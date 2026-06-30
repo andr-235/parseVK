@@ -7,6 +7,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
 from app.domain.exceptions.vk_api import VkApiAuthError
+from app.infrastructure.ok_client.client import OkApiClient
 from app.infrastructure.vk_client.client import VkApiClient, VkApiConfigurationError
 from app.tasks import TaskEventsConsumer, publish_outbox_forever
 
@@ -70,6 +71,21 @@ async def _check_vk_token_at_startup() -> None:
         logger.warning("VK token test could not complete: %s", e)
 
 
+async def _check_ok_credentials_at_startup() -> None:
+    try:
+        client = OkApiClient()
+        await client._call("users.getCurrentUser", fields="uid")
+        logger.info("OK credentials test OK — access token is valid")
+    except RuntimeError as e:
+        logger.critical(
+            "OK credentials test FAILED: %s. "
+            "The OK application or access token may be invalid or blocked.",
+            e,
+        )
+    except Exception as e:
+        logger.warning("OK credentials test could not complete: %s", e)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(
@@ -77,6 +93,7 @@ async def lifespan(app: FastAPI):
         _mask(settings.vk_token) if settings.vk_token else "(not set)",
     )
     asyncio.create_task(_check_vk_token_at_startup())
+    asyncio.create_task(_check_ok_credentials_at_startup())
     consumer = TaskEventsConsumer()
     consumer_task = None
     publisher_task = None
@@ -127,10 +144,16 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict[str, str]:
+        vk_token_configured = "yes" if settings.vk_token else "no"
+        ok_creds_configured = "yes" if (
+            settings.ok_access_token and settings.ok_application_key and settings.ok_application_secret_key
+        ) else "no"
         return {
             "status": "UP",
-            "vkTokenConfigured": "yes" if settings.vk_token else "no",
+            "vkTokenConfigured": vk_token_configured,
             "vkTokenMasked": _mask(settings.vk_token) if settings.vk_token else "",
+            "okCredentialsConfigured": ok_creds_configured,
+            "okTokenMasked": _mask(settings.ok_access_token) if settings.ok_access_token else "",
             "kafkaConsumer": "healthy" if _consumer_healthy[0] else "unhealthy",
             "outboxPublisher": "healthy" if _publisher_healthy[0] else "unhealthy",
         }

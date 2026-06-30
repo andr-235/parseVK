@@ -22,8 +22,7 @@ class OkFriendsExportService:
         self.ok_client = ok_client
 
     async def _log(self, job_id: uuid.UUID, level: str, msg: str, meta: Any = None) -> None:
-        if hasattr(self.repo, "append_log"):
-            await self.repo.append_log(job_id, level, msg, meta)
+        await self.repo.append_log(job_id, level, msg, meta)
         logger.info(f"OK Job {job_id}: [{level.upper()}] {msg}")
 
     async def run_export_job(self, job_id: uuid.UUID, params: dict) -> None:
@@ -56,12 +55,12 @@ class OkFriendsExportService:
             await self.repo.fail_job(job_id, err_msg, fetched_count, total_count or fetched_count, warning)
             await self._log(job_id, "error", f"Export failed: {err_msg}")
 
-    async def _fetch_all_friends(self, job_id: uuid.UUID, params: dict) -> tuple[list[int], int, str | None]:
+    async def _fetch_all_friends(self, job_id: uuid.UUID, params: dict) -> tuple[list[str], int, str | None]:
         fid = params.get("fid")
         base_offset = params.get("offset") or 0
         requested_limit = params.get("limit")
 
-        friend_ids = []
+        friend_ids: list[str] = []
         total_count = 0
         fetched_count = 0
         warning = None
@@ -116,7 +115,7 @@ class OkFriendsExportService:
         await self._log(job_id, "info", f"friends.get finish (fetched={fetched_count}, total={total_count or fetched_count})")
         return friend_ids, total_count, warning
 
-    async def _enrich_users(self, job_id: uuid.UUID, friend_ids: list[int]) -> list[dict]:
+    async def _enrich_users(self, job_id: uuid.UUID, friend_ids: list[str]) -> list[dict]:
         enriched_users = []
         total_users = len(friend_ids)
         await self._log(job_id, "info", f"users.getInfo start (total users: {total_users})")
@@ -142,23 +141,42 @@ class OkFriendsExportService:
 
     async def _save_to_database(self, job_id: uuid.UUID, users: list[dict]) -> None:
         records = []
+        skipped = 0
         for user in users:
             uid = user.get("uid")
             if uid:
                 try:
                     records.append({"okFriendId": int(uid), "payload": user})
-                except ValueError:
+                except (ValueError, TypeError):
+                    skipped += 1
                     continue
+
+        if skipped:
+            await self._log(job_id, "warn", f"Skipped {skipped} records with non-numeric uid")
 
         for i in range(0, len(records), EXPORT_BATCH_SIZE):
             chunk = records[i : i + EXPORT_BATCH_SIZE]
-            await self.repo.save_friends_batch(job_id, chunk)
+            saved = await self.repo.save_friends_batch(job_id, chunk)
+            await self._log(job_id, "info", f"Saved friend records: {saved}")
 
-        await self._log(job_id, "info", f"Saved friend records: {len(records)}")
+        await self._log(job_id, "info", f"Save complete, total records: {len(records)}")
 
     async def _generate_xlsx(self, job_id: uuid.UUID, users: list[dict]) -> str:
         await self._log(job_id, "info", "Generating XLSX file")
         flat_rows = [flatten_user_info(user) for user in users]
         xlsx_path = write_xlsx_file(str(job_id), flat_rows)
         await self._log(job_id, "info", "XLSX generated", {"path": xlsx_path})
+        return xlsx_path
+
+    async def rebuild_xlsx(self, job_id: uuid.UUID) -> str:
+        """Rebuild XLSX from stored payloads when the original file is missing."""
+        await self._log(job_id, "info", "rebuilding XLSX from stored payloads")
+        payloads = await self.repo.get_friend_record_payloads(job_id)
+        if not payloads:
+            await self._log(job_id, "warning", "no payloads found for XLSX rebuild")
+            raise ValueError("No records found for XLSX rebuild")
+        flat_rows = [flatten_user_info(payload) for payload in payloads]
+        xlsx_path = write_xlsx_file(str(job_id), flat_rows)
+        await self.repo.complete_job(job_id, len(payloads), len(payloads), None, xlsx_path)
+        await self._log(job_id, "info", f"XLSX rebuilt at {xlsx_path}")
         return xlsx_path

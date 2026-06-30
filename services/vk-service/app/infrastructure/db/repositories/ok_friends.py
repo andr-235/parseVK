@@ -2,7 +2,7 @@ import uuid
 from collections.abc import Sequence
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.redaction import redact_secrets
@@ -95,17 +95,21 @@ class SqlAlchemyOkFriendsRepository(OkFriendsRepository):
                 job.warning = warning
             await self.session.flush()
 
-    async def save_friends_batch(self, job_id: uuid.UUID, records: list[dict]) -> None:
+    async def save_friends_batch(self, job_id: uuid.UUID, records: list[dict]) -> int:
         if not records:
-            return
-        for rec in records:
-            record_obj = OkFriendsRecord(
-                job_id=job_id,
-                ok_friend_id=rec["okFriendId"],
-                payload=rec["payload"],
-            )
-            self.session.add(record_obj)
+            return 0
+        values = [
+            {"job_id": job_id, "ok_friend_id": rec["okFriendId"], "payload": rec["payload"]}
+            for rec in records
+        ]
+        await self.session.execute(insert(OkFriendsRecord), values)
         await self.session.flush()
+        return len(records)
+
+    async def get_friend_record_payloads(self, job_id: uuid.UUID) -> list[dict]:
+        stmt = select(OkFriendsRecord.payload).where(OkFriendsRecord.job_id == job_id)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
 
     async def append_log(self, job_id: uuid.UUID, level: str, message: str, meta: Any = None) -> None:
         message = redact_secrets(message)

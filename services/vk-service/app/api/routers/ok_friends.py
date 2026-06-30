@@ -5,7 +5,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import get_ok_friends_repository_dep
+from app.api.dependencies import get_ok_friends_repository_dep, get_ok_friends_service_dep
+from app.core.config import settings
 from app.infrastructure.db.session import get_session
 from app.api.schemas.ok_friends import (
     OkFriendsExportStartRequest,
@@ -16,6 +17,7 @@ from app.api.schemas.ok_friends import (
 )
 from app.core.security import require_internal_token
 from app.domain.repositories.ok_friends import OkFriendsRepository
+from app.services.ok_friends_service import OkFriendsExportService
 
 router = APIRouter(
     prefix="/internal/ok/friends",
@@ -104,6 +106,7 @@ async def get_job(
 async def download_xlsx(
     job_id: str,
     repo: OkFriendsRepository = Depends(get_ok_friends_repository_dep),
+    service: OkFriendsExportService = Depends(get_ok_friends_service_dep),
 ) -> FileResponse:
     try:
         job_uuid = uuid.UUID(job_id)
@@ -111,11 +114,26 @@ async def download_xlsx(
         raise HTTPException(status_code=400, detail="Invalid job ID format")
 
     job = await repo.get_job_by_id(job_uuid)
-    if not job or not job.xlsx_path:
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if job.status != "DONE":
+        raise HTTPException(status_code=400, detail=f"Cannot download: job is {job.status}, expected DONE")
+
+    if not job.xlsx_path:
         raise HTTPException(status_code=404, detail="XLSX file not found")
 
+    resolved = os.path.abspath(job.xlsx_path)
+    export_dir = os.path.abspath(settings.ok_friends_export_dir)
+    if os.path.commonpath([resolved, export_dir]) != export_dir:
+        raise HTTPException(status_code=400, detail="Invalid XLSX file path")
+
     if not os.path.exists(job.xlsx_path):
-        raise HTTPException(status_code=404, detail="XLSX file not found on disk")
+        try:
+            new_path = await service.rebuild_xlsx(job_uuid)
+        except Exception:
+            raise HTTPException(status_code=404, detail="XLSX file not found on disk")
+        job.xlsx_path = new_path
 
     filename = f"ok_friends_export_{job_id}.xlsx"
     return FileResponse(

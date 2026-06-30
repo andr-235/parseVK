@@ -56,6 +56,15 @@ class OkApiClient:
             timeout=httpx.Timeout(timeout=30.0, connect=2.0, read=30.0, write=10.0)
         )
 
+    async def close(self) -> None:
+        await self._client.aclose()
+
+    async def __aenter__(self) -> "OkApiClient":
+        return self
+
+    async def __aexit__(self, *args: Any) -> None:
+        await self.close()
+
     async def _call(self, method: str, is_users_info: bool = False, **params) -> Any:
         if not self.access_token or not self.application_key or not self.application_secret_key:
             raise RuntimeError("OK API credentials are not fully configured")

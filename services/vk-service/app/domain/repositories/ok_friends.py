@@ -1,6 +1,7 @@
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
+from typing import Any
 
 from app.domain.models.ok_friends import OkFriendsExportJob, OkFriendsJobLog
 
@@ -31,5 +32,13 @@ class OkFriendsRepository(ABC):
         """Transition job status to FAILED and store exception message."""
 
     @abstractmethod
-    async def save_friends_batch(self, job_id: uuid.UUID, records: list[dict]) -> None:
-        """Save a batch of friend profiles records to database."""
+    async def save_friends_batch(self, job_id: uuid.UUID, records: list[dict]) -> int:
+        """Save a batch of friend profiles records to database. Returns number of saved records."""
+
+    @abstractmethod
+    async def get_friend_record_payloads(self, job_id: uuid.UUID) -> list[dict]:
+        """Retrieve stored friend record payloads for XLSX rebuild."""
+
+    @abstractmethod
+    async def append_log(self, job_id: uuid.UUID, level: str, message: str, meta: Any = None) -> None:
+        """Append a log entry for the given job."""
