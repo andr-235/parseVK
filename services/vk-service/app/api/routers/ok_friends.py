@@ -3,8 +3,10 @@ import uuid
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import FileResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_ok_friends_repository_dep
+from app.infrastructure.db.session import get_session
 from app.api.schemas.ok_friends import (
     OkFriendsExportStartRequest,
     OkFriendsExportStartResponse,
@@ -23,18 +25,20 @@ router = APIRouter(
 
 async def run_export_job_background(job_id: uuid.UUID, params: dict) -> None:
     import asyncio
-    await asyncio.sleep(0.1)  # Allow API request transaction to commit and release SQLite lock
+    await asyncio.sleep(0.1)  # Brief backoff before starting background work
     from app.bootstrap import get_ok_friends_service
     from app.infrastructure.db.session import SessionLocal
     async with SessionLocal() as session:
-        service = get_ok_friends_service(session)
-        await service.run_export_job(job_id, params)
+        async with session.begin():
+            service = get_ok_friends_service(session)
+            await service.run_export_job(job_id, params)
 
 @router.post("/export", response_model=OkFriendsExportStartResponse, status_code=status.HTTP_201_CREATED)
 async def start_export(
     payload: OkFriendsExportStartRequest,
     background_tasks: BackgroundTasks,
     repo: OkFriendsRepository = Depends(get_ok_friends_repository_dep),
+    session: AsyncSession = Depends(get_session),
 ) -> OkFriendsExportStartResponse:
     params = payload.params
     fid_raw = params.get("fid")
@@ -47,6 +51,9 @@ async def start_export(
 
     # Create job in database
     job = await repo.create_job(params, ok_user_id=ok_user_id)
+
+    # Commit so the job is visible to the background task session
+    await session.commit()
 
     # Launch processing in background
     background_tasks.add_task(run_export_job_background, job.id, params)

@@ -3,8 +3,10 @@ import uuid
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import FileResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_vk_friends_repository_dep
+from app.infrastructure.db.session import get_session
 from app.api.schemas.vk_friends import (
     VkFriendsExportStartRequest,
     VkFriendsExportStartResponse,
@@ -23,24 +25,29 @@ router = APIRouter(
 
 async def run_export_job_background(job_id: uuid.UUID, params: dict) -> None:
     import asyncio
-    await asyncio.sleep(0.1)  # Allow API request transaction to commit and release SQLite lock
+    await asyncio.sleep(0.1)  # Brief backoff before starting background work
     from app.bootstrap import get_vk_friends_service
     from app.infrastructure.db.session import SessionLocal
     async with SessionLocal() as session:
-        service = get_vk_friends_service(session)
-        await service.run_export_job(job_id, params)
+        async with session.begin():
+            service = get_vk_friends_service(session)
+            await service.run_export_job(job_id, params)
 
 @router.post("/export", response_model=VkFriendsExportStartResponse, status_code=status.HTTP_201_CREATED)
 async def start_export(
     payload: VkFriendsExportStartRequest,
     background_tasks: BackgroundTasks,
     repo: VkFriendsRepository = Depends(get_vk_friends_repository_dep),
+    session: AsyncSession = Depends(get_session),
 ) -> VkFriendsExportStartResponse:
     params = payload.params
     vk_user_id = params.get("user_id")
 
     # Create job in database
     job = await repo.create_job(params, vk_user_id=vk_user_id)
+
+    # Commit so the job is visible to the background task session
+    await session.commit()
 
     # Launch processing in background with a dedicated background session
     background_tasks.add_task(run_export_job_background, job.id, params)
