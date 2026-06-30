@@ -76,7 +76,8 @@ class OkApiClient:
 
         query_params = {**api_params, "sig": sig}
         if self.access_token:
-            query_params["session_key"] = self.access_token
+            token_key = "session_key" if is_users_info else "access_token"
+            query_params[token_key] = self.access_token
 
         if is_users_info:
             url_path = "/fb.do"
