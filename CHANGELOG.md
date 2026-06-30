@@ -1,3 +1,10 @@
+# [0.53.0](https://github.com/andr-235/parseVK/compare/v0.52.6...v0.53.0) (2026-06-30)
+
+
+### Features
+
+* **vk-service:** close OK friends NestJS migration gaps ([8a96789](https://github.com/andr-235/parseVK/commit/8a967894bb762248cd38d2f730bb50a8533f1c65))
+
 ## [0.52.6](https://github.com/andr-235/parseVK/compare/v0.52.5...v0.52.6) (2026-06-30)
 
 
