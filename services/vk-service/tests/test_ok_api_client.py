@@ -161,6 +161,70 @@ class TestUsersGetInfo:
 
 
 # ---------------------------------------------------------------------------
+# Request query parameter verification
+# ---------------------------------------------------------------------------
+
+def _make_capturing_client():
+    """Build OkApiClient that captures request URL for asserting query params."""
+    captured = []
+
+    async def handler(request):
+        captured.append(str(request.url))
+        return httpx.Response(200, json=[])
+
+    transport = httpx.MockTransport(handler)
+    http_client = httpx.AsyncClient(transport=transport)
+    client = OkApiClient(
+        access_token="tok",
+        application_key="app",
+        application_secret_key="sec",
+        client=http_client,
+    )
+    return client, captured
+
+
+class TestRequestParams:
+    @pytest.mark.anyio
+    async def test_users_get_info_sends_access_token(self):
+        client, captured = _make_capturing_client()
+        await client.users_get_info(["111"], fields="uid")
+        assert len(captured) == 1
+        url = captured[0]
+        assert "access_token=tok" in url
+        assert "session_key=tok" in url
+
+    @pytest.mark.anyio
+    async def test_friends_get_sends_access_token(self):
+        client, captured = _make_capturing_client()
+        await client.friends_get()
+        assert len(captured) == 1
+        url = captured[0]
+        assert "access_token=tok" in url
+        assert "session_key=tok" in url
+
+    @pytest.mark.anyio
+    async def test_users_get_info_uses_fb_do_path(self):
+        client, captured = _make_capturing_client()
+        await client.users_get_info(["111"], fields="uid")
+        url = captured[0]
+        assert "/fb.do" in url
+
+    @pytest.mark.anyio
+    async def test_friends_get_uses_api_path(self):
+        client, captured = _make_capturing_client()
+        await client.friends_get()
+        url = captured[0]
+        assert "/api/friends/get" in url
+
+    @pytest.mark.anyio
+    async def test_request_includes_sig(self):
+        client, captured = _make_capturing_client()
+        await client.users_get_info(["111"], fields="uid")
+        url = captured[0]
+        assert "sig=" in url
+
+
+# ---------------------------------------------------------------------------
 # Credentials guard
 # ---------------------------------------------------------------------------
 
