@@ -1,3 +1,10 @@
+## [0.53.1](https://github.com/andr-235/parseVK/compare/v0.53.0...v0.53.1) (2026-06-30)
+
+
+### Bug Fixes
+
+* **vk-service:** send access_token for OK API RPC calls ([2c95092](https://github.com/andr-235/parseVK/commit/2c95092e75d317abadfdd24fabbfd7bf55a49867))
+
 # [0.53.0](https://github.com/andr-235/parseVK/compare/v0.52.6...v0.53.0) (2026-06-30)
 
 
