@@ -1,3 +1,10 @@
+## [0.52.5](https://github.com/andr-235/parseVK/compare/v0.52.4...v0.52.5) (2026-06-30)
+
+
+### Bug Fixes
+
+* **ok-client:** use correct parameter name for access token in REST API calls ([1352ba9](https://github.com/andr-235/parseVK/commit/1352ba99b44953be60b1b1f181813fe9be9d8001))
+
 ## [0.52.4](https://github.com/andr-235/parseVK/compare/v0.52.3...v0.52.4) (2026-06-30)
 
 
