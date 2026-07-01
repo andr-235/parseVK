@@ -1,3 +1,10 @@
+## [0.54.1](https://github.com/andr-235/parseVK/compare/v0.54.0...v0.54.1) (2026-07-01)
+
+
+### Bug Fixes
+
+* **vk-service:** handle VK API 212 error, improve infra error detection ([b7bb43a](https://github.com/andr-235/parseVK/commit/b7bb43a800d7e7c649c72974bf452fa67357f894))
+
 # [0.54.0](https://github.com/andr-235/parseVK/compare/v0.53.1...v0.54.0) (2026-07-01)
 
 
