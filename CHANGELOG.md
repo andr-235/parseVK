@@ -1,3 +1,15 @@
+# [0.54.0](https://github.com/andr-235/parseVK/compare/v0.53.1...v0.54.0) (2026-07-01)
+
+
+### Bug Fixes
+
+* **export:** align input/button sizing with design system ([9bd8e02](https://github.com/andr-235/parseVK/commit/9bd8e0266c1380a4ff10f422f2125b6d682e6a6b))
+
+
+### Features
+
+* **export:** add error states and SSE retry feedback ([b6164f6](https://github.com/andr-235/parseVK/commit/b6164f64d20ef498d34451a38df8a5ba1dd5cac1))
+
 ## [0.53.1](https://github.com/andr-235/parseVK/compare/v0.53.0...v0.53.1) (2026-06-30)
 
 
