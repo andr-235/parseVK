@@ -1,6 +1,7 @@
 import logging
 from typing import Any
 
+from app.domain.exceptions.vk_api import VkApiDomainError
 from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
 from app.services.ingestion.post_collector import _author_payload as _make_author_payload
 
@@ -27,7 +28,16 @@ class CommentCollector:
         *,
         correlation_id: str | None = None,
     ) -> list[dict]:
-        comments_response = await self.adapter.get_comments(int(owner_id), int(post_id))
+        try:
+            comments_response = await self.adapter.get_comments(int(owner_id), int(post_id))
+        except VkApiDomainError as exc:
+            if exc.code == 212:
+                logger.warning(
+                    "Post %d_%d: access to comments denied (VK error 212), skipping",
+                    owner_id, post_id,
+                )
+                return []
+            raise
         comments = comments_response["items"]
 
         for profile in comments_response.get("profiles", []):

@@ -1,15 +1,11 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-
-# Clients
 from app.domain.ports.vk_api import VkApiPort
 from app.infrastructure.db.repositories.ingestion import SqlAlchemyIngestionRepository
 from app.infrastructure.db.repositories.ok_friends import SqlAlchemyOkFriendsRepository
 from app.infrastructure.db.repositories.outbox import SqlAlchemyOutboxRepository
 from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsRepository
-
-# Repositories
 from app.infrastructure.db.repositories.vk_friends import SqlAlchemyVkFriendsRepository
 from app.infrastructure.ok_client.client import OkApiClient
 from app.infrastructure.tasks_client.client import TasksClient
@@ -20,8 +16,6 @@ from app.services.ingestion.pipeline import IngestionPipeline
 from app.services.ingestion_service import IngestionService
 from app.services.ok_friends.exporter import OkFriendsExportService
 from app.services.task_events_service import TaskEventsService
-
-# Services
 from app.services.vk_friends.exporter import VkFriendsExportService
 from app.services.vk_groups_service import VkGroupsService
 

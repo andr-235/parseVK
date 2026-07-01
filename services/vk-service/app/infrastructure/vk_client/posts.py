@@ -3,6 +3,8 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
+from app.domain.exceptions.vk_api import VkApiDomainError
+
 logger = logging.getLogger(__name__)
 
 
@@ -23,9 +25,18 @@ class PostsClient:
 
     async def get_comments(self, owner_id: int, post_id: int) -> dict:
         logger.debug("wall.getComments for owner_id=%d post_id=%d", owner_id, post_id)
-        response = await self._call(
-            "wall.getComments", owner_id=owner_id, post_id=post_id, count=100, extended=1,
-        )
+        try:
+            response = await self._call(
+                "wall.getComments", owner_id=owner_id, post_id=post_id, count=100, extended=1,
+            )
+        except VkApiDomainError as exc:
+            if exc.code == 212:
+                logger.warning(
+                    "Post %d_%d: access to comments denied (VK error 212), skipping",
+                    owner_id, post_id,
+                )
+                return {"items": [], "profiles": [], "groups": []}
+            raise
         return {
             "items": list(response.get("items") or []),
             "profiles": list(response.get("profiles") or []),

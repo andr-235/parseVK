@@ -7,7 +7,7 @@ from typing import Any
 import httpx
 import sqlalchemy.exc
 
-from app.domain.exceptions.vk_api import VkApiInfrastructureError, VkApiRateLimitError
+from app.domain.exceptions.vk_api import VkApiDomainError, VkApiInfrastructureError, VkApiRateLimitError
 from app.infrastructure.tasks_client.client import TasksClient
 from app.services.ingestion.collector import IngestionResult
 
@@ -127,6 +127,9 @@ class IngestionPipeline:
         if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code >= 500:
             return True
         if isinstance(exc, (VkApiRateLimitError, VkApiInfrastructureError)):
+            return True
+        if isinstance(exc, VkApiDomainError) and exc.code == 1:
+            logger.debug("VK API error code 1 (Unknown error) treated as infrastructure error")
             return True
         return False
 
