@@ -1,6 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+
+# Clients
+from app.domain.ports.vk_api import VkApiPort
 from app.infrastructure.db.repositories.ingestion import SqlAlchemyIngestionRepository
 from app.infrastructure.db.repositories.ok_friends import SqlAlchemyOkFriendsRepository
 from app.infrastructure.db.repositories.outbox import SqlAlchemyOutboxRepository
@@ -10,8 +13,6 @@ from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsReposit
 from app.infrastructure.db.repositories.vk_friends import SqlAlchemyVkFriendsRepository
 from app.infrastructure.ok_client.client import OkApiClient
 from app.infrastructure.tasks_client.client import TasksClient
-
-# Clients
 from app.infrastructure.vk_client.client import VkApiClient
 from app.services.domain_events_service import OutboxService
 from app.services.ingestion.collector import DataCollector
@@ -26,6 +27,11 @@ from app.services.vk_groups_service import VkGroupsService
 
 # Shared Client Singletons (VkApiClient & OkApiClient are stateless/managed cleanly)
 _vk_client = VkApiClient()
+
+
+def get_vk_client() -> VkApiPort:
+    return _vk_client
+
 _ok_client = OkApiClient()
 _tasks_client = TasksClient()
 

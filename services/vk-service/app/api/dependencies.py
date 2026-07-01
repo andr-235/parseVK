@@ -30,6 +30,13 @@ async def get_vk_groups_service_dep(
     return bootstrap.get_vk_groups_service(session)
 
 
+from app.domain.ports.vk_api import VkApiPort
+
+
+async def get_vk_client_dep() -> VkApiPort:
+    return bootstrap.get_vk_client()
+
+
 from app.domain.repositories.ok_friends import OkFriendsRepository
 from app.domain.repositories.vk_friends import VkFriendsRepository
 

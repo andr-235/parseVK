@@ -3,8 +3,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from app.infrastructure.tasks_client.client import TasksClient
 from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
+from app.infrastructure.tasks_client.client import TasksClient
+from app.services.ingestion.comment_collector import CommentCollector
+from app.services.ingestion.group_collector import GroupCollector
+from app.services.ingestion.post_collector import PostCollector
 
 logger = logging.getLogger("vk-service.ingestion")
 
@@ -31,21 +34,6 @@ class IngestionResult:
         return self.groups + self.posts + self.comments
 
 
-_GROUP_FIELDS = [
-    "members_count",
-    "city",
-    "activity",
-    "status",
-    "verified",
-    "description",
-    "addresses",
-    "counters",
-    "photo_50",
-    "photo_100",
-    "photo_200",
-]
-
-
 class DataCollector:
     def __init__(
         self,
@@ -62,82 +50,65 @@ class DataCollector:
         self.outbox = outbox
         self._on_error = on_error or (lambda msg: msg)
 
+        self.group_collector = GroupCollector(
+            adapter=adapter, repository=repository, tasks_client=tasks_client, outbox=outbox,
+        )
+        self.post_collector = PostCollector(
+            adapter=adapter, repository=repository, outbox=outbox,
+        )
+        self.comment_collector = CommentCollector(
+            adapter=adapter, repository=repository, outbox=outbox,
+        )
+
     async def get_group_ids(self, task_run: Any) -> list[int]:
-        if task_run.scope == "selected":
-            return [int(item) for item in task_run.group_ids]
-        group_ids = await self.repository.get_active_group_ids()
-        if not group_ids:
-            raise RuntimeError("No active groups configured for scope=all")
-        return group_ids
+        return await self.group_collector.get_group_ids(task_run)
 
     async def collect(
         self, task_run: Any, group_ids: list[int], *, correlation_id: str | None = None
     ) -> IngestionResult:
         result = IngestionResult()
         result.errors = []
-        groups = await self.adapter.get_groups(group_ids, fields=_GROUP_FIELDS)
-        for group in groups:
-            group_id = int(group["id"])
-            await self.repository.upsert_group(group)
-            if self.outbox:
-                await self.outbox.emit_group_collected(group, correlation_id=correlation_id)
+
+        for group_id in group_ids:
+            try:
+                await self.group_collector.collect_group(group_id, correlation_id=correlation_id)
+            except Exception as error:
+                sanitized_error = self._on_error(str(error))
+                result.errors.append({"group_id": group_id, "error": sanitized_error})
+                continue
             result.groups += 1
 
             try:
-                posts_response = await self.adapter.get_posts(
-                    group_id, mode=task_run.mode, post_limit=task_run.post_limit
+                author_profiles: dict[int, dict] = {}
+                posts = await self.post_collector.collect_for_group(
+                    group_id, task_run, author_profiles, correlation_id=correlation_id,
                 )
             except Exception as error:
                 sanitized_error = self._on_error(str(error))
                 result.errors.append({"group_id": group_id, "error": sanitized_error})
                 continue
 
-            posts = posts_response["items"]
-            author_profiles: dict[int, dict] = {}
-            for profile in posts_response.get("profiles", []):
-                author_profiles[profile["id"]] = profile
-            for group_profile in posts_response.get("groups", []):
-                author_profiles[group_profile["id"]] = group_profile
-
-            post_comments: list[list[dict]] = []
-            valid_posts: list[dict] = []
-            for post in posts:
-                owner_id = post.get("owner_id")
-                post_id = post.get("id")
-                if owner_id is None or post_id is None:
-                    logger.warning("Skipping post without owner_id or id: %s", post.get("id"))
-                    continue
-                post_comments.append([])
-                valid_posts.append(post)
-                comments_response = await self.adapter.get_comments(int(owner_id), int(post_id))
-                comments = comments_response["items"]
-                post_comments[-1] = comments
-                for profile in comments_response.get("profiles", []):
-                    author_profiles.setdefault(profile["id"], profile)
-                for group_profile in comments_response.get("groups", []):
-                    author_profiles.setdefault(group_profile["id"], group_profile)
-            posts = valid_posts
-
             await self._enrich_user_profiles(author_profiles)
 
-            for post_index, post in enumerate(posts):
-                if await self._upsert_post_author(post, author_profiles):
+            for post in posts:
+                author_added = await self.post_collector.save_post(
+                    post, task_run, author_profiles, correlation_id=correlation_id,
+                )
+                if author_added:
                     result.authors += 1
-                await self.repository.upsert_post(post, task_id=task_run.task_id, group_id=group_id)
-                if self.outbox:
-                    await self.outbox.emit_post_collected(
-                        post, task_id=task_run.task_id, correlation_id=correlation_id
-                    )
                 result.posts += 1
 
-                for comment in post_comments[post_index]:
-                    if await self._upsert_comment_author(comment, author_profiles):
+                post_comments = await self.comment_collector.collect_for_post(
+                    int(post["owner_id"]), int(post["id"]), author_profiles,
+                    correlation_id=correlation_id,
+                )
+
+                for comment in post_comments:
+                    author_added = await self.comment_collector.save_comment(
+                        comment, task_run, author_profiles, correlation_id=correlation_id,
+                    )
+                    if author_added:
                         result.authors += 1
-                    await self.repository.upsert_comment(comment, task_id=task_run.task_id)
-                    if self.outbox:
-                        await self.outbox.emit_comment_collected(
-                            comment, task_id=task_run.task_id, correlation_id=correlation_id
-                        )
                     result.comments += 1
 
                 await self.tasks_client.update_progress(
@@ -160,6 +131,7 @@ class DataCollector:
                         stats=result.stats(),
                         correlation_id=correlation_id,
                     )
+
         return result
 
     async def _enrich_user_profiles(self, profiles: dict[int, dict]) -> None:
@@ -179,54 +151,3 @@ class DataCollector:
             user_id = user.get("id")
             if user_id and user_id in profiles:
                 profiles[user_id].update(user)
-
-    async def _upsert_post_author(self, post: dict, profiles: dict[int, dict]) -> bool:
-        from_id = post.get("from_id")
-        if from_id is None:
-            return False
-        payload = self._author_payload(from_id, profiles)
-        await self.repository.upsert_author(payload)
-        if self.outbox:
-            await self.outbox.emit_author_collected(payload)
-        return True
-
-    async def _upsert_comment_author(self, comment: dict, profiles: dict[int, dict]) -> bool:
-        from_id = comment.get("from_id")
-        if from_id is None:
-            return False
-        payload = self._author_payload(from_id, profiles)
-        await self.repository.upsert_author(payload)
-        if self.outbox:
-            await self.outbox.emit_author_collected(payload)
-        return True
-
-    def _author_payload(self, from_id: int, profiles: dict[int, dict] | None = None) -> dict:
-        author_vk_id = int(from_id)
-        profile = profiles.get(author_vk_id) if profiles else None
-        if profile is None and author_vk_id < 0:
-            profile = profiles.get(abs(author_vk_id)) if profiles else None
-        if profile:
-            display_name = (
-                profile.get("name")
-                or f"{profile.get('first_name', '')} {profile.get('last_name', '')}".strip()
-                or str(author_vk_id)
-            )
-            return {
-                "vk_author_id": author_vk_id,
-                "type": "group" if author_vk_id < 0 else "user",
-                "display_name": display_name,
-                "first_name": profile.get("first_name", ""),
-                "last_name": profile.get("last_name", ""),
-                "photo_50": profile.get("photo_50") or profile.get("photo"),
-                "photo_100": profile.get("photo_100") or profile.get("photo"),
-                "photo_200": profile.get("photo_200") or profile.get("photo"),
-                "domain": profile.get("domain", ""),
-                "screen_name": profile.get("screen_name", ""),
-                "raw": {"from_id": from_id},
-            }
-        return {
-            "vk_author_id": author_vk_id,
-            "type": "group" if author_vk_id < 0 else "user",
-            "display_name": str(author_vk_id),
-            "raw": {"from_id": from_id},
-        }

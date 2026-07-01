@@ -130,8 +130,10 @@ async def lifespan(app: FastAPI):
 
 
 from app.api.routers.ok_friends import router as ok_friends_router
-from app.api.routers.vk_api import router as vk_router
 from app.api.routers.vk_friends import router as vk_friends_router
+from app.api.routers.vk_groups import router as vk_groups_router
+from app.api.routers.vk_posts import router as vk_posts_router
+from app.api.routers.vk_users import token_router, users_router
 
 
 def create_app() -> FastAPI:
@@ -171,7 +173,10 @@ def create_app() -> FastAPI:
         except Exception as e:
             raise HTTPException(status_code=503, detail=f"Database is not ready: {str(e)}") from e
 
-    app.include_router(vk_router)
+    app.include_router(vk_groups_router, prefix="/internal/vk")
+    app.include_router(vk_posts_router, prefix="/internal/vk")
+    app.include_router(users_router, prefix="/internal/vk")
+    app.include_router(token_router, prefix="/internal/vk")
     app.include_router(vk_friends_router)
     app.include_router(ok_friends_router)
 
