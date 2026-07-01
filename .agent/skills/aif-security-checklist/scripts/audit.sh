@@ -118,6 +118,6 @@ if [ $ISSUES -gt 0 ]; then
   exit 1
 else
   echo -e "${GREEN}✅ No critical issues found${NC}"
-  echo "Remember to also review manually using /ai-factory.security-checklist"
+  echo "Remember to also review manually using /aif-security-checklist"
   exit 0
 fi

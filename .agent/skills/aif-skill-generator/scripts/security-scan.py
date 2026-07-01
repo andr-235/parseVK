@@ -12,12 +12,12 @@ Exit codes:
   3 - Usage error
 """
 
-import base64
-import fnmatch
-import json
+import sys
 import os
 import re
-import sys
+import base64
+import json
+import fnmatch
 
 # ─── Colors ───────────────────────────────────────────────────────────────────
 
@@ -148,10 +148,10 @@ _add(r'\\u[0-9a-fA-F]{4}(\\u[0-9a-fA-F]{4}){7,}',
 
 # ── 8. Prompt Injection via Dynamic Context ───────────────────────────────────
 
-_add(r'!\s*`[^`]*curl\s',
+_add(r'(?<![A-Za-z0-9_])!\s*`[^`]*curl\s',
      'CRITICAL', 'Dynamic context injection: executes curl in dynamic context substitution')
 
-_add(r'!\s*`[^`]*(rm|wget|nc|ncat|python|node|bash|sh|eval)\s',
+_add(r'(?<![A-Za-z0-9_])!\s*`[^`]*(rm|wget|nc|ncat|python|node|bash|sh|eval)\s',
      'WARNING', 'Suspicious dynamic context: executes potentially dangerous command in dynamic context')
 
 # ── 9. Social Engineering ─────────────────────────────────────────────────────
@@ -170,7 +170,7 @@ _add(r'(urgent|emergency|critical)\s*:?\s*(override|bypass|disable|ignore)',
 _add(r'(this\s+skill|this\s+file|these?\s+patterns?)\s+.{0,30}(verified|audited|safe|secure|approved|reviewed|trusted|harmless)',
      'CRITICAL', 'Self-declaration of safety: skill claims it has been verified/audited')
 
-_add(r'false\s+positive',
+_add(r'((scanner|scan|security.?check|security.?scan|finding|alert|flag|threat)s?.{0,40}false\s+positives?|false\s+positives?.{0,40}(scanner|scan|security.?check|security.?scan|finding|alert|flag|threat)s?)',
      'CRITICAL', 'Scanner evasion: skill claims findings are false positives')
 
 _add(r'(this\s+is|are|is)\s+expected\s+behavior',
@@ -297,7 +297,7 @@ def is_in_code_block(line_num: int, code_ranges: list) -> bool:
 
 def scan_file(filepath: str, strict: bool = False) -> dict:
     """Scan a single file for security threats."""
-    with open(filepath, encoding='utf-8', errors='ignore') as f:
+    with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
         content = f.read()
 
     findings = []
@@ -380,7 +380,7 @@ def _allowlist_matches(rel_path: str, finding: dict, entry: dict) -> bool:
 def load_allowlist(filepath: str) -> list:
     """Load allowlist entries from JSON file."""
     try:
-        with open(filepath, encoding='utf-8') as f:
+        with open(filepath, 'r', encoding='utf-8') as f:
             data = json.load(f)
     except FileNotFoundError:
         print(f"{RED}ERROR:{NC} Allowlist file not found: {filepath}", file=sys.stderr)

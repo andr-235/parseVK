@@ -22,9 +22,10 @@ import tempfile
 import urllib.parse
 import urllib.request
 import uuid
-from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterable
+
 
 TOOL_MARKER_FILE = ".aif-distillation-material-prep.json"
 TOOL_MARKER_NAME = "ai-factory/aif-distillation/material-prep"

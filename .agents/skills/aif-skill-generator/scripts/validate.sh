@@ -22,12 +22,12 @@ WARNINGS=0
 
 error() {
     echo -e "${RED}ERROR:${NC} $1"
-    ((ERRORS++))
+    ERRORS=$((ERRORS + 1))
 }
 
 warn() {
     echo -e "${YELLOW}WARNING:${NC} $1"
-    ((WARNINGS++))
+    WARNINGS=$((WARNINGS + 1))
 }
 
 pass() {
@@ -43,7 +43,7 @@ fi
 pass "SKILL.md exists"
 
 # Extract frontmatter (between first two --- lines)
-FRONTMATTER=$(awk '/^---$/{if(++n==1)next; if(n==2)exit} n==1' "$SKILL_MD")
+FRONTMATTER=$(tr -d '\r' < "$SKILL_MD" | awk '/^---$/{if(++n==1)next; if(n==2)exit} n==1')
 
 if [[ -z "$FRONTMATTER" ]]; then
     error "No YAML frontmatter found (must be between --- markers)"
@@ -51,6 +51,14 @@ if [[ -z "$FRONTMATTER" ]]; then
 fi
 
 pass "Frontmatter found"
+
+# Check frontmatter size (~tokens approximated by word count)
+FM_WORDS=$(echo "$FRONTMATTER" | wc -w | tr -d ' ')
+if [[ $FM_WORDS -gt 100 ]]; then
+    error "Frontmatter exceeds 100 tokens (~words): $FM_WORDS"
+else
+    pass "Frontmatter size OK ($FM_WORDS tokens)"
+fi
 
 # Check name field - get only the value on the same line
 NAME=$(echo "$FRONTMATTER" | grep -E "^name:" | head -1 | sed 's/^name:[[:space:]]*//' | tr -d '"' | tr -d "'" | tr -d ' ')
@@ -64,9 +72,8 @@ else
     fi
 
     if [[ ! "$NAME" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]] && [[ ! "$NAME" =~ ^[a-z0-9]$ ]]; then
-        error "Invalid name format. Must be lowercase, hyphens only, no consecutive hyphens: '$NAME'"
+        error "Invalid name format. Must be lowercase, hyphens only, no consecutive hyphens, no dots: '$NAME'"
     fi
-
     if [[ "$NAME" =~ -- ]]; then
         error "Name contains consecutive hyphens"
     fi
@@ -74,31 +81,35 @@ else
     # Check name matches directory
     DIR_NAME=$(basename "$(cd "$SKILL_PATH" && pwd)")
     if [[ "$NAME" != "$DIR_NAME" ]]; then
-        warn "Name '$NAME' doesn't match directory name '$DIR_NAME'"
+        error "Name '$NAME' doesn't match directory name '$DIR_NAME'"
     else
-        pass "Name '$NAME' is valid and matches directory"
+        pass "Name '$NAME' matches directory"
     fi
 fi
 
-# Check description field - handle multiline
-DESC_LINE=$(echo "$FRONTMATTER" | grep -n "^description:" | head -1 | cut -d: -f1)
+# Check description field - handle multiline (read directly from file to avoid quoting issues)
+DESC=$(tr -d '\r' < "$SKILL_MD" | awk '
+    /^---$/ { n++; next }
+    n == 1 && /^description:/ {
+        found = 1
+        sub(/^description:[[:space:]]*/, "")
+        if ($0 ~ /^[>|]/) next
+        if ($0 != "") desc = desc $0 " "
+        next
+    }
+    n == 1 && found && /^[[:space:]]/ {
+        gsub(/^[[:space:]]+/, "")
+        desc = desc $0 " "
+        next
+    }
+    n == 1 && found && /^[^[:space:]]/ { exit }
+    n == 2 { exit }
+    END { print desc }
+' )
 
-if [[ -z "$DESC_LINE" ]]; then
+if [[ -z "$DESC" ]]; then
     error "Missing required 'description' field"
 else
-    # Get description value (may be on same line or multiline)
-    DESC_SAME_LINE=$(echo "$FRONTMATTER" | sed -n "${DESC_LINE}p" | sed 's/^description:[[:space:]]*//')
-
-    # If it starts with > or | it's multiline
-    if [[ "$DESC_SAME_LINE" =~ ^[\>\|] ]] || [[ -z "$DESC_SAME_LINE" ]]; then
-        # Get all indented lines after description:
-        DESC=$(echo "$FRONTMATTER" | awk -v start="$DESC_LINE" '
-            NR > start && /^[[:space:]]/ { gsub(/^[[:space:]]+/, ""); printf "%s ", $0 }
-            NR > start && /^[a-z]/ { exit }
-        ')
-    else
-        DESC="$DESC_SAME_LINE"
-    fi
 
     DESC_LEN=${#DESC}
     if [[ $DESC_LEN -gt 1024 ]]; then
@@ -115,8 +126,25 @@ else
     fi
 fi
 
+# Check argument-hint quoting (unquoted [] breaks YAML in OpenCode/Kilo Code, crashes agent TUI)
+ARG_HINT_LINE=$(echo "$FRONTMATTER" | grep -E "^argument-hint:" | head -1)
+
+if [[ -n "$ARG_HINT_LINE" ]]; then
+    ARG_HINT_VALUE=$(echo "$ARG_HINT_LINE" | sed 's/^argument-hint:[[:space:]]*//')
+
+    if [[ "$ARG_HINT_VALUE" =~ ^\[.*\] ]]; then
+        # Starts with [ — unquoted YAML array syntax
+        error "argument-hint contains unquoted brackets: $ARG_HINT_VALUE"
+        echo "       Fix: wrap in quotes → argument-hint: \"$ARG_HINT_VALUE\""
+    elif [[ "$ARG_HINT_VALUE" =~ ^\".*\"$ ]] || [[ "$ARG_HINT_VALUE" =~ ^\'.*\'$ ]]; then
+        pass "argument-hint is properly quoted"
+    else
+        pass "argument-hint OK"
+    fi
+fi
+
 # Count body lines (after second ---)
-BODY_LINES=$(awk '/^---$/{if(++n==2){found=1; next}} found' "$SKILL_MD" | wc -l | tr -d ' ')
+BODY_LINES=$(tr -d '\r' < "$SKILL_MD" | awk '/^---$/{if(++n==2){found=1; next}} found' | wc -l | tr -d ' ')
 
 if [[ $BODY_LINES -gt 500 ]]; then
     warn "SKILL.md body exceeds 500 lines ($BODY_LINES). Consider moving content to references/"
