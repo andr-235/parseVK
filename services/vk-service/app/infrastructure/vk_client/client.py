@@ -230,6 +230,9 @@ class VkApiClient(VkApiBaseClient):
     async def friends_get(self, **params) -> dict:
         return await self._call("friends.get", **params)
 
+    async def test_token(self) -> dict:
+        return await self._call("users.get", user_ids="1")
+
     def _filter_comments_by_author(
         self,
         items: list[dict],

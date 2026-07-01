@@ -1,7 +1,7 @@
 import uuid
 from abc import ABC, abstractmethod
 
-from app.domain.models.tasks import VkTaskRun
+from app.domain.entities.tasks import VkTaskRun
 
 
 class TaskEventsRepository(ABC):
@@ -29,6 +29,10 @@ class TaskEventsRepository(ABC):
         post_limit: int | None = None,
     ) -> VkTaskRun:
         """Initialize new VK task run execution tracker state."""
+
+    @abstractmethod
+    async def update_task_run(self, task_id: int, **kwargs) -> VkTaskRun | None:
+        """Update task run fields by task_id and return updated entity."""
 
     @abstractmethod
     async def save(self) -> None:

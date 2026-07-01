@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from app.db.base import Base
+from app.infrastructure.db.base import Base
 from sqlalchemy import (
     BigInteger,
     Boolean,

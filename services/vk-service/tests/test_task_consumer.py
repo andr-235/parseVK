@@ -53,6 +53,13 @@ class FakeRepository:
         self.runs[task_id] = run
         return run
 
+    async def update_task_run(self, task_id, **kwargs):
+        run = self.runs.get(task_id)
+        if run is not None:
+            for key, value in kwargs.items():
+                setattr(run, key, value)
+        return run
+
     async def save(self):
         self.saved += 1
 

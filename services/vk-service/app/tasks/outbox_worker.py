@@ -73,7 +73,7 @@ class OutboxPublisher:
                     event.event_type,
                     self.topic,
                 )
-                await self.repository.mark_published(event)
+                await self.repository.mark_published(event.id)
                 count += 1
             except Exception:
                 logger.exception(

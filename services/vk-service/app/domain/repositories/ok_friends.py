@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import Any
 
-from app.domain.models.ok_friends import OkFriendsExportJob, OkFriendsJobLog
+from app.domain.entities.ok_friends import OkFriendsExportJob, OkFriendsJobLog
 
 
 class OkFriendsRepository(ABC):

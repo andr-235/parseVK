@@ -27,7 +27,7 @@ async def test_outbox_repository_flow(db_session):
     assert pending[0].status == "pending"
     
     # 4. Mark Published
-    await repo.mark_published(pending[0])
+    await repo.mark_published(pending[0].id)
     
     # 5. List Pending (should be empty again)
     pending = await repo.list_pending()

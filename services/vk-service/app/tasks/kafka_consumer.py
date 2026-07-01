@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.bootstrap import get_ingestion_service, get_task_events_handler
 from app.core.config import settings
-from app.domain.models.tasks import ProcessedEvent
+from app.infrastructure.db.models.tasks import ProcessedEvent
 from app.infrastructure.db.session import SessionLocal
 
 logger = logging.getLogger(__name__)

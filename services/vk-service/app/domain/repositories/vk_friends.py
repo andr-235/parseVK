@@ -2,7 +2,7 @@ import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
-from app.domain.models.vk_friends import VkFriendsExportJob, VkFriendsJobLog
+from app.domain.entities.vk_friends import VkFriendsExportJob, VkFriendsJobLog
 
 
 class VkFriendsRepository(ABC):

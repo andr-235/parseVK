@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from uuid import UUID as PyUUID
 from uuid import uuid4
 
-from app.db.base import Base
+from app.infrastructure.db.base import Base
 from sqlalchemy import (
     DateTime,
     Index,

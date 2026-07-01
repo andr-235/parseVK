@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from app.domain.models.outbox import OutboxEvent
+from app.domain.entities.outbox import OutboxEvent
 
 
 class OutboxRepository(ABC):
@@ -27,7 +27,7 @@ class OutboxRepository(ABC):
         """FOR UPDATE SKIP LOCKED batch of pending events."""
 
     @abstractmethod
-    async def mark_published(self, event: OutboxEvent) -> None:
+    async def mark_published(self, event_id: UUID) -> None:
         """Mark event status to published and fill publish timestamp."""
 
     @abstractmethod

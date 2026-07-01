@@ -31,8 +31,8 @@ class FakeOutboxRepository:
     async def lock_pending_batch(self, limit=100):
         return self.events[:limit]
 
-    async def mark_published(self, event):
-        self.published.append(event.id)
+    async def mark_published(self, event_id):
+        self.published.append(event_id)
 
     async def mark_failed_or_retry(self, event_id, error):
         return False

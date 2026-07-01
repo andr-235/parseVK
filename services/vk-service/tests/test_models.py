@@ -6,18 +6,11 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.db.models import (
-    OutboxEvent,
-    ProcessedEvent,
-    VkAuthor,
-    VkComment,
-    VkFriendsExportJob,
-    VkFriendsJobLog,
-    VkFriendsRecord,
-    VkGroup,
-    VkPost,
-    VkTaskRun,
-)
+from app.infrastructure.db.models.ok_friends import OkFriendsExportJob, OkFriendsJobLog, OkFriendsRecord
+from app.infrastructure.db.models.outbox import OutboxEvent
+from app.infrastructure.db.models.tasks import ProcessedEvent, VkTaskRun
+from app.infrastructure.db.models.vk_friends import VkFriendsExportJob, VkFriendsJobLog, VkFriendsRecord
+from app.infrastructure.db.models.vk_ingestion import VkAuthor, VkComment, VkGroup, VkPost
 
 
 def constraint_names(model) -> set[str]:

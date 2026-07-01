@@ -14,22 +14,22 @@ use_service_path()
 
 # Import session module with a name that doesn't conflict with the db_session fixture
 import app.infrastructure.db.session as session_module
-from app.db.base import Base
-from app.domain.models.ok_friends import (  # noqa: F401
+from app.infrastructure.db.base import Base
+from app.infrastructure.db.models.ok_friends import (  # noqa: F401
     OkFriendsExportJob,
     OkFriendsJobLog,
     OkFriendsRecord,
 )
-from app.domain.models.outbox import OutboxEvent  # noqa: F401
-from app.domain.models.tasks import ProcessedEvent, VkTaskRun  # noqa: F401
-from app.domain.models.vk_friends import (  # noqa: F401
+from app.infrastructure.db.models.outbox import OutboxEvent  # noqa: F401
+from app.infrastructure.db.models.tasks import ProcessedEvent, VkTaskRun  # noqa: F401
+from app.infrastructure.db.models.vk_friends import (  # noqa: F401
     VkFriendsExportJob,
     VkFriendsJobLog,
     VkFriendsRecord,
 )
 
 # Ensure all models are registered
-from app.domain.models.vk_ingestion import VkAuthor, VkComment, VkGroup, VkPost  # noqa: F401
+from app.infrastructure.db.models.vk_ingestion import VkAuthor, VkComment, VkGroup, VkPost  # noqa: F401
 from sqlalchemy.dialects.postgresql import JSONB
 
 # Add compiler support for JSONB on SQLite

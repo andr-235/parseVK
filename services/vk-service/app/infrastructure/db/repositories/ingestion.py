@@ -4,7 +4,7 @@ from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.models.vk_ingestion import VkAuthor, VkComment, VkGroup, VkPost
+from app.infrastructure.db.models.vk_ingestion import VkAuthor, VkComment, VkGroup, VkPost
 from app.domain.repositories.ingestion import IngestionRepository
 
 
