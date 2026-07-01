@@ -1,6 +1,6 @@
 import type { RefObject } from 'react'
 import { Check, X } from 'lucide-react'
-import { Spinner } from '../../../components/ui/Spinner'
+import { Spinner } from '../../../components/ui'
 import type { FriendsExportStreamState } from '../../../shared/hooks/useFriendsExportStream'
 import { ExportLogList } from './ExportLogList'
 

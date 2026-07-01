@@ -67,7 +67,7 @@ export function FriendsExportForm<TParams extends Record<string, string | number
             placeholder={placeholder}
             disabled={disabled}
             aria-invalid={!!error}
-            className="h-10 w-full basis-auto"
+            className="w-full basis-auto"
           />
         </div>
         <Button
@@ -76,7 +76,7 @@ export function FriendsExportForm<TParams extends Record<string, string | number
           size="md"
           disabled={disabled || isLoading}
           icon={isLoading ? undefined : <Play size={16} aria-hidden="true" />}
-          className="h-10 w-full lg:w-auto"
+          className="h-8 w-full lg:w-auto"
         >
           {isLoading ? (
             <span className="flex items-center gap-1.5">
