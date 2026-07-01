@@ -4,6 +4,7 @@ import { FeedbackToast } from '../../components/ui'
 import { PageShell } from '../../components/layout/PageShell'
 import { useFeedback } from '../../shared/hooks/useFeedback'
 import { useFriendsExportStream } from '../../shared/hooks/useFriendsExportStream'
+import { useKeyPress } from '../../shared/hooks/useKeyPress'
 import type { FriendsExportStartResponse } from '../../shared/api/friends-export-types'
 import { ExportWorkspace } from './components/ExportWorkspace'
 import { formatError } from '../../shared/utils/error'
@@ -93,6 +94,22 @@ export function FriendsExportPage<TParams>({ config }: FriendsExportPageProps<TP
   }, [stream.status, stream.error, showFeedback, config.platform])
 
   const isStreamActive = stream.status === 'running' || stream.status === 'connecting'
+
+  useKeyPress('Escape', () => {
+    if (!isStreamActive) {
+      dismissFeedback()
+    }
+  }, !isStreamActive)
+
+  useEffect(() => {
+    if (stream.status === 'done') {
+      const btn = document.getElementById('export-download-btn')
+      if (btn) setTimeout(() => btn.focus(), 100)
+    } else if (stream.status === 'error') {
+      const btn = document.getElementById('export-retry-btn')
+      if (btn) setTimeout(() => btn.focus(), 100)
+    }
+  }, [stream.status])
 
   useEffect(() => {
     if (typeof logEndRef.current?.scrollIntoView === 'function') {

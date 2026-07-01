@@ -30,7 +30,7 @@ export function ExportLogList({ logs, endRef }: ExportLogListProps) {
       </summary>
       <div className="max-h-56 space-y-1 overflow-y-auto border-t border-border px-4 py-3 font-mono text-xs leading-relaxed">
         {logEvents.map((event, index) => (
-          <div key={`${event.data.message}-${index}`} className={getLogClassName(event.data.level)}>
+          <div key={index} className={getLogClassName(event.data.level)}>
             {event.data.message}
           </div>
         ))}

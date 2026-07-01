@@ -23,7 +23,7 @@ export function ExportResultsPanel({ stream, onDownload, onReset }: ExportResult
         </p>
 
         <div className="flex flex-wrap gap-2">
-          <Button variant="primary" onClick={onDownload} disabled={!canDownload} icon={<Download size={16} aria-hidden="true" />}>
+          <Button id="export-download-btn" variant="primary" onClick={onDownload} disabled={!canDownload} icon={<Download size={16} aria-hidden="true" />}>
             Скачать XLSX
           </Button>
           <Button variant="secondary" onClick={onReset} icon={<RefreshCw size={16} aria-hidden="true" />}>

@@ -73,7 +73,7 @@ export function ExportStatusPanel({ stream, logEndRef, onRetry }: ExportStatusPa
               <span>{stream.error || 'Не удалось выполнить экспорт'}</span>
               {onRetry && (
                 <Button
-                 
+                  id="export-retry-btn"
                   variant="ghost"
                   semantic="danger"
                   size="xs"
