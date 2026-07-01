@@ -1,10 +1,10 @@
-from typing import Any
-
 from app.core.security import require_internal_token
 from app.modules.listings.dependencies import get_listings_service
+from app.modules.listings.schemas import ListingImportPayload, ListingUpdateRequest, ListingsListResponse
 from app.modules.listings.service import ListingsService
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import PlainTextResponse
+from pydantic import ValidationError
 
 router = APIRouter(
     prefix="/internal/content",
@@ -13,8 +13,7 @@ router = APIRouter(
 )
 
 
-
-@router.get("/listings")
+@router.get("/listings", response_model=ListingsListResponse)
 async def list_listings(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=25, ge=1, le=100, alias="pageSize"),
@@ -62,7 +61,7 @@ async def export_listings(
 @router.patch("/listings/{listing_id:int}")
 async def update_listing(
     listing_id: int,
-    payload: dict[str, Any],
+    payload: ListingUpdateRequest,
     service: ListingsService = Depends(get_listings_service),
 ):
     return await service.update_listing(listing_id, payload)
@@ -83,16 +82,30 @@ async def import_data(
     service: ListingsService = Depends(get_listings_service),
 ):
     try:
-        payload = await request.json()
-        if isinstance(payload, list):
-            payload = {"listings": payload}
-        elif isinstance(payload, dict) and "listings" not in payload:
-            payload = {"listings": [payload]}
-        return await service.import_listings(payload)
-    except HTTPException as exc:
-        if isinstance(exc.detail, dict) and "message" in exc.detail:
-            return JSONResponse(status_code=exc.status_code, content=exc.detail)
-        raise
+        raw = await request.json()
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "Неверный формат запроса импорта", "errors": ["Неверный JSON"]},
+        )
+
+    if isinstance(raw, list):
+        raw = {"listings": raw}
+    elif isinstance(raw, dict) and "listings" not in raw:
+        raw = {"listings": [raw]}
+
+    try:
+        payload = ListingImportPayload.model_validate(raw)
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Данные объявлений содержат ошибки",
+                "errors": [str(e) for e in exc.errors()],
+            },
+        )
+
+    return await service.import_listings(payload)
 
 
 def normalize_text(value: str | None) -> str | None:

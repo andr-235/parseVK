@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
 
 from app.core.config import settings
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 from prometheus_fastapi_instrumentator import Instrumentator
 
 
@@ -12,6 +14,16 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, lifespan=lifespan)
+
+    @app.exception_handler(ValidationError)
+    async def validation_exception_handler(request: Request, exc: ValidationError):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "message": "Данные объявлений содержат ошибки",
+                "errors": [str(e) for e in exc.errors()],
+            },
+        )
 
     @app.get("/health")
     async def health() -> dict[str, str]:
