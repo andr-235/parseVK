@@ -270,6 +270,16 @@ Codex должен остановиться на стадии PR и запрос
 * database migrations;
 * крупный refactor вне рамок задачи.
 
+### Локальный мердж после коммита (auto-merge)
+
+После каждого коммита в feature-ветку (если пользователь не сказал иного):
+
+1. Переключиться на default branch (`main`)
+2. Сделать `git merge <feature-branch>` (fast-forward если возможно)
+3. Удалить feature-ветку: `git branch -d <feature-branch>`
+
+Этот workflow заменяет GitHub PR для мелких задач. Для крупных изменений (см. список выше) используй `parsevkctl task pr` и GitHub PR.
+
 ### Запрещённые действия
 
 Codex не должен выполнять без явного запроса пользователя:
