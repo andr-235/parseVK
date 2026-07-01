@@ -392,7 +392,7 @@ Codex должен делать не максимальное количеств
 * Для запуска команд используй `["bash", ...]` с явным `workdir`.
 * Избегай разрушительных git-команд (`reset --hard`, `rebase`, `push --force`) без прямого запроса.
 * По умолчанию предполагай UTF-8, если не указано иное.
-* **Стек проекта:** Python 3.12+ (FastAPI, SQLAlchemy 2.0 async), фронтенд React 19 + Vite 8 + Tailwind CSS 4. Подробнее — `INSTRUCTIONS.md`.
+* **Стек проекта:** Python 3.12+ (FastAPI, SQLAlchemy 2.0 async), фронтенд React 19 + Vite 8 + Tailwind CSS 4. Подробнее — `docs/getting-started.md` и `docs/architecture.md`.
 
 ### Окружение
 
@@ -589,7 +589,7 @@ cache = {}
 | .ai-factory/ARCHITECTURE.md | Architecture guidelines (Microservices + Three-Tier) |
 | .ai-factory/ROADMAP.md | Project roadmap and milestones |
 | .ai-factory/rules/base.md | Auto-detected codebase conventions and rules |
-| INSTRUCTIONS.md | Detailed development setup and runbook |
+| docs/getting-started.md | Detailed development setup and runbook |
 | docs/api.md | API Gateway endpoints |
 | docs/configuration.md | Environment variables and secrets |
 | docs/testing.md | Test setup (pytest, vitest, go test) |

@@ -67,7 +67,16 @@ services/<name>/
 
 > Некоторые сервисы (например, `vk-service`) используют **слоистую архитектуру** (Layered Architecture) вместо модульной: Presentation → Business Logic → Domain → Infrastructure. Это обеспечивает строгое разделение ответственности и Dependency Rule.
 
-Все сервисы билдятся через **Hatchling**. Общая библиотека — `libs/py/common/`.
+Все сервисы билдятся через **Hatchling**. Общая библиотека — `libs/py/common/` (shared schemas, модели SQLAlchemy, исключения, Kafka-хелперы). Базовый класс Pydantic-схем — `CamelModel` из `common.schemas` (авто-трансляция camelCase ↔ snake_case).
+
+### Docker-образы
+
+| Сервис | Базовый образ |
+|--------|-------------|
+| Python-микросервисы | `python:3.12.13-slim` + `uv:0.11.6` (multi-stage) |
+| Фронтенд (build) | `oven/bun:1-alpine` → **production:** `nginx:alpine` |
+
+Порты наружу: 3002 (gateway), 8080 (frontend), 3001 (grafana), 9090 (prometheus). Остальные — внутри Docker-сети.
 
 ## API Gateway
 
@@ -96,9 +105,47 @@ Issue → Task-ветка → Реализация → PR → Review → Merge
 ```
 
 - **Default branch:** `fastapi-microservices-rewrite`
-- **Ветки:** `<type>/<issue-number>-<short-summary>`
-- **Коммиты:** Conventional Commits на английском
-- **AI-автоматизация:** `tools/parsevkctl-go` (Go CLI)
+- **Ветки:** `<type>/<issue-number>-<short-summary>` (напр. `feat/127-moderation-service`). AI-ветки: `ai/mbp-<issue-number>-<slug>`
+- **Коммиты:** Conventional Commits на английском:
+  ```
+  feat(vk-service): add wall post pagination
+  fix(api-gateway): handle empty refresh token
+  chore(deps): bump aiokafka to 0.14
+  ```
+
+**CLI автоматизации (parsevkctl):**
+
+```
+cd tools/parsevkctl-go
+go run ./cmd/parsevkctl task create "Title" --body "desc"
+go run ./cmd/parsevkctl task start ISSUE_NUMBER
+go run ./cmd/parsevkctl task pr ISSUE_NUMBER
+go run ./cmd/parsevkctl task merge ISSUE_NUMBER
+```
+
+## AI-assisted разработка
+
+Репозиторий настроен на полный AI-цикл разработки:
+
+| Артефакт | Назначение |
+|---|---|
+| `AGENTS.md` | Правила для AI-агента (Codex) |
+| `.agents/skills/` | AI-скиллы (планирование, реализация, PR, merge, handoff) |
+| `.opencode/` | Конфигурация AI-агентов и правила безопасности |
+
+Все AI-инструкции — в `AGENTS.md`. Новые разработчики должны его прочитать в первую очередь.
+
+## Антипаттерны (запрещено)
+
+- **Бизнес-логика в Router или Repository** — только Router маршрутизирует, Repository читает/пишет, Service содержит бизнес-логику
+- **Толстые сервисы** — разбивайте на модули по фичам (`app/modules/`)
+- **Файлы > 100-150 строк** — требуют декомпозиции (исключение: конфиги, миграции alembic, автогенерация)
+- **Синхронные цепочки сервисов** — используйте Kafka для асинхронных сценариев
+- **Shared database** — каждый сервис владеет своей БД, доступ к чужим данным только через API
+- **Тихие ошибки** — никогда `except: pass`, всегда логируйте причину
+- **Нет идемпотентности Kafka-consumer'ов** — повторная доставка штатна, consumer должен быть идемпотентным
+- **Магические числа и хардкод** — все константы в конфиг или переменные окружения
+- **Нет типов** — Python-код обязан иметь type hints, Pydantic схемы для всех входящих/исходящих данных
 
 ## См. также
 
