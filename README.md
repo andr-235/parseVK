@@ -44,9 +44,9 @@ curl http://localhost:3002/api/v1/tasks \
 | [Configuration](docs/configuration.md) | Переменные окружения, secrets |
 | [Testing](docs/testing.md) | Тесты: pytest, vitest, go test |
 | [Deploy Runbook](docs/deploy-runbook.md) | Production deployment |
-| [Design System](DESIGN.md) | Дизайн-токены, тема оформления |
+| [Design System](docs/design.md) | Дизайн-токены, тема оформления |
+| [PRODUCT](docs/product.md) | Описание продукта и пользователей |
 | [AGENTS](AGENTS.md) | AI Playbook для разработчиков |
-| [PRODUCT](PRODUCT.md) | Описание продукта и пользователей |
 | [ADR](docs/adr/) | Architecture Decision Records |
 
 ## Лицензия

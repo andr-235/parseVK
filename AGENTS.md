@@ -577,8 +577,8 @@ cache = {}
 | Configuration | docs/configuration.md | Environment variables and secrets |
 | Testing | docs/testing.md | Test setup (pytest, vitest, go test) |
 | Deploy Runbook | docs/deploy-runbook.md | Production deployment guide |
-| Design System | DESIGN.md | Design tokens, theme, components |
-| Product | PRODUCT.md | Product requirements and user stories |
+| Design System | docs/design.md | Design tokens, theme, components |
+| Product | docs/product.md | Product requirements and user stories |
 
 ## AI Context Files
 
@@ -594,8 +594,7 @@ cache = {}
 | docs/configuration.md | Environment variables and secrets |
 | docs/testing.md | Test setup (pytest, vitest, go test) |
 | docs/deploy-runbook.md | Production deployment guide |
-| DESIGN.md | Design system tokens and component guidelines |
-| PRODUCT.md | Product requirements and user stories |
-| GEMINI.md | Legacy Gemini agent playbook |
+| docs/design.md | Design system tokens and component guidelines |
+| docs/product.md | Product requirements and user stories |
 
 ---

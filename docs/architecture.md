@@ -48,7 +48,12 @@ services/<name>/
   app/
     core/         # config (pydantic-settings), dependencies, exceptions
     modules/      # feature-модули (router, service, repository, schemas)
+    api/          # presentation layer (routers, schemas) — альтернатива modules
+    services/     # business logic layer
+    domain/       # domain entities + repository interfaces
+    infrastructure/  # adapters (DB, HTTP clients, Kafka)
     db/           # SQLAlchemy models, session factory
+    tasks/        # background workers (Kafka consumer, outbox)
     main.py       # FastAPI app factory / create_app()
   alembic/        # миграции
   tests/
@@ -59,6 +64,8 @@ services/<name>/
 - **Router** — FastAPI-роуты, валидация Pydantic, авторизация
 - **Service** — бизнес-логика, оркестрация вызовов
 - **Repository** — чтение/запись данных (SQLAlchemy)
+
+> Некоторые сервисы (например, `vk-service`) используют **слоистую архитектуру** (Layered Architecture) вместо модульной: Presentation → Business Logic → Domain → Infrastructure. Это обеспечивает строгое разделение ответственности и Dependency Rule.
 
 Все сервисы билдятся через **Hatchling**. Общая библиотека — `libs/py/common/`.
 
