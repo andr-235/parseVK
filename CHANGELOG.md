@@ -1,3 +1,10 @@
+# [0.55.0](https://github.com/andr-235/parseVK/compare/v0.54.1...v0.55.0) (2026-07-01)
+
+
+### Features
+
+* **listings-service:** add pydantic schemas and refactor service layer ([b5deef0](https://github.com/andr-235/parseVK/commit/b5deef075b88e8902f02184607420416cfddddf2))
+
 ## [0.54.1](https://github.com/andr-235/parseVK/compare/v0.54.0...v0.54.1) (2026-07-01)
 
 
