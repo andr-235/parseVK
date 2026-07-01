@@ -36,6 +36,8 @@ const idleState = {
   status: 'idle' as const,
   xlsxPath: null,
   error: null,
+  retryAttempt: 0,
+  maxRetries: 5,
   reset: vi.fn(),
 }
 
@@ -47,6 +49,8 @@ const runningState = {
   status: 'running' as const,
   xlsxPath: null,
   error: null,
+  retryAttempt: 0,
+  maxRetries: 5,
   reset: vi.fn(),
 }
 
@@ -58,6 +62,8 @@ const doneState = {
   status: 'done' as const,
   xlsxPath: '/tmp/file.xlsx',
   error: null,
+  retryAttempt: 0,
+  maxRetries: 5,
   reset: vi.fn(),
 }
 
@@ -67,6 +73,8 @@ const errorState = {
   status: 'error' as const,
   xlsxPath: null,
   error: 'Export failed',
+  retryAttempt: 0,
+  maxRetries: 5,
   reset: vi.fn(),
 }
 

@@ -36,6 +36,8 @@ const idleState = {
   status: 'idle' as const,
   xlsxPath: null,
   error: null,
+  retryAttempt: 0,
+  maxRetries: 5,
   reset: vi.fn(),
 }
 
@@ -47,6 +49,32 @@ const doneState = {
   status: 'done' as const,
   xlsxPath: '/tmp/ok.xlsx',
   error: null,
+  retryAttempt: 0,
+  maxRetries: 5,
+  reset: vi.fn(),
+}
+
+const runningState = {
+  logs: [
+    { type: 'log', data: { level: 'info' as const, message: 'Fetching friends...', meta: null } },
+  ],
+  progress: { fetchedCount: 10, totalCount: 50 },
+  status: 'running' as const,
+  xlsxPath: null,
+  error: null,
+  retryAttempt: 0,
+  maxRetries: 5,
+  reset: vi.fn(),
+}
+
+const errorState = {
+  logs: [],
+  progress: { fetchedCount: 0, totalCount: 0 },
+  status: 'error' as const,
+  xlsxPath: null,
+  error: 'Export failed',
+  retryAttempt: 0,
+  maxRetries: 5,
   reset: vi.fn(),
 }
 
@@ -113,5 +141,28 @@ describe('OkFriendsExportPage', () => {
     await user.click(screen.getByRole('button', { name: 'Запустить экспорт' }))
     await user.click(screen.getByRole('button', { name: 'Скачать XLSX' }))
     expect(mockDownload).toHaveBeenCalledWith('job-1')
+  })
+
+  it('shows running state with progress and logs', () => {
+    mockUseStream.mockReturnValue(runningState)
+    render(<OkFriendsExportPage />, { wrapper: createWrapper() })
+    expect(screen.getByText('Выполняется')).toBeInTheDocument()
+    expect(screen.getByText('Fetching friends...')).toBeInTheDocument()
+  })
+
+  it('shows error state', () => {
+    mockUseStream.mockReturnValue(errorState)
+    render(<OkFriendsExportPage />, { wrapper: createWrapper() })
+    expect(screen.getAllByText('Export failed').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByRole('button', { name: 'Повторить' })).toBeInTheDocument()
+  })
+
+  it('resets state on "Новый экспорт" click', async () => {
+    const mockReset = vi.fn()
+    mockUseStream.mockReturnValue({ ...doneState, reset: mockReset })
+    const user = userEvent.setup()
+    render(<OkFriendsExportPage />, { wrapper: createWrapper() })
+    await user.click(screen.getByRole('button', { name: 'Новый экспорт' }))
+    expect(mockReset).toHaveBeenCalled()
   })
 })
