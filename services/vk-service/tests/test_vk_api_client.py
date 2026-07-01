@@ -123,3 +123,81 @@ async def test_search_groups_by_region_uses_city_title_for_empty_query():
     assert searched_queries[1] == "Биробиджан"
     assert searched_queries[2] == "Облучье"
     assert len(results) == 2
+
+
+# ---------------------------------------------------------------------------
+# Parameter capture tests for remaining API methods
+# ---------------------------------------------------------------------------
+
+class TestVkApiMethodParams:
+    """Verify each public method passes correct method name and params to _call."""
+
+    @pytest.fixture
+    def client(self):
+        return VkApiClient(token="fake-token")
+
+    @pytest.mark.anyio
+    async def test_get_user_photos_passes_correct_params(self, client):
+        mock_call = AsyncMock(return_value={"items": [{"id": 1}]})
+        client._users._call = mock_call
+
+        result = await client.get_user_photos(123, count=5, offset=10)
+
+        assert result == [{"id": 1}]
+        mock_call.assert_awaited_once_with(
+            "photos.getAll",
+            owner_id=123, count=5, offset=10, extended=0, photo_sizes=1,
+        )
+
+    @pytest.mark.anyio
+    async def test_get_users_passes_correct_params(self, client):
+        mock_call = AsyncMock(return_value=[{"id": 1, "first_name": "John"}])
+        client._users._call = mock_call
+
+        result = await client.get_users([1, 2, 3], fields=["photo_50", "domain"])
+
+        assert len(result) == 1
+        mock_call.assert_awaited_once_with(
+            "users.get",
+            user_ids="1,2,3", fields="photo_50,domain",
+        )
+
+    @pytest.mark.anyio
+    async def test_friends_get_passes_correct_params(self, client):
+        mock_call = AsyncMock(return_value={"items": [{"id": 1}]})
+        client._friends._call = mock_call
+
+        result = await client.friends_get(user_id=123, count=10)
+
+        assert result == {"items": [{"id": 1}]}
+        mock_call.assert_awaited_once_with("friends.get", user_id=123, count=10)
+
+    @pytest.mark.anyio
+    async def test_test_token_passes_correct_params(self, client):
+        mock_call = AsyncMock(return_value=[{"id": 1}])
+        client._users._call = mock_call
+
+        result = await client.test_token()
+
+        assert result == [{"id": 1}]
+        mock_call.assert_awaited_once_with("users.get", user_ids="1")
+
+    @pytest.mark.anyio
+    async def test_get_author_comments_passes_correct_params(self, client):
+        mock_call = AsyncMock(return_value={
+            "items": [{"id": 1, "from_id": 100, "date": 1000}],
+            "count": 1,
+        })
+        client._posts._call = mock_call
+
+        result = await client.get_author_comments_for_post(
+            owner_id=-1, post_id=42, author_vk_id=100,
+            baseline=None, batch_size=100, max_pages=1, thread_items_count=10,
+        )
+
+        assert len(result) == 1
+        mock_call.assert_awaited_once_with(
+            "wall.getComments",
+            owner_id=-1, post_id=42, need_likes=0, extended=0,
+            count=100, offset=0, sort="desc", thread_items_count=10,
+        )
