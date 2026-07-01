@@ -2,8 +2,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
-from pydantic.alias_generators import to_camel
+from pydantic import BaseModel
+from common.schemas import CamelModel
 
 
 class JobStatus(str, Enum):
@@ -11,13 +11,6 @@ class JobStatus(str, Enum):
     RUNNING = "RUNNING"
     DONE = "DONE"
     FAILED = "FAILED"
-
-class CamelModel(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True
-    )
 
 class VkFriendsExportStartRequest(BaseModel):
     params: dict[str, Any]

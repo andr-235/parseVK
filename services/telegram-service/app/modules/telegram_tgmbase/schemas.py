@@ -3,18 +3,18 @@ from pydantic import BaseModel, ConfigDict, Field
 # Схемы импорта.
 
 class DlImportBatchSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
     id: str
     status: str
     filesTotal: int = Field(..., alias="filesTotal")
     filesSuccess: int = Field(..., alias="filesSuccess")
     filesFailed: int = Field(..., alias="filesFailed")
 
-    class Config:
-        populate_by_name = True
-        from_attributes = True
-
 
 class DlImportFileSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
     id: str
     originalFileName: str = Field(..., alias="originalFileName")
     status: str
@@ -25,10 +25,6 @@ class DlImportFileSchema(BaseModel):
     replacedFileId: str | None = Field(None, alias="replacedFileId")
     error: str | None = None
 
-    class Config:
-        populate_by_name = True
-        from_attributes = True
-
 
 class TelegramDlImportUploadResponseSchema(BaseModel):
     batch: DlImportBatchSchema
@@ -36,6 +32,8 @@ class TelegramDlImportUploadResponseSchema(BaseModel):
 
 
 class TelegramDlImportContactSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
     id: str
     importFileId: str | None = Field(None, alias="importFileId")
     originalFileName: str = Field(..., alias="originalFileName")
@@ -63,10 +61,6 @@ class TelegramDlImportContactSchema(BaseModel):
     sourceRowIndex: int = Field(..., alias="sourceRowIndex")
     createdAt: str = Field(..., alias="createdAt")
 
-    class Config:
-        populate_by_name = True
-        from_attributes = True
-
 
 class TelegramDlImportContactsPageSchema(BaseModel):
     items: list[TelegramDlImportContactSchema]
@@ -78,6 +72,8 @@ class TelegramDlImportContactsPageSchema(BaseModel):
 # Схемы Telegram-сопоставлений.
 
 class TelegramDlMatchRunSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
     id: str
     status: str
     contactsTotal: int = Field(..., alias="contactsTotal")
@@ -89,12 +85,10 @@ class TelegramDlMatchRunSchema(BaseModel):
     finishedAt: str | None = Field(None, alias="finishedAt")
     error: str | None = None
 
-    class Config:
-        populate_by_name = True
-        from_attributes = True
-
 
 class TelegramDlMatchResultContactSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     id: str
     importFileId: str | None = Field(None, alias="importFileId")
     originalFileName: str | None = Field(None, alias="originalFileName")
@@ -106,9 +100,6 @@ class TelegramDlMatchResultContactSchema(BaseModel):
     fullName: str | None = Field(None, alias="fullName")
     region: str | None = None
     sourceRowIndex: int | None = Field(None, alias="sourceRowIndex")
-
-    class Config:
-        populate_by_name = True
 
 
 class TelegramDlMatchResultRelatedChatSchema(BaseModel):
@@ -139,6 +130,8 @@ class TelegramDlMatchResultUserSchema(BaseModel):
 
 
 class TelegramDlMatchResultSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
     id: str
     runId: str = Field(..., alias="runId")
     dlContactId: str = Field(..., alias="dlContactId")
@@ -151,51 +144,45 @@ class TelegramDlMatchResultSchema(BaseModel):
     user: TelegramDlMatchResultUserSchema | None = None
     createdAt: str = Field(..., alias="createdAt")
 
-    class Config:
-        populate_by_name = True
-        from_attributes = True
-
 
 class TelegramDlMatchMessageSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     messageId: str = Field(..., alias="messageId")
     messageDate: str | None = Field(None, alias="messageDate")
     text: str | None = None
 
-    class Config:
-        populate_by_name = True
-
 
 class TelegramDlMatchResultMessagesGroupSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     peerId: str = Field(..., alias="peerId")
     chatType: str = Field(..., alias="chatType")
     title: str
     isExcluded: bool = Field(..., alias="isExcluded")
     messages: list[TelegramDlMatchMessageSchema]
 
-    class Config:
-        populate_by_name = True
-
 
 class TelegramDlMatchExcludeChatSchema(BaseModel):
-    peerId: str = Field(..., alias="peerId")
+    model_config = ConfigDict(populate_by_name=True)
 
-    class Config:
-        populate_by_name = True
+    peerId: str = Field(..., alias="peerId")
 
 
 # Раздел поиска по базе tgmbase (tgmbase-search).
 
 class TgmbaseSearchRequestSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     queries: list[str]
     searchId: str | None = Field(None, alias="searchId")
     page: int | None = 1
     pageSize: int | None = Field(20, alias="pageSize")
 
-    class Config:
-        populate_by_name = True
-
 
 class TgmbaseProfileSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
     id: str
     telegramId: str = Field(..., alias="telegramId")
     username: str | None = None
@@ -208,23 +195,19 @@ class TgmbaseProfileSchema(BaseModel):
     premium: bool
     updatedAt: str | None = Field(None, alias="updatedAt")
 
-    class Config:
-        populate_by_name = True
-        from_attributes = True
-
 
 class TgmbaseCandidateSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
     telegramId: str = Field(..., alias="telegramId")
     username: str | None = None
     phoneNumber: str | None = Field(None, alias="phoneNumber")
     fullName: str = Field(..., alias="fullName")
 
-    class Config:
-        populate_by_name = True
-        from_attributes = True
-
 
 class TgmbasePeerSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
     peerId: str = Field(..., alias="peerId")
     title: str
     username: str | None = None
@@ -232,12 +215,10 @@ class TgmbasePeerSchema(BaseModel):
     participantsCount: int | None = Field(None, alias="participantsCount")
     region: int | None = None
 
-    class Config:
-        populate_by_name = True
-        from_attributes = True
-
 
 class TgmbaseContactSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     telegramId: str = Field(..., alias="telegramId")
     username: str | None = None
     phoneNumber: str | None = Field(None, alias="phoneNumber")
@@ -245,11 +226,10 @@ class TgmbaseContactSchema(BaseModel):
     commonPeersCount: int = Field(..., alias="commonPeersCount")
     messageCount: int = Field(..., alias="messageCount")
 
-    class Config:
-        populate_by_name = True
-
 
 class TgmbaseMessageSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     id: str
     messageId: str = Field(..., alias="messageId")
     peerId: str = Field(..., alias="peerId")
@@ -262,19 +242,15 @@ class TgmbaseMessageSchema(BaseModel):
     hasMedia: bool = Field(..., alias="hasMedia")
     hasKeywords: bool = Field(..., alias="hasKeywords")
 
-    class Config:
-        populate_by_name = True
-
 
 class TgmbaseMessagesPageSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     items: list[TgmbaseMessageSchema]
     page: int
     pageSize: int = Field(..., alias="pageSize")
     total: int
     hasMore: bool = Field(..., alias="hasMore")
-
-    class Config:
-        populate_by_name = True
 
 
 class TgmbaseSearchItemStatsSchema(BaseModel):
@@ -284,6 +260,8 @@ class TgmbaseSearchItemStatsSchema(BaseModel):
 
 
 class TgmbaseSearchItemSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     query: str
     normalizedQuery: str = Field(..., alias="normalizedQuery")
     queryType: str = Field(..., alias="queryType")
@@ -296,20 +274,16 @@ class TgmbaseSearchItemSchema(BaseModel):
     stats: TgmbaseSearchItemStatsSchema
     error: str | None = None
 
-    class Config:
-        populate_by_name = True
-
 
 class TgmbaseSearchSummarySchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     total: int
     found: int
     notFound: int = Field(..., alias="notFound")
     ambiguous: int
     invalid: int
     error: int
-
-    class Config:
-        populate_by_name = True
 
 
 class TgmbaseSearchResponseSchema(BaseModel):

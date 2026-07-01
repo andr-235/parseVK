@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from common.events.types import ImEventType, TaskEventType, VkEventType
 
@@ -30,7 +30,7 @@ class WireEvent(BaseModel):
     payload: dict[str, Any]
     created_at: str
 
-    model_config = {"extra": "ignore"}
+    model_config = ConfigDict(extra="ignore")
 
 
 class ConsumerEvent(BaseModel):

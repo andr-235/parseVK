@@ -11,6 +11,10 @@ def use_service_path() -> None:
     if str(service_root) not in sys.path:
         sys.path.insert(0, str(service_root))
     
+    libs_common = str(service_root.parent.parent / "libs" / "py" / "common")
+    if libs_common not in sys.path:
+        sys.path.insert(0, libs_common)
+    
     # Only clear sys.modules on the very first initialization (before tests start running)
     # to prevent breaking module identity and unittest.mock patches across test files.
     if not _initialized:

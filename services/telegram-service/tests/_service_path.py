@@ -23,6 +23,9 @@ def use_service_path() -> None:
         )
 
     sys.path.insert(0, service_root)
+    libs_common = str(Path(service_root).parent.parent / "libs" / "py" / "common")
+    if libs_common not in sys.path:
+        sys.path.insert(0, libs_common)
     for module_name in list(sys.modules):
         if module_name == "app" or module_name.startswith("app."):
             del sys.modules[module_name]
