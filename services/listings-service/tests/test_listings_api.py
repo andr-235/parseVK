@@ -11,6 +11,7 @@ use_service_path()
 
 from app.main import create_app
 from app.modules.listings.dependencies import get_listings_service
+from app.modules.listings.schemas import ListingImportPayload, ListingUpdateRequest
 
 
 @pytest.fixture
@@ -73,14 +74,20 @@ class FakeListingsService:
         return "ID,Источник\n1,avito\n", "listings_avito.csv"
 
     async def update_listing(self, listing_id, payload):
-        self.calls.append(("update", listing_id, payload))
-        return {"id": listing_id, "url": "https://example.test/flat", "images": [], "manualOverrides": []}
+        self.calls.append(("update", listing_id, payload.model_dump(exclude_unset=True, by_alias=True) if hasattr(payload, 'model_dump') else payload))
+        return {
+            "id": listing_id,
+            "url": "https://example.test/flat",
+            "images": [],
+            "manualOverrides": [],
+        }
 
     async def delete_listing(self, listing_id):
         self.calls.append(("delete", listing_id))
 
     async def import_listings(self, payload):
-        self.calls.append(("import", payload))
+        dumped = payload.model_dump(by_alias=True) if hasattr(payload, 'model_dump') else payload
+        self.calls.append(("import", dumped))
         return {"processed": 1, "created": 1, "updated": 0, "skipped": 0, "failed": 0, "errors": []}
 
 

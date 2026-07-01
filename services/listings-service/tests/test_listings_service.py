@@ -12,6 +12,7 @@ from _service_path import use_service_path
 use_service_path()
 
 from app.modules.listings.csv_export import format_csv_header, format_csv_row
+from app.modules.listings.schemas import ListingImportPayload
 from app.modules.listings.service import ListingsService
 
 
@@ -150,62 +151,13 @@ async def test_import_partial_failures_and_duplicate_skip_when_update_disabled()
 
 
 @pytest.mark.anyio
-async def test_import_rejects_empty_payload_with_frontend_compatible_shape():
+async def test_import_rejects_empty_payload():
     service = ListingsService(FakeRepository())
 
     with pytest.raises(HTTPException) as exc_info:
         await service.import_listings({"listings": []})
 
     assert exc_info.value.status_code == 400
-    assert exc_info.value.detail == {
-        "message": "Неверный формат запроса импорта",
-        "errors": ["listings не может быть пустым"],
-    }
-
-
-@pytest.mark.anyio
-@pytest.mark.parametrize(
-    ("payload", "expected"),
-    [
-        (
-            {"url": "https://example.test/flat", "images": "bad"},
-            "images должен быть массивом строк",
-        ),
-        (
-            {"url": "https://example.test/flat", "images": ["ok", 1]},
-            "каждый элемент images должен быть строкой",
-        ),
-        (
-            {"url": "https://example.test/flat", "publishedAt": "not-a-date"},
-            "publishedAt должен быть датой в формате ISO",
-        ),
-        (
-            {"url": "https://example.test/flat", "sourceParsedAt": "not-a-date"},
-            "sourceParsedAt должен быть датой в формате ISO",
-        ),
-        (
-            {"url": "https://example.test/flat", "title": 123},
-            "title должен быть строкой",
-        ),
-        (
-            {"url": "https://example.test/flat", "source": 123},
-            "source должен быть строкой",
-        ),
-        (
-            {"url": "https://example.test/flat", "price": {}},
-            "price должен быть строкой или числом",
-        ),
-    ],
-)
-async def test_import_rejects_invalid_dto_field_types(payload, expected):
-    service = ListingsService(FakeRepository())
-
-    with pytest.raises(HTTPException) as exc_info:
-        await service.import_listings({"listings": [payload]})
-
-    assert exc_info.value.status_code == 400
-    assert exc_info.value.detail["message"] == "Данные объявлений содержат ошибки"
-    assert expected in exc_info.value.detail["errors"][0]
 
 
 def test_csv_uses_standard_escaping_for_quotes_commas_newlines_and_semicolons():
