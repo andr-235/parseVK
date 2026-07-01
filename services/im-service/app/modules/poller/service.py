@@ -16,11 +16,20 @@ logger = logging.getLogger(__name__)
 
 
 class WappiPoller:
-    def __init__(self, repository: IngestionRepository):
+    def __init__(
+        self,
+        repository: IngestionRepository,
+        wappi_client: WappiClient | None = None,
+        max_client: MaxApiClient | None = None,
+    ):
         self.repository = repository
-        self._wappi = WappiClient()
-        self._max = MaxApiClient()
+        self._wappi = wappi_client or WappiClient()
+        self._max = max_client or MaxApiClient()
         self._last_poll: dict[str, int | None] = {}
+
+    async def close(self) -> None:
+        await self._wappi.close()
+        await self._max.close()
 
     async def start(self) -> None:
         now = int(time.time())
@@ -40,7 +49,7 @@ class WappiPoller:
         last_ts = self._last_poll.get(messenger)
 
         try:
-            chats = await asyncio.to_thread(client.list_chats)
+            chats = await client.list_chats()
         except Exception as exc:
             logger.error("Poller %s: failed to list chats: %s", messenger, exc)
             return 0
@@ -57,11 +66,11 @@ class WappiPoller:
             await self.repository.upsert_group(messenger, chat.chat_id, chat.name, chat.raw)
 
             try:
-                raw_messages = await asyncio.to_thread(
-                    client.list_messages, chat.chat_id, time_from=last_ts
-                )
+                raw_messages = await client.list_messages(chat.chat_id, time_from=last_ts)
             except Exception as exc:
-                logger.error("Poller %s: failed to list messages for %s: %s", messenger, chat.chat_id, exc)
+                logger.error(
+                    "Poller %s: failed to list messages for %s: %s", messenger, chat.chat_id, exc
+                )
                 continue
 
             if not raw_messages:
@@ -75,8 +84,10 @@ class WappiPoller:
                 )
                 total += count
             except Exception as exc:
-                logger.error("Poller %s: failed to process %d messages from %s: %s",
-                             messenger, len(raw_messages), chat.chat_id, exc)
+                logger.error(
+                    "Poller %s: failed to process %d messages from %s: %s",
+                    messenger, len(raw_messages), chat.chat_id, exc,
+                )
 
         now = int(time.time())
         self._last_poll[messenger] = now
@@ -100,9 +111,12 @@ async def run_poller_forever(repository: IngestionRepository, poll_interval: int
     await poller.start()
     logger.info("WappiPoller started (interval=%ds)", poll_interval)
 
-    while True:
-        try:
-            await poller.run()
-        except Exception as e:
-            logger.error("Poller cycle failed: %s", e, exc_info=True)
-        await asyncio.sleep(poll_interval)
+    try:
+        while True:
+            try:
+                await poller.run()
+            except Exception as e:
+                logger.error("Poller cycle failed: %s", e, exc_info=True)
+            await asyncio.sleep(poll_interval)
+    finally:
+        await poller.close()

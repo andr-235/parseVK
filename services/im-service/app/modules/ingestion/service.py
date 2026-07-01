@@ -26,24 +26,24 @@ class IngestionResult:
 
 
 class IngestionService:
-    def __init__(self, *, repository, tasks_client: TasksClient, outbox_service=None):
+    def __init__(
+        self,
+        *,
+        repository,
+        tasks_client: TasksClient,
+        outbox_service=None,
+        wappi_client: WappiClient | None = None,
+        max_client: MaxApiClient | None = None,
+    ):
         self.repository = repository
         self.tasks_client = tasks_client
         self.outbox = outbox_service
+        self._wappi = wappi_client or WappiClient()
+        self._max = max_client or MaxApiClient()
 
-    def _get_client(self, messenger: str) -> WappiClient | MaxApiClient:
-        if messenger == "max":
-            return MaxApiClient()
-        return WappiClient()
-
-    async def _fetch_chats(self, client, messenger: str) -> list[dict]:
-        import asyncio
-        chats = await asyncio.to_thread(client.list_chats)
-        return [{"chat_id": c.chat_id, "name": c.name, "raw": c.raw} for c in chats]
-
-    async def _fetch_messages(self, client, chat_id: str, from_ts: int | None) -> list[dict]:
-        import asyncio
-        return await asyncio.to_thread(client.list_messages, chat_id, time_from=from_ts)
+    async def close(self) -> None:
+        await self._wappi.close()
+        await self._max.close()
 
     async def execute(self, task_run: Any, *, correlation_id: str | None = None) -> IngestionResult:
         messenger = task_run.messenger
@@ -57,12 +57,12 @@ class IngestionService:
                 logger.warning("No groups to parse for messenger=%s", messenger)
                 return result
 
-            client = self._get_client(messenger)
+            client = self._wappi if messenger == "whatsapp" else self._max
             outbox = self.outbox
 
             for chat_id in group_ids:
                 try:
-                    raw_messages = await self._fetch_messages(client, chat_id, None)
+                    raw_messages = await client.list_messages(chat_id)
                     processed = await process_chat_messages(
                         messenger, chat_id, raw_messages,
                         include_system=settings.wappi_include_system,
