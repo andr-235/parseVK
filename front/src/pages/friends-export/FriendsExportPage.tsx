@@ -75,6 +75,13 @@ export function FriendsExportPage<TParams>({ config }: FriendsExportPageProps<TP
     stream.reset()
   }, [stream, config.platform])
 
+  const handleRetry = useCallback(() => {
+    console.log(`[FriendsExportPage] ${config.platform} export retry`)
+    dismissFeedback()
+    setJobId(null)
+    stream.reset()
+  }, [stream, config.platform, dismissFeedback])
+
   useEffect(() => {
     if (stream.status === 'done') {
       console.log(`[FriendsExportPage] ${config.platform} export completed`)
@@ -84,6 +91,8 @@ export function FriendsExportPage<TParams>({ config }: FriendsExportPageProps<TP
       showFeedback('error', stream.error || 'Ошибка экспорта')
     }
   }, [stream.status, stream.error, showFeedback, config.platform])
+
+  const isStreamActive = stream.status === 'running' || stream.status === 'connecting'
 
   useEffect(() => {
     if (typeof logEndRef.current?.scrollIntoView === 'function') {
@@ -100,7 +109,7 @@ export function FriendsExportPage<TParams>({ config }: FriendsExportPageProps<TP
         form={(
           <config.FormComponent
             onSubmit={handleExport}
-            disabled={stream.status === 'running' || stream.status === 'connecting'}
+            disabled={isStreamActive}
             isLoading={exportMutation.isPending}
           />
         )}
@@ -108,6 +117,7 @@ export function FriendsExportPage<TParams>({ config }: FriendsExportPageProps<TP
         logEndRef={logEndRef}
         onDownload={handleDownload}
         onReset={handleReset}
+        onRetry={handleRetry}
       />
     </PageShell>
   )

@@ -1,12 +1,13 @@
 import type { RefObject } from 'react'
-import { Check, X } from 'lucide-react'
-import { Spinner } from '../../../components/ui'
+import { Check, RotateCcw, X } from 'lucide-react'
+import { Button, Spinner } from '../../../components/ui'
 import type { FriendsExportStreamState } from '../../../shared/hooks/useFriendsExportStream'
 import { ExportLogList } from './ExportLogList'
 
 type ExportStatusPanelProps = {
   stream: FriendsExportStreamState
   logEndRef: RefObject<HTMLDivElement | null>
+  onRetry?: () => void
 }
 
 const statusLabel: Record<FriendsExportStreamState['status'], string> = {
@@ -25,7 +26,7 @@ const statusClassName: Record<FriendsExportStreamState['status'], string> = {
   error: 'border-danger/30 bg-danger-soft text-danger',
 }
 
-export function ExportStatusPanel({ stream, logEndRef }: ExportStatusPanelProps) {
+export function ExportStatusPanel({ stream, logEndRef, onRetry }: ExportStatusPanelProps) {
   const progressPct = stream.progress.totalCount > 0
     ? Math.round((stream.progress.fetchedCount / stream.progress.totalCount) * 100)
     : 0
@@ -43,7 +44,11 @@ export function ExportStatusPanel({ stream, logEndRef }: ExportStatusPanelProps)
             {isActive && <Spinner size={14} />}
             {stream.status === 'done' && <Check size={16} className="text-success" aria-hidden="true" />}
             {stream.status === 'error' && <X size={16} className="text-danger" aria-hidden="true" />}
-            <span>{statusLabel[stream.status]}</span>
+            <span>
+              {stream.status === 'connecting' && stream.retryAttempt > 0
+                ? `Подключение... попытка ${stream.retryAttempt}/${stream.maxRetries}`
+                : statusLabel[stream.status]}
+            </span>
           </div>
           <span className={`rounded-md border px-2 py-1 text-xs font-medium uppercase tracking-wide ${statusClassName[stream.status]}`}>
             {stream.status}
@@ -64,7 +69,21 @@ export function ExportStatusPanel({ stream, logEndRef }: ExportStatusPanelProps)
 
         {stream.status === 'error' && (
           <div className="rounded-md border border-danger/30 bg-danger-soft p-3 text-sm text-danger">
-            {stream.error || 'Не удалось выполнить экспорт'}
+            <div className="flex items-center justify-between gap-3">
+              <span>{stream.error || 'Не удалось выполнить экспорт'}</span>
+              {onRetry && (
+                <Button
+                 
+                  variant="ghost"
+                  semantic="danger"
+                  size="xs"
+                  onClick={onRetry}
+                  icon={<RotateCcw size={14} aria-hidden="true" />}
+                >
+                  Попробовать снова
+                </Button>
+              )}
+            </div>
           </div>
         )}
 

@@ -10,6 +10,8 @@ export type FriendsExportStreamState = {
   status: StreamStatus
   xlsxPath: string | null
   error: string | null
+  retryAttempt: number
+  maxRetries: number
   reset: () => void
 }
 
@@ -47,6 +49,7 @@ export function useFriendsExportStream(
   const [status, setStatus] = useState<StreamStatus>('idle')
   const [xlsxPath, setXlsxPath] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [retryAttempt, setRetryAttempt] = useState(0)
   const abortControllerRef = useRef<AbortController | null>(null)
   const statusRef = useRef<StreamStatus>('idle')
 
@@ -61,6 +64,7 @@ export function useFriendsExportStream(
     setStatusSafe('idle')
     setXlsxPath(null)
     setError(null)
+    setRetryAttempt(0)
   }, [setStatusSafe])
 
   useEffect(() => {
@@ -93,13 +97,14 @@ export function useFriendsExportStream(
 
         if (response.status === 404 && attempt < RETRY_MAX_ATTEMPTS) {
           const delay = RETRY_BASE_DELAY_MS * 2 ** attempt
-          console.log('[FIX] SSE 404, retrying', { attempt, delay, url })
+          console.log('[useFriendsExportStream] SSE 404, retrying', { attempt, delay, url })
+          setRetryAttempt(attempt + 1)
           await new Promise((resolve) => setTimeout(resolve, delay))
           return connect(attempt + 1)
         }
 
         if (!response.ok) {
-          console.warn('[FIX] SSE connection failed', { status: response.status, url })
+          console.warn('[useFriendsExportStream] SSE connection failed', { status: response.status, url })
           if (response.status === 401) {
             setError('Unauthorized — session expired')
           } else {
@@ -108,6 +113,8 @@ export function useFriendsExportStream(
           setStatusSafe('error')
           return
         }
+
+        setRetryAttempt(0)
 
         const reader = response.body?.getReader()
         if (!reader) {
@@ -178,5 +185,5 @@ export function useFriendsExportStream(
     }
   }, [jobId, streamUrlBuilder, setStatusSafe])
 
-  return { logs, progress, status, xlsxPath, error, reset }
+  return { logs, progress, status, xlsxPath, error, retryAttempt, maxRetries: RETRY_MAX_ATTEMPTS, reset }
 }

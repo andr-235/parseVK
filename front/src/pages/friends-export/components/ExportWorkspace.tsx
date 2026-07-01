@@ -10,6 +10,7 @@ type ExportWorkspaceProps = {
   logEndRef: RefObject<HTMLDivElement | null>
   onDownload: () => void
   onReset: () => void
+  onRetry?: () => void
 }
 
 export function ExportWorkspace({
@@ -19,6 +20,7 @@ export function ExportWorkspace({
   logEndRef,
   onDownload,
   onReset,
+  onRetry,
 }: ExportWorkspaceProps) {
   return (
     <div className="w-full space-y-5">
@@ -31,7 +33,7 @@ export function ExportWorkspace({
         <div className="p-5">{form}</div>
       </section>
 
-      <ExportStatusPanel stream={stream} logEndRef={logEndRef} />
+      <ExportStatusPanel stream={stream} logEndRef={logEndRef} onRetry={onRetry} />
 
       <ExportResultsPanel
         stream={stream}
