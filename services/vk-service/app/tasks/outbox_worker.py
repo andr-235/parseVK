@@ -4,9 +4,10 @@ import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
 from app.core.config import settings
 from app.infrastructure.db.repositories.outbox import SqlAlchemyOutboxRepository
-from app.infrastructure.db.session import SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -118,11 +119,11 @@ class OutboxPublisher:
             self._producer = None
 
 
-async def publish_outbox_forever() -> None:
+async def publish_outbox_forever(session_factory: async_sessionmaker) -> None:
     logger.info("VK outbox publisher starting")
     while True:
         try:
-            async with SessionLocal() as session:
+            async with session_factory() as session:
                 async with session.begin():
                     publisher = OutboxPublisher(SqlAlchemyOutboxRepository(session))
                     try:

@@ -31,3 +31,10 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
+
+def mask_token(value: str, keep: int = 4) -> str:
+    if len(value) <= keep:
+        return "****"
+    return value[:keep] + "*" * min(len(value) - keep, 8)
+
+

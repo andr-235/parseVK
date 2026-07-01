@@ -222,7 +222,7 @@ async def test_skip_due_to_retry_backoff_commits_offset_when_in_backoff():
     from app.tasks.kafka_consumer import TaskEventsConsumer
     from uuid import uuid4
 
-    consumer = TaskEventsConsumer()
+    consumer = TaskEventsConsumer(session_factory=AsyncMock())
     consumer._consumer = AsyncMock()
 
     raw_value = json.dumps({

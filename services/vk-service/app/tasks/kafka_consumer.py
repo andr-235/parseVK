@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from app.bootstrap import get_ingestion_service, get_task_events_handler
 from app.core.config import settings
 from app.infrastructure.db.models.tasks import ProcessedEvent
-from app.infrastructure.db.session import SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +30,10 @@ class TaskEventsConsumer(BaseEventConsumer):
     def __init__(
         self,
         *,
-        session_factory: async_sessionmaker | None = None,
+        session_factory: async_sessionmaker,
     ):
         super().__init__(
-            session_factory=session_factory or SessionLocal,
+            session_factory=session_factory,
             kafka_topic=settings.kafka_topic_tasks,
             bootstrap_servers=settings.kafka_bootstrap_servers,
             model_class=ProcessedEvent,

@@ -10,7 +10,7 @@ from _service_path import use_service_path
 use_service_path()
 
 from app.domain.exceptions.vk_api import VkApiAuthError
-from app.main import supervise
+from app.tasks.lifespan import supervise
 
 
 @pytest.fixture
