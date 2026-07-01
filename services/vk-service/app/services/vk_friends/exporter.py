@@ -16,10 +16,11 @@ class VkFriendsExportService:
         self.repo = repo
         self.vk_client = vk_client
 
-    async def _log(self, job_id: uuid.UUID, level: str, msg: str, meta: Any = None) -> None:
+    async def _log(self, job_id: uuid.UUID, level: str, msg: str, *args: Any, meta: Any = None) -> None:
+        formatted = msg % args if args else msg
         if hasattr(self.repo, "append_log"):
-            await self.repo.append_log(job_id, level, msg, meta)
-        logger.info(f"Job {job_id}: [{level.upper()}] {msg}")
+            await self.repo.append_log(job_id, level, formatted, meta)
+        logger.info("Job %s: [%s] %s", job_id, level.upper(), formatted)
 
     async def run_export_job(self, job_id: uuid.UUID, params: dict) -> None:
         raw_items = []
@@ -46,11 +47,10 @@ class VkFriendsExportService:
         except Exception as exc:
             err_msg = str(exc)
             await self.repo.fail_job(job_id, err_msg, fetched_count, total_count, warning)
-            await self._log(job_id, "error", f"Export failed: {err_msg}")
+            await self._log(job_id, "error", "Export failed: %s", err_msg)
 
     async def _fetch_all_friends(self, job_id: uuid.UUID, params: dict) -> tuple[list[dict], int, str | None]:
         user_id = params.get("user_id")
-
         api_params = {
             "fields": params.get("fields") or [
                 "nickname", "domain", "sex", "bdate", "city", "country",
@@ -92,15 +92,14 @@ class VkFriendsExportService:
             if request_count <= 0:
                 break
 
-            await self._log(job_id, "info", f"Calling friends.get (offset={offset}, count={request_count})")
+            await self._log(job_id, "info", "Calling friends.get (offset=%d, count=%d)", offset, request_count)
 
             try:
                 response = await self.vk_client.friends_get(
                     **{**api_params, "offset": offset, "count": request_count}
                 )
             except Exception as exc:
-                err_msg = str(exc)
-                await self._log(job_id, "error", f"VK API error: {err_msg}")
+                await self._log(job_id, "error", "VK API error: %s", str(exc))
                 raise
 
             if effective_limit is None:
@@ -116,7 +115,7 @@ class VkFriendsExportService:
                     effective_limit = min(effective_limit, hard_limit)
 
                 if hard_limit is not None and total_count > hard_limit and effective_limit == hard_limit:
-                    warning = f"VK limit: при fields максимум 5000. Выгружено 5000 из {total_count}."
+                    warning = "VK limit: при fields максимум 5000. Выгружено 5000 из %d." % total_count
                     await self._log(job_id, "warn", warning)
 
             items = response.get("items") or []
@@ -134,7 +133,11 @@ class VkFriendsExportService:
 
             fetched_count += len(page_items)
             await self.repo.update_progress(job_id, fetched_count, total_count, warning)
-            await self._log(job_id, "info", f"friends.get page fetched (offset={offset}, items={len(page_items)}, total={total_count})")
+            await self._log(
+                job_id, "info",
+                "friends.get page fetched (offset=%d, items=%d, total=%d)",
+                offset, len(page_items), total_count,
+            )
 
             if len(page_items) == 0:
                 break
@@ -147,7 +150,7 @@ class VkFriendsExportService:
             if len(items) < request_count:
                 break
 
-        await self._log(job_id, "info", f"Fetch completed (fetched={fetched_count}, total={total_count})")
+        await self._log(job_id, "info", "Fetch completed (fetched=%d, total=%d)", fetched_count, total_count)
         return raw_items, total_count, warning
 
     async def _save_to_database(self, job_id: uuid.UUID, raw_items: list[dict]) -> None:
@@ -166,17 +169,17 @@ class VkFriendsExportService:
             records.append({"vkFriendId": friend_id, "payload": item})
 
         if skipped > 0:
-            await self._log(job_id, "warn", f"Skipped friends without id: {skipped}")
+            await self._log(job_id, "warn", "Skipped friends without id: %d", skipped)
 
         for i in range(0, len(records), EXPORT_BATCH_SIZE):
-            chunk = records[i : i + EXPORT_BATCH_SIZE]
+            chunk = records[i: i + EXPORT_BATCH_SIZE]
             await self.repo.save_friends_batch(job_id, chunk)
 
-        await self._log(job_id, "info", f"Saved friend records: {len(records)}")
+        await self._log(job_id, "info", "Saved friend records: %d", len(records))
 
     async def _generate_xlsx(self, job_id: uuid.UUID, raw_items: list[dict]) -> str:
         await self._log(job_id, "info", "Generating XLSX file")
         flat_rows = [map_vk_user_to_flat_dto(item) for item in raw_items]
         xlsx_path = write_xlsx_file(str(job_id), flat_rows)
-        await self._log(job_id, "info", "XLSX generated", {"path": xlsx_path})
+        await self._log(job_id, "info", f"XLSX generated at {xlsx_path}")
         return xlsx_path

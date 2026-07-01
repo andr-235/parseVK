@@ -17,7 +17,7 @@ from app.api.schemas.ok_friends import (
 )
 from app.core.security import require_internal_token
 from app.domain.repositories.ok_friends import OkFriendsRepository
-from app.services.ok_friends_service import OkFriendsExportService
+from app.services.ok_friends.exporter import OkFriendsExportService
 
 router = APIRouter(
     prefix="/internal/ok/friends",

@@ -65,7 +65,7 @@ class OkApiClient:
     async def __aexit__(self, *args: Any) -> None:
         await self.close()
 
-    async def _call(self, method: str, is_users_info: bool = False, **params) -> Any:
+    async def _execute(self, url_path: str, method: str, *, token_in_sig: bool = False, **params) -> Any:
         if not self.access_token or not self.application_key or not self.application_secret_key:
             raise RuntimeError("OK API credentials are not fully configured")
 
@@ -77,10 +77,8 @@ class OkApiClient:
         }
 
         sig = sign_ok_request(
-            api_params,
-            self.access_token,
-            self.application_secret_key,
-            is_users_info=is_users_info,
+            api_params, self.access_token, self.application_secret_key,
+            is_users_info=token_in_sig,
         )
 
         query_params = {**api_params, "sig": sig}
@@ -88,55 +86,54 @@ class OkApiClient:
             query_params["session_key"] = self.access_token
             query_params["access_token"] = self.access_token
 
-        if is_users_info:
-            url_path = "/fb.do"
-        else:
-            method_path = method.replace(".", "/")
-            url_path = f"/api/{method_path}"
-
-        url = f"{OK_API_BASE_URL}{url_path}"
-        
-        # Mask credentials in log message
         masked_query_params = {}
         for k, v in query_params.items():
             if k in ("access_token", "session_key", "sig"):
                 masked_query_params[k] = "***"
             else:
                 masked_query_params[k] = v
-        masked_query = urlencode(masked_query_params)
-        logger.info(f"OK API request: {url_path}?{masked_query}")
+        logger.debug("OK API request: %s?%s", url_path, urlencode(masked_query_params))
 
         try:
-            response = await self._client.get(url, params=query_params)
+            response = await self._client.get(f"{OK_API_BASE_URL}{url_path}", params=query_params)
             if not response.is_success:
                 err_text = redact_secrets(response.text)
-                logger.error(f"OK API error HTTP {response.status_code}: {err_text}")
+                logger.error("OK API error HTTP %d: %s", response.status_code, err_text)
                 raise RuntimeError(redact_secrets(f"OK API request failed with HTTP {response.status_code}"))
 
             data = response.json()
             if isinstance(data, dict):
                 if "error_code" in data:
                     err_msg = redact_secrets(data.get("error_msg") or "Unknown error")
-                    logger.error(f"OK API error: {data['error_code']} - {err_msg}")
+                    logger.error("OK API error: %s - %s", data["error_code"], err_msg)
                     raise RuntimeError(redact_secrets(f"OK API error: {err_msg}"))
                 if "error" in data and data["error"]:
                     err = data["error"]
                     if isinstance(err, dict):
                         err_msg = redact_secrets(err.get("error_msg") or "Unknown error")
-                        logger.error(f"OK API error: {err.get('error_code')} - {err_msg}")
+                        logger.error("OK API error: %s - %s", err.get("error_code"), err_msg)
                         raise RuntimeError(redact_secrets(f"OK API error: {err_msg}"))
 
             return data
-        except Exception as exc:
-            if not isinstance(exc, RuntimeError):
-                masked_exc_msg = redact_secrets(str(exc))
-                logger.error(f"OK API call exception: {masked_exc_msg}")
-                raise RuntimeError(masked_exc_msg) from exc
+        except RuntimeError:
             raise
+        except Exception as exc:
+            masked_exc_msg = redact_secrets(str(exc))
+            logger.error("OK API call exception: %s", masked_exc_msg)
+            raise RuntimeError(masked_exc_msg) from exc
+
+    async def _call_rest(self, method: str, **params) -> Any:
+        logger.debug("OK REST call: method=%s", method)
+        url_path = f"/api/{method.replace('.', '/')}"
+        return await self._execute(url_path, method, **params)
+
+    async def _call_rpc(self, method: str, **params) -> Any:
+        logger.debug("OK RPC call: method=%s", method)
+        return await self._execute("/fb.do", method, token_in_sig=True, **params)
 
     async def friends_get(self, **params) -> list[str]:
-        response = await self._call("friends.get", is_users_info=False, **params)
-        
+        response = await self._call_rest("friends.get", **params)
+
         friends = []
         if isinstance(response, list):
             friends = response
@@ -156,8 +153,8 @@ class OkApiClient:
             "fields": fields,
             "emptyPictures": "true" if empty_pictures else "false",
         }
-        response = await self._call("users.getInfo", is_users_info=True, **params)
-        
+        response = await self._call_rpc("users.getInfo", **params)
+
         if isinstance(response, list):
             return response
         if isinstance(response, dict) and "users" in response:

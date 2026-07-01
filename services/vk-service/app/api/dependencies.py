@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import app.bootstrap as bootstrap
 from app.infrastructure.db.session import get_session
 from app.services.ingestion_service import IngestionService
-from app.services.ok_friends_service import OkFriendsExportService
-from app.services.vk_friends_service import VkFriendsExportService
+from app.services.ok_friends.exporter import OkFriendsExportService
+from app.services.vk_friends.exporter import VkFriendsExportService
 from app.services.vk_groups_service import VkGroupsService
 
 

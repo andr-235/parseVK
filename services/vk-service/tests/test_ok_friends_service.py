@@ -15,7 +15,7 @@ from app.core.config import settings
 from app.infrastructure.db.repositories.ok_friends import SqlAlchemyOkFriendsRepository
 from app.infrastructure.ok_client.client import OkApiClient
 from app.main import create_app
-from app.services.ok_friends_service import OkFriendsExportService
+from app.services.ok_friends.exporter import OkFriendsExportService
 
 
 @pytest.fixture
@@ -99,7 +99,7 @@ async def test_run_export_job_success(repo: SqlAlchemyOkFriendsRepository, servi
     mock_client.users_get_info.return_value = mock_users_info_response
 
     service.ok_client = mock_client
-    with patch("app.services.ok_friends_service.write_xlsx_file", return_value="/tmp/test_ok.xlsx") as mock_write:
+    with patch("app.services.ok_friends.exporter.write_xlsx_file", return_value="/tmp/test_ok.xlsx") as mock_write:
         await service.run_export_job(job.id, {"fid": "333"})
         
         mock_client.friends_get.assert_called_once()
@@ -124,7 +124,7 @@ async def test_api_routes():
     app = create_app()
     headers = {"X-Internal-Service-Token": settings.internal_service_token}
     
-    with patch("app.services.ok_friends_service.OkFriendsExportService.run_export_job", new_callable=AsyncMock):
+    with patch("app.services.ok_friends.exporter.OkFriendsExportService.run_export_job", new_callable=AsyncMock):
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
             # Start export
             start_payload = {"params": {"fid": "777"}}

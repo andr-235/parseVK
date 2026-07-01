@@ -15,7 +15,7 @@ from app.core.config import settings
 from app.infrastructure.db.repositories.vk_friends import SqlAlchemyVkFriendsRepository
 from app.infrastructure.vk_client.client import VkApiClient
 from app.main import create_app
-from app.services.vk_friends_service import VkFriendsExportService
+from app.services.vk_friends.exporter import VkFriendsExportService
 
 
 @pytest.fixture
@@ -104,7 +104,7 @@ async def test_run_export_job_success(service: VkFriendsExportService, repo: Sql
     mock_client.friends_get.return_value = mock_vk_response
 
     service.vk_client = mock_client
-    with patch("app.services.vk_friends_service.write_xlsx_file", return_value="/tmp/test.xlsx") as mock_write:
+    with patch("app.services.vk_friends.exporter.write_xlsx_file", return_value="/tmp/test.xlsx") as mock_write:
         await service.run_export_job(job.id, {"user_id": 333})
 
         mock_client.friends_get.assert_called_once()
@@ -129,7 +129,7 @@ async def test_api_routes():
     app = create_app()
     headers = {"X-Internal-Service-Token": settings.internal_service_token}
 
-    with patch("app.services.vk_friends_service.VkFriendsExportService.run_export_job", new_callable=AsyncMock):
+    with patch("app.services.vk_friends.exporter.VkFriendsExportService.run_export_job", new_callable=AsyncMock):
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as ac:

@@ -17,11 +17,11 @@ from app.services.domain_events_service import OutboxService
 from app.services.ingestion.collector import DataCollector
 from app.services.ingestion.pipeline import IngestionPipeline
 from app.services.ingestion_service import IngestionService
-from app.services.ok_friends_service import OkFriendsExportService
+from app.services.ok_friends.exporter import OkFriendsExportService
 from app.services.task_events_service import TaskEventsService
 
 # Services
-from app.services.vk_friends_service import VkFriendsExportService
+from app.services.vk_friends.exporter import VkFriendsExportService
 from app.services.vk_groups_service import VkGroupsService
 
 # Shared Client Singletons (VkApiClient & OkApiClient are stateless/managed cleanly)
