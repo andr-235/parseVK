@@ -9,7 +9,7 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app import main
+from app.background import outbox_worker
 from app.modules.outbox.publisher import kafka_key_for_event
 
 SENSITIVE_KEYS = {"authorization", "cookie", "access_token", "refresh_token", "password"}
@@ -78,12 +78,12 @@ async def test_outbox_loop_continues_after_publish_error(monkeypatch):
     async def sleep_without_delay(seconds):
         return None
 
-    monkeypatch.setattr(main, "SessionLocal", FakeSession)
-    monkeypatch.setattr(main, "OutboxPublisher", FakePublisher)
-    monkeypatch.setattr(main.asyncio, "sleep", sleep_without_delay)
+    monkeypatch.setattr(outbox_worker, "SessionLocal", FakeSession)
+    monkeypatch.setattr(outbox_worker, "OutboxPublisher", FakePublisher)
+    monkeypatch.setattr(outbox_worker.asyncio, "sleep", sleep_without_delay)
 
     with pytest.raises(asyncio.CancelledError):
-        await main.publish_outbox_forever()
+        await outbox_worker.publish_outbox_forever()
 
     assert calls == 2
 
