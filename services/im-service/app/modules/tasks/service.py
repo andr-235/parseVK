@@ -3,13 +3,22 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 import httpx
+from common.events import TaskEvent
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients.tasks.client import TasksClient
 from app.db.models import ImTaskRun, ProcessedEvent
-from app.modules.tasks.events import TaskEvent
+from app.modules.tasks.events import (
+    get_group_ids,
+    get_messenger,
+    get_mode,
+    get_owner_user_id,
+    get_post_limit,
+    get_scope,
+    get_task_id,
+)
 
 CONSUMER_NAME = "im-service.tasks"
 
@@ -48,16 +57,17 @@ class TaskEventsRepository:
         return await self.session.scalar(select(ImTaskRun).where(ImTaskRun.task_id == task_id))
 
     async def create_task_run(self, event: TaskEvent, run_id: str) -> ImTaskRun:
+        scope = get_scope(event) or "all"
         task_run = ImTaskRun(
-            task_id=event.task_id(),
-            owner_user_id=event.owner_user_id(),
+            task_id=get_task_id(event),
+            owner_user_id=get_owner_user_id(event),
             run_id=run_id,
             status="pending",
-            scope=event.scope(),
-            mode=event.mode(),
-            messenger=event.messenger() or "",
-            group_ids=event.group_ids() if event.scope() == "selected" else None,
-            post_limit=event.post_limit(),
+            scope=scope,
+            mode=get_mode(event) or "recent_posts",
+            messenger=get_messenger(event) or "",
+            group_ids=get_group_ids(event) if scope == "selected" else None,
+            post_limit=get_post_limit(event),
         )
         self.session.add(task_run)
         await self.session.flush()
@@ -93,7 +103,7 @@ class TaskEventsHandler:
         return result
 
     async def _handle_created_or_resumed(self, event: TaskEvent) -> ImTaskRun | None:
-        task_id = event.task_id()
+        task_id = get_task_id(event)
         run_id = str(event.event_id)
         task_run = await self.repository.get_task_run(task_id)
 
@@ -132,7 +142,7 @@ class TaskEventsHandler:
         return task_run
 
     async def _handle_deleted(self, event: TaskEvent) -> ImTaskRun | None:
-        task_id = event.task_id()
+        task_id = get_task_id(event)
         task_run = await self.repository.get_task_run(task_id)
         if task_run is None:
             return None

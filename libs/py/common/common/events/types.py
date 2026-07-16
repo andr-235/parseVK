@@ -4,9 +4,13 @@ TaskEventType = Literal[
     "task.created",
     "task.resumed",
     "task.automation_run_requested",
+    "task.automation_settings_updated",
     "task.deleted",
     "task.cancelled",
+    "task.completed",
     "task.failed",
+    "task.execution_started",
+    "task.checked",
 ]
 
 VkEventType = Literal[

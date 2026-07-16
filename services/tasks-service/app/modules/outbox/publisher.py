@@ -3,6 +3,7 @@ import logging
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+from common.events import WireEvent
 from prometheus_client import REGISTRY, Counter
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -73,22 +74,22 @@ class OutboxPublisher:
         return len(events)
 
     async def _publish_event(self, producer: "AIOKafkaProducer", event: OutboxEvent) -> None:
+        wire = WireEvent(
+            event_id=event.id,
+            event_type=event.event_type,
+            event_version=event.event_version,
+            aggregate_type=event.aggregate_type,
+            aggregate_id=event.aggregate_id,
+            correlation_id=event.correlation_id,
+            payload=event.payload,
+            created_at=event.created_at.isoformat(),
+        )
         key = kafka_key_for_event(event.event_type, event.payload, event.aggregate_id)
+        logger.debug("Publishing event id=%s type=%s via WireEvent", event.id, event.event_type)
         await producer.send_and_wait(
             settings.kafka_topic_tasks,
             key=key.encode("utf-8"),
-            value=json.dumps(
-                {
-                    "event_id": str(event.id),
-                    "event_type": event.event_type,
-                    "event_version": event.event_version,
-                    "aggregate_type": event.aggregate_type,
-                    "aggregate_id": event.aggregate_id,
-                    "correlation_id": event.correlation_id,
-                    "payload": event.payload,
-                    "created_at": event.created_at.isoformat(),
-                }
-            ).encode("utf-8"),
+            value=wire.model_dump_json().encode("utf-8"),
         )
 
     async def _publish_to_dlq(self, producer: "AIOKafkaProducer", event: OutboxEvent, last_error: str = "") -> None:

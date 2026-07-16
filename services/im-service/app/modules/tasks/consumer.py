@@ -1,6 +1,7 @@
 import json
 import logging
 
+from common.events import TaskEvent
 from common.kafka.consumer import BaseEventConsumer
 from prometheus_client import Gauge
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -13,7 +14,7 @@ from app.modules.ingestion.repository import IngestionRepository
 from app.modules.ingestion.service import IngestionService
 from app.modules.outbox.repository import OutboxRepository
 from app.modules.outbox.service import OutboxService
-from app.modules.tasks.events import TaskEvent
+from app.modules.tasks.events import get_messenger
 from app.modules.tasks.service import TaskEventsHandler, TaskEventsRepository
 
 logger = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ class TaskEventsConsumer(BaseEventConsumer):
             logger.warning("Skipping unsupported event version %d for type %s", event.event_version, event.event_type)
             return
 
-        messenger = event.messenger()
+        messenger = get_messenger(event)
         if messenger not in ("whatsapp", "max"):
             logger.debug("Skipping event for messenger=%s", messenger)
             return
