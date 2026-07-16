@@ -343,3 +343,168 @@ async def test_publish_batch_no_dlq_below_max_attempts():
     assert len(send_calls) == 1
     assert send_calls[0] == "parsevk.tasks.events"
 
+
+@pytest.mark.anyio
+async def test_automation_settings_update_produces_two_events():
+    """Two sequential updates for the same user must produce two outbox events (not deduped)."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    from app.modules.automation.schemas import AutomationSettingsUpdate
+    from app.modules.automation.service import AutomationService
+
+    session = AsyncMock()
+    service = AutomationService(session)
+
+    mock_settings = MagicMock()
+    mock_settings.enabled = False
+    mock_settings.run_hour = 10
+    mock_settings.run_minute = 0
+    mock_settings.post_limit = 10
+    mock_settings.timezone_offset_minutes = 0
+    mock_settings.last_run_at = None
+
+    service.repository.get_or_create_settings = AsyncMock(return_value=mock_settings)
+    service.tasks.add_audit = AsyncMock()
+    service.outbox.add_event = AsyncMock()
+    service._settings_response = AsyncMock(return_value={})
+
+    payload_first = AutomationSettingsUpdate(
+        enabled=False,
+        runHour=10,
+        runMinute=0,
+        postLimit=10,
+        timezoneOffsetMinutes=0,
+    )
+    payload_second = AutomationSettingsUpdate(
+        enabled=True,
+        runHour=12,
+        runMinute=30,
+        postLimit=20,
+        timezoneOffsetMinutes=60,
+    )
+
+    await service.update_settings("user-1", payload_first)
+    await service.update_settings("user-1", payload_second)
+
+    assert service.outbox.add_event.call_count == 2, (
+        f"Expected 2 outbox events, got {service.outbox.add_event.call_count}"
+    )
+
+    first_call_event_type = service.outbox.add_event.call_args_list[0].kwargs["event_type"]
+    second_call_event_type = service.outbox.add_event.call_args_list[1].kwargs["event_type"]
+    assert first_call_event_type == "task.automation_settings_updated"
+    assert second_call_event_type == "task.automation_settings_updated"
+
+
+@pytest.mark.anyio
+async def test_complete_execution_publishes_outbox_event():
+    """complete_execution() must publish a task.completed outbox event with correct payload."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    from app.modules.tasks.schemas import ExecutionCompleteRequest
+    from app.modules.tasks.service import TasksService
+
+    session = AsyncMock()
+    service = TasksService(session)
+
+    task_mock = MagicMock()
+    task_mock.id = 42
+    task_mock.owner_user_id = "user-1"
+    task_mock.scope = "selected"
+    task_mock.mode = "recent_posts"
+    task_mock.group_ids = [1, 2]
+    task_mock.post_limit = 10
+    task_mock.source = "manual"
+    task_mock.status = "running"
+    task_mock.execution_run_id = "run-abc-123"
+    task_mock.processed_items = 100
+    task_mock.total_items = 200
+    task_mock.stats = {"processed": 100, "total": 200}
+
+    payload = MagicMock(spec=ExecutionCompleteRequest)
+    payload.run_id = "run-abc-123"
+    payload.processed_items = 100
+    payload.total_items = 200
+    payload.stats = {"processed": 100, "total": 200}
+
+    service.crud.repository.get_task_by_id = AsyncMock(return_value=task_mock)
+    service.crud.repository.add_audit = AsyncMock()
+    service.crud.repository.touch_task = AsyncMock(return_value=task_mock)
+    service.crud.outbox.add_event = AsyncMock()
+
+    await service.complete_execution(42, payload)
+
+    service.crud.outbox.add_event.assert_called_once()
+    call_kwargs = service.crud.outbox.add_event.call_args.kwargs
+    assert call_kwargs["event_type"] == "task.completed"
+    assert call_kwargs["aggregate_type"] == "task"
+    assert call_kwargs["aggregate_id"] == "42"
+    assert call_kwargs["dedupe_key"] == "task.completed:42"
+    assert call_kwargs["payload"]["taskId"] == "42"
+    assert call_kwargs["payload"]["ownerUserId"] == "user-1"
+    assert call_kwargs["payload"]["scope"] == "selected"
+    assert call_kwargs["payload"]["mode"] == "recent_posts"
+    assert call_kwargs["payload"]["groupIds"] == [1, 2]
+    assert call_kwargs["payload"]["postLimit"] == 10
+    assert call_kwargs["payload"]["source"] == "manual"
+    assert call_kwargs["payload"]["stats"] == {"processed": 100, "total": 200}
+    assert call_kwargs["payload"]["processedItems"] == 100
+    assert call_kwargs["payload"]["totalItems"] == 200
+
+
+@pytest.mark.anyio
+async def test_fail_execution_publishes_outbox_event():
+    """fail_execution() must publish a task.failed outbox event with correct payload."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    from app.modules.tasks.schemas import ExecutionFailRequest
+    from app.modules.tasks.service import TasksService
+
+    session = AsyncMock()
+    service = TasksService(session)
+
+    task_mock = MagicMock()
+    task_mock.id = 42
+    task_mock.owner_user_id = "user-1"
+    task_mock.scope = "selected"
+    task_mock.mode = "recent_posts"
+    task_mock.group_ids = [1, 2]
+    task_mock.post_limit = 10
+    task_mock.source = "manual"
+    task_mock.status = "running"
+    task_mock.execution_run_id = None
+    task_mock.error = None
+    task_mock.processed_items = 50
+    task_mock.total_items = 200
+    task_mock.stats = {"processed": 50, "total": 200}
+
+    error_message = "VK API timeout error"
+    payload = MagicMock(spec=ExecutionFailRequest)
+    payload.run_id = "run-fail-456"
+    payload.error = error_message
+    payload.processed_items = 50
+    payload.total_items = 200
+    payload.stats = {"processed": 50, "total": 200}
+
+    service.crud.repository.get_task_by_id = AsyncMock(return_value=task_mock)
+    service.crud.repository.add_audit = AsyncMock()
+    service.crud.repository.touch_task = AsyncMock(return_value=task_mock)
+    service.crud.outbox.add_event = AsyncMock()
+
+    await service.fail_execution(42, payload)
+
+    service.crud.outbox.add_event.assert_called_once()
+    call_kwargs = service.crud.outbox.add_event.call_args.kwargs
+    assert call_kwargs["event_type"] == "task.failed"
+    assert call_kwargs["aggregate_type"] == "task"
+    assert call_kwargs["aggregate_id"] == "42"
+    assert call_kwargs["dedupe_key"] == "task.failed:42:run-fail-456"
+    assert call_kwargs["payload"]["taskId"] == "42"
+    assert call_kwargs["payload"]["ownerUserId"] == "user-1"
+    assert call_kwargs["payload"]["error"] == error_message
+    assert call_kwargs["payload"]["scope"] == "selected"
+    assert call_kwargs["payload"]["mode"] == "recent_posts"
+    assert call_kwargs["payload"]["groupIds"] == [1, 2]
+    assert call_kwargs["payload"]["postLimit"] == 10
+    assert call_kwargs["payload"]["source"] == "manual"
+
