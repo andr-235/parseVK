@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager, suppress
 from fastapi import FastAPI
 
 from app.background.automation_worker import run_automation_scheduler_forever
+from app.background.health import WorkerHealth
 from app.background.outbox_worker import publish_outbox_forever
 from app.background.supervisor import supervise
 from app.core.config import settings
@@ -26,16 +27,14 @@ __all__ = [
 
 
 def create_lifespan(
-    outbox_flag: list[bool],
-    automation_flag: list[bool],
+    outbox_health: WorkerHealth,
+    automation_health: WorkerHealth,
 ) -> Callable[[FastAPI], AsyncGenerator[None, None]]:
     """Build a FastAPI lifespan that starts supervised background workers.
 
     Args:
-        outbox_flag: Mutable one-element list used as a health flag for
-            the outbox publisher worker.
-        automation_flag: Mutable one-element list used as a health flag for
-            the automation scheduler worker.
+        outbox_health: WorkerHealth instance for the outbox publisher worker.
+        automation_health: WorkerHealth instance for the automation scheduler worker.
 
     Returns:
         An asynccontextmanager lifespan callable for FastAPI.
@@ -44,9 +43,9 @@ def create_lifespan(
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         tasks: list[asyncio.Task] = []
         if settings.outbox_publish_enabled:
-            tasks.append(asyncio.create_task(supervise("Outbox publisher", publish_outbox_forever, health_flag=outbox_flag)))
+            tasks.append(asyncio.create_task(supervise("Outbox publisher", publish_outbox_forever, health=outbox_health)))
         if settings.automation_scheduler_enabled:
-            tasks.append(asyncio.create_task(supervise("Automation scheduler", run_automation_scheduler_forever, health_flag=automation_flag)))
+            tasks.append(asyncio.create_task(supervise("Automation scheduler", run_automation_scheduler_forever, health=automation_health)))
         try:
             yield
         finally:
