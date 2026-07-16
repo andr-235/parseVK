@@ -26,16 +26,24 @@ _vk_client = VkApiClient()
 def get_vk_client() -> VkApiPort:
     return _vk_client
 
+
 _ok_client = OkApiClient()
 _tasks_client = TasksClient()
+
+
+def get_tasks_client() -> TasksClient:
+    return _tasks_client
+
 
 def get_vk_friends_service(session: AsyncSession) -> VkFriendsExportService:
     repo = SqlAlchemyVkFriendsRepository(session)
     return VkFriendsExportService(repo=repo, vk_client=_vk_client)
 
+
 def get_ok_friends_service(session: AsyncSession) -> OkFriendsExportService:
     repo = SqlAlchemyOkFriendsRepository(session)
     return OkFriendsExportService(repo=repo, ok_client=_ok_client)
+
 
 def get_ingestion_service(session: AsyncSession) -> IngestionService:
     repository = SqlAlchemyIngestionRepository(session)
@@ -54,6 +62,7 @@ def get_ingestion_service(session: AsyncSession) -> IngestionService:
         tasks_client=_tasks_client,
         outbox=outbox_service,
         on_error=sanitize_error,
+        checkpoint=session.commit,
     )
     pipeline = IngestionPipeline(
         collector=collector,
@@ -70,12 +79,11 @@ def get_ingestion_service(session: AsyncSession) -> IngestionService:
         outbox_service=outbox_service,
     )
 
+
 def get_task_events_handler(session: AsyncSession) -> TaskEventsService:
     repository = SqlAlchemyTaskEventsRepository(session)
-    return TaskEventsService(
-        repository=repository,
-        tasks_client=_tasks_client,
-    )
+    return TaskEventsService(repository=repository)
+
 
 def get_vk_groups_service(session: AsyncSession) -> VkGroupsService:
     ingestion_repo = SqlAlchemyIngestionRepository(session)
@@ -85,4 +93,3 @@ def get_vk_groups_service(session: AsyncSession) -> VkGroupsService:
         ingestion_repo=ingestion_repo,
         outbox_service=outbox_service,
     )
-

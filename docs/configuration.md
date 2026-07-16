@@ -37,11 +37,24 @@ TELEGRAM_POSTGRES_PASSWORD=telegram_dev_password_change_me
 
 # Service-specific
 VK_SERVICE_VK_TOKEN=vk123...
+VK_SERVICE_TASK_WORKER_ENABLED=true
+VK_SERVICE_TASK_WORKER_CONCURRENCY=2
+VK_SERVICE_TASK_WORKER_POLL_SECONDS=1
+VK_SERVICE_TASK_LEASE_SECONDS=90
+VK_SERVICE_TASK_HEARTBEAT_SECONDS=20
+VK_SERVICE_TASK_TIMEOUT_SECONDS=1800
+VK_SERVICE_TASK_MAX_ATTEMPTS=3
+VK_SERVICE_VK_API_TIMEOUT_SECONDS=20
 IDENTITY_ADMIN_PASSWORD=admin-secure-password
 
 # Internal
 FASTAPI_INTERNAL_SERVICE_TOKEN=dev-internal-token
 ```
+
+`VK_SERVICE_TASK_WORKER_CONCURRENCY` ограничивает параллельный парсинг. Lease должен
+быть длиннее heartbeat; просроченный lease автоматически подхватывается другим worker.
+`VK_SERVICE_TASK_TIMEOUT_SECONDS` ограничивает полное время одной задачи, а
+`VK_SERVICE_VK_API_TIMEOUT_SECONDS` — отдельный сетевой вызов VK.
 
 ## See Also
 

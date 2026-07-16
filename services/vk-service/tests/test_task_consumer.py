@@ -11,8 +11,8 @@ from _service_path import use_service_path
 use_service_path()
 
 from app.domain.events.task_event_mapper import TaskEventMapper
-from common.events import TaskEvent
 from app.services.task_events_service import TaskEventsService
+from common.events import TaskEvent
 
 
 @pytest.fixture
@@ -75,16 +75,6 @@ class FakeTaskRun:
         self.last_error = None
 
 
-
-class FakeTasksClient:
-    def __init__(self):
-        self.calls = []
-
-    async def start_execution(self, task_id, run_id, **kwargs):
-        self.calls.append(("start", task_id, run_id, kwargs))
-        return {"status": "running"}
-
-
 def event(event_type="task.created", task_id=1, event_id=None):
     return TaskEvent.model_validate(
         {
@@ -106,46 +96,41 @@ def event(event_type="task.created", task_id=1, event_id=None):
 
 
 @pytest.mark.anyio
-async def test_created_event_calls_start_execution():
+async def test_created_event_is_queued_without_inline_execution():
     repository = FakeRepository()
-    tasks_client = FakeTasksClient()
-    handler = TaskEventsService(repository, tasks_client)
+    handler = TaskEventsService(repository)
     task_event = event()
 
     result = await handler.handle(task_event)
 
-    assert result.status == "running"
-    assert tasks_client.calls == [
-        ("start", 1, str(task_event.event_id), {"request_id": str(task_event.event_id), "correlation_id": "corr-1"})
-    ]
+    assert result.status == "pending"
+    assert result.run_id == str(task_event.event_id)
+    assert repository.saved == 1
 
 
 @pytest.mark.anyio
 async def test_duplicate_event_does_not_call_tasks_client_twice():
     repository = FakeRepository()
-    tasks_client = FakeTasksClient()
-    handler = TaskEventsService(repository, tasks_client)
+    handler = TaskEventsService(repository)
     task_event = event()
 
     await handler.handle(task_event)
     duplicate = await handler.handle(task_event)
 
     assert duplicate is None
-    assert len(tasks_client.calls) == 1
+    assert repository.saved == 1
 
 
 @pytest.mark.anyio
 async def test_deleted_event_marks_run_cancelled():
     repository = FakeRepository()
     repository.runs[1] = FakeTaskRun(task_id=1, run_id="run-1", status="running")
-    tasks_client = FakeTasksClient()
-    handler = TaskEventsService(repository, tasks_client)
+    handler = TaskEventsService(repository)
 
     result = await handler.handle(event(event_type="task.deleted", task_id=1))
 
     assert result.status == "cancelled"
     assert repository.runs[1].status == "cancelled"
-    assert tasks_client.calls == []
 
 
 def test_missing_task_id_is_validation_safe():
@@ -169,35 +154,30 @@ def test_missing_task_id_is_validation_safe():
 async def test_completed_task_event_does_not_move_lifecycle_backward():
     repository = FakeRepository()
     repository.runs[1] = FakeTaskRun(task_id=1, run_id="run-1", status="done")
-    tasks_client = FakeTasksClient()
-    handler = TaskEventsService(repository, tasks_client)
+    handler = TaskEventsService(repository)
 
     result = await handler.handle(event(task_id=1))
 
     assert result is None
     assert repository.runs[1].status == "done"
-    assert len(tasks_client.calls) == 0
 
 
 @pytest.mark.anyio
 async def test_running_task_event_same_run_id_returns_none_preventing_reexecution():
     repository = FakeRepository()
-    repository.runs[1] = FakeTaskRun(task_id=1, run_id="run-1", status="running")
-    tasks_client = FakeTasksClient()
-    handler = TaskEventsService(repository, tasks_client)
-
     task_event = event(task_id=1)
-    task_event.payload["taskId"] = "1"
-    
+    repository.runs[1] = FakeTaskRun(task_id=1, run_id=str(task_event.event_id), status="running")
+    handler = TaskEventsService(repository)
+
     result = await handler._handle_created_or_resumed(task_event)
 
     assert result is None
-    assert len(tasks_client.calls) == 0
 
 
 @pytest.mark.anyio
 async def test_handle_processing_failure_sends_to_dlq_on_malformed_msg():
     from unittest.mock import AsyncMock, patch
+
     from app.tasks.kafka_consumer import TaskEventsConsumer
 
     consumer = TaskEventsConsumer(session_factory=AsyncMock())
@@ -215,24 +195,27 @@ async def test_handle_processing_failure_sends_to_dlq_on_malformed_msg():
 
 
 @pytest.mark.anyio
-async def test_skip_due_to_retry_backoff_commits_offset_when_in_backoff():
-    from unittest.mock import AsyncMock
-    from types import SimpleNamespace
+async def test_skip_exhausted_event_commits_offset():
     from datetime import UTC, datetime, timedelta
-    from app.tasks.kafka_consumer import TaskEventsConsumer
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, patch
     from uuid import uuid4
+
+    from app.tasks.kafka_consumer import TaskEventsConsumer
 
     consumer = TaskEventsConsumer(session_factory=AsyncMock())
     consumer._consumer = AsyncMock()
 
-    raw_value = json.dumps({
-        "event_id": str(uuid4()),
-        "event_type": "task.created",
-    }).encode()
+    raw_value = json.dumps(
+        {
+            "event_id": str(uuid4()),
+            "event_type": "task.created",
+        }
+    ).encode()
 
     row = SimpleNamespace(
         next_retry_at=datetime.now(UTC) + timedelta(hours=1),
-        retry_count=1,
+        retry_count=3,
     )
 
     async def scalar_mock(*a, **kw):
@@ -244,30 +227,23 @@ async def test_skip_due_to_retry_backoff_commits_offset_when_in_backoff():
 
     consumer.session_factory = lambda: session
 
-    result = await consumer._skip_due_to_retry_backoff(raw_value)
+    with patch("common.kafka.consumer.send_to_dlq", new_callable=AsyncMock) as send_to_dlq:
+        result = await consumer._skip_due_to_retry_backoff(raw_value)
 
     assert result is True
+    send_to_dlq.assert_awaited_once()
     consumer._consumer.commit.assert_awaited_once()
 
 
 @pytest.mark.anyio
-async def test_conflict_409_different_run_id_marks_failed_without_loop():
+async def test_resumed_event_requeues_failed_run_with_new_run_id():
     repository = FakeRepository()
-    tasks_client = FakeTasksClient()
-    
-    import httpx
-    async def mock_start_execution(*args, **kwargs):
-        resp = httpx.Response(status_code=409, json={"detail": "Task already running"})
-        raise httpx.HTTPStatusError("Conflict", request=httpx.Request("POST", "http://test"), response=resp)
-        
-    tasks_client.start_execution = mock_start_execution
-    handler = TaskEventsService(repository, tasks_client)
+    repository.runs[1] = FakeTaskRun(task_id=1, run_id="old-run", status="failed")
+    handler = TaskEventsService(repository)
 
-    task_event = event(task_id=1)
+    task_event = event(event_type="task.resumed", task_id=1)
     result = await handler.handle(task_event)
 
-    assert result is None
-    assert repository.runs[1].status == "failed"
-    assert "Conflict: Task already running" in repository.runs[1].last_error
-
-
+    assert result.status == "pending"
+    assert result.run_id == str(task_event.event_id)
+    assert result.attempts == 0

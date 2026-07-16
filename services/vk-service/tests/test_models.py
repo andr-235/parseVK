@@ -6,10 +6,13 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.infrastructure.db.models.ok_friends import OkFriendsExportJob, OkFriendsJobLog, OkFriendsRecord
 from app.infrastructure.db.models.outbox import OutboxEvent
 from app.infrastructure.db.models.tasks import ProcessedEvent, VkTaskRun
-from app.infrastructure.db.models.vk_friends import VkFriendsExportJob, VkFriendsJobLog, VkFriendsRecord
+from app.infrastructure.db.models.vk_friends import (
+    VkFriendsExportJob,
+    VkFriendsJobLog,
+    VkFriendsRecord,
+)
 from app.infrastructure.db.models.vk_ingestion import VkAuthor, VkComment, VkGroup, VkPost
 
 
@@ -40,6 +43,7 @@ def test_domain_unique_constraints_exist():
     assert "uq_vk_posts_owner_post" in constraint_names(VkPost)
     assert "uq_vk_comments_owner_post_comment" in constraint_names(VkComment)
     assert "uq_vk_task_runs_task_id" in constraint_names(VkTaskRun)
+    assert "ix_vk_task_runs_claimable" in index_names(VkTaskRun)
 
 
 def test_event_idempotency_and_outbox_indexes_exist():

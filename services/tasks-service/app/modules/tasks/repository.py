@@ -20,7 +20,9 @@ class TasksRepository:
         await self.session.refresh(audit)
         return audit
 
-    async def list_tasks(self, owner_user_id: str, *, page: int, limit: int) -> tuple[list[Task], int]:
+    async def list_tasks(
+        self, owner_user_id: str, *, page: int, limit: int
+    ) -> tuple[list[Task], int]:
         offset = (page - 1) * limit
         base: Select = select(Task).where(Task.owner_user_id == owner_user_id)
         total = await self.session.scalar(select(func.count()).select_from(base.subquery()))
@@ -32,6 +34,13 @@ class TasksRepository:
     async def get_task(self, owner_user_id: str, task_id: int) -> Task | None:
         return await self.session.scalar(
             select(Task).where(Task.owner_user_id == owner_user_id, Task.id == task_id)
+        )
+
+    async def get_task_for_update(self, owner_user_id: str, task_id: int) -> Task | None:
+        return await self.session.scalar(
+            select(Task)
+            .where(Task.owner_user_id == owner_user_id, Task.id == task_id)
+            .with_for_update()
         )
 
     async def get_task_by_id(self, task_id: int) -> Task | None:

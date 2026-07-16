@@ -1,12 +1,14 @@
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from app.core.config import settings
+from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
 from app.domain.repositories.ingestion import IngestionRepository
 from app.infrastructure.tasks_client.client import TasksClient
-from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
 from app.services.domain_events_service import OutboxService
-from app.services.ingestion.collector import DataCollector, IngestionResult
+from app.services.ingestion.collector import DataCollector
 from app.services.ingestion.pipeline import IngestionPipeline
+from app.services.ingestion.result import IngestionResult
 
 
 class IngestionService:
@@ -19,6 +21,7 @@ class IngestionService:
         collector: DataCollector | None = None,
         pipeline: IngestionPipeline | None = None,
         outbox_service: OutboxService | None = None,
+        checkpoint: Callable[[], Awaitable[None]] | None = None,
     ):
         self.adapter = adapter
         self.repository = repository
@@ -31,6 +34,7 @@ class IngestionService:
             tasks_client=tasks_client,
             outbox=outbox_service,
             on_error=self._sanitize_error,
+            checkpoint=checkpoint,
         )
         self.pipeline = pipeline or IngestionPipeline(
             collector=self.collector,
@@ -50,7 +54,5 @@ class IngestionService:
             return error.replace(token, "<redacted>")
         return error
 
-    async def execute(
-        self, task_run: Any, *, correlation_id: str | None = None
-    ) -> IngestionResult:
+    async def execute(self, task_run: Any, *, correlation_id: str | None = None) -> IngestionResult:
         return await self.pipeline.execute(task_run, correlation_id=correlation_id)
