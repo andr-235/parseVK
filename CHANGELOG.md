@@ -1,3 +1,10 @@
+# [0.58.0](https://github.com/andr-235/parseVK/compare/v0.57.0...v0.58.0) (2026-07-16)
+
+
+### Features
+
+* add shared background worker runtime with WorkerHealth and supervise ([24ceb99](https://github.com/andr-235/parseVK/commit/24ceb99a25ae4e472209a4df6837a083dd1962b0))
+
 # [0.57.0](https://github.com/andr-235/parseVK/compare/v0.56.0...v0.57.0) (2026-07-16)
 
 
