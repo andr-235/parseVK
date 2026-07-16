@@ -47,14 +47,9 @@ def test_payload_has_no_sensitive_keys():
 async def test_outbox_loop_continues_after_publish_error(monkeypatch):
     calls = 0
 
-    class FakeTransaction:
-        async def __aenter__(self):
-            return self
+    class FakeContextManager:
+        """Reusable async context manager that does nothing."""
 
-        async def __aexit__(self, exc_type, exc, tb):
-            return False
-
-    class FakeSession:
         async def __aenter__(self):
             return self
 
@@ -62,12 +57,9 @@ async def test_outbox_loop_continues_after_publish_error(monkeypatch):
             return False
 
         def begin(self):
-            return FakeTransaction()
+            return self
 
     class FakePublisher:
-        def __init__(self, session):
-            self.session = session
-
         async def publish_batch(self):
             nonlocal calls
             calls += 1
@@ -75,11 +67,27 @@ async def test_outbox_loop_continues_after_publish_error(monkeypatch):
                 raise RuntimeError("kafka unavailable")
             raise asyncio.CancelledError
 
+    class FakeFactory:
+        def __init__(self, session, *, producer, on_task_complete=None):
+            self.session = session
+            self.producer = producer
+
+        def create_outbox_publisher(self):
+            return FakePublisher()
+
+    class FakeProducer:
+        async def start(self):
+            pass
+
+        async def stop(self):
+            pass
+
     async def sleep_without_delay(seconds):
         return None
 
-    monkeypatch.setattr(outbox_worker, "SessionLocal", FakeSession)
-    monkeypatch.setattr(outbox_worker, "OutboxPublisher", FakePublisher)
+    monkeypatch.setattr(outbox_worker, "SessionLocal", FakeContextManager)
+    monkeypatch.setattr(outbox_worker, "AIOKafkaProducer", lambda **kwargs: FakeProducer())
+    monkeypatch.setattr(outbox_worker, "ApplicationFactory", FakeFactory)
     monkeypatch.setattr(outbox_worker.asyncio, "sleep", sleep_without_delay)
 
     with pytest.raises(asyncio.CancelledError):
@@ -218,23 +226,23 @@ def enable_outbox():
 
 @pytest.mark.anyio
 async def test_publish_batch_calls_mark_published_on_success():
-    from unittest.mock import AsyncMock, patch
+    from unittest.mock import AsyncMock
 
     from app.modules.outbox.publisher import OutboxPublisher
 
     repo = AsyncMock()
     repo.lock_pending.return_value = [_make_event("00000000-0000-0000-0000-000000000001")]
 
-    session = AsyncMock()
-    publisher = OutboxPublisher(session)
-    publisher.repository = repo
-
     producer_instance = AsyncMock()
-    producer_instance.start = AsyncMock()
-    producer_instance.stop = AsyncMock()
 
-    with patch("aiokafka.AIOKafkaProducer", return_value=producer_instance):
-        result = await publisher.publish_batch()
+    publisher = OutboxPublisher(
+        repository=repo,
+        producer=producer_instance,
+        topic="parsevk.tasks.events",
+        dlq_topic="parsevk.tasks.dlq",
+        publish_enabled=True,
+    )
+    result = await publisher.publish_batch()
 
     assert result == 1
     repo.mark_published.assert_awaited_once()
@@ -242,7 +250,7 @@ async def test_publish_batch_calls_mark_published_on_success():
 
 @pytest.mark.anyio
 async def test_publish_batch_calls_mark_failed_on_error():
-    from unittest.mock import AsyncMock, patch
+    from unittest.mock import AsyncMock
 
     from app.modules.outbox.publisher import MAX_OUTBOX_ATTEMPTS, OutboxPublisher
 
@@ -250,17 +258,17 @@ async def test_publish_batch_calls_mark_failed_on_error():
     repo = AsyncMock()
     repo.lock_pending.return_value = [event]
 
-    session = AsyncMock()
-    publisher = OutboxPublisher(session)
-    publisher.repository = repo
-
     producer_instance = AsyncMock()
-    producer_instance.start = AsyncMock()
-    producer_instance.stop = AsyncMock()
     producer_instance.send_and_wait = AsyncMock(side_effect=RuntimeError("kafka down"))
 
-    with patch("aiokafka.AIOKafkaProducer", return_value=producer_instance):
-        result = await publisher.publish_batch()
+    publisher = OutboxPublisher(
+        repository=repo,
+        producer=producer_instance,
+        topic="parsevk.tasks.events",
+        dlq_topic="parsevk.tasks.dlq",
+        publish_enabled=True,
+    )
+    result = await publisher.publish_batch()
 
     assert result == 1
     repo.mark_failed.assert_awaited_once_with(event, "kafka down", max_attempts=MAX_OUTBOX_ATTEMPTS)
@@ -269,7 +277,7 @@ async def test_publish_batch_calls_mark_failed_on_error():
 
 @pytest.mark.anyio
 async def test_publish_batch_sends_to_dlq_after_max_attempts():
-    from unittest.mock import AsyncMock, patch
+    from unittest.mock import AsyncMock
 
     from app.modules.outbox.publisher import MAX_OUTBOX_ATTEMPTS, OutboxPublisher
 
@@ -282,13 +290,7 @@ async def test_publish_batch_sends_to_dlq_after_max_attempts():
     repo.mark_failed = AsyncMock(side_effect=mark_failed_side_effect)
     repo.lock_pending.return_value = [event]
 
-    session = AsyncMock()
-    publisher = OutboxPublisher(session)
-    publisher.repository = repo
-
     producer_instance = AsyncMock()
-    producer_instance.start = AsyncMock()
-    producer_instance.stop = AsyncMock()
 
     send_calls = []
 
@@ -299,8 +301,14 @@ async def test_publish_batch_sends_to_dlq_after_max_attempts():
 
     producer_instance.send_and_wait = AsyncMock(side_effect=send_and_wait_side_effect)
 
-    with patch("aiokafka.AIOKafkaProducer", return_value=producer_instance):
-        result = await publisher.publish_batch()
+    publisher = OutboxPublisher(
+        repository=repo,
+        producer=producer_instance,
+        topic="parsevk.tasks.events",
+        dlq_topic="parsevk.tasks.dlq",
+        publish_enabled=True,
+    )
+    result = await publisher.publish_batch()
 
     assert result == 1
     repo.mark_failed.assert_awaited_once()
@@ -311,7 +319,7 @@ async def test_publish_batch_sends_to_dlq_after_max_attempts():
 
 @pytest.mark.anyio
 async def test_publish_batch_no_dlq_below_max_attempts():
-    from unittest.mock import AsyncMock, patch
+    from unittest.mock import AsyncMock
 
     from app.modules.outbox.publisher import OutboxPublisher
 
@@ -319,13 +327,7 @@ async def test_publish_batch_no_dlq_below_max_attempts():
     repo = AsyncMock()
     repo.lock_pending.return_value = [event]
 
-    session = AsyncMock()
-    publisher = OutboxPublisher(session)
-    publisher.repository = repo
-
     producer_instance = AsyncMock()
-    producer_instance.start = AsyncMock()
-    producer_instance.stop = AsyncMock()
 
     send_calls = []
 
@@ -335,8 +337,14 @@ async def test_publish_batch_no_dlq_below_max_attempts():
 
     producer_instance.send_and_wait = AsyncMock(side_effect=send_and_wait_side_effect)
 
-    with patch("aiokafka.AIOKafkaProducer", return_value=producer_instance):
-        result = await publisher.publish_batch()
+    publisher = OutboxPublisher(
+        repository=repo,
+        producer=producer_instance,
+        topic="parsevk.tasks.events",
+        dlq_topic="parsevk.tasks.dlq",
+        publish_enabled=True,
+    )
+    result = await publisher.publish_batch()
 
     assert result == 1
     repo.mark_failed.assert_awaited_once()
@@ -507,4 +515,117 @@ async def test_fail_execution_publishes_outbox_event():
     assert call_kwargs["payload"]["groupIds"] == [1, 2]
     assert call_kwargs["payload"]["postLimit"] == 10
     assert call_kwargs["payload"]["source"] == "manual"
+
+
+@pytest.mark.anyio
+async def test_publisher_does_not_create_producer():
+    """OutboxPublisher does not create AIOKafkaProducer internally."""
+    from unittest.mock import AsyncMock
+
+    from app.modules.outbox.publisher import OutboxPublisher
+
+    repo = AsyncMock()
+    repo.lock_pending.return_value = []
+    producer = AsyncMock()
+
+    publisher = OutboxPublisher(
+        repository=repo,
+        producer=producer,
+        topic="parsevk.tasks.events",
+        dlq_topic="parsevk.tasks.dlq",
+        publish_enabled=False,
+    )
+    # Should not raise — producer is not created by publisher
+    result = await publisher.publish_batch()
+    assert result == 0
+
+
+@pytest.mark.anyio
+async def test_publisher_does_not_stop_producer():
+    """OutboxPublisher does not call producer.stop() after publish."""
+    from unittest.mock import AsyncMock
+
+    from app.modules.outbox.publisher import OutboxPublisher
+
+    repo = AsyncMock()
+    repo.lock_pending.return_value = []
+    producer = AsyncMock()
+
+    publisher = OutboxPublisher(
+        repository=repo,
+        producer=producer,
+        topic="parsevk.tasks.events",
+        dlq_topic="parsevk.tasks.dlq",
+        publish_enabled=False,
+    )
+    await publisher.publish_batch()
+    producer.stop.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_publisher_uses_explicit_topic_names():
+    """OutboxPublisher uses topic from constructor, not settings."""
+    from unittest.mock import AsyncMock
+
+    from app.modules.outbox.publisher import OutboxPublisher
+
+    event = _make_event("00000000-0000-0000-0000-000000000005")
+    repo = AsyncMock()
+    repo.lock_pending.return_value = [event]
+    producer = AsyncMock()
+    producer.send_and_wait = AsyncMock()
+
+    custom_topic = "custom.tasks.events"
+    publisher = OutboxPublisher(
+        repository=repo,
+        producer=producer,
+        topic=custom_topic,
+        dlq_topic="custom.tasks.dlq",
+        publish_enabled=True,
+    )
+    await publisher.publish_batch()
+    # verify send_and_wait was called with our custom topic
+    call_args = producer.send_and_wait.call_args
+    assert call_args is not None, "send_and_wait should have been called"
+    assert call_args[0][0] == custom_topic, f"Expected topic {custom_topic}, got {call_args[0][0]}"
+
+
+@pytest.mark.anyio
+async def test_publisher_uses_explicit_dlq_topic():
+    """DLQ send uses dlq_topic from constructor."""
+    from unittest.mock import AsyncMock
+
+    from app.modules.outbox.publisher import MAX_OUTBOX_ATTEMPTS, OutboxPublisher
+
+    event = _make_event("00000000-0000-0000-0000-000000000006", attempts=MAX_OUTBOX_ATTEMPTS - 1)
+    repo = AsyncMock()
+
+    async def mark_failed_side_effect(event, error, **kwargs):
+        event.attempts += 1
+
+    repo.mark_failed = AsyncMock(side_effect=mark_failed_side_effect)
+    repo.lock_pending.return_value = [event]
+
+    producer = AsyncMock()
+    send_calls = []
+
+    async def send_and_wait_side_effect(topic, **kwargs):
+        send_calls.append(topic)
+        if topic == "parsevk.tasks.events":
+            raise RuntimeError("kafka down")
+
+    producer.send_and_wait = AsyncMock(side_effect=send_and_wait_side_effect)
+
+    custom_dlq = "custom.tasks.dlq"
+    publisher = OutboxPublisher(
+        repository=repo,
+        producer=producer,
+        topic="parsevk.tasks.events",
+        dlq_topic=custom_dlq,
+        publish_enabled=True,
+    )
+    await publisher.publish_batch()
+
+    assert len(send_calls) == 2, f"Expected 2 send calls, got {len(send_calls)}"
+    assert send_calls[1] == custom_dlq, f"Expected DLQ topic {custom_dlq}, got {send_calls[1]}"
 

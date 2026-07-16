@@ -5,9 +5,7 @@ from typing import TYPE_CHECKING
 
 from common.events import WireEvent
 from prometheus_client import REGISTRY, Counter
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.db.models import OutboxEvent
 from app.modules.outbox.repository import OutboxRepository
 
@@ -41,39 +39,53 @@ def kafka_key_for_event(event_type: str, payload: dict, aggregate_id: str) -> st
 
 
 class OutboxPublisher:
-    def __init__(self, session: AsyncSession):
-        self.repository = OutboxRepository(session)
+    """Publishes pending outbox events to Kafka using a pre-configured producer.
+
+    Does NOT manage the Kafka producer lifecycle — the producer is created and
+    started by the OutboxWorker (or provided in tests). This class is responsible
+    only for reading pending events, publishing them, handling retries, and
+    moving fatally-failed events to the dead-letter queue.
+    """
+
+    def __init__(
+        self,
+        *,
+        repository: OutboxRepository,
+        producer: "AIOKafkaProducer",
+        topic: str,
+        dlq_topic: str,
+        publish_enabled: bool = True,
+    ):
+        self.repository = repository
+        self.producer = producer
+        self.topic = topic
+        self.dlq_topic = dlq_topic
+        self.publish_enabled = publish_enabled
+        logger.debug("OutboxPublisher initialized with explicit producer and topics")
 
     async def publish_batch(self, limit: int = 100) -> int:
-        if not settings.outbox_publish_enabled:
+        if not self.publish_enabled:
             return 0
 
         events = await self.repository.lock_pending(limit)
         if not events:
             return 0
 
-        from aiokafka import AIOKafkaProducer
-
-        producer = AIOKafkaProducer(bootstrap_servers=settings.kafka_bootstrap_servers)
-        await producer.start()
-        try:
-            for event in events:
-                try:
-                    await self._publish_event(producer, event)
-                except Exception as exc:
-                    error = str(exc)
-                    logger.warning("Failed to publish event id=%s type=%s: %s", event.id, event.event_type, error)
-                    await self.repository.mark_failed(event, error, max_attempts=MAX_OUTBOX_ATTEMPTS)
-                    if event.attempts >= MAX_OUTBOX_ATTEMPTS:
-                        await self._publish_to_dlq(producer, event, error)
-                    continue
-                await self.repository.mark_published(event)
-        finally:
-            await producer.stop()
+        for event in events:
+            try:
+                await self._publish_event(event)
+            except Exception as exc:
+                error = str(exc)
+                logger.warning("Failed to publish event id=%s type=%s: %s", event.id, event.event_type, error)
+                await self.repository.mark_failed(event, error, max_attempts=MAX_OUTBOX_ATTEMPTS)
+                if event.attempts >= MAX_OUTBOX_ATTEMPTS:
+                    await self._publish_to_dlq(event, error)
+                continue
+            await self.repository.mark_published(event)
 
         return len(events)
 
-    async def _publish_event(self, producer: "AIOKafkaProducer", event: OutboxEvent) -> None:
+    async def _publish_event(self, event: OutboxEvent) -> None:
         wire = WireEvent(
             event_id=event.id,
             event_type=event.event_type,
@@ -86,13 +98,13 @@ class OutboxPublisher:
         )
         key = kafka_key_for_event(event.event_type, event.payload, event.aggregate_id)
         logger.debug("Publishing event id=%s type=%s via WireEvent", event.id, event.event_type)
-        await producer.send_and_wait(
-            settings.kafka_topic_tasks,
+        await self.producer.send_and_wait(
+            self.topic,
             key=key.encode("utf-8"),
             value=wire.model_dump_json().encode("utf-8"),
         )
 
-    async def _publish_to_dlq(self, producer: "AIOKafkaProducer", event: OutboxEvent, last_error: str = "") -> None:
+    async def _publish_to_dlq(self, event: OutboxEvent, last_error: str = "") -> None:
         dlq_reason = f"max_retries_exceeded: {last_error}" if last_error else "max_retries_exceeded"
         envelope = {
             "event_id": str(event.id),
@@ -108,8 +120,8 @@ class OutboxPublisher:
         }
         dlq_events_total.labels(event_type=event.event_type).inc()
         key = kafka_key_for_event(event.event_type, event.payload, event.aggregate_id)
-        await producer.send_and_wait(
-            settings.kafka_topic_tasks_dlq,
+        await self.producer.send_and_wait(
+            self.dlq_topic,
             key=key.encode("utf-8"),
             value=json.dumps(envelope).encode("utf-8"),
         )
