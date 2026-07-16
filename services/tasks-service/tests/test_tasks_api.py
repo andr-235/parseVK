@@ -9,8 +9,8 @@ from _service_path import use_service_path
 
 use_service_path()
 
+from app.api.dependencies import get_tasks_service
 from app.main import create_app
-from app.modules.tasks.router import get_tasks_service
 
 
 class FakeTasksService:

@@ -6,12 +6,13 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 
+from app.bootstrap import ApplicationFactory
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.modules.automation.repository import AutomationRepository
 from app.modules.automation.router import router as automation_router
-from app.modules.automation.service import AutomationService
 from app.modules.outbox.publisher import OutboxPublisher
+from app.modules.tasks.exceptions import TaskConflictError, TaskError, TaskNotFoundError
 from app.modules.tasks.router import router as tasks_router
 
 logger = logging.getLogger(__name__)
@@ -62,7 +63,7 @@ async def run_automation_scheduler_forever() -> None:
                     settings_list = await AutomationRepository(session).list_enabled_settings()
                     for s in settings_list:
                         try:
-                            await AutomationService(session).check_and_run_due(s)
+                            await ApplicationFactory(session).create_automation_service().check_and_run_due(s)
                         except Exception:
                             logger.exception("Automation scheduler failed for user %s", s.owner_user_id)
                     count = len(settings_list)
@@ -119,10 +120,19 @@ def create_app() -> FastAPI:
                 await conn.execute(text("SELECT 1"))
             return {"status": "READY"}
         except Exception as e:
-            raise HTTPException(status_code=503, detail=f"Database is not ready: {str(e)}")
+            raise HTTPException(status_code=503, detail=f"Database is not ready: {str(e)}") from e
 
     app.include_router(automation_router)
     app.include_router(tasks_router)
+
+    @app.exception_handler(TaskError)
+    async def task_error_handler(request: Request, exc: TaskError):
+        logger.warning("Domain exception: %s", exc, exc_info=True)
+        if isinstance(exc, TaskNotFoundError):
+            return JSONResponse(status_code=404, content={"detail": str(exc)})
+        if isinstance(exc, TaskConflictError):
+            return JSONResponse(status_code=409, content={"detail": str(exc)})
+        return JSONResponse(status_code=500, content={"detail": "Internal task error"})
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception):

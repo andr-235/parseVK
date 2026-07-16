@@ -1,10 +1,10 @@
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import get_tasks_service
 from app.core.security import require_internal_token, require_owner_user_id
-from app.db.session import get_session
 from app.modules.tasks.schemas import (
     CreateParseTaskRequest,
     ExecutionCompleteRequest,
@@ -14,15 +14,13 @@ from app.modules.tasks.schemas import (
 )
 from app.modules.tasks.service import TasksService
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(
     prefix="/internal/tasks",
     tags=["tasks"],
     dependencies=[Depends(require_internal_token)],
 )
-
-
-async def get_tasks_service(session: AsyncSession = Depends(get_session)) -> TasksService:
-    return TasksService(session)
 
 
 @router.post("/parse")

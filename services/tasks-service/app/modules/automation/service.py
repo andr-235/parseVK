@@ -1,23 +1,19 @@
 import logging
-
 from datetime import UTC, datetime, timedelta
 
 from app.db.models import Task, TaskAuditLog, TaskAutomationSettings
-
-from app.modules.automation.repository import AutomationRepository
 from app.modules.automation.schemas import AutomationSettingsUpdate
-from app.modules.outbox.service import OutboxService
 from app.modules.tasks.mapper import task_to_response
-from app.modules.tasks.repository import TasksRepository
 
 logger = logging.getLogger(__name__)
 
 
 class AutomationService:
-    def __init__(self, session):
-        self.repository = AutomationRepository(session)
-        self.tasks = TasksRepository(session)
-        self.outbox = OutboxService(session)
+    def __init__(self, *, session, repository, tasks, outbox):
+        self.session = session
+        self.repository = repository
+        self.tasks = tasks
+        self.outbox = outbox
 
     async def get_settings(self, owner_user_id: str) -> dict:
         settings = await self.repository.get_or_create_settings(owner_user_id)

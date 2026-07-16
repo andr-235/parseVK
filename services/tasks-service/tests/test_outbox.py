@@ -92,11 +92,11 @@ async def test_outbox_loop_continues_after_publish_error(monkeypatch):
 async def test_tasks_service_outbox_events_contract():
     from unittest.mock import AsyncMock, MagicMock
 
+    from app.bootstrap import ApplicationFactory
     from app.modules.tasks.schemas import CreateParseTaskRequest
-    from app.modules.tasks.service import TasksService
-    
+
     session = AsyncMock()
-    service = TasksService(session)
+    service = ApplicationFactory(session).create_tasks_service()
     
     task_mock = MagicMock()
     task_mock.id = 42
@@ -186,8 +186,8 @@ async def test_tasks_service_outbox_events_contract():
 
 def _make_event(event_id: str, attempts: int = 0, status: str = "pending"):
     from datetime import UTC, datetime
-    from uuid import UUID
     from unittest.mock import MagicMock
+    from uuid import UUID
 
     event = MagicMock()
     event.id = UUID(event_id)
@@ -244,7 +244,7 @@ async def test_publish_batch_calls_mark_published_on_success():
 async def test_publish_batch_calls_mark_failed_on_error():
     from unittest.mock import AsyncMock, patch
 
-    from app.modules.outbox.publisher import OutboxPublisher, MAX_OUTBOX_ATTEMPTS
+    from app.modules.outbox.publisher import MAX_OUTBOX_ATTEMPTS, OutboxPublisher
 
     event = _make_event("00000000-0000-0000-0000-000000000002", attempts=3)
     repo = AsyncMock()
@@ -271,7 +271,7 @@ async def test_publish_batch_calls_mark_failed_on_error():
 async def test_publish_batch_sends_to_dlq_after_max_attempts():
     from unittest.mock import AsyncMock, patch
 
-    from app.modules.outbox.publisher import OutboxPublisher, MAX_OUTBOX_ATTEMPTS
+    from app.modules.outbox.publisher import MAX_OUTBOX_ATTEMPTS, OutboxPublisher
 
     event = _make_event("00000000-0000-0000-0000-000000000003", attempts=MAX_OUTBOX_ATTEMPTS - 1)
     repo = AsyncMock()
@@ -349,11 +349,11 @@ async def test_automation_settings_update_produces_two_events():
     """Two sequential updates for the same user must produce two outbox events (not deduped)."""
     from unittest.mock import AsyncMock, MagicMock
 
+    from app.bootstrap import ApplicationFactory
     from app.modules.automation.schemas import AutomationSettingsUpdate
-    from app.modules.automation.service import AutomationService
 
     session = AsyncMock()
-    service = AutomationService(session)
+    service = ApplicationFactory(session).create_automation_service()
 
     mock_settings = MagicMock()
     mock_settings.enabled = False
@@ -401,11 +401,11 @@ async def test_complete_execution_publishes_outbox_event():
     """complete_execution() must publish a task.completed outbox event with correct payload."""
     from unittest.mock import AsyncMock, MagicMock
 
+    from app.bootstrap import ApplicationFactory
     from app.modules.tasks.schemas import ExecutionCompleteRequest
-    from app.modules.tasks.service import TasksService
 
     session = AsyncMock()
-    service = TasksService(session)
+    service = ApplicationFactory(session).create_tasks_service()
 
     task_mock = MagicMock()
     task_mock.id = 42
@@ -457,11 +457,11 @@ async def test_fail_execution_publishes_outbox_event():
     """fail_execution() must publish a task.failed outbox event with correct payload."""
     from unittest.mock import AsyncMock, MagicMock
 
+    from app.bootstrap import ApplicationFactory
     from app.modules.tasks.schemas import ExecutionFailRequest
-    from app.modules.tasks.service import TasksService
 
     session = AsyncMock()
-    service = TasksService(session)
+    service = ApplicationFactory(session).create_tasks_service()
 
     task_mock = MagicMock()
     task_mock.id = 42

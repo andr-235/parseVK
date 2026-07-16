@@ -1,10 +1,9 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import get_automation_service
 from app.core.security import require_internal_token, require_owner_user_id
-from app.db.session import get_session
 from app.modules.automation.schemas import AutomationSettingsUpdate
 from app.modules.automation.service import AutomationService
 
@@ -13,10 +12,6 @@ router = APIRouter(
     tags=["task-automation"],
     dependencies=[Depends(require_internal_token)],
 )
-
-
-async def get_automation_service(session: AsyncSession = Depends(get_session)) -> AutomationService:
-    return AutomationService(session)
 
 
 @router.get("/settings")

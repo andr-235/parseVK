@@ -39,7 +39,12 @@ NOW = datetime(2026, 6, 23, 14, 30, 0, 0, tzinfo=UTC)
 
 @pytest.mark.asyncio
 async def test_check_and_run_due_disabled_skips():
-    service = AutomationService(session=MagicMock())
+    service = AutomationService(
+        session=MagicMock(),
+        repository=MagicMock(),
+        tasks=MagicMock(),
+        outbox=MagicMock(),
+    )
     service.run = AsyncMock()
     settings = make_settings(enabled=False)
 
@@ -50,7 +55,12 @@ async def test_check_and_run_due_disabled_skips():
 
 @pytest.mark.asyncio
 async def test_check_and_run_due_future_time_skips():
-    service = AutomationService(session=MagicMock())
+    service = AutomationService(
+        session=MagicMock(),
+        repository=MagicMock(),
+        tasks=MagicMock(),
+        outbox=MagicMock(),
+    )
     service.run = AsyncMock()
     settings = make_settings(run_hour=16, run_minute=0)
 
@@ -61,9 +71,15 @@ async def test_check_and_run_due_future_time_skips():
 
 @pytest.mark.asyncio
 async def test_check_and_run_due_past_time_runs():
-    service = AutomationService(session=MagicMock())
+    repository = MagicMock()
+    repository.has_active_automation_task = AsyncMock(return_value=False)
+    service = AutomationService(
+        session=MagicMock(),
+        repository=repository,
+        tasks=MagicMock(),
+        outbox=MagicMock(),
+    )
     service.run = AsyncMock()
-    service.repository.has_active_automation_task = AsyncMock(return_value=False)
     settings = make_settings(run_hour=9, run_minute=0, timezone_offset_minutes=0, last_run_at=None)
 
     await service.check_and_run_due(settings, _now=NOW)
@@ -73,9 +89,15 @@ async def test_check_and_run_due_past_time_runs():
 
 @pytest.mark.asyncio
 async def test_check_and_run_due_already_ran_today_skips():
-    service = AutomationService(session=MagicMock())
+    repository = MagicMock()
+    repository.has_active_automation_task = AsyncMock(return_value=False)
+    service = AutomationService(
+        session=MagicMock(),
+        repository=repository,
+        tasks=MagicMock(),
+        outbox=MagicMock(),
+    )
     service.run = AsyncMock()
-    service.repository.has_active_automation_task = AsyncMock(return_value=False)
     last_run_at = NOW - timedelta(hours=1)
     settings = make_settings(run_hour=9, run_minute=45, timezone_offset_minutes=0, last_run_at=last_run_at)
 
@@ -86,9 +108,15 @@ async def test_check_and_run_due_already_ran_today_skips():
 
 @pytest.mark.asyncio
 async def test_check_and_run_due_active_task_skips():
-    service = AutomationService(session=MagicMock())
+    repository = MagicMock()
+    repository.has_active_automation_task = AsyncMock(return_value=True)
+    service = AutomationService(
+        session=MagicMock(),
+        repository=repository,
+        tasks=MagicMock(),
+        outbox=MagicMock(),
+    )
     service.run = AsyncMock()
-    service.repository.has_active_automation_task = AsyncMock(return_value=True)
     settings = make_settings(run_hour=9, run_minute=0, timezone_offset_minutes=0, last_run_at=None)
 
     await service.check_and_run_due(settings, _now=NOW)
