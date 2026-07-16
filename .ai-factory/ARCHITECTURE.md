@@ -187,7 +187,7 @@ class ContentServiceClient(ServiceClient):
 
 | Topic | Partitions | Producer (Outbox) | Consumers | Event Types |
 |-------|-----------|-------------------|-----------|-------------|
-| `parsevk.tasks.events` | 3 | tasks-service | vk-service, im-service | `task.created`, `.resumed`, `.deleted`, `.cancelled`, `.failed`, `.automation_settings_updated`, `.automation_run_requested` |
+| `parsevk.tasks.events` | 3 | tasks-service | vk-service, im-service | `task.created`, `.resumed`, `.deleted`, `.cancelled`, `.completed`, `.failed`, `.automation_settings_updated`, `.automation_run_requested` |
 | `parsevk.vk.events` | 3 | vk-service | content-service, moderation-service | `vk.group_collected`, `.group_deleted`, `.author_collected`, `.post_collected`, `.comment_collected`, `.task_progress_updated`, `.task_completed`, `.task_failed` |
 | `parsevk.im.events` | 3 | im-service | content-service | `im.message_collected`, `.group_collected`, `.task_progress_updated`, `.task_completed`, `.task_failed` |
 | `identity.events` | 3 | identity-service | — | `identity.user_created`, `.user_logged_in`, `.user_logged_out`, `.password_changed` |

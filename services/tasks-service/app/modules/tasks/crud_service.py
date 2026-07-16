@@ -1,3 +1,4 @@
+import logging
 from math import ceil
 
 from fastapi import HTTPException, status
@@ -9,6 +10,7 @@ from app.modules.tasks.mapper import audit_to_response, task_to_response
 from app.modules.tasks.repository import TasksRepository
 from app.modules.tasks.schemas import CreateParseTaskRequest
 
+logger = logging.getLogger(__name__)
 
 class TasksCrudService:
     def __init__(self, session: AsyncSession, on_complete=None):
@@ -172,6 +174,26 @@ class TasksCrudService:
                 event_data={"taskId": str(task.id)},
             )
         )
+        await self.outbox.add_event(
+            event_type="task.completed",
+            aggregate_type="task",
+            aggregate_id=str(task.id),
+            correlation_id=correlation_id,
+            dedupe_key=f"task.completed:{task.id}",
+            payload={
+                "taskId": str(task.id),
+                "ownerUserId": task.owner_user_id,
+                "scope": task.scope,
+                "mode": task.mode,
+                "groupIds": task.group_ids,
+                "postLimit": task.post_limit,
+                "source": task.source,
+                "stats": task.stats,
+                "processedItems": task.processed_items,
+                "totalItems": task.total_items,
+            },
+        )
+        logger.info("Published task.completed outbox event for task %s", task.id)
         task = await self.repository.touch_task(task)
         if self._on_complete:
             await self._on_complete(task_id=task_id, task=task)
@@ -205,6 +227,24 @@ class TasksCrudService:
                 event_data={"taskId": str(task.id), "error": payload.error},
             )
         )
+        await self.outbox.add_event(
+            event_type="task.failed",
+            aggregate_type="task",
+            aggregate_id=str(task.id),
+            correlation_id=correlation_id,
+            dedupe_key=f"task.failed:{task.id}:{run_id}",
+            payload={
+                "taskId": str(task.id),
+                "ownerUserId": task.owner_user_id,
+                "error": payload.error,
+                "scope": task.scope,
+                "mode": task.mode,
+                "groupIds": task.group_ids,
+                "postLimit": task.post_limit,
+                "source": task.source,
+            },
+        )
+        logger.info("Published task.failed outbox event for task %s", task.id)
         task = await self.repository.touch_task(task)
         return task_to_response(task)
 
