@@ -56,13 +56,23 @@ class AutomationRepository:
             .limit(1)
         )
 
-    async def list_enabled_settings(self) -> list[TaskAutomationSettings]:
-        rows = await self.session.scalars(
-            select(TaskAutomationSettings).where(TaskAutomationSettings.enabled.is_(True))
+    async def list_enabled_owner_ids(self) -> list[str]:
+        """Return owner_user_id list of enabled automation settings."""
+        stmt = select(TaskAutomationSettings.owner_user_id).where(
+            TaskAutomationSettings.enabled.is_(True)
         )
-        result = list(rows.all())
-        logger.info("Found %d enabled automation settings", len(result))
-        return result
+        result = await self.session.execute(stmt)
+        owner_ids = [row[0] for row in result.all()]
+        logger.debug("Listed %d enabled owner IDs", len(owner_ids))
+        return owner_ids
+
+    async def get_settings_by_owner(self, owner_user_id: str) -> TaskAutomationSettings | None:
+        """Load settings for a specific owner. Returns None if not found."""
+        stmt = select(TaskAutomationSettings).where(
+            TaskAutomationSettings.owner_user_id == owner_user_id
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def update_last_run_at(self, settings: TaskAutomationSettings) -> None:
         settings.last_run_at = utcnow()

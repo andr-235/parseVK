@@ -1,6 +1,9 @@
 """Automation scheduler background worker for tasks-service.
 
-Periodically evaluates enabled automation settings and triggers due runs.
+Periodically evaluates enabled automation settings in per-user transactions
+and triggers due runs. Each owner is processed in its own database session
+and transaction, so one owner's error does not affect others.
+Processes at most MAX_OWNERS_PER_CYCLE owners per cycle.
 """
 
 import asyncio
@@ -12,25 +15,44 @@ from app.modules.automation.repository import AutomationRepository
 
 logger = logging.getLogger(__name__)
 
+MAX_OWNERS_PER_CYCLE = 100
+
 
 async def run_automation_scheduler_forever() -> None:
-    """Background worker: check and run due automation settings every 30 seconds."""
-    logger.info("Automation scheduler starting")
+    """Background worker: check and run due automation every 30 seconds.
+
+    Algorithm:
+    1. Short session -> list_enabled_owner_ids() -> close.
+    2. Per owner: own session -> get_settings_by_owner -> check_and_run_due -> commit.
+    3. Max MAX_OWNERS_PER_CYCLE owners per cycle.
+    """
+    logger.info("Automation scheduler starting (per-user transactions)")
     while True:
         try:
+            # Step 1: collect enabled owner IDs (short session)
+            owner_ids: list[str] = []
             async with SessionLocal() as session:
-                async with session.begin():
-                    automation = ApplicationFactory(session).create_automation_service()
-                    settings_list = await AutomationRepository(session).list_enabled_settings()
-                    for s in settings_list:
-                        try:
-                            await automation.check_and_run_due(s)
-                        except Exception:
-                            logger.exception("Automation scheduler failed for user %s", s.owner_user_id)
-                    count = len(settings_list)
-                    if count:
-                        logger.info("Automation scheduler check: %d settings processed", count)
+                repo = AutomationRepository(session)
+                owner_ids = await repo.list_enabled_owner_ids()
+                logger.debug("Found %d enabled automation owners", len(owner_ids))
+
+            # Step 2: process each owner in its own session/transaction
+            for owner_id in owner_ids[:MAX_OWNERS_PER_CYCLE]:
+                try:
+                    async with SessionLocal() as session:
+                        async with session.begin():
+                            repo = AutomationRepository(session)
+                            settings = await repo.get_settings_by_owner(owner_id)
+                            if settings is None:
+                                logger.warning("Owner %s has no settings (race)", owner_id)
+                                continue
+                            factory = ApplicationFactory(session)
+                            automation = factory.create_automation_service()
+                            await automation.check_and_run_due(settings)
+                except Exception:
+                    logger.exception("Automation check failed for owner %s", owner_id)
+                    continue  # don't break the loop for other owners
         except Exception:
-            logger.exception("automation scheduler loop failed")
+            logger.exception("Automation scheduler top-level loop failed")
         logger.debug("Automation cycle completed, next check in 30s")
         await asyncio.sleep(30)
