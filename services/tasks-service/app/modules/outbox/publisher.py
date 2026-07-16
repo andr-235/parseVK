@@ -1,7 +1,9 @@
 import json
 import logging
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+from prometheus_client import REGISTRY, Counter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -12,6 +14,21 @@ if TYPE_CHECKING:
     from aiokafka import AIOKafkaProducer
 
 logger = logging.getLogger(__name__)
+
+
+def _create_dlq_counter() -> Counter:
+    try:
+        return Counter(
+            "tasks_dlq_events_total",
+            "Total events sent to tasks DLQ",
+            ["event_type"],
+        )
+    except ValueError:
+        # Re-import in the same process (tests reset sys.modules) — reuse existing collector.
+        return REGISTRY._names_to_collectors["tasks_dlq_events_total"]
+
+
+dlq_events_total = _create_dlq_counter()
 
 MAX_OUTBOX_ATTEMPTS = 5
 
@@ -47,7 +64,7 @@ class OutboxPublisher:
                     logger.warning("Failed to publish event id=%s type=%s: %s", event.id, event.event_type, error)
                     await self.repository.mark_failed(event, error, max_attempts=MAX_OUTBOX_ATTEMPTS)
                     if event.attempts >= MAX_OUTBOX_ATTEMPTS:
-                        await self._publish_to_dlq(producer, event)
+                        await self._publish_to_dlq(producer, event, error)
                     continue
                 await self.repository.mark_published(event)
         finally:
@@ -74,7 +91,8 @@ class OutboxPublisher:
             ).encode("utf-8"),
         )
 
-    async def _publish_to_dlq(self, producer: "AIOKafkaProducer", event: OutboxEvent) -> None:
+    async def _publish_to_dlq(self, producer: "AIOKafkaProducer", event: OutboxEvent, last_error: str = "") -> None:
+        dlq_reason = f"max_retries_exceeded: {last_error}" if last_error else "max_retries_exceeded"
         envelope = {
             "event_id": str(event.id),
             "event_type": event.event_type,
@@ -84,8 +102,10 @@ class OutboxPublisher:
             "correlation_id": event.correlation_id,
             "payload": event.payload,
             "created_at": event.created_at.isoformat() if event.created_at else None,
-            "dlq_reason": "max_retries_exceeded",
+            "dlq_reason": dlq_reason,
+            "dlq_timestamp": datetime.now(UTC).isoformat(),
         }
+        dlq_events_total.labels(event_type=event.event_type).inc()
         key = kafka_key_for_event(event.event_type, event.payload, event.aggregate_id)
         await producer.send_and_wait(
             settings.kafka_topic_tasks_dlq,
@@ -93,6 +113,6 @@ class OutboxPublisher:
             value=json.dumps(envelope).encode("utf-8"),
         )
         logger.warning(
-            "Moved outbox event id=%s type=%s to DLQ after %d attempts",
-            event.id, event.event_type, event.attempts,
+            "Moved outbox event id=%s type=%s to DLQ after %d attempts (reason: %s)",
+            event.id, event.event_type, event.attempts, dlq_reason,
         )
