@@ -4,12 +4,13 @@ from datetime import UTC, datetime, timedelta
 
 from app.db.models import Task, TaskAuditLog, TaskAutomationSettings
 
-logger = logging.getLogger(__name__)
 from app.modules.automation.repository import AutomationRepository
 from app.modules.automation.schemas import AutomationSettingsUpdate
 from app.modules.outbox.service import OutboxService
 from app.modules.tasks.mapper import task_to_response
 from app.modules.tasks.repository import TasksRepository
+
+logger = logging.getLogger(__name__)
 
 
 class AutomationService:
@@ -50,13 +51,13 @@ class AutomationService:
             aggregate_type="task_automation_settings",
             aggregate_id=owner_user_id,
             correlation_id=correlation_id,
-            dedupe_key=f"task.automation_settings_updated:{owner_user_id}",
             payload={
                 "ownerUserId": owner_user_id,
                 "enabled": settings.enabled,
                 "postLimit": settings.post_limit,
             },
         )
+        logger.info("Published automation_settings_updated outbox event for user %s", owner_user_id)
         return await self._settings_response(owner_user_id, settings)
 
     async def run(
