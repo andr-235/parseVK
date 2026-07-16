@@ -16,6 +16,14 @@ lifespan = create_lifespan(_outbox_publisher_healthy, _automation_scheduler_heal
 
 
 def create_app() -> FastAPI:
+    """Create and configure the tasks-service FastAPI application.
+
+    Registers routers, health/ready endpoints, exception handlers, Prometheus
+    instrumentation, and the lifespan that manages background workers.
+
+    Returns:
+        Configured FastAPI application instance.
+    """
     app = FastAPI(title="parseVK Tasks Service", lifespan=lifespan)
 
     @app.get("/health")

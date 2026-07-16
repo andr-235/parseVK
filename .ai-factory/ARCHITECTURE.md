@@ -65,11 +65,13 @@ services/vk-service/
 ```
 services/<name>/
 ├── app/
-│   ├── core/          # Config (pydantic-settings), dependencies, exceptions
-│   ├── modules/       # Feature modules (router, service, repository, schemas)
-│   ├── db/            # SQLAlchemy models, session factory
-│   └── main.py        # FastAPI app factory (create_app)
-├── alembic/           # Database migrations
+│   ├── api/            # Presentation layer (routers, schemas, dependencies)
+│   ├── background/     # Background workers (outbox publisher, automation scheduler, supervisor)
+│   ├── core/           # Config (pydantic-settings), dependencies, exceptions
+│   ├── modules/        # Feature modules (router, service, repository, schemas)
+│   ├── db/             # SQLAlchemy models, session factory
+│   └── main.py         # FastAPI app factory (create_app)
+├── alembic/            # Database migrations
 ├── tests/
 ├── pyproject.toml
 └── Dockerfile
@@ -194,7 +196,7 @@ class ContentServiceClient(ServiceClient):
 | `parsevk.vk.dlq` | 3 | vk-service | — | Failed vk outbox events exceeding retry limit |
 | `parsevk.im.dlq` | 3 | im-service | — | Failed im outbox events exceeding retry limit |
 | `identity.dlq` | 3 | identity-service | — | Failed identity outbox events exceeding retry limit |
-| `parsevk.tasks.dlq` | 3 | — | — | Created in docker-compose but tasks-service does NOT produce to it |
+| `parsevk.tasks.dlq` | 3 | tasks-service | — | Outbox events exceeding max retries (producer-side DLQ) |
 
 ### Services Without Kafka
 
@@ -214,7 +216,7 @@ class ContentServiceClient(ServiceClient):
 
                             ┌────────────────┐
                             │ tasks.svc      │──→ parsevk.tasks.events
-                            │ (publisher)    │──→ (NO DLQ - dead-end at "failed")
+                            │ (publisher)    │──→ parsevk.tasks.dlq
                             └──────┬─────────┘
                                    │
                     ┌──────────────┼──────────────┐
@@ -247,9 +249,9 @@ class ContentServiceClient(ServiceClient):
 | ✅ Multi-Partition Topics | Done | All topics have 3 partitions (configured in docker-compose.yml) |
 | ✅ Consumer Lag Monitoring | Done | `kafka_consumer_lag` Prometheus metric in all 4 consumers (vk, im, content×2, moderation) |
 | ✅ Health Endpoints | Done | All 6 Kafka-related services expose /health with kafka/outboxPublisher status |
-| ✅ Dead Letter Queue | Done (6/9) | vk, im, identity have producer-side + consumer-side DLQ. content, moderation have consumer-side DLQ. **Only tasks-service lacks DLQ** |
+| ✅ Dead Letter Queue | Done (7/9) | vk, im, identity have producer-side + consumer-side DLQ. content, moderation have consumer-side DLQ. **tasks-service has producer-side DLQ** |
 | ⚠️ Consumer Retry (In-Memory) | Partial | All consumers have `_retry_count` dict with max 3 retries, but **in-memory only** — lost on restart |
-| ❌ Shared Event Schemas | Missing | `EventEnvelope`/`WireEvent`/`ConsumerEvent` exist in `libs/py/common/events/` but only identity-service uses them. All consumer services (vk, im, content, moderation) define copy-pasted local Pydantic models |
+| ⚠️ Shared Event Schemas | Partial | `EventEnvelope`/`WireEvent`/`ConsumerEvent` exist in `libs/py/common/events/`. identity-service and tasks-service use them. Shared helpers (`common.events.helpers`) extracted. im-service refactored to use shared helpers. vk-service, content-service, moderation-service still use legacy local models |
 | ❌ Distributed Tracing | Missing | No OpenTelemetry/Jaeger. `correlation_id` propagated but not traced across service boundaries |
 | ❌ `identity.events` Has No Consumers | Fire-and-Forget | Identity publishes events but no service subscribes — events are produced with zero observable effect |
 | ❌ Exactly-Once Semantics | Missing | No `transactional.id` or explicit `enable.idempotence` config on any producer (aiokafka defaults apply) |
@@ -267,8 +269,7 @@ All event envelopes carry an `event_version` integer field. Current version is `
 
 | Priority | Task | Details | Files |
 |----------|------|---------|-------|
-| P0 | **tasks-service DLQ** | Only producer without DLQ transport. Add DLQ publisher when outbox retries exhausted | `services/tasks-service/app/modules/outbox/` |
-| P0 | **Shared event schemas** | Extract local VkEvent/TaskEvent/ImEvent models to `libs/py/common/events/`. All consumers currently copy-paste | `libs/py/common/common/events/` + all consumer services |
+| P0 | **Shared event schemas** | ⚠️ **Partially Done** — tasks-service uses `WireEvent`, im-service refactored, shared helpers created. **Remaining:** vk-service, content-service, moderation-service still use legacy local models | `libs/py/common/common/events/` + vk-service, content-service, moderation-service |
 | P1 | **Persistent consumer retry** | Move `_retry_count` from in-memory dict to DB-backed (use `processed_events` table). Survive restarts | All 4 consumer services |
 | P1 | **Consumer-side backoff** | Add `next_attempt_at` style backoff to consumers instead of immediate retry | All 4 consumer services |
 | P1 | **DLQ monitoring/alerting** | Add Prometheus alert rules for DLQ topic non-zero offset. No one monitors failed events today | `monitoring/prometheus/` |

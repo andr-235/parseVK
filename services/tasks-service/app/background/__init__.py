@@ -29,6 +29,17 @@ def create_lifespan(
     outbox_flag: list[bool],
     automation_flag: list[bool],
 ) -> Callable[[FastAPI], AsyncGenerator[None, None]]:
+    """Build a FastAPI lifespan that starts supervised background workers.
+
+    Args:
+        outbox_flag: Mutable one-element list used as a health flag for
+            the outbox publisher worker.
+        automation_flag: Mutable one-element list used as a health flag for
+            the automation scheduler worker.
+
+    Returns:
+        An asynccontextmanager lifespan callable for FastAPI.
+    """
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         tasks: list[asyncio.Task] = []

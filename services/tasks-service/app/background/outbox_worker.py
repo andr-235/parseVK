@@ -1,3 +1,8 @@
+"""Outbox publisher background worker for tasks-service.
+
+Continuously polls the outbox table and publishes pending events to Kafka.
+"""
+
 import asyncio
 import logging
 

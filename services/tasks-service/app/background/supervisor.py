@@ -1,3 +1,8 @@
+"""Supervisor background worker for tasks-service.
+
+Wraps a background coroutine with exponential-backoff restart on crash.
+"""
+
 import asyncio
 import logging
 

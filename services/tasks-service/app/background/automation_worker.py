@@ -1,3 +1,8 @@
+"""Automation scheduler background worker for tasks-service.
+
+Periodically evaluates enabled automation settings and triggers due runs.
+"""
+
 import asyncio
 import logging
 
