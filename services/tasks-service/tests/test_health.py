@@ -9,7 +9,7 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.background.health import WorkerHealth
+from common.runtime import WorkerHealth
 from app.main import create_app
 
 
@@ -55,7 +55,9 @@ def test_initial_state_dead():
     """New WorkerHealth is not healthy."""
     h = WorkerHealth()
     assert h.running is False
-    assert h.last_success_at is None
+    assert h.last_cycle_success_at is None
+    assert h.last_cycle_error is None
+    assert h.last_crash is None
     assert h.is_healthy is False
 
 
@@ -67,23 +69,33 @@ def test_mark_started():
     assert h.is_healthy is False  # no success yet
 
 
-def test_mark_success():
-    """mark_success() sets running=True, updates last_success_at, clears error."""
+def test_mark_cycle_success():
+    """mark_cycle_success() sets running=True, updates last_cycle_success_at, clears cycle error."""
     h = WorkerHealth()
-    h.mark_success()
+    h.mark_cycle_success()
     assert h.running is True
-    assert h.last_success_at is not None
-    assert h.last_error is None
+    assert h.last_cycle_success_at is not None
+    assert h.last_cycle_error is None
     assert h.is_healthy is True
 
 
-def test_mark_error():
-    """mark_error() sets running=False and records the error."""
+def test_mark_crashed():
+    """mark_crashed() sets running=False and records the crash."""
     h = WorkerHealth()
-    h.mark_success()  # was healthy
-    h.mark_error("something went wrong")
+    h.mark_cycle_success()  # was healthy
+    h.mark_crashed("something went wrong")
     assert h.running is False
-    assert h.last_error == "something went wrong"
+    assert h.last_crash == "something went wrong"
+    assert h.is_healthy is False
+
+
+def test_mark_cycle_error_preserves_running():
+    """mark_cycle_error keeps running=True, sets last_cycle_error."""
+    h = WorkerHealth()
+    h.mark_cycle_success()
+    h.mark_cycle_error("cycle failed")
+    assert h.running is True
+    assert h.last_cycle_error == "cycle failed"
     assert h.is_healthy is False
 
 

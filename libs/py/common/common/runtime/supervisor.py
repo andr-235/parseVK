@@ -1,22 +1,33 @@
-"""Supervisor background worker for tasks-service.
+"""Supervisor background worker for common runtime.
 
 Wraps a background coroutine with exponential-backoff restart on crash.
+Workers report their own cycle health via WorkerHealth.mark_cycle_success()
+and mark_cycle_error(). The supervisor only marks start, crash, and stop.
 """
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 
-from app.background.health import WorkerHealth
+from common.runtime.health import WorkerHealth
 
 logger = logging.getLogger(__name__)
 
 
 async def supervise(
     name: str,
-    coro_factory,
+    coro_factory: Callable[[], Awaitable[None]],
     health: WorkerHealth | None = None,
 ) -> None:
     """Run a background coroutine with exponential backoff restart on crash.
+
+    The supervisor manages lifecycle at the worker level:
+    - Calls mark_started() before running the worker
+    - On unhandled exception: calls mark_crashed(), restarts with backoff
+    - On CancelledError: calls mark_stopped() and re-raises
+
+    The worker is responsible for reporting its own cycle-level health
+    via mark_cycle_success() and mark_cycle_error().
 
     Args:
         name: Human-readable worker name for logging.
@@ -29,21 +40,15 @@ async def supervise(
             if health is not None:
                 health.mark_started()
             await coro_factory()
-            if health is not None:
-                health.mark_success()
-                logger.debug(
-                    "Health updated: running=%s, last_success=%s",
-                    health.running, health.last_success_at,
-                )
             break
         except asyncio.CancelledError:
             logger.info("%s cancelled, stopping supervise", name)
             if health is not None:
                 health.mark_stopped()
-            break
+            raise
         except Exception as e:
             if health is not None:
-                health.mark_error(str(e))
+                health.mark_crashed(str(e))
             logger.error(
                 "%s crashed: %s. Restarting in %ds...",
                 name, e, retry_delay,

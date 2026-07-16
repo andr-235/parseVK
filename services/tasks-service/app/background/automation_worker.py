@@ -9,6 +9,8 @@ Processes at most MAX_OWNERS_PER_CYCLE owners per cycle.
 import asyncio
 import logging
 
+from common.runtime import WorkerHealth
+
 from app.bootstrap import ApplicationFactory
 from app.db.session import SessionLocal
 from app.modules.automation.repository import AutomationRepository
@@ -18,7 +20,7 @@ logger = logging.getLogger(__name__)
 MAX_OWNERS_PER_CYCLE = 100
 
 
-async def run_automation_scheduler_forever() -> None:
+async def run_automation_scheduler_forever(health: WorkerHealth) -> None:
     """Background worker: check and run due automation every 30 seconds.
 
     Algorithm:
@@ -52,7 +54,9 @@ async def run_automation_scheduler_forever() -> None:
                 except Exception:
                     logger.exception("Automation check failed for owner %s", owner_id)
                     continue  # don't break the loop for other owners
-        except Exception:
+        except Exception as e:
             logger.exception("Automation scheduler top-level loop failed")
+            health.mark_cycle_error(f"Automation scheduler cycle failed: {e}")
+        health.mark_cycle_success()
         logger.debug("Automation cycle completed, next check in 30s")
         await asyncio.sleep(30)

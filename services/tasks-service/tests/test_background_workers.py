@@ -12,8 +12,7 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.background import supervise
-from app.background.health import WorkerHealth
+from common.runtime import WorkerHealth, supervise
 
 
 @pytest.mark.asyncio
@@ -25,31 +24,34 @@ async def test_supervise_completes_successfully():
         pass
 
     await supervise("test-good", good_worker, health=health)
-    assert health.is_healthy is True
+    assert health.running is True
+    assert health.is_healthy is False  # supervisor doesn't report cycles
 
 
 @pytest.mark.asyncio
-async def test_supervise_sets_health_flag():
-    """supervise marks health healthy on successful completion."""
+async def test_supervise_does_not_set_health_flag():
+    """supervise no longer marks cycle success; just lifecycle flags."""
     health = WorkerHealth()
 
     async def worker():
         pass
 
     await supervise("test-health", worker, health=health)
-    assert health.is_healthy is True
+    assert health.running is True
+    assert health.is_healthy is False  # supervisor no longer calls mark_cycle_success
 
 
 @pytest.mark.asyncio
 async def test_supervise_handles_cancelled_error():
-    """supervise exits cleanly on CancelledError."""
+    """supervise re-raises CancelledError after marking stopped."""
     health = WorkerHealth()
     health.mark_started()
 
     async def cancelling_worker():
         raise asyncio.CancelledError()
 
-    await supervise("test-cancel", cancelling_worker, health=health)
+    with pytest.raises(asyncio.CancelledError):
+        await supervise("test-cancel", cancelling_worker, health=health)
     assert health.running is False
 
 
@@ -75,9 +77,13 @@ async def test_supervise_retries_on_exception():
         if call_count < 3:
             raise RuntimeError(f"Attempt {call_count} failed")
 
-    with patch("app.background.supervisor.asyncio.sleep", AsyncMock()):
-        await supervise("test-flaky", flaky_worker)
+    health = WorkerHealth()
+    with patch("common.runtime.supervisor.asyncio.sleep", AsyncMock()):
+        await supervise("test-flaky", flaky_worker, health=health)
     assert call_count == 3, f"Expected 3 calls, got {call_count}"
+    assert health.last_crash == "Attempt 2 failed"
+    assert health.running is True
+    assert health.is_healthy is False
 
 
 @pytest.mark.asyncio
@@ -126,12 +132,14 @@ async def test_outbox_worker_creates_producer_once(monkeypatch):
     monkeypatch.setattr(outbox_worker, "ApplicationFactory", FakeFactory)
     monkeypatch.setattr(outbox_worker.asyncio, "sleep", sleep_once)
 
+    health = WorkerHealth()
     with pytest.raises(asyncio.CancelledError):
-        await outbox_worker.publish_outbox_forever()
+        await outbox_worker.publish_outbox_forever(health)
 
     assert start_calls == 1, f"Expected 1 start call, got {start_calls}"
     assert stop_calls == 1, f"Expected 1 stop call, got {stop_calls}"
     assert pub_mock.publish_batch.await_count == 1
+    assert health.last_cycle_success_at is not None  # mark_cycle_success was called
 
 
 @pytest.mark.asyncio
@@ -180,11 +188,13 @@ async def test_outbox_worker_stops_producer_on_exit(monkeypatch):
     monkeypatch.setattr(outbox_worker, "ApplicationFactory", FakeFactory)
     monkeypatch.setattr(outbox_worker.asyncio, "sleep", sleep_once)
 
+    health = WorkerHealth()
     with pytest.raises(asyncio.CancelledError):
-        await outbox_worker.publish_outbox_forever()
+        await outbox_worker.publish_outbox_forever(health)
 
     assert start_called, "Producer should have been started"
     assert stop_called, "Producer should have been stopped"
+    assert health.last_cycle_success_at is not None  # mark_cycle_success was called
 
 
 @pytest.mark.asyncio
@@ -228,8 +238,9 @@ async def test_outbox_worker_stops_producer_on_cancelled_error(monkeypatch):
     monkeypatch.setattr(outbox_worker, "AIOKafkaProducer", lambda **kwargs: FakeProducer())
     monkeypatch.setattr(outbox_worker, "ApplicationFactory", FakeFactory)
 
+    health = WorkerHealth()
     with pytest.raises(asyncio.CancelledError):
-        await outbox_worker.publish_outbox_forever()
+        await outbox_worker.publish_outbox_forever(health)
 
     assert start_called, "Producer should have been started"
     assert stop_called, "Producer should have been stopped in finally"

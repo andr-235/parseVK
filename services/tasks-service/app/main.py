@@ -1,11 +1,11 @@
 """FastAPI application factory for tasks-service."""
 
+from common.runtime import WorkerHealth
 from fastapi import FastAPI, HTTPException
 from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import text
 
 from app.background import create_lifespan
-from app.background.health import WorkerHealth
 from app.core.exception_handlers import register_exception_handlers
 from app.modules.automation.router import router as automation_router
 from app.modules.tasks.router import router as tasks_router

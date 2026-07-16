@@ -9,6 +9,7 @@ import asyncio
 import logging
 
 from aiokafka import AIOKafkaProducer
+from common.runtime import WorkerHealth
 
 from app.bootstrap import ApplicationFactory
 from app.core.config import settings
@@ -17,7 +18,7 @@ from app.db.session import SessionLocal
 logger = logging.getLogger(__name__)
 
 
-async def publish_outbox_forever() -> None:
+async def publish_outbox_forever(health: WorkerHealth) -> None:
     """Background worker: create producer once, publish outbox events every 2s."""
     producer = AIOKafkaProducer(bootstrap_servers=settings.kafka_bootstrap_servers)
     try:
@@ -37,8 +38,10 @@ async def publish_outbox_forever() -> None:
                         count = await publisher.publish_batch()
                         if count:
                             logger.info("Outbox batch published: %d events", count)
-            except Exception:
+                        health.mark_cycle_success()
+            except Exception as e:
                 logger.exception("Outbox batch publish failed")
+                health.mark_cycle_error(f"Outbox batch publish failed: {e}")
             await asyncio.sleep(2)
     finally:
         try:

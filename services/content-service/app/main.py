@@ -2,6 +2,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager, suppress
 
+from common.runtime import WorkerHealth, supervise
 from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
@@ -12,29 +13,8 @@ from app.modules.projections.consumer import ProjectionConsumer
 
 logger = logging.getLogger(__name__)
 
-_vk_consumer_healthy: list[bool] = [False]
-_im_consumer_healthy: list[bool] = [False]
-
-
-async def supervise(name: str, coro_factory, health_flag: list[bool] | None = None):
-    retry_delay = 1
-    while True:
-        try:
-            if health_flag is not None:
-                health_flag[0] = True
-            await coro_factory()
-            break
-        except asyncio.CancelledError:
-            logger.info("%s cancelled, stopping supervise", name)
-            if health_flag is not None:
-                health_flag[0] = False
-            break
-        except Exception as e:
-            if health_flag is not None:
-                health_flag[0] = False
-            logger.error("%s crashed: %s. Restarting in %ds...", name, e, retry_delay)
-            await asyncio.sleep(retry_delay)
-            retry_delay = min(retry_delay * 2, 30)
+_vk_consumer_health: WorkerHealth = WorkerHealth()
+_im_consumer_health: WorkerHealth = WorkerHealth()
 
 
 @asynccontextmanager
@@ -52,10 +32,10 @@ async def lifespan(app: FastAPI):
 
     if settings.kafka_consumer_enabled:
         vk_task = asyncio.create_task(
-            supervise("VK consumer", run_vk, health_flag=_vk_consumer_healthy)
+            supervise("VK consumer", run_vk, health=_vk_consumer_health)
         )
         im_task = asyncio.create_task(
-            supervise("IM consumer", run_im, health_flag=_im_consumer_healthy)
+            supervise("IM consumer", run_im, health=_im_consumer_health)
         )
     try:
         yield
@@ -83,8 +63,8 @@ def create_app() -> FastAPI:
     async def health() -> dict[str, str]:
         result: dict[str, str] = {"status": "UP"}
         if settings.kafka_consumer_enabled:
-            result["vkConsumer"] = "healthy" if _vk_consumer_healthy[0] else "unhealthy"
-            result["imConsumer"] = "healthy" if _im_consumer_healthy[0] else "unhealthy"
+            result["vkConsumer"] = "healthy" if _vk_consumer_health.is_healthy else "unhealthy"
+            result["imConsumer"] = "healthy" if _im_consumer_health.is_healthy else "unhealthy"
         return result
 
     @app.get("/ready")

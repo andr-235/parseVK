@@ -10,19 +10,17 @@ import asyncio
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager, suppress
 
+from common.runtime import WorkerHealth, supervise
 from fastapi import FastAPI
 
 from app.background.automation_worker import run_automation_scheduler_forever
-from app.background.health import WorkerHealth
 from app.background.outbox_worker import publish_outbox_forever
-from app.background.supervisor import supervise
 from app.core.config import settings
 
 __all__ = [
     "create_lifespan",
     "publish_outbox_forever",
     "run_automation_scheduler_forever",
-    "supervise",
 ]
 
 
@@ -43,9 +41,13 @@ def create_lifespan(
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         tasks: list[asyncio.Task] = []
         if settings.outbox_publish_enabled:
-            tasks.append(asyncio.create_task(supervise("Outbox publisher", publish_outbox_forever, health=outbox_health)))
+            tasks.append(asyncio.create_task(
+                supervise("Outbox publisher", lambda: publish_outbox_forever(outbox_health), health=outbox_health)
+            ))
         if settings.automation_scheduler_enabled:
-            tasks.append(asyncio.create_task(supervise("Automation scheduler", run_automation_scheduler_forever, health=automation_health)))
+            tasks.append(asyncio.create_task(
+                supervise("Automation scheduler", lambda: run_automation_scheduler_forever(automation_health), health=automation_health)
+            ))
         try:
             yield
         finally:

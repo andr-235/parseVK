@@ -180,9 +180,76 @@ class ContentServiceClient(ServiceClient):
 1. **Database per Service:** 8 PostgreSQL databases (identity, tasks, vk, content, moderation, im, telegram, listings). No shared databases.
 2. **Idempotent Consumers:** Kafka consumers must handle duplicate delivery (dedup by event_id or upsert).
 3. **Outbox Pattern:** Services publish domain events via an outbox table to ensure reliable Kafka delivery. Each service's OutboxPublisher receives a long-lived Kafka producer from its OutboxWorker (not created internally). Producer lifecycle (start/stop) is managed by the worker, not the publisher.
-4. **Typed Worker Health:** Background worker health is tracked via a `WorkerHealth` dataclass (not `list[bool]`). It records running state, last success timestamp, and last error. The supervisor uses `mark_started()/mark_success()/mark_error()/mark_stopped()` for typed lifecycle diagnostics instead of mutable flag mutation.
+4. **Typed Worker Health:** Background worker health is tracked via a `WorkerHealth` dataclass from `common.runtime` (not `list[bool]`). It records running state, last cycle success timestamp, last cycle error, and last crash. The supervisor uses `mark_started()/mark_crashed()/mark_stopped()` — workers report their own cycle health via `mark_cycle_success()/mark_cycle_error()`.
 5. **File Size Limit:** Max 100-150 lines per file. Decompose into modules when exceeded. Exceptions: configs, migrations, autogen.
 6. **Type Safety:** Pydantic v2 schemas for all I/O. TypeScript types for frontend. Pydantic Settings for all configs.
+
+## Shared Background Worker Runtime (`common.runtime`)
+
+The `libs/py/common/common/runtime/` module provides a shared background worker supervision and health-tracking framework used by tasks-service, identity-service, and content-service.
+
+### WorkerHealth Lifecycle Contract
+
+`WorkerHealth` is a dataclass that tracks five lifecycle states:
+
+```
+  mark_started()
+       │
+       ▼
+  ┌───────────┐     mark_cycle_success()     ┌──────────────────┐
+  │  RUNNING  │──────────────────────────────►│  HEALTHY         │
+  │  (active) │◄──────────────────────────────│  (running=True,  │
+  │           │     mark_cycle_error()        │   last_cycle_    │
+  │           │  (running stays True)         │   success_at)    │
+  └─────┬─────┘                              └──────────────────┘
+        │
+        ├── mark_crashed() ──► running=False, last_crash set
+        │
+        └── mark_stopped() ──► running=False (graceful shutdown)
+```
+
+Key rules:
+- **Supervisor** calls only `mark_started()` (before worker starts), `mark_crashed()` (on unhandled exception), and `mark_stopped()` (on CancelledError).
+- **Workers** are responsible for calling `mark_cycle_success()` after each successful cycle and `mark_cycle_error()` on recoverable errors within their loop.
+- `is_healthy` returns `True` only when `running=True` AND `last_cycle_success_at` is set (at least one successful cycle recorded).
+- A cycle error (`mark_cycle_error`) does NOT set `running=False` — the worker continues its loop. A crash (`mark_crashed`) sets `running=False` because the worker terminated unexpectedly.
+
+### supervise() — Background Worker Supervisor
+
+The `supervise()` coroutine wraps any background worker coroutine factory with:
+
+1. **Start tracking:** Calls `health.mark_started()` before the first run.
+2. **Exponential backoff restart:** On unhandled exception, calls `health.mark_crashed()` and restarts the worker with backoff: 1s, 2s, 4s, 8s, ... up to 30s max.
+3. **Cancellation propagation:** On `asyncio.CancelledError`, calls `health.mark_stopped()` and **re-raises** the exception (not swallowed).
+4. **No cycle health reporting:** The supervisor never calls `mark_cycle_success()` or `mark_cycle_error()` — that is the worker's responsibility.
+
+### Usage Pattern
+
+```python
+from common.runtime import WorkerHealth, supervise
+
+health = WorkerHealth()
+
+async def my_worker(health: WorkerHealth) -> None:
+    while True:
+        try:
+            # ... do work ...
+            health.mark_cycle_success()
+        except Exception as e:
+            health.mark_cycle_error(f"Failed: {e}")
+        await asyncio.sleep(1)
+
+# In lifespan:
+task = asyncio.create_task(
+    supervise("My worker", lambda: my_worker(health), health=health)
+)
+```
+
+### Migration Notes
+
+- tasks-service: `WorkerHealth.mark_success()` → `mark_cycle_success()`, `mark_error()` → split into `mark_cycle_error()` (running stays True) and `mark_crashed()` (running=False).
+- identity-service: Local `supervise()` and inline `publish_outbox_forever()` replaced with `common.runtime` equivalents.
+- content-service: Local `supervise()` replaced with `common.runtime.supervise()`. Consumer-level cycle reporting is future work.
 
 ## Event-Driven Architecture Compliance
 
