@@ -1,3 +1,11 @@
+# [0.57.0](https://github.com/andr-235/parseVK/compare/v0.56.0...v0.57.0) (2026-07-16)
+
+
+### Features
+
+* **tasks-service:** add per-user transaction isolation for automation scheduler, cap to 100 owners/cycle, remove list_enabled_settings ([a7f5729](https://github.com/andr-235/parseVK/commit/a7f5729936665f9b9f3950be69b52aabe2afe8aa))
+* **tasks-service:** add typed WorkerHealth dataclass replacing list[bool] health flags, update dependent tests ([20d2944](https://github.com/andr-235/parseVK/commit/20d2944247a5dfb0f1d17a041020bbe5f07344a9))
+
 # [0.56.0](https://github.com/andr-235/parseVK/compare/v0.55.1...v0.56.0) (2026-07-16)
 
 
