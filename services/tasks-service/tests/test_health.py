@@ -9,6 +9,7 @@ from _service_path import use_service_path
 
 use_service_path()
 
+from app.background.health import WorkerHealth
 from app.main import create_app
 
 
@@ -48,3 +49,48 @@ async def test_ready_returns_service_unavailable():
 
     assert response.status_code == 503
     assert "Database is not ready" in response.json()["detail"]
+
+
+def test_initial_state_dead():
+    """New WorkerHealth is not healthy."""
+    h = WorkerHealth()
+    assert h.running is False
+    assert h.last_success_at is None
+    assert h.is_healthy is False
+
+
+def test_mark_started():
+    """mark_started() sets running=True but is_healthy is still False."""
+    h = WorkerHealth()
+    h.mark_started()
+    assert h.running is True
+    assert h.is_healthy is False  # no success yet
+
+
+def test_mark_success():
+    """mark_success() sets running=True, updates last_success_at, clears error."""
+    h = WorkerHealth()
+    h.mark_success()
+    assert h.running is True
+    assert h.last_success_at is not None
+    assert h.last_error is None
+    assert h.is_healthy is True
+
+
+def test_mark_error():
+    """mark_error() sets running=False and records the error."""
+    h = WorkerHealth()
+    h.mark_success()  # was healthy
+    h.mark_error("something went wrong")
+    assert h.running is False
+    assert h.last_error == "something went wrong"
+    assert h.is_healthy is False
+
+
+def test_mark_stopped():
+    """mark_stopped() sets running=False."""
+    h = WorkerHealth()
+    h.mark_started()
+    h.mark_stopped()
+    assert h.running is False
+    assert h.is_healthy is False
