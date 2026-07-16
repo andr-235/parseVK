@@ -179,9 +179,10 @@ class ContentServiceClient(ServiceClient):
 
 1. **Database per Service:** 8 PostgreSQL databases (identity, tasks, vk, content, moderation, im, telegram, listings). No shared databases.
 2. **Idempotent Consumers:** Kafka consumers must handle duplicate delivery (dedup by event_id or upsert).
-3. **Outbox Pattern:** Services publish domain events via an outbox table to ensure reliable Kafka delivery.
-4. **File Size Limit:** Max 100-150 lines per file. Decompose into modules when exceeded. Exceptions: configs, migrations, autogen.
-5. **Type Safety:** Pydantic v2 schemas for all I/O. TypeScript types for frontend. Pydantic Settings for all configs.
+3. **Outbox Pattern:** Services publish domain events via an outbox table to ensure reliable Kafka delivery. Each service's OutboxPublisher receives a long-lived Kafka producer from its OutboxWorker (not created internally). Producer lifecycle (start/stop) is managed by the worker, not the publisher.
+4. **Typed Worker Health:** Background worker health is tracked via a `WorkerHealth` dataclass (not `list[bool]`). It records running state, last success timestamp, and last error. The supervisor uses `mark_started()/mark_success()/mark_error()/mark_stopped()` for typed lifecycle diagnostics instead of mutable flag mutation.
+5. **File Size Limit:** Max 100-150 lines per file. Decompose into modules when exceeded. Exceptions: configs, migrations, autogen.
+6. **Type Safety:** Pydantic v2 schemas for all I/O. TypeScript types for frontend. Pydantic Settings for all configs.
 
 ## Event-Driven Architecture Compliance
 
