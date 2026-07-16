@@ -4,7 +4,7 @@
   "projectNumber": 2,
   "projectId": "PVT_kwHOCJBloc4BYcpQ",
   "projectTitle": "parsevk development",
-  "defaultBranch": "fastapi-microservices-rewrite",
+  "defaultBranch": "main",
   "statuses": {
     "todo": "Todo",
     "inProgress": "In Progress",
