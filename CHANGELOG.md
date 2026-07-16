@@ -1,3 +1,11 @@
+## [0.55.1](https://github.com/andr-235/parseVK/compare/v0.55.0...v0.55.1) (2026-07-16)
+
+
+### Bug Fixes
+
+* **tasks-service:** add outbox events for task.completed and task.failed + update ARCHITECTURE.md ([751c0ae](https://github.com/andr-235/parseVK/commit/751c0ae534ff0d9249e96713f9b7be08b18f7573))
+* **tasks-service:** remove permanent outbox dedupe_key for automation_settings_updated ([14afc82](https://github.com/andr-235/parseVK/commit/14afc825965dda52b32a18e81d98c34b2ff5a3ac))
+
 # [0.55.0](https://github.com/andr-235/parseVK/compare/v0.54.1...v0.55.0) (2026-07-01)
 
 
