@@ -1,3 +1,10 @@
+# [0.56.0](https://github.com/andr-235/parseVK/compare/v0.55.1...v0.56.0) (2026-07-16)
+
+
+### Features
+
+* **tasks-service:** harden DLQ production and add monitoring metric ([c24cf65](https://github.com/andr-235/parseVK/commit/c24cf65a0be8a74775c8ff78d84a55eb187e5674))
+
 ## [0.55.1](https://github.com/andr-235/parseVK/compare/v0.55.0...v0.55.1) (2026-07-16)
 
 
