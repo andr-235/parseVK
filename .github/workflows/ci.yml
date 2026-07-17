@@ -19,8 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'pull_request' || !contains(github.event.head_commit.message, '[skip ci]') }}
     outputs:
-      frontend_changed: ${{ steps.filter.outputs.frontend_changed }}
-      python_changed: ${{ steps.filter.outputs.python_changed }}
+      frontend_changed: ${{ steps.detect.outputs.frontend_changed }}
+      python_changed: ${{ steps.detect.outputs.python_changed }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -56,11 +56,11 @@ jobs:
               echo "$CHANGED_FILES"
             fi
 
-            if grep -qE '^front/' <<< "$CHANGED_FILES"; then
+            if echo "$CHANGED_FILES" | grep -qE '^front/'; then
               FRONTEND_CHANGED=true
             fi
 
-            if grep -qE '^(services/|libs/py/common/|pyproject\.toml)' <<< "$CHANGED_FILES"; then
+            if echo "$CHANGED_FILES" | grep -qE '^(services/|libs/py/common/|pyproject\.toml)'; then
               PYTHON_CHANGED=true
             fi
           fi
@@ -112,6 +112,12 @@ jobs:
           enable-cache: true
       - name: Run ruff check on all Python sources
         run: uvx ruff check --output-format=github services/ libs/
+
+  alembic-graphs:
+    name: Validate Alembic graphs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
       - name: Validate Alembic revision graphs
         run: python3 .github/scripts/validate_alembic_graphs.py
 
