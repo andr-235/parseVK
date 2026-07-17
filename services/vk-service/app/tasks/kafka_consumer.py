@@ -57,6 +57,5 @@ class TaskEventsConsumer(BaseEventConsumer):
             )
             return
         async with self.session_factory() as session:
-            async with session.begin():
-                handler = get_task_events_handler(session)
-                await handler.handle(event)
+            handler = get_task_events_handler(session)
+            await handler.handle(event)

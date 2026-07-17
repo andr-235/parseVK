@@ -82,7 +82,7 @@ def get_ingestion_service(session: AsyncSession) -> IngestionService:
 
 def get_task_events_handler(session: AsyncSession) -> TaskEventsService:
     repository = SqlAlchemyTaskEventsRepository(session)
-    return TaskEventsService(repository=repository)
+    return TaskEventsService(repository=repository, tasks_client=_tasks_client)
 
 
 def get_vk_groups_service(session: AsyncSession) -> VkGroupsService:

@@ -2,9 +2,16 @@ import logging
 from datetime import UTC, datetime
 
 import httpx
+from common.events import (
+    TaskEvent,
+    get_group_ids,
+    get_mode,
+    get_owner_user_id,
+    get_post_limit,
+    get_scope,
+    get_task_id,
+)
 
-from common.events import get_task_id, get_owner_user_id, get_scope, get_mode, get_group_ids, get_post_limit
-from common.events import TaskEvent
 from app.domain.entities.tasks import VkTaskRun
 from app.domain.repositories.tasks import TaskEventsRepository
 from app.infrastructure.tasks_client.client import TasksClient
@@ -24,6 +31,36 @@ def utcnow() -> datetime:
 
 
 class TaskEventsService:
+    """Handles incoming TaskEvent Kafka messages with a two-phase transaction pattern.
+
+    Phase A (short DB transaction):
+        - Idempotency check via is_processed
+        - Create or update VkTaskRun with status="pending"
+        - Mark event as processed (prevents redelivery from re-triggering handling)
+        - Commit
+
+    Phase B (HTTP call, no open transaction):
+        - Call tasks_service.start_execution()
+        - On 200: continue to Phase C
+        - On 409: mark local run as failed (conflict — another worker won)
+        - On 404: mark local run as failed (task was deleted)
+        - On other errors: leave run in "pending" for lease worker recovery
+
+    Phase C (short DB transaction):
+        - Update VkTaskRun status to "running"
+        - Commit
+
+    Why mark_processed is in Phase A, not Phase C:
+        If mark_processed were in Phase C and the process crashed after
+        Phase B success but before Phase C commit, the event would be
+        redelivered — is_processed would return False, causing duplicate
+        handling. With mark_processed in Phase A, even if Phase C never
+        commits, the event is idempotent. The run stays in "pending" and
+        the lease worker (TaskExecutor) picks it up via claim_next(),
+        calls start_execution with the same run_id, gets 200 (idempotent),
+        and updates the local run.
+    """
+
     def __init__(
         self,
         repository: TaskEventsRepository,
@@ -36,17 +73,95 @@ class TaskEventsService:
         self.consumer_name = consumer_name
 
     async def handle(self, event: TaskEvent) -> VkTaskRun | None:
-        if await self.repository.is_processed(self.consumer_name, event.event_id):
-            return None
-
         if event.event_type in TERMINAL_STATUSES:
-            result = await self._handle_termination(event)
-        else:
-            result = await self._handle_created_or_resumed(event)
+            logger.info(
+                "Handling termination event event_id=%s event_type=%s",
+                event.event_id,
+                event.event_type,
+            )
+            async with self.repository.session.begin():
+                if await self.repository.is_processed(self.consumer_name, event.event_id):
+                    return None
+                result = await self._handle_termination(event)
+                await self.repository.mark_processed(
+                    self.consumer_name, event.event_id, event.event_type
+                )
+            return result
 
-        await self.repository.mark_processed(self.consumer_name, event.event_id, event.event_type)
-        await self.repository.save()
-        return result
+        task_id = get_task_id(event)
+        run_id = str(event.payload.get("runId") or event.event_id)
+        logger.info(
+            "Phase A: preparing task run for event_id=%s task_id=%s run_id=%s",
+            event.event_id,
+            task_id,
+            run_id,
+        )
+
+        async with self.repository.session.begin():
+            if await self.repository.is_processed(self.consumer_name, event.event_id):
+                return None
+            task_run = await self._handle_created_or_resumed(event)
+            if task_run is None:
+                await self.repository.mark_processed(
+                    self.consumer_name, event.event_id, event.event_type
+                )
+                return None
+            await self.repository.mark_processed(
+                self.consumer_name, event.event_id, event.event_type
+            )
+
+        logger.info(
+            "Phase B: calling tasks-service start_execution for task_id=%s run_id=%s",
+            task_id,
+            run_id,
+        )
+        try:
+            await self.tasks_client.start_execution(
+                task_id,
+                run_id,
+                request_id=run_id,
+                correlation_id=event.correlation_id,
+            )
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 409:
+                logger.info(
+                    "Phase B: received 409 conflict for task_id=%s run_id=%s",
+                    task_id,
+                    run_id,
+                )
+                async with self.repository.session.begin():
+                    await self._handle_conflict(task_run, run_id, exc)
+                return None
+            if exc.response.status_code == 404:
+                logger.warning(
+                    "[FIX] Task %s not found in tasks-service (may have been deleted), skipping",
+                    task_id,
+                )
+                async with self.repository.session.begin():
+                    await self.repository.update_task_run(
+                        task_id,
+                        status="failed",
+                        finished_at=utcnow(),
+                        last_error=f"Task {task_id} not found in tasks-service",
+                        updated_at=utcnow(),
+                    )
+                return None
+            raise
+
+        logger.info(
+            "Phase C: marking task run as running for task_id=%s run_id=%s",
+            task_id,
+            run_id,
+        )
+        async with self.repository.session.begin():
+            await self.repository.update_task_run(
+                task_id,
+                status="running",
+                started_at=task_run.started_at or utcnow(),
+                updated_at=utcnow(),
+            )
+            task_run = await self.repository.get_task_run(task_id)
+        return task_run
 
     async def _handle_created_or_resumed(self, event: TaskEvent) -> VkTaskRun | None:
         task_id = get_task_id(event)
@@ -71,40 +186,6 @@ class TaskEventsService:
                 group_ids=get_group_ids(event),
                 post_limit=get_post_limit(event),
             )
-
-        try:
-            await self.tasks_client.start_execution(
-                task_id,
-                run_id,
-                request_id=run_id,
-                correlation_id=event.correlation_id,
-            )
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 409:
-                await self._handle_conflict(task_run, run_id, exc)
-                return None
-            if exc.response.status_code == 404:
-                logger.warning(
-                    "[FIX] Task %s not found in tasks-service (may have been deleted), skipping",
-                    task_id,
-                )
-                await self.repository.update_task_run(
-                    task_id,
-                    status="failed",
-                    finished_at=utcnow(),
-                    last_error=f"Task {task_id} not found in tasks-service",
-                    updated_at=utcnow(),
-                )
-                return None
-            raise
-
-        await self.repository.update_task_run(
-            task_id,
-            status="running",
-            started_at=task_run.started_at or utcnow(),
-            updated_at=utcnow(),
-        )
-        task_run = await self.repository.get_task_run(task_id)
         return task_run
 
     async def _handle_termination(self, event: TaskEvent) -> VkTaskRun | None:
@@ -164,7 +245,6 @@ class TaskEventsService:
             finished_at=utcnow(),
             last_error=f"Conflict: {detail} (run {run_id}).",
         )
-        await self.repository.save()
 
     def _extract_conflict_detail(self, exc: httpx.HTTPStatusError) -> str:
         try:
