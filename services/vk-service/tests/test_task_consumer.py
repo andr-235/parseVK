@@ -10,8 +10,7 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.domain.events.task_event_mapper import TaskEventMapper
-from common.events import TaskEvent
+from common.events import TaskEvent, get_task_id
 from app.services.task_events_service import TaskEventsService
 
 
@@ -148,7 +147,7 @@ async def test_deleted_event_marks_run_cancelled():
     assert tasks_client.calls == []
 
 
-def test_missing_task_id_is_validation_safe():
+def test_missing_task_id_returns_none():
     task_event = TaskEvent.model_validate(
         {
             "event_id": str(uuid4()),
@@ -159,10 +158,7 @@ def test_missing_task_id_is_validation_safe():
         }
     )
 
-    with pytest.raises(KeyError) as error:
-        TaskEventMapper.get_task_id(task_event)
-
-    assert "taskId" in str(error.value)
+    assert get_task_id(task_event) is None
 
 
 @pytest.mark.anyio

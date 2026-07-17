@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import ContentAuthor, ContentComment, ContentGroup, ContentPost, ProcessedEvent
 
-CONSUMER_NAME = "content-service.vk"
+CONSUMER_NAME = "content-service"
 
 
 def utcnow() -> datetime:

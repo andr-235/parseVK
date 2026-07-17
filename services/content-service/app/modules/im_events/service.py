@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import ImMessage, ProcessedEvent
 
-CONSUMER_NAME = "content-service.im"
+CONSUMER_NAME = "content-service-im"
 
 logger = logging.getLogger(__name__)
 

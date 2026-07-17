@@ -26,10 +26,10 @@ def get_mode(event: TaskEvent) -> str | None:
     return str(value) if value is not None else None
 
 
-def get_group_ids(event: TaskEvent) -> list[str]:
-    """Extract group_ids list from event payload."""
+def get_group_ids(event: TaskEvent) -> list[int]:
+    """Extract group_ids list from event payload as integers."""
     items = event.payload.get("groupIds") or event.payload.get("group_ids") or []
-    return [str(item) for item in items]
+    return [int(item) for item in items]
 
 
 def get_post_limit(event: TaskEvent) -> int | None:

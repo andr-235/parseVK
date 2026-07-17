@@ -3,14 +3,14 @@ from datetime import UTC, datetime
 
 import httpx
 
-from app.domain.events.task_event_mapper import TaskEventMapper
+from common.events import get_task_id, get_owner_user_id, get_scope, get_mode, get_group_ids, get_post_limit
 from common.events import TaskEvent
 from app.domain.entities.tasks import VkTaskRun
 from app.domain.repositories.tasks import TaskEventsRepository
 from app.infrastructure.tasks_client.client import TasksClient
 
-CONSUMER_NAME = "vk-service.tasks"
-logger = logging.getLogger("vk-service.tasks")
+CONSUMER_NAME = "vk-service"
+logger = logging.getLogger("vk-service")
 
 
 def utcnow() -> datetime:
@@ -43,7 +43,7 @@ class TaskEventsService:
         return result
 
     async def _handle_created_or_resumed(self, event: TaskEvent) -> VkTaskRun | None:
-        task_id = TaskEventMapper.get_task_id(event)
+        task_id = get_task_id(event)
         run_id = str(event.event_id)
         task_run = await self.repository.get_task_run(task_id)
 
@@ -58,12 +58,12 @@ class TaskEventsService:
         else:
             task_run = await self.repository.create_task_run(
                 task_id=task_id,
-                owner_user_id=TaskEventMapper.get_owner_user_id(event),
+                owner_user_id=get_owner_user_id(event),
                 run_id=run_id,
-                scope=TaskEventMapper.get_scope(event),
-                mode=TaskEventMapper.get_mode(event),
-                group_ids=TaskEventMapper.get_group_ids(event),
-                post_limit=TaskEventMapper.get_post_limit(event),
+                scope=get_scope(event) or "all",
+                mode=get_mode(event) or "recent_posts",
+                group_ids=get_group_ids(event),
+                post_limit=get_post_limit(event),
             )
 
         try:
@@ -102,7 +102,7 @@ class TaskEventsService:
         return task_run
 
     async def _handle_termination(self, event: TaskEvent) -> VkTaskRun | None:
-        task_id = TaskEventMapper.get_task_id(event)
+        task_id = get_task_id(event)
         task_run = await self.repository.get_task_run(task_id)
         if task_run is None:
             return None

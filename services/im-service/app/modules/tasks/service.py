@@ -20,7 +20,7 @@ from app.modules.tasks.events import (
     get_task_id,
 )
 
-CONSUMER_NAME = "im-service.tasks"
+CONSUMER_NAME = "im-service"
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ class TaskEventsRepository:
             scope=scope,
             mode=get_mode(event) or "recent_posts",
             messenger=get_messenger(event) or "",
-            group_ids=get_group_ids(event) if scope == "selected" else None,
+            group_ids=[str(gid) for gid in get_group_ids(event)] if scope == "selected" else None,
             post_limit=get_post_limit(event),
         )
         self.session.add(task_run)

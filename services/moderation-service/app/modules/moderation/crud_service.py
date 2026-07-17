@@ -194,11 +194,11 @@ class ModerationCrudService:
         await self.session.execute(stmt)
         return {"id": id, "status": status}
 
-    async def is_processed(self, event_id: UUID) -> bool:
+    async def is_processed(self, event_id: UUID, consumer_name: str | None = None) -> bool:
         logger.debug("ModerationCrudService.is_processed: event_id=%s", event_id)
         stmt = select(ProcessedEvent).where(
             and_(
-                ProcessedEvent.consumer_name == CONSUMER_NAME,
+                ProcessedEvent.consumer_name == (consumer_name or CONSUMER_NAME),
                 ProcessedEvent.event_id == event_id,
             )
         )
@@ -229,11 +229,11 @@ class ModerationCrudService:
             logger.info("ModerationCrudService.upsert_comment: created comment %d", comment.id)
             return comment
 
-    async def mark_processed(self, event_id: UUID, event_type: str) -> None:
+    async def mark_processed(self, event_id: UUID, event_type: str, consumer_name: str | None = None) -> None:
         logger.debug("ModerationCrudService.mark_processed: event_id=%s, type=%s", event_id, event_type)
         now = datetime.now(UTC)
         stmt = insert(ProcessedEvent).values(
-            consumer_name=CONSUMER_NAME,
+            consumer_name=(consumer_name or CONSUMER_NAME),
             event_id=event_id,
             event_type=event_type,
             processed_at=now,
