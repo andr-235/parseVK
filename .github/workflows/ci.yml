@@ -56,11 +56,11 @@ jobs:
               echo "$CHANGED_FILES"
             fi
 
-            if echo "$CHANGED_FILES" | grep -qE '^front/'; then
+            if grep -qE '^front/' <<< "$CHANGED_FILES"; then
               FRONTEND_CHANGED=true
             fi
 
-            if echo "$CHANGED_FILES" | grep -qE '^(services/|libs/py/common/|pyproject\.toml)'; then
+            if grep -qE '^(services/|libs/py/common/|pyproject\.toml)' <<< "$CHANGED_FILES"; then
               PYTHON_CHANGED=true
             fi
           fi
