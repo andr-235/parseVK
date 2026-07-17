@@ -1,3 +1,12 @@
+## [0.59.2](https://github.com/andr-235/parseVK/compare/v0.59.1...v0.59.2) (2026-07-17)
+
+
+### Bug Fixes
+
+* **vk-service,tasks-service:** extract HTTP from DB transaction, add FOR UPDATE locking, tests, and docs ([#279](https://github.com/andr-235/parseVK/issues/279)) ([6922b48](https://github.com/andr-235/parseVK/commit/6922b48647a06f15e7bac0d0aae8b44688aff542)), closes [#278](https://github.com/andr-235/parseVK/issues/278)
+* **vk-service,tasks-service:** extract HTTP from DB transaction, add FOR UPDATE, tests, and docs ([632f67d](https://github.com/andr-235/parseVK/commit/632f67d808a61796b80e8e41415b1d965adfac26))
+* **vk-service:** pass tasks_client to TaskEventsService, add wiring test ([c8185ce](https://github.com/andr-235/parseVK/commit/c8185ce51421f831532c0e782407c161b8a075ad))
+
 ## [0.59.1](https://github.com/andr-235/parseVK/compare/v0.59.0...v0.59.1) (2026-07-17)
 
 
