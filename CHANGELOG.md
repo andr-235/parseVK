@@ -1,3 +1,11 @@
+# [0.59.0](https://github.com/andr-235/parseVK/compare/v0.58.1...v0.59.0) (2026-07-17)
+
+
+### Features
+
+* **eda:** add durable backoff, fix moderation consumer, optimize DLQ ([d782bb3](https://github.com/andr-235/parseVK/commit/d782bb393fe7c028eab59d1fc52e78f736758267))
+* **eda:** unify consumer_name across 5 services; remove TaskEventMapper ([6ac3b8b](https://github.com/andr-235/parseVK/commit/6ac3b8b65c6d1e379bce65bdb73ee3dd9891c667))
+
 ## [0.58.1](https://github.com/andr-235/parseVK/compare/v0.58.0...v0.58.1) (2026-07-17)
 
 
