@@ -112,6 +112,8 @@ jobs:
           enable-cache: true
       - name: Run ruff check on all Python sources
         run: uvx ruff check --output-format=github services/ libs/
+      - name: Validate Alembic revision graphs
+        run: python3 .github/scripts/validate_alembic_graphs.py
 
   frontend-tests:
     name: Test Frontend
