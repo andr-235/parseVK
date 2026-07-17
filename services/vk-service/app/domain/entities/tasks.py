@@ -19,6 +19,11 @@ class VkTaskRun:
     processed_items: int
     total_items: int
     last_error: str | None
+    attempts: int
+    available_at: datetime
+    lease_owner: str | None
+    lease_expires_at: datetime | None
+    heartbeat_at: datetime | None
     created_at: datetime
     updated_at: datetime
 

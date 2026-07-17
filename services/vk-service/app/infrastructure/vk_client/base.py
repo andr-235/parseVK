@@ -6,6 +6,7 @@ from typing import Any
 try:
     import vk_api
     from vk_api.exceptions import ApiError as VkApiLibraryError
+
     _VK_API_ERRORS = (VkApiLibraryError,)
 except ImportError:  # pragma: no cover
     vk_api = None
@@ -15,6 +16,7 @@ from app.core.config import settings
 from app.core.redaction import redact_secrets
 from app.domain.exceptions.vk_api import map_vk_error
 from app.domain.ports.vk_api import VkApiPort
+from app.infrastructure.vk_client.session import TimeoutSession
 
 logger = logging.getLogger("vk-service.vk_client")
 
@@ -42,17 +44,25 @@ class VkApiBaseClient:
         self._call_runner = call_runner or self._execute_in_thread
         self._api: Any = None
         self._api_lock = asyncio.Lock()
+        self._request_lock = asyncio.Lock()
 
     def _default_vk_session_factory(self, **kwargs) -> Any:
         if vk_api is None:
             raise VkApiConfigurationError("vk_api package is not installed")
         return vk_api.VkApi(**kwargs)
 
+    def _session_kwargs(self) -> dict[str, Any]:
+        return {
+            "token": self.token,
+            "api_version": VK_API_VERSION,
+            "session": TimeoutSession(settings.vk_api_timeout_seconds),
+        }
+
     def _resolve_api(self) -> Any:
         """Resolve and cache the VK API object (synchronous, called from thread)."""
         if not self.token:
             raise VkApiConfigurationError("VK token is not configured")
-        session = self._vk_session_factory(token=self.token, api_version=VK_API_VERSION)
+        session = self._vk_session_factory(**self._session_kwargs())
         return session.get_api()
 
     def _call_sync(self, method: str, **params) -> dict:
@@ -88,10 +98,12 @@ class VkApiBaseClient:
                 if self._api is None:
                     if not self.token:
                         raise VkApiConfigurationError("VK token is not configured")
-                    session = self._vk_session_factory(token=self.token, api_version=VK_API_VERSION)
+                    session = self._vk_session_factory(**self._session_kwargs())
                     self._api = session.get_api()
 
-        return await self._call_runner(self._call_sync, method, **params)
+        # vk_api reuses one requests.Session, which is not safe for concurrent threads.
+        async with self._request_lock:
+            return await self._call_runner(self._call_sync, method, **params)
 
     async def _execute_in_thread(self, sync_function: Callable, *args, **kwargs) -> Any:
         return await asyncio.to_thread(sync_function, *args, **kwargs)

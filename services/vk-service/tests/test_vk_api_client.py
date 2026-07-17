@@ -21,26 +21,23 @@ def anyio_backend():
 async def test_search_groups_by_region_filters_by_city_id():
     # Создаем клиент
     client = VkApiClient(token="fake-token")
-    
+
     # Мокаем внутренний метод _call
     mock_call = AsyncMock()
-    client._call = mock_call
-    
+    client._groups._call = mock_call
+
     # Описываем возвращаемые значения для последовательности вызовов
     async def mock_call_side_effect(method, **params):
         if method == "database.getRegions":
             return {"items": [{"id": 100, "title": "Еврейская автономная область"}]}
-            
+
         elif method == "database.getCities":
             assert params.get("region_id") == 100
             return {
-                "items": [
-                    {"id": 1, "title": "Биробиджан"},
-                    {"id": 2, "title": "Облучье"}
-                ],
-                "count": 2
+                "items": [{"id": 1, "title": "Биробиджан"}, {"id": 2, "title": "Облучье"}],
+                "count": 2,
             }
-            
+
         elif method == "groups.search":
             city_id = params.get("city_id")
             if city_id == 1:
@@ -48,9 +45,9 @@ async def test_search_groups_by_region_filters_by_city_id():
             elif city_id == 2:
                 return {"items": [{"id": 20, "name": "Группа Облучья"}]}
             return {"items": []}
-            
+
         elif method == "groups.getById":
-            # Имитируем обогащение. 
+            # Имитируем обогащение.
             # Группа 10 имеет правильный city (id=1, Биробиджан)
             # Группа 20 имеет неправильный city (id=3, Облучье в другой области)
             return {
@@ -58,13 +55,13 @@ async def test_search_groups_by_region_filters_by_city_id():
                     {
                         "id": 10,
                         "name": "Группа Биробиджана",
-                        "city": {"id": 1, "title": "Биробиджан"}
+                        "city": {"id": 1, "title": "Биробиджан"},
                     },
                     {
                         "id": 20,
                         "name": "Группа Облучья",
-                        "city": {"id": 3, "title": "Облучье (Другой Регион)"}
-                    }
+                        "city": {"id": 3, "title": "Облучье (Другой Регион)"},
+                    },
                 ]
             }
         return {}
@@ -85,20 +82,17 @@ async def test_search_groups_by_region_filters_by_city_id():
 async def test_search_groups_by_region_uses_city_title_for_empty_query():
     client = VkApiClient(token="fake-token")
     mock_call = AsyncMock()
-    client._call = mock_call
-    
+    client._groups._call = mock_call
+
     searched_queries = {}
-    
+
     async def mock_call_side_effect(method, **params):
         if method == "database.getRegions":
             return {"items": [{"id": 100, "title": "Еврейская автономная область"}]}
         elif method == "database.getCities":
             return {
-                "items": [
-                    {"id": 1, "title": "Биробиджан"},
-                    {"id": 2, "title": "Облучье"}
-                ],
-                "count": 2
+                "items": [{"id": 1, "title": "Биробиджан"}, {"id": 2, "title": "Облучье"}],
+                "count": 2,
             }
         elif method == "groups.search":
             city_id = params.get("city_id")
@@ -108,8 +102,12 @@ async def test_search_groups_by_region_uses_city_title_for_empty_query():
         elif method == "groups.getById":
             return {
                 "groups": [
-                    {"id": 10, "name": "Группа Биробиджан", "city": {"id": 1, "title": "Биробиджан"}},
-                    {"id": 20, "name": "Группа Облучье", "city": {"id": 2, "title": "Облучье"}}
+                    {
+                        "id": 10,
+                        "name": "Группа Биробиджан",
+                        "city": {"id": 1, "title": "Биробиджан"},
+                    },
+                    {"id": 20, "name": "Группа Облучье", "city": {"id": 2, "title": "Облучье"}},
                 ]
             }
         return {}
@@ -129,6 +127,7 @@ async def test_search_groups_by_region_uses_city_title_for_empty_query():
 # Parameter capture tests for remaining API methods
 # ---------------------------------------------------------------------------
 
+
 class TestVkApiMethodParams:
     """Verify each public method passes correct method name and params to _call."""
 
@@ -146,7 +145,11 @@ class TestVkApiMethodParams:
         assert result == [{"id": 1}]
         mock_call.assert_awaited_once_with(
             "photos.getAll",
-            owner_id=123, count=5, offset=10, extended=0, photo_sizes=1,
+            owner_id=123,
+            count=5,
+            offset=10,
+            extended=0,
+            photo_sizes=1,
         )
 
     @pytest.mark.anyio
@@ -159,7 +162,8 @@ class TestVkApiMethodParams:
         assert len(result) == 1
         mock_call.assert_awaited_once_with(
             "users.get",
-            user_ids="1,2,3", fields="photo_50,domain",
+            user_ids="1,2,3",
+            fields="photo_50,domain",
         )
 
     @pytest.mark.anyio
@@ -184,20 +188,33 @@ class TestVkApiMethodParams:
 
     @pytest.mark.anyio
     async def test_get_author_comments_passes_correct_params(self, client):
-        mock_call = AsyncMock(return_value={
-            "items": [{"id": 1, "from_id": 100, "date": 1000}],
-            "count": 1,
-        })
+        mock_call = AsyncMock(
+            return_value={
+                "items": [{"id": 1, "from_id": 100, "date": 1000}],
+                "count": 1,
+            }
+        )
         client._posts._call = mock_call
 
         result = await client.get_author_comments_for_post(
-            owner_id=-1, post_id=42, author_vk_id=100,
-            baseline=None, batch_size=100, max_pages=1, thread_items_count=10,
+            owner_id=-1,
+            post_id=42,
+            author_vk_id=100,
+            baseline=None,
+            batch_size=100,
+            max_pages=1,
+            thread_items_count=10,
         )
 
         assert len(result) == 1
         mock_call.assert_awaited_once_with(
             "wall.getComments",
-            owner_id=-1, post_id=42, need_likes=0, extended=0,
-            count=100, offset=0, sort="desc", thread_items_count=10,
+            owner_id=-1,
+            post_id=42,
+            need_likes=0,
+            extended=0,
+            count=100,
+            offset=0,
+            sort="desc",
+            thread_items_count=10,
         )

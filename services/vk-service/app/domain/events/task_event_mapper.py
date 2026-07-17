@@ -26,3 +26,16 @@ class TaskEventMapper:
     def get_post_limit(event: TaskEvent) -> int | None:
         value = event.payload.get("postLimit")
         return int(value) if value is not None else None
+
+    @staticmethod
+    def get_requested_run_id(event: TaskEvent) -> str:
+        return str(event.payload.get("runId") or event.event_id)
+
+    @staticmethod
+    def get_terminal_run_id(event: TaskEvent) -> str | None:
+        value = event.payload.get("runId")
+        if value:
+            return str(value)
+        if event.event_type in {"task.completed", "task.failed"}:
+            return event.correlation_id
+        return None

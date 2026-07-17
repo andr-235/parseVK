@@ -1,6 +1,8 @@
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
+from uuid import uuid4
 
 import pytest
 
@@ -9,6 +11,7 @@ from _service_path import use_service_path
 
 use_service_path()
 
+from app.domain.entities.tasks import VkTaskRun
 from app.domain.exceptions.vk_api import (
     VkApiAuthError,
     VkApiInfrastructureError,
@@ -28,10 +31,24 @@ class StubVkApiClient:
         return [{"id": gid, "name": f"Group {gid}"} for gid in group_ids]
 
     async def get_posts(self, group_id: int, *, mode: str, post_limit: int) -> dict:
-        return {"items": [{"id": group_id * 10, "owner_id": -group_id, "from_id": -group_id, "text": "post"}]}
+        return {
+            "items": [
+                {"id": group_id * 10, "owner_id": -group_id, "from_id": -group_id, "text": "post"}
+            ]
+        }
 
     async def get_comments(self, owner_id: int, post_id: int) -> dict:
-        return {"items": [{"id": post_id * 10, "owner_id": owner_id, "post_id": post_id, "from_id": 1, "text": "comment"}]}
+        return {
+            "items": [
+                {
+                    "id": post_id * 10,
+                    "owner_id": owner_id,
+                    "post_id": post_id,
+                    "from_id": 1,
+                    "text": "comment",
+                }
+            ]
+        }
 
 
 @pytest.fixture
@@ -70,13 +87,21 @@ class FakeTasksClient:
     def __init__(self):
         self.calls = []
 
-    async def update_progress(self, task_id, run_id, processed_items, total_items, progress, stats, **kwargs):
-        self.calls.append(("progress", task_id, run_id, processed_items, total_items, progress, stats))
+    async def update_progress(
+        self, task_id, run_id, processed_items, total_items, progress, stats, **kwargs
+    ):
+        self.calls.append(
+            ("progress", task_id, run_id, processed_items, total_items, progress, stats)
+        )
 
-    async def complete_execution(self, task_id, run_id, processed_items, total_items, stats, **kwargs):
+    async def complete_execution(
+        self, task_id, run_id, processed_items, total_items, stats, **kwargs
+    ):
         self.calls.append(("complete", task_id, run_id, processed_items, total_items, stats))
 
-    async def fail_execution(self, task_id, run_id, error, processed_items, total_items, stats, **kwargs):
+    async def fail_execution(
+        self, task_id, run_id, error, processed_items, total_items, stats, **kwargs
+    ):
         self.calls.append(("fail", task_id, run_id, error, processed_items, total_items, stats))
 
 
@@ -96,7 +121,9 @@ class FakeVkApiNamespace:
 
     def getComments(self, **kwargs):
         self.calls.append(("wall.getComments", kwargs))
-        return {"items": [{"id": 100, "owner_id": -1, "post_id": 10, "from_id": 1, "text": "comment"}]}
+        return {
+            "items": [{"id": 100, "owner_id": -1, "post_id": 10, "from_id": 1, "text": "comment"}]
+        }
 
 
 class FakeVkApiSession:
@@ -136,7 +163,9 @@ def task_run(scope="selected", group_ids=None):
 async def test_selected_task_collects_only_requested_groups():
     repository = FakeRepository()
     tasks_client = FakeTasksClient()
-    service = IngestionService(adapter=StubVkApiClient(), repository=repository, tasks_client=tasks_client)
+    service = IngestionService(
+        adapter=StubVkApiClient(), repository=repository, tasks_client=tasks_client
+    )
 
     result = await service.execute(task_run(group_ids=[1, 2]), correlation_id="corr-1")
 
@@ -152,7 +181,9 @@ async def test_scope_all_collects_active_groups():
     repository = FakeRepository()
     repository.groups.append({"id": 1, "name": "Group 1"})
     tasks_client = FakeTasksClient()
-    service = IngestionService(adapter=StubVkApiClient(), repository=repository, tasks_client=tasks_client)
+    service = IngestionService(
+        adapter=StubVkApiClient(), repository=repository, tasks_client=tasks_client
+    )
 
     result = await service.execute(task_run(scope="all", group_ids=[]))
 
@@ -175,12 +206,21 @@ async def test_scope_all_without_active_groups_fails_task():
     run.finished_at = None
     run.last_error = None
 
-    await service.execute(run)
+    with pytest.raises(RuntimeError, match="No active groups configured"):
+        await service.execute(run)
 
-    assert run.status == "failed"
-    assert run.finished_at is not None
-    assert "No active groups configured for scope=all" in run.last_error
-    assert tasks_client.calls == [("fail", 10, "run-10", "No active groups configured for scope=all", 0, 0, {})]
+    assert run.status == "running"
+    assert tasks_client.calls == [
+        (
+            "fail",
+            10,
+            "run-10",
+            "No active groups configured for scope=all",
+            0,
+            0,
+            {"groups": 0, "posts": 0, "comments": 0, "authors": 0, "errors": 0},
+        )
+    ]
 
 
 @pytest.mark.anyio
@@ -194,17 +234,30 @@ async def test_real_vk_adapter_requires_token_without_leaking_secret():
 @pytest.mark.anyio
 async def test_real_vk_adapter_uses_vk_api_library_session():
     calls = []
-    client = VkApiClient(token="vk-token", vk_session_factory=fake_vk_session_factory(calls), call_runner=run_inline)
+    client = VkApiClient(
+        token="vk-token", vk_session_factory=fake_vk_session_factory(calls), call_runner=run_inline
+    )
 
     groups = await client.get_groups([1])
     posts = await client.get_posts(1, mode="recent_posts", post_limit=1)
     comments = await client.get_comments(-1, 10)
 
     assert groups == [{"id": 1, "name": "Group 1"}]
-    assert posts == {"items": [{"id": 10, "owner_id": -1, "from_id": -1, "text": "post"}], "profiles": [], "groups": []}
-    assert comments == {"items": [{"id": 100, "owner_id": -1, "post_id": 10, "from_id": 1, "text": "comment"}], "profiles": [], "groups": []}
-    assert calls == [
-        ("VkApi", {"token": "vk-token", "api_version": "5.199"}),
+    assert posts == {
+        "items": [{"id": 10, "owner_id": -1, "from_id": -1, "text": "post"}],
+        "profiles": [],
+        "groups": [],
+    }
+    assert comments == {
+        "items": [{"id": 100, "owner_id": -1, "post_id": 10, "from_id": 1, "text": "comment"}],
+        "profiles": [],
+        "groups": [],
+    }
+    assert calls[0][0] == "VkApi"
+    assert calls[0][1]["token"] == "vk-token"
+    assert calls[0][1]["api_version"] == "5.199"
+    assert calls[0][1]["session"].timeout_seconds == 20
+    assert calls[1:] == [
         ("groups.getById", {"group_ids": "1"}),
         ("wall.get", {"owner_id": -1, "count": 1, "extended": 1}),
         ("wall.getComments", {"owner_id": -1, "post_id": 10, "count": 100, "extended": 1}),
@@ -221,25 +274,47 @@ def test_settings_token_validation_requires_token_when_not_in_pytest():
 
 
 @pytest.mark.anyio
-async def test_ingestion_updates_task_run_fields_on_success():
+async def test_ingestion_does_not_mutate_frozen_task_run_on_success():
     repository = FakeRepository()
     tasks_client = FakeTasksClient()
-    service = IngestionService(adapter=StubVkApiClient(), repository=repository, tasks_client=tasks_client)
+    service = IngestionService(
+        adapter=StubVkApiClient(), repository=repository, tasks_client=tasks_client
+    )
 
-    run = task_run()
-    run.status = "running"
-    run.finished_at = None
+    now = datetime.now(UTC)
+    run = VkTaskRun(
+        id=uuid4(),
+        task_id=10,
+        owner_user_id="user-1",
+        run_id="run-10",
+        status="running",
+        scope="selected",
+        mode="recent_posts",
+        group_ids=[1],
+        post_limit=1,
+        started_at=now,
+        finished_at=None,
+        processed_items=0,
+        total_items=0,
+        last_error=None,
+        attempts=1,
+        available_at=now,
+        lease_owner="worker-1",
+        lease_expires_at=now,
+        heartbeat_at=now,
+        created_at=now,
+        updated_at=now,
+    )
 
-    await service.execute(run)
+    result = await service.execute(run)
 
-    assert run.status == "done"
-    assert run.finished_at is not None
-    assert run.processed_items == 3
-    assert run.total_items == 3
+    assert run.status == "running"
+    assert result.processed_items == 3
+    assert tasks_client.calls[-1][0] == "complete"
 
 
 @pytest.mark.anyio
-async def test_ingestion_updates_task_run_fields_on_failure():
+async def test_ingestion_failure_is_reported_without_mutating_task_run():
     repository = FakeRepository()
     tasks_client = FakeTasksClient()
     service = IngestionService(
@@ -253,22 +328,24 @@ async def test_ingestion_updates_task_run_fields_on_failure():
     run.finished_at = None
     run.last_error = None
 
-    await service.execute(run)
+    with pytest.raises(RuntimeError, match="No active groups configured"):
+        await service.execute(run)
 
-    assert run.status == "failed"
-    assert run.finished_at is not None
-    assert "No active groups configured for scope=all" in run.last_error
+    assert run.status == "running"
+    assert run.finished_at is None
     assert run.processed_items == 0
 
 
 def test_vk_token_redaction():
     repository = FakeRepository()
     tasks_client = FakeTasksClient()
-    
+
     class MockAdapter:
         token = "secret-token-123"
-        
-    service = IngestionService(adapter=MockAdapter(), repository=repository, tasks_client=tasks_client)
+
+    service = IngestionService(
+        adapter=MockAdapter(), repository=repository, tasks_client=tasks_client
+    )
 
     err = "Failed with secret-token-123 in message"
     sanitized = service._sanitize_error(err)
@@ -278,26 +355,33 @@ def test_vk_token_redaction():
 class TestIsInfrastructureError:
     def test_dbapi_error_is_infrastructure(self):
         import sqlalchemy.exc
-        assert IngestionPipeline._is_infrastructure_error(sqlalchemy.exc.DBAPIError(False, None, None))
+
+        assert IngestionPipeline._is_infrastructure_error(
+            sqlalchemy.exc.DBAPIError(False, None, None)
+        )
 
     def test_cancelled_error_is_infrastructure(self):
         import asyncio
+
         assert IngestionPipeline._is_infrastructure_error(asyncio.CancelledError())
 
     def test_request_error_is_infrastructure(self):
         import httpx
-        assert IngestionPipeline._is_infrastructure_error(httpx.RequestError("timeout", request=httpx.Request("GET", "http://test")))
+
+        assert IngestionPipeline._is_infrastructure_error(
+            httpx.RequestError("timeout", request=httpx.Request("GET", "http://test"))
+        )
 
     def test_rate_limit_is_infrastructure(self):
         assert IngestionPipeline._is_infrastructure_error(VkApiRateLimitError(6, "rate limit"))
 
     def test_infrastructure_vk_error_is_infrastructure(self):
-        assert IngestionPipeline._is_infrastructure_error(VkApiInfrastructureError(10, "server error"))
+        assert IngestionPipeline._is_infrastructure_error(
+            VkApiInfrastructureError(10, "server error")
+        )
 
     def test_auth_error_is_not_infrastructure(self):
         assert not IngestionPipeline._is_infrastructure_error(VkApiAuthError(8, "blocked"))
 
     def test_value_error_is_not_infrastructure(self):
         assert not IngestionPipeline._is_infrastructure_error(ValueError("bad"))
-
-

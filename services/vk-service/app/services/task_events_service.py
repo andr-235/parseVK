@@ -1,16 +1,20 @@
 import logging
 from datetime import UTC, datetime
 
-import httpx
-
-from app.domain.events.task_event_mapper import TaskEventMapper
 from common.events import TaskEvent
+
 from app.domain.entities.tasks import VkTaskRun
+from app.domain.events.task_event_mapper import TaskEventMapper
 from app.domain.repositories.tasks import TaskEventsRepository
-from app.infrastructure.tasks_client.client import TasksClient
 
 CONSUMER_NAME = "vk-service.tasks"
 logger = logging.getLogger("vk-service.tasks")
+TERMINAL_STATUSES = {
+    "task.cancelled": "cancelled",
+    "task.completed": "done",
+    "task.deleted": "cancelled",
+    "task.failed": "failed",
+}
 
 
 def utcnow() -> datetime:
@@ -21,19 +25,17 @@ class TaskEventsService:
     def __init__(
         self,
         repository: TaskEventsRepository,
-        tasks_client: TasksClient,
         *,
         consumer_name: str = CONSUMER_NAME,
     ):
         self.repository = repository
-        self.tasks_client = tasks_client
         self.consumer_name = consumer_name
 
     async def handle(self, event: TaskEvent) -> VkTaskRun | None:
         if await self.repository.is_processed(self.consumer_name, event.event_id):
             return None
 
-        if event.event_type in {"task.deleted", "task.cancelled", "task.failed"}:
+        if event.event_type in TERMINAL_STATUSES:
             result = await self._handle_termination(event)
         else:
             result = await self._handle_created_or_resumed(event)
@@ -44,16 +46,29 @@ class TaskEventsService:
 
     async def _handle_created_or_resumed(self, event: TaskEvent) -> VkTaskRun | None:
         task_id = TaskEventMapper.get_task_id(event)
-        run_id = str(event.event_id)
+        run_id = TaskEventMapper.get_requested_run_id(event)
         task_run = await self.repository.get_task_run(task_id)
 
         if task_run is not None:
             if task_run.status == "done":
                 return None
-            if task_run.status == "running":
+            if task_run.run_id == run_id and task_run.status in {"pending", "running"}:
                 return None
             task_run = await self.repository.update_task_run(
-                task_id, run_id=run_id, updated_at=utcnow()
+                task_id,
+                run_id=run_id,
+                status="pending",
+                started_at=None,
+                finished_at=None,
+                processed_items=0,
+                total_items=0,
+                last_error=None,
+                attempts=0,
+                available_at=utcnow(),
+                lease_owner=None,
+                lease_expires_at=None,
+                heartbeat_at=None,
+                updated_at=utcnow(),
             )
         else:
             task_run = await self.repository.create_task_run(
@@ -65,40 +80,7 @@ class TaskEventsService:
                 group_ids=TaskEventMapper.get_group_ids(event),
                 post_limit=TaskEventMapper.get_post_limit(event),
             )
-
-        try:
-            await self.tasks_client.start_execution(
-                task_id,
-                run_id,
-                request_id=run_id,
-                correlation_id=event.correlation_id,
-            )
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 409:
-                await self._handle_conflict(task_run, run_id, exc)
-                return None
-            if exc.response.status_code == 404:
-                logger.warning(
-                    "[FIX] Task %s not found in tasks-service (may have been deleted), skipping",
-                    task_id,
-                )
-                await self.repository.update_task_run(
-                    task_id,
-                    status="failed",
-                    finished_at=utcnow(),
-                    last_error=f"Task {task_id} not found in tasks-service",
-                    updated_at=utcnow(),
-                )
-                return None
-            raise
-
-        await self.repository.update_task_run(
-            task_id,
-            status="running",
-            started_at=task_run.started_at or utcnow(),
-            updated_at=utcnow(),
-        )
-        task_run = await self.repository.get_task_run(task_id)
+        logger.info("Queued VK task task_id=%s run_id=%s", task_id, run_id)
         return task_run
 
     async def _handle_termination(self, event: TaskEvent) -> VkTaskRun | None:
@@ -107,33 +89,38 @@ class TaskEventsService:
         if task_run is None:
             return None
 
-        new_status = "failed" if event.event_type == "task.failed" else "cancelled"
+        if task_run.status == "done":
+            return None
+
+        event_run_id = TaskEventMapper.get_terminal_run_id(event)
+        if event_run_id and event_run_id != task_run.run_id:
+            logger.info(
+                "Ignored stale task event task_id=%s event=%s event_run=%s active_run=%s",
+                task_id,
+                event.event_type,
+                event_run_id,
+                task_run.run_id,
+            )
+            return None
+
+        new_status = TERMINAL_STATUSES[event.event_type]
+        values = {
+            "status": new_status,
+            "finished_at": utcnow(),
+            "lease_owner": None,
+            "lease_expires_at": None,
+            "updated_at": utcnow(),
+        }
+        if new_status == "done":
+            values.update(
+                processed_items=int(event.payload.get("processedItems") or 0),
+                total_items=int(event.payload.get("totalItems") or 0),
+                last_error=None,
+            )
+        elif new_status == "failed":
+            values["last_error"] = str(event.payload.get("error") or "Task failed")
         task_run = await self.repository.update_task_run(
             task_id,
-            status=new_status,
-            finished_at=utcnow(),
-            updated_at=utcnow(),
+            **values,
         )
         return task_run
-
-    async def _handle_conflict(self, task_run: VkTaskRun, run_id: str, exc: httpx.HTTPStatusError) -> None:
-        detail = self._extract_conflict_detail(exc)
-        logger.warning(
-            "Execution conflict for task_id=%s, run_id=%s. Conflict detail: %s. Transitioning local run to failed.",
-            task_run.task_id,
-            run_id,
-            detail,
-        )
-        await self.repository.update_task_run(
-            task_run.task_id,
-            status="failed",
-            finished_at=utcnow(),
-            last_error=f"Conflict: {detail} (run {run_id}).",
-        )
-        await self.repository.save()
-
-    def _extract_conflict_detail(self, exc: httpx.HTTPStatusError) -> str:
-        try:
-            return exc.response.json().get("detail", "Unknown conflict")
-        except Exception:
-            return "Unknown conflict"

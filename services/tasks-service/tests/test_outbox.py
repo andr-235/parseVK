@@ -105,7 +105,7 @@ async def test_tasks_service_outbox_events_contract():
 
     session = AsyncMock()
     service = ApplicationFactory(session).create_tasks_service()
-    
+
     task_mock = MagicMock()
     task_mock.id = 42
     task_mock.owner_user_id = "user-1"
@@ -114,20 +114,19 @@ async def test_tasks_service_outbox_events_contract():
     task_mock.group_ids = [1, 2]
     task_mock.post_limit = 10
     task_mock.source = "manual"
-    
+    task_mock.status = "failed"
+    task_mock.execution_run_id = "run-42"
+
     service.crud.repository.create_task = AsyncMock(return_value=task_mock)
     service.crud.repository.add_audit = AsyncMock()
     service.crud.outbox.add_event = AsyncMock()
-    
+
     payload = CreateParseTaskRequest(
-        scope="selected",
-        groupIds=[1, 2],
-        postLimit=10,
-        mode="recent_posts"
+        scope="selected", groupIds=[1, 2], postLimit=10, mode="recent_posts"
     )
-    
+
     await service.create_parse_task("user-1", payload)
-    
+
     service.crud.outbox.add_event.assert_called_with(
         event_type="task.created",
         aggregate_type="task",
@@ -137,21 +136,19 @@ async def test_tasks_service_outbox_events_contract():
         payload={
             "taskId": "42",
             "ownerUserId": "user-1",
+            "runId": "run-42",
             "scope": "selected",
             "mode": "recent_posts",
             "groupIds": [1, 2],
             "postLimit": 10,
             "source": "manual",
-        }
+        },
     )
 
     task_mock.scope = "all"
     task_mock.group_ids = []
     payload_all = CreateParseTaskRequest(
-        scope="all",
-        groupIds=[1, 2],
-        postLimit=10,
-        mode="recent_posts"
+        scope="all", groupIds=[1, 2], postLimit=10, mode="recent_posts"
     )
     await service.create_parse_task("user-1", payload_all)
     service.crud.outbox.add_event.assert_called_with(
@@ -163,33 +160,37 @@ async def test_tasks_service_outbox_events_contract():
         payload={
             "taskId": "42",
             "ownerUserId": "user-1",
+            "runId": "run-42",
             "scope": "all",
             "mode": "recent_posts",
             "groupIds": [],
             "postLimit": 10,
             "source": "manual",
-        }
+        },
     )
 
-    service.crud.repository.get_task = AsyncMock(return_value=task_mock)
+    service.crud.repository.get_task_for_update = AsyncMock(return_value=task_mock)
     service.crud.repository.touch_task = AsyncMock(return_value=task_mock)
-    
+
     await service.resume_task("user-1", 42)
-    service.crud.outbox.add_event.assert_called_with(
-        event_type="task.resumed",
-        aggregate_type="task",
-        aggregate_id="42",
-        dedupe_key="task.resumed:42",
-        payload={
+    resume_event = service.crud.outbox.add_event.await_args.kwargs
+    run_id = resume_event["payload"]["runId"]
+    assert resume_event == {
+        "event_type": "task.resumed",
+        "aggregate_type": "task",
+        "aggregate_id": "42",
+        "dedupe_key": f"task.resumed:42:{run_id}",
+        "payload": {
             "taskId": "42",
             "ownerUserId": "user-1",
+            "runId": run_id,
             "scope": "all",
             "mode": "recent_posts",
             "groupIds": [],
             "postLimit": 10,
             "source": "manual",
-        }
-    )
+        },
+    }
 
 
 def _make_event(event_id: str, attempts: int = 0, status: str = "pending"):
@@ -218,6 +219,7 @@ def _make_event(event_id: str, attempts: int = 0, status: str = "pending"):
 @pytest.fixture(autouse=True)
 def enable_outbox():
     from app.core.config import settings
+
     original = settings.outbox_publish_enabled
     settings.outbox_publish_enabled = True
     yield
@@ -628,4 +630,3 @@ async def test_publisher_uses_explicit_dlq_topic():
 
     assert len(send_calls) == 2, f"Expected 2 send calls, got {len(send_calls)}"
     assert send_calls[1] == custom_dlq, f"Expected DLQ topic {custom_dlq}, got {send_calls[1]}"
-
