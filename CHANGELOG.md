@@ -1,3 +1,10 @@
+## [0.59.1](https://github.com/andr-235/parseVK/compare/v0.59.0...v0.59.1) (2026-07-17)
+
+
+### Bug Fixes
+
+* **deploy:** repair Alembic migration heads ([#277](https://github.com/andr-235/parseVK/issues/277)) ([fb31b85](https://github.com/andr-235/parseVK/commit/fb31b85bd56add3c25dec4d802d510ffc472cb20))
+
 # [0.59.0](https://github.com/andr-235/parseVK/compare/v0.58.1...v0.59.0) (2026-07-17)
 
 
