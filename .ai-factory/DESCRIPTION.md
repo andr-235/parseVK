@@ -20,7 +20,6 @@ A social media analytics platform for monitoring and detecting illegal/extremist
 - **Database:** PostgreSQL 16 (8 separate databases per service)
 - **Messaging:** Kafka 4.1 (event-driven, 3 topics)
 - **Cache:** Redis 7.4
-- **CLI:** Go 1.26 (parsevkctl)
 - **Infrastructure:** Docker Compose, Prometheus, Grafana, Node Exporter
 - **CI/CD:** GitHub Actions, Semantic Release, Husky
 

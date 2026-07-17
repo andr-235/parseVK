@@ -27,13 +27,6 @@ bun run test           # Vitest (однократно)
 bun run test:watch     # Watch mode
 ```
 
-## Go CLI
-
-```powershell
-cd tools/parsevkctl-go
-go test ./...
-```
-
 ## Структура тестов
 
 | Слой | Фреймворк | Паттерн |

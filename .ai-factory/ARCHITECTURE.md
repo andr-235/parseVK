@@ -7,7 +7,7 @@ ParseVK follows a microservice architecture with 9 independently deployable Fast
 ## Decision Rationale
 
 - **Project type:** Social media analytics platform with multi-source content collection (VK, Telegram, WhatsApp)
-- **Tech stack:** Python 3.12+ (FastAPI) backend, React 19 frontend, Go CLI tooling
+- **Tech stack:** Python 3.12+ (FastAPI) backend, React 19 frontend
 - **Key factor:** Independent scaling of domain-specific services (identity, tasks, parsing, moderation, content, messaging) with clear bounded contexts
 
 ## Folder Structure
@@ -33,7 +33,6 @@ parseVK/
 │   ├── listings-service/          # Listings storage and CSV export
 │   └── im-service/                # Instant messaging (WhatsApp via Wappi.pro)
 ├── libs/py/common/                # Shared Python library (models, exceptions, Kafka helpers)
-├── tools/parsevkctl-go/           # Go CLI for GitHub automation
 ├── monitoring/                    # Prometheus + Grafana configs
 └── docker/                        # Dockerfiles, compose configs
 ```

@@ -19,7 +19,6 @@
 - **Python services:** `services/<name>/app/{core,modules,db}/`
 - **Frontend:** `front/src/` with feature-based organization
 - **Shared Python library:** `libs/py/common/`
-- **Go CLI:** `tools/parsevkctl-go/`
 
 ## Error Handling
 

@@ -23,7 +23,7 @@ body:
     attributes:
       label: Service
       description: Name the affected service, tool, or area.
-      placeholder: parsevkctl
+      placeholder: api-gateway
     validations:
       required: true
 

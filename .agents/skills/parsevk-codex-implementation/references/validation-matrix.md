@@ -4,7 +4,6 @@
 
 | Область изменений | Каталог | Команды проверки |
 | :--- | :--- | :--- |
-| **Go CLI (`parsevkctl`)** | `tools/parsevkctl-go/` | `go test ./...`<br>`go vet ./...`<br>`go fmt ./...` |
 | **Python Backend / Микросервисы** | `services/` | `pytest`<br>`ruff check .`<br>`mypy .` |
 | **Фронтенд** | `front/` | `npm test`<br>`npm run lint`<br>`npm run typecheck`<br>`npm run build` |
 | **Общие библиотеки (Python)** | `libs/` | `pytest libs/` |

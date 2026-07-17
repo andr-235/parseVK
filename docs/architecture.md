@@ -22,7 +22,7 @@ Frontend (React/Vite) → API Gateway → Identity / Tasks / Content / Moderatio
 | Бэкенд | Python 3.12+, FastAPI, SQLAlchemy 2.0 async, asyncpg, Pydantic v2, Alembic, aiokafka, httpx |
 | Фронтенд | React 19, Vite 8, Tailwind CSS 4, TanStack Query, Zustand, TypeScript 6, Vitest |
 | Инфра | PostgreSQL 16, Kafka 4.1, Redis 7.4, Prometheus, Grafana |
-| Инструменты | Docker Compose, uv, Bun, Go (parsevkctl) |
+| Инструменты | Docker Compose, uv, Bun, Go |
 | CI/CD | GitHub Actions, Semantic Release |
 
 ## Микросервисы
@@ -124,16 +124,6 @@ Issue → Task-ветка → Реализация → PR → Review → Merge
   fix(api-gateway): handle empty refresh token
   chore(deps): bump aiokafka to 0.14
   ```
-
-**CLI автоматизации (parsevkctl):**
-
-```
-cd tools/parsevkctl-go
-go run ./cmd/parsevkctl task create "Title" --body "desc"
-go run ./cmd/parsevkctl task start ISSUE_NUMBER
-go run ./cmd/parsevkctl task pr ISSUE_NUMBER
-go run ./cmd/parsevkctl task merge ISSUE_NUMBER
-```
 
 ## AI-assisted разработка
 

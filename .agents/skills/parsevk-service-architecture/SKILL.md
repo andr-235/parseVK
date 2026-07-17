@@ -27,12 +27,6 @@ description: Enforces, validates, and scaffolds parseVK FastAPI microservices ac
 
 ### 1. Создание нового сервиса
 
-```powershell
-cd tools/parsevkctl-go
-go run ./cmd/parsevkctl task create "feat({name}): create {name} FastAPI service"
-go run ./cmd/parsevkctl task start ISSUE_NUMBER
-```
-
 Затем запусти скрипт скаффолдинга:
 
 ```powershell

@@ -14,7 +14,6 @@ allowed-tools: Read Write Bash(git *)
 
 - После завершения реализации задачи (code changes ready)
 - После code review
-- Перед созданием PR через `parsevkctl task pr`
 - После мержа PR (итоговое закрытие задачи)
 
 ## Формат отчёта

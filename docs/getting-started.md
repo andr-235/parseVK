@@ -9,7 +9,6 @@
 - **Docker** и **Docker Compose** (для запуска полного стека)
 - **Bun 1.x** (для фронтенда)
 - **uv 0.11.6** (для Python-сервисов)
-- **Go 1.26** (для CLI parsevkctl)
 
 ## Быстрый старт (Docker)
 
@@ -66,17 +65,6 @@ docker compose up -d vk-db kafka
 | `uv lock` | Обновить lock-файл |
 | `uv run pytest` | Запустить тесты |
 
-### Go CLI (parsevkctl)
-
-```bash
-cd tools/parsevkctl-go
-go run ./cmd/parsevkctl --help
-go test ./...
-go build -o bin/parsevkctl ./cmd/parsevkctl
-```
-
-Default branch для CLI настроен в `config.json`: `fastapi-microservices-rewrite`.
-
 ## Команды быстрого доступа
 
 | Команда | Где | Описание |
@@ -89,7 +77,6 @@ Default branch для CLI настроен в `config.json`: `fastapi-microservi
 | `uv run pytest` | корень / сервис | Python-тесты |
 | `ruff check .` | корень / сервис | Python-линтинг |
 | `uv sync` | сервис | Установка зависимостей |
-| `go run ./cmd/parsevkctl` | `tools/parsevkctl-go/` | CLI автоматизации |
 
 ## Troubleshooting
 
