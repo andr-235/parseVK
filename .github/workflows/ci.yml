@@ -113,6 +113,14 @@ jobs:
       - name: Run ruff check on all Python sources
         run: uvx ruff check --output-format=github services/ libs/
 
+  alembic-graphs:
+    name: Validate Alembic graphs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Validate Alembic revision graphs
+        run: python3 .github/scripts/validate_alembic_graphs.py
+
   frontend-tests:
     name: Test Frontend
     runs-on: ubuntu-latest
