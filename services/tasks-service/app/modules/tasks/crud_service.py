@@ -6,11 +6,13 @@ Publishes outbox events when new tasks are created.
 
 import logging
 from math import ceil
+from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Task, TaskAuditLog
 from app.modules.outbox.service import OutboxService
+from app.modules.tasks.event_payloads import task_request_payload
 from app.modules.tasks.exceptions import TaskNotFoundError
 from app.modules.tasks.mapper import audit_to_response, task_to_response
 from app.modules.tasks.repository import TasksRepository
@@ -53,6 +55,7 @@ class TasksCrudService:
                 group_ids=group_ids,
                 post_limit=payload.post_limit,
                 source="manual",
+                execution_run_id=str(uuid4()),
             )
         )
         await self.repository.add_audit(
@@ -71,15 +74,7 @@ class TasksCrudService:
             aggregate_id=str(task.id),
             correlation_id=correlation_id,
             dedupe_key=f"task.created:{task.id}",
-            payload={
-                "taskId": str(task.id),
-                "ownerUserId": owner_user_id,
-                "scope": task.scope,
-                "mode": task.mode,
-                "groupIds": task.group_ids,
-                "postLimit": task.post_limit,
-                "source": task.source,
-            },
+            payload=task_request_payload(task, owner_user_id),
         )
         return task_to_response(task)
 

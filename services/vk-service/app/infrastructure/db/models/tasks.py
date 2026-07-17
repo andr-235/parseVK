@@ -2,7 +2,6 @@ from datetime import UTC, datetime
 from uuid import UUID as PyUUID
 from uuid import uuid4
 
-from app.infrastructure.db.base import Base
 from sqlalchemy import (
     BigInteger,
     DateTime,
@@ -15,6 +14,8 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.infrastructure.db.base import Base
+
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
@@ -25,6 +26,7 @@ class VkTaskRun(Base):
     __table_args__ = (
         UniqueConstraint("task_id", name="uq_vk_task_runs_task_id"),
         Index("ix_vk_task_runs_task_id", "task_id"),
+        Index("ix_vk_task_runs_claimable", "status", "available_at", "lease_expires_at"),
     )
 
     id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -41,7 +43,18 @@ class VkTaskRun(Base):
     processed_items: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     total_items: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    available_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
+    )
+    lease_owner: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    lease_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
     )
@@ -58,7 +71,9 @@ class ProcessedEvent(Base):
     consumer_name: Mapped[str] = mapped_column(Text, nullable=False)
     event_id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     event_type: Mapped[str] = mapped_column(Text, nullable=False)
-    processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    processed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
+    )
     retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     next_retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

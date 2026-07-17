@@ -6,8 +6,8 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.entities.tasks import VkTaskRun as VkTaskRunEntity
-from app.infrastructure.db.models.tasks import ProcessedEvent, VkTaskRun
 from app.domain.repositories.tasks import TaskEventsRepository
+from app.infrastructure.db.models.tasks import ProcessedEvent, VkTaskRun
 
 
 def utcnow() -> datetime:
@@ -30,6 +30,11 @@ def _to_task_run_entity(model: VkTaskRun) -> VkTaskRunEntity:
         processed_items=model.processed_items,
         total_items=model.total_items,
         last_error=model.last_error,
+        attempts=model.attempts,
+        available_at=model.available_at,
+        lease_owner=model.lease_owner,
+        lease_expires_at=model.lease_expires_at,
+        heartbeat_at=model.heartbeat_at,
         created_at=model.created_at,
         updated_at=model.updated_at,
     )
@@ -50,22 +55,31 @@ class SqlAlchemyTaskEventsRepository(TaskEventsRepository):
             is not None
         )
 
-    async def mark_processed(self, consumer_name: str, event_id: uuid.UUID, event_type: str) -> None:
-        stmt = pg_insert(ProcessedEvent).values(
-            consumer_name=consumer_name,
-            event_id=event_id,
-            event_type=event_type,
-            processed_at=utcnow(),
-        ).on_conflict_do_update(
-            constraint="uq_processed_events_consumer_event",
-            set_={"processed_at": utcnow(), "retry_count": 0, "last_error": None, "next_retry_at": None},
+    async def mark_processed(
+        self, consumer_name: str, event_id: uuid.UUID, event_type: str
+    ) -> None:
+        stmt = (
+            pg_insert(ProcessedEvent)
+            .values(
+                consumer_name=consumer_name,
+                event_id=event_id,
+                event_type=event_type,
+                processed_at=utcnow(),
+            )
+            .on_conflict_do_update(
+                constraint="uq_processed_events_consumer_event",
+                set_={
+                    "processed_at": utcnow(),
+                    "retry_count": 0,
+                    "last_error": None,
+                    "next_retry_at": None,
+                },
+            )
         )
         await self.session.execute(stmt)
 
     async def get_task_run(self, task_id: int) -> VkTaskRunEntity | None:
-        model = await self.session.scalar(
-            select(VkTaskRun).where(VkTaskRun.task_id == task_id)
-        )
+        model = await self.session.scalar(select(VkTaskRun).where(VkTaskRun.task_id == task_id))
         return _to_task_run_entity(model) if model is not None else None
 
     async def create_task_run(
@@ -93,9 +107,7 @@ class SqlAlchemyTaskEventsRepository(TaskEventsRepository):
         return _to_task_run_entity(task_run)
 
     async def update_task_run(self, task_id: int, **kwargs) -> VkTaskRunEntity | None:
-        model = await self.session.scalar(
-            select(VkTaskRun).where(VkTaskRun.task_id == task_id)
-        )
+        model = await self.session.scalar(select(VkTaskRun).where(VkTaskRun.task_id == task_id))
         if model is None:
             return None
         for key, value in kwargs.items():

@@ -24,17 +24,27 @@ async def test_health_returns_up():
         response = await client.get("/health")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "UP", "vkTokenConfigured": "no", "vkTokenMasked": "", "okCredentialsConfigured": "no", "okTokenMasked": "", "kafkaConsumer": "unhealthy", "outboxPublisher": "unhealthy"}
+    assert response.json() == {
+        "status": "UP",
+        "vkTokenConfigured": "no",
+        "vkTokenMasked": "",
+        "okCredentialsConfigured": "no",
+        "okTokenMasked": "",
+        "kafkaConsumer": "unhealthy",
+        "outboxPublisher": "unhealthy",
+        "taskWorker": "unhealthy",
+    }
 
 
 @pytest.mark.anyio
 async def test_ready_returns_ready():
     from unittest.mock import AsyncMock, patch
+
     app = create_app()
     with patch("app.infrastructure.db.session.engine") as mock_engine:
         mock_conn = AsyncMock()
         mock_engine.connect.return_value.__aenter__.return_value = mock_conn
-        
+
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/ready")
 
@@ -45,6 +55,7 @@ async def test_ready_returns_ready():
 @pytest.mark.anyio
 async def test_ready_returns_service_unavailable():
     from unittest.mock import patch
+
     app = create_app()
     with patch("app.infrastructure.db.session.engine") as mock_engine:
         mock_engine.connect.side_effect = Exception("Database connection error")

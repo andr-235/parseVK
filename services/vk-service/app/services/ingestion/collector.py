@@ -1,6 +1,5 @@
 import logging
-from collections.abc import Callable
-from dataclasses import dataclass
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
@@ -8,30 +7,10 @@ from app.infrastructure.tasks_client.client import TasksClient
 from app.services.ingestion.comment_collector import CommentCollector
 from app.services.ingestion.group_collector import GroupCollector
 from app.services.ingestion.post_collector import PostCollector
+from app.services.ingestion.progress_reporter import ProgressReporter
+from app.services.ingestion.result import IngestionResult
 
 logger = logging.getLogger("vk-service.ingestion")
-
-
-@dataclass
-class IngestionResult:
-    groups: int = 0
-    posts: int = 0
-    comments: int = 0
-    authors: int = 0
-    errors: list[dict] | None = None
-
-    def stats(self) -> dict[str, int]:
-        return {
-            "groups": self.groups,
-            "posts": self.posts,
-            "comments": self.comments,
-            "authors": self.authors,
-            "errors": len(self.errors) if self.errors else 0,
-        }
-
-    @property
-    def processed_items(self) -> int:
-        return self.groups + self.posts + self.comments
 
 
 class DataCollector:
@@ -43,21 +22,33 @@ class DataCollector:
         tasks_client: TasksClient,
         outbox=None,
         on_error: Callable[[str], str] | None = None,
+        checkpoint: Callable[[], Awaitable[None]] | None = None,
     ):
         self.adapter = adapter
         self.repository = repository
-        self.tasks_client = tasks_client
-        self.outbox = outbox
         self._on_error = on_error or (lambda msg: msg)
+        self.current_result = IngestionResult()
+        self.progress = ProgressReporter(
+            tasks_client=tasks_client,
+            outbox=outbox,
+            checkpoint=checkpoint,
+        )
 
         self.group_collector = GroupCollector(
-            adapter=adapter, repository=repository, tasks_client=tasks_client, outbox=outbox,
+            adapter=adapter,
+            repository=repository,
+            tasks_client=tasks_client,
+            outbox=outbox,
         )
         self.post_collector = PostCollector(
-            adapter=adapter, repository=repository, outbox=outbox,
+            adapter=adapter,
+            repository=repository,
+            outbox=outbox,
         )
         self.comment_collector = CommentCollector(
-            adapter=adapter, repository=repository, outbox=outbox,
+            adapter=adapter,
+            repository=repository,
+            outbox=outbox,
         )
 
     async def get_group_ids(self, task_run: Any) -> list[int]:
@@ -68,6 +59,7 @@ class DataCollector:
     ) -> IngestionResult:
         result = IngestionResult()
         result.errors = []
+        self.current_result = result
 
         for group_id in group_ids:
             try:
@@ -81,7 +73,10 @@ class DataCollector:
             try:
                 author_profiles: dict[int, dict] = {}
                 posts = await self.post_collector.collect_for_group(
-                    group_id, task_run, author_profiles, correlation_id=correlation_id,
+                    group_id,
+                    task_run,
+                    author_profiles,
+                    correlation_id=correlation_id,
                 )
             except Exception as error:
                 sanitized_error = self._on_error(str(error))
@@ -92,45 +87,37 @@ class DataCollector:
 
             for post in posts:
                 author_added = await self.post_collector.save_post(
-                    post, task_run, author_profiles, correlation_id=correlation_id,
+                    post,
+                    task_run,
+                    author_profiles,
+                    correlation_id=correlation_id,
                 )
                 if author_added:
                     result.authors += 1
                 result.posts += 1
 
                 post_comments = await self.comment_collector.collect_for_post(
-                    int(post["owner_id"]), int(post["id"]), author_profiles,
+                    int(post["owner_id"]),
+                    int(post["id"]),
+                    author_profiles,
                     correlation_id=correlation_id,
                 )
 
                 for comment in post_comments:
                     author_added = await self.comment_collector.save_comment(
-                        comment, task_run, author_profiles, correlation_id=correlation_id,
+                        comment,
+                        task_run,
+                        author_profiles,
+                        correlation_id=correlation_id,
                     )
                     if author_added:
                         result.authors += 1
                     result.comments += 1
 
-                await self.tasks_client.update_progress(
-                    task_run.task_id,
-                    task_run.run_id,
-                    result.processed_items,
-                    result.processed_items,
-                    1,
-                    result.stats(),
-                    request_id=task_run.run_id,
-                    correlation_id=correlation_id,
-                )
-                if self.outbox:
-                    await self.outbox.emit_task_progress_updated(
-                        task_id=task_run.task_id,
-                        run_id=task_run.run_id,
-                        processed_items=result.processed_items,
-                        total_items=result.processed_items,
-                        progress=1,
-                        stats=result.stats(),
-                        correlation_id=correlation_id,
-                    )
+                await self.progress.report(task_run, result, correlation_id)
+
+            if not posts:
+                await self.progress.checkpoint()
 
         return result
 

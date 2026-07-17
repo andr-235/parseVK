@@ -11,6 +11,12 @@ from app.infrastructure.tasks_client.client import TasksClient
 
 CONSUMER_NAME = "vk-service"
 logger = logging.getLogger("vk-service")
+TERMINAL_STATUSES = {
+    "task.cancelled": "cancelled",
+    "task.completed": "done",
+    "task.deleted": "cancelled",
+    "task.failed": "failed",
+}
 
 
 def utcnow() -> datetime:
@@ -33,7 +39,7 @@ class TaskEventsService:
         if await self.repository.is_processed(self.consumer_name, event.event_id):
             return None
 
-        if event.event_type in {"task.deleted", "task.cancelled", "task.failed"}:
+        if event.event_type in TERMINAL_STATUSES:
             result = await self._handle_termination(event)
         else:
             result = await self._handle_created_or_resumed(event)
@@ -44,13 +50,13 @@ class TaskEventsService:
 
     async def _handle_created_or_resumed(self, event: TaskEvent) -> VkTaskRun | None:
         task_id = get_task_id(event)
-        run_id = str(event.event_id)
+        run_id = str(event.payload.get("runId") or event.event_id)
         task_run = await self.repository.get_task_run(task_id)
 
         if task_run is not None:
             if task_run.status == "done":
                 return None
-            if task_run.status == "running":
+            if task_run.run_id == run_id and task_run.status in {"pending", "running"}:
                 return None
             task_run = await self.repository.update_task_run(
                 task_id, run_id=run_id, updated_at=utcnow()
@@ -107,12 +113,40 @@ class TaskEventsService:
         if task_run is None:
             return None
 
-        new_status = "failed" if event.event_type == "task.failed" else "cancelled"
+        if task_run.status == "done":
+            return None
+
+        # Stale event detection: ignore events for a different run
+        event_run_id = event.payload.get("runId")
+        if not event_run_id and event.event_type in {"task.completed", "task.failed"}:
+            event_run_id = event.correlation_id
+        if event_run_id and event_run_id != task_run.run_id:
+            logger.info(
+                "Ignored stale task event task_id=%s event=%s event_run=%s active_run=%s",
+                task_id,
+                event.event_type,
+                event_run_id,
+                task_run.run_id,
+            )
+            return None
+
+        new_status = TERMINAL_STATUSES[event.event_type]
+        values: dict = {
+            "status": new_status,
+            "finished_at": utcnow(),
+            "updated_at": utcnow(),
+        }
+        if new_status == "done":
+            values.update(
+                processed_items=int(event.payload.get("processedItems") or 0),
+                total_items=int(event.payload.get("totalItems") or 0),
+                last_error=None,
+            )
+        elif new_status == "failed":
+            values["last_error"] = str(event.payload.get("error") or "Task failed")
         task_run = await self.repository.update_task_run(
             task_id,
-            status=new_status,
-            finished_at=utcnow(),
-            updated_at=utcnow(),
+            **values,
         )
         return task_run
 
