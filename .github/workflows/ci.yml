@@ -19,8 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'pull_request' || !contains(github.event.head_commit.message, '[skip ci]') }}
     outputs:
-      frontend_changed: ${{ steps.detect.outputs.frontend_changed }}
-      python_changed: ${{ steps.detect.outputs.python_changed }}
+      frontend_changed: ${{ steps.filter.outputs.frontend_changed }}
+      python_changed: ${{ steps.filter.outputs.python_changed }}
     steps:
       - uses: actions/checkout@v6
         with:
