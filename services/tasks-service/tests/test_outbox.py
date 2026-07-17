@@ -437,7 +437,7 @@ async def test_complete_execution_publishes_outbox_event():
     payload.total_items = 200
     payload.stats = {"processed": 100, "total": 200}
 
-    service.crud.repository.get_task_by_id = AsyncMock(return_value=task_mock)
+    service.crud.repository.get_task_by_id_for_update = AsyncMock(return_value=task_mock)
     service.crud.repository.add_audit = AsyncMock()
     service.crud.repository.touch_task = AsyncMock(return_value=task_mock)
     service.crud.outbox.add_event = AsyncMock()
@@ -496,7 +496,7 @@ async def test_fail_execution_publishes_outbox_event():
     payload.total_items = 200
     payload.stats = {"processed": 50, "total": 200}
 
-    service.crud.repository.get_task_by_id = AsyncMock(return_value=task_mock)
+    service.crud.repository.get_task_by_id_for_update = AsyncMock(return_value=task_mock)
     service.crud.repository.add_audit = AsyncMock()
     service.crud.repository.touch_task = AsyncMock(return_value=task_mock)
     service.crud.outbox.add_event = AsyncMock()

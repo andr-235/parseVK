@@ -46,6 +46,23 @@ class TasksRepository:
     async def get_task_by_id(self, task_id: int) -> Task | None:
         return await self.session.get(Task, task_id)
 
+    async def get_task_by_id_for_update(self, task_id: int) -> Task | None:
+        """Fetch a task by primary key with SELECT ... FOR UPDATE.
+
+        Acquires a row-level lock on the task row, blocking concurrent
+        transactions from reading or modifying it until the current
+        transaction commits. Used by TaskExecutionService lifecycle
+        methods to prevent race conditions between concurrent callers
+        (e.g. Kafka consumer + lease worker).
+
+        Unlike get_task_by_id() which uses session.get() without locking,
+        this method uses select().with_for_update() to ensure serialised
+        access to the task row.
+        """
+        return await self.session.scalar(
+            select(Task).where(Task.id == task_id).with_for_update()
+        )
+
     async def list_audit(self, owner_user_id: str, task_id: int) -> list[TaskAuditLog]:
         result = await self.session.scalars(
             select(TaskAuditLog)
