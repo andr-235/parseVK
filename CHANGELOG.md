@@ -1,3 +1,10 @@
+## [0.58.1](https://github.com/andr-235/parseVK/compare/v0.58.0...v0.58.1) (2026-07-17)
+
+
+### Bug Fixes
+
+* **vk-service:** recover stuck parsing tasks with leased workers ([#275](https://github.com/andr-235/parseVK/issues/275)) ([6d87b19](https://github.com/andr-235/parseVK/commit/6d87b19e2d5b213f56a1c11cf6f6fe53235446df)), closes [#274](https://github.com/andr-235/parseVK/issues/274) [#274](https://github.com/andr-235/parseVK/issues/274)
+
 # [0.58.0](https://github.com/andr-235/parseVK/compare/v0.57.0...v0.58.0) (2026-07-16)
 
 
