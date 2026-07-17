@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
+from uuid import UUID
 
 import pytest
 from app.modules.tasks.exceptions import TaskConflictError
@@ -43,13 +44,18 @@ def make_service(task):
 
 @pytest.mark.anyio
 async def test_resume_uses_run_scoped_dedupe_key_and_row_lock():
-    service, repository, outbox = make_service(make_task("failed", "run-7"))
+    task = make_task("failed", "run-7")
+    service, repository, outbox = make_service(task)
 
     result = await service.resume_task("user-1", 42)
 
     repository.get_task_for_update.assert_awaited_once_with("user-1", 42)
     assert result["status"] == "pending"
-    assert outbox.add_event.await_args.kwargs["dedupe_key"] == "task.resumed:42:run-7"
+    run_id = outbox.add_event.await_args.kwargs["payload"]["runId"]
+    assert UUID(run_id)
+    assert run_id != "run-7"
+    assert task.execution_run_id == run_id
+    assert outbox.add_event.await_args.kwargs["dedupe_key"] == f"task.resumed:42:{run_id}"
 
 
 @pytest.mark.anyio
@@ -68,3 +74,4 @@ async def test_cancel_uses_current_execution_run_in_dedupe_key():
 
     assert result["status"] == "cancelled"
     assert outbox.add_event.await_args.kwargs["dedupe_key"] == "task.cancelled:42:run-8"
+    assert outbox.add_event.await_args.kwargs["payload"]["runId"] == "run-8"

@@ -136,6 +136,7 @@ async def test_tasks_service_outbox_events_contract():
         payload={
             "taskId": "42",
             "ownerUserId": "user-1",
+            "runId": "run-42",
             "scope": "selected",
             "mode": "recent_posts",
             "groupIds": [1, 2],
@@ -159,6 +160,7 @@ async def test_tasks_service_outbox_events_contract():
         payload={
             "taskId": "42",
             "ownerUserId": "user-1",
+            "runId": "run-42",
             "scope": "all",
             "mode": "recent_posts",
             "groupIds": [],
@@ -171,21 +173,24 @@ async def test_tasks_service_outbox_events_contract():
     service.crud.repository.touch_task = AsyncMock(return_value=task_mock)
 
     await service.resume_task("user-1", 42)
-    service.crud.outbox.add_event.assert_called_with(
-        event_type="task.resumed",
-        aggregate_type="task",
-        aggregate_id="42",
-        dedupe_key="task.resumed:42:run-42",
-        payload={
+    resume_event = service.crud.outbox.add_event.await_args.kwargs
+    run_id = resume_event["payload"]["runId"]
+    assert resume_event == {
+        "event_type": "task.resumed",
+        "aggregate_type": "task",
+        "aggregate_id": "42",
+        "dedupe_key": f"task.resumed:42:{run_id}",
+        "payload": {
             "taskId": "42",
             "ownerUserId": "user-1",
+            "runId": run_id,
             "scope": "all",
             "mode": "recent_posts",
             "groupIds": [],
             "postLimit": 10,
             "source": "manual",
         },
-    )
+    }
 
 
 def _make_event(event_id: str, attempts: int = 0, status: str = "pending"):

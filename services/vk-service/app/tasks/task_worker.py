@@ -32,7 +32,7 @@ class TaskWorker:
 
     async def run_forever(self) -> None:
         logger.info(
-            "[FIX:274] VK task worker starting worker=%s concurrency=%s",
+            "VK task worker starting worker=%s concurrency=%s",
             self.worker_id,
             self.concurrency,
         )
@@ -72,4 +72,4 @@ class TaskWorker:
             with suppress(asyncio.CancelledError):
                 error = task.exception()
                 if error is not None:
-                    logger.error("[FIX:274] Unhandled task executor error: %s", error)
+                    logger.error("Unhandled task executor error: %s", error)

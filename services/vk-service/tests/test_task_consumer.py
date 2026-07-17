@@ -75,22 +75,32 @@ class FakeTaskRun:
         self.last_error = None
 
 
-def event(event_type="task.created", task_id=1, event_id=None):
+def event(
+    event_type="task.created",
+    task_id=1,
+    event_id=None,
+    *,
+    correlation_id="corr-1",
+    run_id=None,
+):
+    payload = {
+        "taskId": str(task_id),
+        "ownerUserId": "user-1",
+        "scope": "selected",
+        "mode": "recent_posts",
+        "groupIds": [1],
+        "postLimit": 10,
+    }
+    if run_id:
+        payload["runId"] = run_id
     return TaskEvent.model_validate(
         {
             "event_id": str(event_id or uuid4()),
             "event_type": event_type,
             "event_version": 1,
             "aggregate_id": str(task_id),
-            "correlation_id": "corr-1",
-            "payload": {
-                "taskId": str(task_id),
-                "ownerUserId": "user-1",
-                "scope": "selected",
-                "mode": "recent_posts",
-                "groupIds": [1],
-                "postLimit": 10,
-            },
+            "correlation_id": correlation_id,
+            "payload": payload,
         }
     )
 
@@ -151,15 +161,31 @@ def test_missing_task_id_is_validation_safe():
 
 
 @pytest.mark.anyio
-async def test_completed_task_event_does_not_move_lifecycle_backward():
+async def test_completed_event_moves_running_task_forward_to_done():
     repository = FakeRepository()
-    repository.runs[1] = FakeTaskRun(task_id=1, run_id="run-1", status="done")
+    repository.runs[1] = FakeTaskRun(task_id=1, run_id="run-1", status="running")
     handler = TaskEventsService(repository)
 
-    result = await handler.handle(event(task_id=1))
+    result = await handler.handle(
+        event(event_type="task.completed", task_id=1, correlation_id="run-1")
+    )
+
+    assert result is not None
+    assert repository.runs[1].status == "done"
+
+
+@pytest.mark.anyio
+async def test_stale_failed_event_does_not_terminate_new_run():
+    repository = FakeRepository()
+    repository.runs[1] = FakeTaskRun(task_id=1, run_id="run-new", status="running")
+    handler = TaskEventsService(repository)
+
+    result = await handler.handle(
+        event(event_type="task.failed", task_id=1, correlation_id="run-old")
+    )
 
     assert result is None
-    assert repository.runs[1].status == "done"
+    assert repository.runs[1].status == "running"
 
 
 @pytest.mark.anyio

@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 import httpx
 
 from app.domain.entities.tasks import VkTaskRun
+from app.tasks.completion_recorder import TaskCompletionRecorder
 from app.tasks.task_finalizer import TaskFinalizer
 
 logger = logging.getLogger("vk-service.task-worker")
@@ -40,21 +41,20 @@ class TaskExecutor:
         self.finalizer = TaskFinalizer(
             worker_id=worker_id, lease_store=lease_store, tasks_client=tasks_client
         )
+        self.completion_recorder = TaskCompletionRecorder(
+            session_factory=session_factory, ingestion_factory=ingestion_factory
+        )
 
     async def execute(self, task_run: VkTaskRun) -> None:
         logger.info(
-            "[FIX:274] Claimed VK task task_id=%s run_id=%s attempt=%s worker=%s",
+            "Claimed VK task task_id=%s run_id=%s attempt=%s worker=%s",
             task_run.task_id,
             task_run.run_id,
             task_run.attempts,
             self.worker_id,
         )
         if task_run.attempts > self.max_attempts:
-            await self.finalizer.fail(
-                task_run,
-                "Task lease recovery attempts exhausted",
-                retry_callback=False,
-            )
+            await self.finalizer.fail(task_run, "Task lease recovery attempts exhausted")
             return
         try:
             remote = await self.tasks_client.start_execution(
@@ -64,6 +64,13 @@ class TaskExecutor:
                 correlation_id=task_run.run_id,
             )
             if remote.get("status") == "done":
+                try:
+                    await self.completion_recorder.record(task_run, remote)
+                except Exception as exc:
+                    await self.finalizer.release(
+                        task_run, f"completion reconciliation failed: {exc}"
+                    )
+                    return
                 await self.lease_store.done(
                     task_id=task_run.task_id,
                     run_id=task_run.run_id,
@@ -80,10 +87,10 @@ class TaskExecutor:
                 processed_items=result.processed_items,
                 total_items=result.processed_items,
             )
-            logger.info("[FIX:274] Completed VK task task_id=%s", task_run.task_id)
+            logger.info("Completed VK task task_id=%s", task_run.task_id)
         except LeaseLostError:
             logger.warning(
-                "[FIX:274] Lease lost for task_id=%s; execution cancelled", task_run.task_id
+                "Lease lost for task_id=%s; execution cancelled", task_run.task_id
             )
         except TimeoutError:
             await self.finalizer.fail(task_run, f"Task timed out after {self.timeout_seconds}s")

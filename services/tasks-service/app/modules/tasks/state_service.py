@@ -5,11 +5,17 @@ Validates transitions and publishes outbox events for downstream consumers.
 """
 
 import logging
+from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import TaskAuditLog
 from app.modules.outbox.service import OutboxService
+from app.modules.tasks.event_payloads import (
+    task_identity_payload,
+    task_request_payload,
+    task_snapshot,
+)
 from app.modules.tasks.exceptions import TaskConflictError, TaskNotFoundError
 from app.modules.tasks.mapper import task_to_response
 from app.modules.tasks.repository import TasksRepository
@@ -38,6 +44,7 @@ class TaskStateService:
             )
         task.status = "pending"
         task.error = None
+        task.execution_run_id = str(uuid4())
         await self.repository.add_audit(
             TaskAuditLog(
                 owner_user_id=owner_user_id,
@@ -45,23 +52,15 @@ class TaskStateService:
                 aggregate_id=str(task.id),
                 task_id=task.id,
                 event_type="task.resumed",
-                event_data={"taskId": str(task.id)},
+                event_data={"taskId": str(task.id), "runId": task.execution_run_id},
             )
         )
         await self.outbox.add_event(
             event_type="task.resumed",
             aggregate_type="task",
             aggregate_id=str(task.id),
-            dedupe_key=f"task.resumed:{task.id}:{task.execution_run_id or task.updated_at.isoformat()}",
-            payload={
-                "taskId": str(task.id),
-                "ownerUserId": owner_user_id,
-                "scope": task.scope,
-                "mode": task.mode,
-                "groupIds": task.group_ids,
-                "postLimit": task.post_limit,
-                "source": task.source,
-            },
+            dedupe_key=f"task.resumed:{task.id}:{task.execution_run_id}",
+            payload=task_request_payload(task, owner_user_id),
         )
         task = await self.repository.touch_task(task)
         return task_to_response(task)
@@ -85,18 +84,15 @@ class TaskStateService:
                 aggregate_id=str(task.id),
                 task_id=task.id,
                 event_type="task.cancelled",
-                event_data={"taskId": str(task.id)},
+                event_data={"taskId": str(task.id), "runId": task.execution_run_id},
             )
         )
         await self.outbox.add_event(
             event_type="task.cancelled",
             aggregate_type="task",
             aggregate_id=str(task.id),
-            dedupe_key=f"task.cancelled:{task.id}:{task.execution_run_id or task.updated_at.isoformat()}",
-            payload={
-                "taskId": str(task.id),
-                "ownerUserId": owner_user_id,
-            },
+            dedupe_key=f"task.cancelled:{task.id}:{task.execution_run_id}",
+            payload=task_identity_payload(task, owner_user_id),
         )
         task = await self.repository.touch_task(task)
         return task_to_response(task)
@@ -127,14 +123,7 @@ class TaskStateService:
             raise TaskConflictError(
                 "Cannot delete running task", task_id=task_id, current_status=task.status
             )
-        snapshot = {
-            "taskId": str(task.id),
-            "status": task.status,
-            "scope": task.scope,
-            "mode": task.mode,
-            "groupIds": task.group_ids,
-            "postLimit": task.post_limit,
-        }
+        snapshot = task_snapshot(task)
         await self.repository.add_audit(
             TaskAuditLog(
                 owner_user_id=owner_user_id,

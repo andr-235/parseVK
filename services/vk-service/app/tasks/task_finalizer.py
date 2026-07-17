@@ -29,8 +29,6 @@ class TaskFinalizer:
         self,
         task_run: VkTaskRun,
         error: str,
-        *,
-        retry_callback: bool = True,
     ) -> None:
         safe_error = error[:2000]
         try:
@@ -45,18 +43,14 @@ class TaskFinalizer:
                 correlation_id=task_run.run_id,
             )
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code != 409:
+            if exc.response.status_code not in {404, 409}:
                 callback_error = f"failure callback rejected: {exc.response.status_code}"
-                if retry_callback:
-                    await self.release(task_run, callback_error)
-                    return
-                logger.error("[FIX:274] %s; marking local task terminal", callback_error)
-        except httpx.RequestError as exc:
-            callback_error = f"failure callback unavailable: {exc}"
-            if retry_callback:
                 await self.release(task_run, callback_error)
                 return
-            logger.error("[FIX:274] %s; marking local task terminal", callback_error)
+        except httpx.RequestError as exc:
+            callback_error = f"failure callback unavailable: {exc}"
+            await self.release(task_run, callback_error)
+            return
         await self.lease_store.failed(
             task_id=task_run.task_id,
             run_id=task_run.run_id,
@@ -65,7 +59,7 @@ class TaskFinalizer:
         )
 
     async def release(self, task_run: VkTaskRun, error: str) -> None:
-        delay = min(2**task_run.attempts, 60)
+        delay = min(2 ** min(task_run.attempts, 6), 60)
         await self.lease_store.release(
             task_id=task_run.task_id,
             run_id=task_run.run_id,
@@ -73,4 +67,4 @@ class TaskFinalizer:
             error=error[:2000],
             available_at=datetime.now(UTC) + timedelta(seconds=delay),
         )
-        logger.warning("[FIX:274] Released task_id=%s for retry in %ss", task_run.task_id, delay)
+        logger.warning("Released task_id=%s for retry in %ss", task_run.task_id, delay)
