@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from datetime import UTC, datetime, timedelta
@@ -40,6 +41,7 @@ class ProjectionConsumer(BaseEventConsumer):
             model_class=ProcessedEvent,
             lag_gauge=_consumer_lag,
         )
+        self._pending_recalculation_tasks: set[asyncio.Task] = set()
 
     async def handle_message(self, raw_value: bytes) -> None:
         payload = json.loads(raw_value.decode("utf-8"))
@@ -55,5 +57,25 @@ class ProjectionConsumer(BaseEventConsumer):
             event.event_id, event.event_type,
         )
         async with self.session_factory() as session:
-            service = ModerationService(session, session_maker=async_session_maker)
-            await service.handle_event(event)
+            async with session.begin():
+                service = ModerationService(session, session_maker=async_session_maker)
+                await service.handle_event(event)
+                # Track any fire-and-forget recalculation tasks
+                for pending_task in service.drain_pending_tasks():
+                    self._pending_recalculation_tasks.add(pending_task)
+                    pending_task.add_done_callback(self._pending_recalculation_tasks.discard)
+                    logger.debug(
+                        "Tracking recalculation task %s",
+                        pending_task.get_name(),
+                    )
+
+    async def stop(self) -> None:
+        logger.info(
+            "Stopping ProjectionConsumer, cancelling %d pending recalculation tasks",
+            len(self._pending_recalculation_tasks),
+        )
+        for task in self._pending_recalculation_tasks:
+            task.cancel()
+        if self._pending_recalculation_tasks:
+            await asyncio.gather(*self._pending_recalculation_tasks, return_exceptions=True)
+        await super().stop()

@@ -26,6 +26,30 @@ class BaseEventConsumer(ABC):
         self._lag_gauge = lag_gauge
         self._pending_resume_tasks: set[asyncio.Task] = set()
 
+    def _build_dlq_headers(
+        self,
+        event_id: str | None = None,
+        event_type: str = "",
+        retry_count: int = 0,
+        failure_reason: str = "",
+        raw_value: bytes | None = None,
+    ) -> list[tuple[str, bytes]]:
+        """Build metadata headers for DLQ messages."""
+        headers: list[tuple[str, bytes]] = [
+            ("consumer_name", self.consumer_name.encode()),
+            ("original_topic", self.kafka_topic.encode()),
+            ("failed_at", datetime.now(UTC).isoformat().encode()),
+        ]
+        if event_id:
+            headers.append(("event_id", str(event_id).encode()))
+        if event_type:
+            headers.append(("event_type", event_type.encode()))
+        if retry_count:
+            headers.append(("retry_count", str(retry_count).encode()))
+        if failure_reason:
+            headers.append(("failure_reason", failure_reason.encode()[:2000]))
+        return headers
+
     async def run_forever(self) -> None:
         from aiokafka import AIOKafkaConsumer
 
@@ -60,6 +84,14 @@ class BaseEventConsumer(ABC):
             await self.stop()
 
     async def _skip_due_to_retry_backoff(self, raw_value: bytes) -> bool:
+        """Check if event should be skipped due to retry backoff.
+
+        Checks:
+        1. next_retry_at (durable backoff) — skip without DLQ if retry time is in the future
+        2. retry_count — send to DLQ if max retries exceeded
+
+        Returns True if event should be skipped, False to process.
+        """
         payload = decode_payload(raw_value)
         if payload is None:
             return False
@@ -69,17 +101,41 @@ class BaseEventConsumer(ABC):
             return False
         async with self.session_factory() as session:
             row = await self._repo.get_event(session, event_id)
-            if row is not None and row.retry_count >= self.max_consumer_retries:
+            if row is None:
+                return False
+
+            # Durable backoff — check next_retry_at before retry_count
+            if row.next_retry_at is not None and datetime.now(UTC) < row.next_retry_at:
+                logger.debug(
+                    "Skipping event %s (type=%s): next_retry_at=%s is in the future",
+                    event_id, event_type, row.next_retry_at,
+                )
+                return True  # Don't process, don't DLQ — partition remains paused
+
+            # DLQ after max retries
+            if row.retry_count >= self.max_consumer_retries:
                 logger.warning(
                     "Event %s (type=%s) exceeded max retries (%d), sending to DLQ",
                     event_id, event_type, self.max_consumer_retries,
                 )
-                await send_to_dlq(raw_value, self.dlq_topic, self.bootstrap_servers)
+                headers = self._build_dlq_headers(
+                    event_id=str(row.event_id),
+                    event_type=row.event_type,
+                    retry_count=row.retry_count,
+                    failure_reason=str(row.last_error or ""),
+                )
+                await send_to_dlq(raw_value, self.dlq_topic, self.bootstrap_servers, headers=headers)
                 await self._consumer.commit()
                 return True
         return False
 
     async def _handle_processing_failure(self, message) -> None:
+        """Handle a processing failure for a Kafka message.
+
+        Stores retry state in the database with exponential backoff.
+        After max retries, sends the message to DLQ with metadata headers.
+        Pauses the partition during backoff period.
+        """
         from aiokafka import TopicPartition
 
         payload = decode_payload(message.value)
@@ -101,7 +157,13 @@ class BaseEventConsumer(ABC):
                         "Failed to process event %s after %d retries, sending to DLQ",
                         event_id, updated,
                     )
-                    await send_to_dlq(message.value, self.dlq_topic, self.bootstrap_servers)
+                    headers = self._build_dlq_headers(
+                        event_id=event_id,
+                        event_type=event_type,
+                        retry_count=updated,
+                        failure_reason=error,
+                    )
+                    await send_to_dlq(message.value, self.dlq_topic, self.bootstrap_servers, headers=headers)
                     await self._consumer.commit()
                 else:
                     logger.exception(
@@ -121,7 +183,10 @@ class BaseEventConsumer(ABC):
                 "Poison pill detected at offset %s (no event_id), sending to DLQ and committing offset",
                 message.offset,
             )
-            await send_to_dlq(message.value, self.dlq_topic, self.bootstrap_servers)
+            headers = self._build_dlq_headers(
+                failure_reason=f"Poison pill at offset {message.offset}: no event_id",
+            )
+            await send_to_dlq(message.value, self.dlq_topic, self.bootstrap_servers, headers=headers)
             await self._consumer.commit()
 
     async def _delayed_resume(self, tp, delay: float) -> None:

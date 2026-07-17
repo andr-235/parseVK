@@ -211,8 +211,8 @@ async def test_handle_processing_failure_sends_to_dlq_on_malformed_msg():
 
 
 @pytest.mark.anyio
-async def test_skip_due_to_retry_backoff_commits_offset_when_in_backoff():
-    from unittest.mock import AsyncMock
+async def test_skip_due_to_retry_backoff_skips_when_next_retry_at_in_future():
+    from unittest.mock import AsyncMock, patch
     from types import SimpleNamespace
     from datetime import UTC, datetime, timedelta
     from app.tasks.kafka_consumer import TaskEventsConsumer
@@ -240,10 +240,14 @@ async def test_skip_due_to_retry_backoff_commits_offset_when_in_backoff():
 
     consumer.session_factory = lambda: session
 
-    result = await consumer._skip_due_to_retry_backoff(raw_value)
+    with patch("common.kafka.consumer.send_to_dlq", new_callable=AsyncMock) as mock_dlq:
+        result = await consumer._skip_due_to_retry_backoff(raw_value)
 
     assert result is True
-    consumer._consumer.commit.assert_awaited_once()
+    # Durable backoff: should skip without committing offset
+    consumer._consumer.commit.assert_not_awaited()
+    # Durable backoff: should NOT send to DLQ
+    mock_dlq.assert_not_awaited()
 
 
 @pytest.mark.anyio

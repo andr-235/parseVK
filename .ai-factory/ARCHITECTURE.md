@@ -317,12 +317,45 @@ task = asyncio.create_task(
 | ✅ Multi-Partition Topics | Done | All topics have 3 partitions (configured in docker-compose.yml) |
 | ✅ Consumer Lag Monitoring | Done | `kafka_consumer_lag` Prometheus metric in all 4 consumers (vk, im, content×2, moderation) |
 | ✅ Health Endpoints | Done | All 6 Kafka-related services expose /health with kafka/outboxPublisher status |
-| ✅ Dead Letter Queue | Done (7/9) | vk, im, identity have producer-side + consumer-side DLQ. content, moderation have consumer-side DLQ. **tasks-service has producer-side DLQ** |
-| ⚠️ Consumer Retry (In-Memory) | Partial | All consumers have `_retry_count` dict with max 3 retries, but **in-memory only** — lost on restart |
-| ⚠️ Shared Event Schemas | Partial | `EventEnvelope`/`WireEvent`/`ConsumerEvent` exist in `libs/py/common/events/`. identity-service and tasks-service use them. Shared helpers (`common.events.helpers`) extracted. im-service refactored to use shared helpers. vk-service, content-service, moderation-service still use legacy local models |
+| ✅ Dead Letter Queue | Done (7/9) | vk, im, identity have producer-side + consumer-side DLQ. content, moderation have consumer-side DLQ. **tasks-service has producer-side DLQ**. DLQ producer now reused via bootstrap-server-level caching with metadata headers |
+| ✅ Consumer Retry (Durable) | Done | All consumers now check `next_retry_at` from `processed_events` table before retry_count. Backoff state survives restarts. In-memory partition pause/resume retained as optimization |
+| ✅ Shared Event Schemas | Done (PR5) | vk-service `TaskEventMapper` replaced with `common.events.helpers`. `get_group_ids` returns `list[int]` consistently. im-service adapted. 5 services now use shared helpers from `common.events` |
 | ❌ Distributed Tracing | Missing | No OpenTelemetry/Jaeger. `correlation_id` propagated but not traced across service boundaries |
 | ❌ `identity.events` Has No Consumers | Fire-and-Forget | Identity publishes events but no service subscribes — events are produced with zero observable effect |
 | ❌ Exactly-Once Semantics | Missing | No `transactional.id` or explicit `enable.idempotence` config on any producer (aiokafka defaults apply) |
+
+### Consumer Name Convention
+
+All 5 consumer services follow a strict naming convention for the `consumer_name` field in the `processed_events` table:
+
+| Service | Consumer Name |
+|---------|--------------|
+| vk-service | `vk-service` |
+| content-service (projections) | `content-service` |
+| content-service (im_events) | `content-service-im` |
+| moderation-service | `moderation-service` |
+| im-service | `im-service` |
+
+**Rule:** The base Kafka consumer's `consumer_name` is the single source of truth. Service-layer dedup MUST use the same value. This ensures the retry-state machine in `BaseEventConsumer` can track idempotency status across restarts.
+
+Enforced via `CONSUMER_NAME` constant in each service's task event service, parameterized `consumer_name` in `is_processed`/`mark_processed` methods.
+
+### Durable Backoff Contract
+
+All consumers implement DB-backed retry backoff that survives restarts:
+
+1. On processing failure, `_handle_processing_failure`:
+   - Stores `next_retry_at` in `processed_events` with exponential backoff (2^retry_count, max 60s)
+   - Pauses the Kafka partition and schedules in-memory resume
+2. On next delivery, `_skip_due_to_retry_backoff`:
+   - Checks `next_retry_at` FIRST (before `retry_count`)
+   - If `next_retry_at` is in the future → skips processing WITHOUT committing offset or sending to DLQ
+   - If `retry_count >= max_consumer_retries` → sends to DLQ with metadata headers and commits
+3. This ensures backoff state is never lost — even if the consumer restarts, it reads `next_retry_at` from the database.
+
+### DLQ Producer Caching
+
+`send_to_dlq` in `libs/py/common/common/kafka/producer.py` now caches `AIOKafkaProducer` instances by `bootstrap_servers`. Producers are created once and reused, avoiding the start/stop overhead on every DLQ send. Each DLQ message includes metadata headers (`consumer_name`, `event_id`, `event_type`, `original_topic`, `retry_count`, `failure_reason`, `failed_at`) for observability.
 
 ### Schema Evolution & Versioning Policy
 
@@ -337,9 +370,9 @@ All event envelopes carry an `event_version` integer field. Current version is `
 
 | Priority | Task | Details | Files |
 |----------|------|---------|-------|
-| P0 | **Shared event schemas** | ⚠️ **Partially Done** — tasks-service uses `WireEvent`, im-service refactored, shared helpers created. **Remaining:** vk-service, content-service, moderation-service still use legacy local models | `libs/py/common/common/events/` + vk-service, content-service, moderation-service |
-| P1 | **Persistent consumer retry** | Move `_retry_count` from in-memory dict to DB-backed (use `processed_events` table). Survive restarts | All 4 consumer services |
-| P1 | **Consumer-side backoff** | Add `next_attempt_at` style backoff to consumers instead of immediate retry | All 4 consumer services |
+| P0 | **Shared event schemas** | ✅ **Done (PR5)** — vk-service `TaskEventMapper` removed, im-service using common helpers. All 5 consumer services use `common.events.helpers`. content-service and moderation-service were already compliant | `libs/py/common/common/events/` |
+| P1 | **Persistent consumer retry** | ✅ **Done (PR5)** — `_skip_due_to_retry_backoff` now reads `next_retry_at` from `processed_events` table before checking retry_count. Durable backoff survives consumer restarts | `libs/py/common/common/kafka/consumer.py` |
+| P1 | **Consumer-side backoff** | ✅ **Done (PR5)** — `_handle_processing_failure` stores `next_retry_at` with exponential backoff (2^retry, max 60s). `_skip_due_to_retry_backoff` checks it before processing | `libs/py/common/common/kafka/consumer.py` |
 | P1 | **DLQ monitoring/alerting** | Add Prometheus alert rules for DLQ topic non-zero offset. No one monitors failed events today | `monitoring/prometheus/` |
 | P2 | **Consumer for identity.events** | Either add a consumer or remove the publisher. Currently fire-and-forget with no observable effect | `services/identity-service/` |
 | P2 | **OpenTelemetry tracing** | Propagate trace context through Kafka message headers. Add OTLP exporter | `libs/py/common/` + all services |

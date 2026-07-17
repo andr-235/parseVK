@@ -27,6 +27,7 @@ class ModerationService:
             on_enrich=lambda records: svc._enrich_comments(records),
         )
         self.keyword_repository = KeywordMatchRepository(session)
+        self._pending_tasks: list[asyncio.Task] = []
 
     def _enrich_comments(self, records):
         return records
@@ -78,8 +79,12 @@ class ModerationService:
         else:
             logger.warning("ModerationService.handle_event: unsupported event type=%s", event.event_type)
         await self.crud.mark_processed(event.event_id, event.event_type)
-        await self.session.commit()
         return True
+
+    def drain_pending_tasks(self) -> list[asyncio.Task]:
+        tasks = list(self._pending_tasks)
+        self._pending_tasks.clear()
+        return tasks
 
     async def _handle_comment_collected(self, event: VkEvent) -> None:
         comment = event.payload.get("comment") or {}
@@ -127,4 +132,6 @@ class ModerationService:
             job_id, event.event_id,
         )
         worker = RecalculationWorker(sm)
-        asyncio.create_task(worker.run_recalculation(job_id))
+        task = asyncio.create_task(worker.run_recalculation(job_id))
+        self._pending_tasks.append(task)
+        task.add_done_callback(lambda t: self._pending_tasks.remove(t))
