@@ -32,7 +32,7 @@ class TaskExecutionService:
     async def start_execution(self, task_id: int, payload, request_id: str | None = None,
                               correlation_id: str | None = None) -> dict:
         logger.debug("Execution lifecycle: start_execution for task %s", task_id)
-        task = await self.repository.get_task_by_id(task_id)
+        task = await self.repository.get_task_by_id_for_update(task_id)
         if not task:
             logger.warning("Task not found for start_execution: task_id=%s", task_id)
             raise TaskNotFoundError(task_id=task_id)
@@ -60,7 +60,7 @@ class TaskExecutionService:
     async def update_execution_progress(self, task_id: int, payload, request_id: str | None = None,
                                         correlation_id: str | None = None) -> dict:
         logger.debug("Execution lifecycle: update_execution_progress for task %s", task_id)
-        task = await self.repository.get_task_by_id(task_id)
+        task = await self.repository.get_task_by_id_for_update(task_id)
         if not task:
             logger.warning("Task not found for update_execution_progress: task_id=%s", task_id)
             raise TaskNotFoundError(task_id=task_id)
@@ -79,7 +79,7 @@ class TaskExecutionService:
     async def complete_execution(self, task_id: int, payload, request_id: str | None = None,
                                   correlation_id: str | None = None) -> dict:
         logger.debug("Execution lifecycle: complete_execution for task %s", task_id)
-        task = await self.repository.get_task_by_id(task_id)
+        task = await self.repository.get_task_by_id_for_update(task_id)
         if not task:
             logger.warning("Task not found for complete_execution: task_id=%s", task_id)
             raise TaskNotFoundError(task_id=task_id)
@@ -119,7 +119,7 @@ class TaskExecutionService:
     async def fail_execution(self, task_id: int, payload, request_id: str | None = None,
                              correlation_id: str | None = None) -> dict:
         logger.debug("Execution lifecycle: fail_execution for task %s", task_id)
-        task = await self.repository.get_task_by_id(task_id)
+        task = await self.repository.get_task_by_id_for_update(task_id)
         if not task:
             logger.warning("Task not found for fail_execution: task_id=%s", task_id)
             raise TaskNotFoundError(task_id=task_id)

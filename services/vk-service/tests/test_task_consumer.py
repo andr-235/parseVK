@@ -1,6 +1,7 @@
 import json
 import sys
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -10,8 +11,8 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from common.events import TaskEvent, get_task_id
 from app.services.task_events_service import TaskEventsService
+from common.events import TaskEvent, get_task_id
 
 
 @pytest.fixture
@@ -24,6 +25,11 @@ class FakeRepository:
         self.processed = set()
         self.runs = {}
         self.saved = 0
+        self.session = AsyncMock()
+        begin_ctx = AsyncMock()
+        begin_ctx.__aenter__.return_value = None
+        begin_ctx.__aexit__.return_value = None
+        self.session.begin = MagicMock(return_value=begin_ctx)
 
     async def is_processed(self, consumer_name, event_id):
         return (consumer_name, event_id) in self.processed
@@ -258,11 +264,12 @@ async def test_handle_processing_failure_sends_to_dlq_on_malformed_msg():
 
 @pytest.mark.anyio
 async def test_skip_due_to_retry_backoff_skips_when_next_retry_at_in_future():
-    from unittest.mock import AsyncMock, patch
-    from types import SimpleNamespace
     from datetime import UTC, datetime, timedelta
-    from app.tasks.kafka_consumer import TaskEventsConsumer
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, patch
     from uuid import uuid4
+
+    from app.tasks.kafka_consumer import TaskEventsConsumer
 
     consumer = TaskEventsConsumer(session_factory=AsyncMock())
     consumer._consumer = AsyncMock()
@@ -316,8 +323,11 @@ async def test_skip_exhausted_event_commits_offset():
     ).encode()
 
     row = SimpleNamespace(
-        next_retry_at=datetime.now(UTC) + timedelta(hours=1),
+        event_id=str(uuid4()),
+        event_type="task.created",
+        next_retry_at=datetime.now(UTC) - timedelta(hours=1),
         retry_count=3,
+        last_error="max retries exceeded",
     )
 
     async def scalar_mock(*a, **kw):
@@ -356,3 +366,41 @@ async def test_conflict_409_different_run_id_marks_failed_without_loop():
     assert result is None
     assert repository.runs[1].status == "failed"
     assert "Conflict: Task already running" in repository.runs[1].last_error
+
+
+@pytest.mark.anyio
+async def test_generic_http_error_leaves_run_pending():
+    repository = FakeRepository()
+    tasks_client = FakeTasksClient()
+
+    import httpx
+    async def mock_start_execution(*args, **kwargs):
+        resp = httpx.Response(status_code=503, text="Service Unavailable")
+        raise httpx.HTTPStatusError(
+            "Service Unavailable",
+            request=httpx.Request("POST", "http://test"),
+            response=resp,
+        )
+
+    tasks_client.start_execution = mock_start_execution
+    handler = TaskEventsService(repository, tasks_client)
+
+    task_event = event(task_id=1)
+    with pytest.raises(httpx.HTTPStatusError):
+        await handler.handle(task_event)
+
+    assert repository.runs[1].status == "pending"
+    assert (handler.consumer_name, task_event.event_id) in repository.processed
+
+
+@pytest.mark.anyio
+async def test_event_is_marked_processed_after_phase_a():
+    repository = FakeRepository()
+    tasks_client = FakeTasksClient()
+    handler = TaskEventsService(repository, tasks_client)
+
+    task_event = event(task_id=1)
+    result = await handler.handle(task_event)
+
+    assert result.status == "running"
+    assert (handler.consumer_name, task_event.event_id) in repository.processed
