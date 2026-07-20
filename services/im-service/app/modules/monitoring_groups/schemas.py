@@ -10,6 +10,7 @@ class MonitoringGroupCreateRequest(BaseModel):
     chat_id: str
     name: str
     category: str | None = None
+    im_group_id: int | None = None
 
 
 class MonitoringGroupUpdateRequest(BaseModel):
@@ -27,5 +28,6 @@ class MonitoringGroupResponse(BaseModel):
     chat_id: str
     name: str
     category: str | None = None
+    im_group_id: int | None = None
     created_at: datetime
     updated_at: datetime
