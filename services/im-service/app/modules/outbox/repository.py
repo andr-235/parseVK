@@ -25,13 +25,14 @@ class OutboxRepository:
         aggregate_type: str,
         aggregate_id: str,
         payload: dict,
+        event_version: int = 1,
         correlation_id: str | None = None,
         dedupe_key: str | None = None,
     ) -> None:
         stmt = insert(OutboxEvent).values(
             id=OutboxEvent.id.default.arg,
             event_type=event_type,
-            event_version=1,
+            event_version=event_version,
             aggregate_type=aggregate_type,
             aggregate_id=aggregate_id,
             correlation_id=correlation_id,

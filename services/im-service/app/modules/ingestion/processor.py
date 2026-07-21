@@ -73,6 +73,6 @@ async def process_chat_messages(
             "raw": msg,
         })
         if emit_message_collected_fn:
-            await emit_message_collected_fn(str(msg.get("id", "")))
+            await emit_message_collected_fn(str(msg.get("id", "")), msg)
         count += 1
     return count

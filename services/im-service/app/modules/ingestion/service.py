@@ -5,10 +5,23 @@ from typing import Any
 
 from app.clients.tasks.client import TasksClient
 from app.core.config import settings
-from app.modules.ingestion.processor import process_chat_messages
+from app.modules.ingestion.processor import _extract_text, process_chat_messages
 from app.modules.whappi.client import MaxApiClient, WappiClient
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_if_exists(value: int | str | None) -> datetime | None:
+    """Parse a timestamp to datetime if present, return None otherwise."""
+    if value is None:
+        return None
+    try:
+        ts = int(value)
+    except (TypeError, ValueError):
+        return None
+    if ts > 1_000_000_000_000:
+        ts //= 1000
+    return datetime.fromtimestamp(ts, tz=UTC)
 
 
 @dataclass
@@ -68,9 +81,17 @@ class IngestionService:
                         include_system=settings.wappi_include_system,
                         upsert_message_fn=lambda md: self.repository.upsert_message(messenger, md),
                         emit_message_collected_fn=(
-                            lambda mid: outbox.emit_message_collected(
+                            lambda mid, raw: outbox.emit_message_collected(
                                 messenger=messenger, message_id=mid,
                                 chat_id=chat_id, correlation_id=correlation_id,
+                                chat_name=raw.get("chatName"),
+                                author_id=str(raw.get("author")) if raw.get("author") else None,
+                                author_name=raw.get("senderName") or raw.get("from_name"),
+                                text=_extract_text(raw),
+                                content_url=raw.get("content_url"),
+                                content_type=raw.get("content_type"),
+                                created_at=_parse_if_exists(raw.get("time") or raw.get("timestamp")),
+                                raw=raw,
                             )
                         ) if outbox else None,
                     )
