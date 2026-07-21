@@ -1,14 +1,14 @@
 import json
 import logging
 
+from common.events import ImEvent
+from common.kafka.consumer import BaseEventConsumer
 from prometheus_client import Gauge
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.core.config import settings
 from app.db.models import ProcessedEvent
 from app.db.session import SessionLocal
-from common.events import ImEvent
-from common.kafka.consumer import BaseEventConsumer
 from app.modules.im_events.service import ImEventRepository, ImEventService
 
 logger = logging.getLogger(__name__)
@@ -42,8 +42,12 @@ class ImEventConsumer(BaseEventConsumer):
             raw_value = raw_value.decode("utf-8")
         payload = json.loads(raw_value) if isinstance(raw_value, str) else raw_value
         event = ImEvent.model_validate(payload)
-        if event.event_version != 1:
-            logger.warning("Skipping unsupported event version %d for type %s", event.event_version, event.event_type)
+        if event.event_version not in (1, 2):
+            logger.warning(
+                "Skipping unsupported event version %d for type %s",
+                event.event_version,
+                event.event_type,
+            )
             return
         async with self.session_factory() as session:
             async with session.begin():

@@ -1,20 +1,71 @@
+import logging
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+
 class OutboxService:
     def __init__(self, repository):
         self.repository = repository
 
     async def emit_message_collected(
         self, *, messenger: str, message_id: str, chat_id: str,
+        chat_name: str | None = None,
+        author_id: str | None = None,
+        author_name: str | None = None,
+        text: str | None = None,
+        content_url: str | None = None,
+        content_type: str | None = None,
+        created_at: datetime | None = None,
+        raw: dict | None = None,
         correlation_id: str | None = None,
     ) -> None:
         dedupe_key = f"im.message_collected:{messenger}:{chat_id}:{message_id}"
-        await self.repository.add_event(
-            event_type="im.message_collected",
-            aggregate_type="im_message",
-            aggregate_id=f"{messenger}:{chat_id}:{message_id}",
-            correlation_id=correlation_id,
-            dedupe_key=dedupe_key,
-            payload={"messenger": messenger, "messageId": message_id, "chatId": chat_id},
-        )
+        has_extra = any(v is not None for v in (chat_name, author_id, author_name, text, content_url, content_type, created_at))
+        if has_extra:
+            payload = {
+                "messenger": messenger,
+                "messageId": message_id,
+                "chatId": chat_id,
+                "chatName": chat_name,
+                "authorId": author_id,
+                "authorName": author_name,
+                "text": text,
+                "contentUrl": content_url,
+                "contentType": content_type,
+                "createdAt": created_at.isoformat() if created_at else None,
+                "metadata": raw,
+            }
+            payload = {k: v for k, v in payload.items() if v is not None}
+            logger.info("Emitting im.message_collected v2 for %s:%s:%s", messenger, chat_id, message_id)
+            logger.debug(
+                "Emitting im.message_collected v2: messenger=%s message_id=%s has_text=%s",
+                messenger, message_id, text is not None,
+            )
+            await self.repository.add_event(
+                event_type="im.message_collected",
+                aggregate_type="im_message",
+                aggregate_id=f"{messenger}:{chat_id}:{message_id}",
+                correlation_id=correlation_id,
+                dedupe_key=dedupe_key,
+                event_version=2,
+                payload=payload,
+            )
+        else:
+            # v1 compatible: minimal payload with 3 fields
+            logger.debug(
+                "Emitting im.message_collected v1: messenger=%s message_id=%s",
+                messenger, message_id,
+            )
+            await self.repository.add_event(
+                event_type="im.message_collected",
+                aggregate_type="im_message",
+                aggregate_id=f"{messenger}:{chat_id}:{message_id}",
+                correlation_id=correlation_id,
+                dedupe_key=dedupe_key,
+                event_version=1,
+                payload={"messenger": messenger, "messageId": message_id, "chatId": chat_id},
+            )
 
     async def emit_group_collected(
         self, *, messenger: str, chat_id: str,

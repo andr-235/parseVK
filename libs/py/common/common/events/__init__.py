@@ -9,6 +9,7 @@ from common.events.helpers import (
     get_scope,
     get_task_id,
 )
+from common.events.payloads import ImMessageCollectedPayload, validate_im_payload
 from common.events.types import IdentityEventType, ImEventType, TaskEventType, VkEventType
 
 __all__ = [
@@ -30,4 +31,6 @@ __all__ = [
     "get_group_ids",
     "get_post_limit",
     "get_messenger",
+    "ImMessageCollectedPayload",
+    "validate_im_payload",
 ]

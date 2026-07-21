@@ -127,12 +127,14 @@ class ImMessage(Base):
     __tablename__ = "im_messages"
     __table_args__ = (
         Index("ix_im_messages_messenger_created", "messenger", "created_at"),
+        UniqueConstraint("messenger", "external_id", "chat_external_id", name="uq_im_messages_natural_key"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     messenger: Mapped[str] = mapped_column(String(32), nullable=False)
     external_id: Mapped[str] = mapped_column(String(256), nullable=False)
     chat_external_id: Mapped[str] = mapped_column(String(256), nullable=False)
+    projection_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     chat_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     author: Mapped[str | None] = mapped_column(Text, nullable=True)
     text: Mapped[str | None] = mapped_column(Text, nullable=True)
