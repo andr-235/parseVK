@@ -50,6 +50,7 @@ async def lifespan(app: FastAPI):
     consumer_task = None
     publisher_task = None
     notifier_task = None
+    replay_task = None
 
     async def run_consumer():
         await consumer.run_forever()
@@ -75,6 +76,20 @@ async def lifespan(app: FastAPI):
             repository = IngestionRepository(session)
             await run_poller_forever(repository, poll_interval=settings.wappi_poll_interval)
 
+    async def _run_replay_on_startup():
+        from app.db.session import SessionLocal
+        from app.modules.outbox.repository import OutboxRepository
+        from app.modules.outbox.service import OutboxService
+        from app.modules.replay.processor import ReplayBatchProcessor
+
+        async with SessionLocal() as session, session.begin():
+            repo = OutboxRepository(session)
+            outbox = OutboxService(repo)
+            processor = ReplayBatchProcessor(SessionLocal, outbox)
+            result = await processor.run_batch(batch_size=100)
+            if result.processed_count > 0:
+                logger.info("Startup replay batch complete: %d messages enqueued", result.processed_count)
+
     if settings.kafka_consumer_enabled:
         consumer_task = asyncio.create_task(
             supervise("Kafka consumer", run_consumer, health_flag=_consumer_healthy)
@@ -89,13 +104,16 @@ async def lifespan(app: FastAPI):
     poller_task = asyncio.create_task(
         supervise("WappiPoller", run_poller, health_flag=_poller_healthy)
     )
+    if settings.replay_enabled:
+        logger.info("Replay on startup: enabled=%s", settings.replay_enabled)
+        replay_task = asyncio.create_task(_run_replay_on_startup())
     try:
         yield
     finally:
-        for task in (consumer_task, publisher_task, notifier_task, poller_task):
+        for task in (consumer_task, publisher_task, notifier_task, poller_task, replay_task):
             if task:
                 task.cancel()
-        for task in (consumer_task, publisher_task, notifier_task, poller_task):
+        for task in (consumer_task, publisher_task, notifier_task, poller_task, replay_task):
             if task:
                 with suppress(asyncio.CancelledError):
                     await task
