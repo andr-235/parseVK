@@ -73,7 +73,8 @@ async def test_skip_due_to_retry_backoff_commits_offset_when_in_backoff():
     result = await consumer._skip_due_to_retry_backoff(raw_value)
 
     assert result is True
-    consumer._consumer.commit.assert_awaited_once()
+    # Durable backoff: skip without committing offset — partition stays paused
+    consumer._consumer.commit.assert_not_awaited()
 
 
 @pytest.mark.anyio
@@ -123,7 +124,8 @@ async def test_service_handle_v1_message_collected():
 
     assert result is True
     repo.upsert_message.assert_awaited_once_with(
-        messenger="whatsapp", message_id="m1", chat_id="c1"
+        messenger="whatsapp", message_id="m1", chat_id="c1",
+        projection_version=1,
     )
     repo.mark_processed.assert_awaited_once()
     repo.save.assert_awaited_once()
@@ -207,3 +209,149 @@ async def test_service_handle_already_processed():
     repo.upsert_message.assert_not_awaited()
     repo.mark_processed.assert_not_awaited()
     repo.save.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_v1_event_calls_upsert_with_version_1():
+    """A v1 event must call upsert_message with projection_version=1.
+    The actual WHERE clause enforcement is a database-level guarantee
+    and cannot be verified with a mock repository."""
+    from unittest.mock import AsyncMock
+    from uuid import uuid4
+
+    from app.modules.im_events.service import ImEventService
+    from common.events import ImEvent
+
+    repo = AsyncMock()
+    repo.is_processed.return_value = False
+    service = ImEventService(repo)
+
+    event_v1 = ImEvent(
+        event_id=uuid4(),
+        event_type="im.message_collected",
+        event_version=1,
+        aggregate_id="c1",
+        payload={"messenger": "whatsapp", "messageId": "m1", "chatId": "c1"},
+    )
+    result = await service.handle(event_v1)
+    assert result is True
+
+    call_kwargs = repo.upsert_message.await_args.kwargs
+    assert call_kwargs["projection_version"] == 1
+
+
+@pytest.mark.anyio
+async def test_v2_after_v1_upgrades_projection():
+    """A v2 event must overwrite a v1 skeleton and set projection_version=2."""
+    from datetime import UTC, datetime
+    from unittest.mock import AsyncMock
+    from uuid import uuid4
+
+    from app.modules.im_events.service import ImEventService
+    from common.events import ImEvent
+
+    repo = AsyncMock()
+    repo.is_processed.return_value = False
+    service = ImEventService(repo)
+
+    created_at = datetime.now(UTC)
+    event_v2 = ImEvent(
+        event_id=uuid4(),
+        event_type="im.message_collected",
+        event_version=2,
+        aggregate_id="c1",
+        payload={
+            "messenger": "whatsapp",
+            "messageId": "m1",
+            "chatId": "c1",
+            "chatName": "Test",
+            "authorName": "Alice",
+            "text": "hello",
+            "contentUrl": "https://example.com/img",
+            "contentType": "image",
+            "createdAt": created_at.isoformat(),
+            "metadata": {"source": "replay"},
+        },
+    )
+    result = await service.handle(event_v2)
+    assert result is True
+
+    call_kwargs = repo.upsert_message.await_args.kwargs
+    assert call_kwargs["projection_version"] == 2
+    assert call_kwargs["text"] == "hello"
+    assert call_kwargs["chat_name"] == "Test"
+
+
+@pytest.mark.anyio
+async def test_same_event_id_delivered_twice():
+    """ProcessedEvent prevents duplicate handling — upsert_message not called."""
+    from unittest.mock import AsyncMock
+    from uuid import uuid4
+
+    from app.modules.im_events.service import ImEventService
+    from common.events import ImEvent
+
+    repo = AsyncMock()
+    repo.is_processed.side_effect = [True, True]  # always processed
+    service = ImEventService(repo)
+
+    event = ImEvent(
+        event_id=uuid4(),
+        event_type="im.message_collected",
+        event_version=2,
+        aggregate_id="c1",
+        payload={"messenger": "whatsapp", "messageId": "m1", "chatId": "c1"},
+    )
+
+    result = await service.handle(event)
+    assert result is False
+    repo.upsert_message.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_two_events_same_natural_key_both_call_upsert_message():
+    """Two different event IDs for the same natural key must both
+    result in upsert_message being called. The DB-level upsert prevents
+    duplicate rows — this test verifies the service-layer routing,
+    not the SQL constraint."""
+    from unittest.mock import AsyncMock
+    from uuid import uuid4
+
+    from app.modules.im_events.service import ImEventService
+    from common.events import ImEvent
+
+    repo = AsyncMock()
+    repo.is_processed.return_value = False
+    service = ImEventService(repo)
+
+    event_1 = ImEvent(
+        event_id=uuid4(),
+        event_type="im.message_collected",
+        event_version=2,
+        aggregate_id="c1",
+        payload={
+            "messenger": "whatsapp",
+            "messageId": "m1",
+            "chatId": "c1",
+            "text": "first",
+        },
+    )
+    event_2 = ImEvent(
+        event_id=uuid4(),
+        event_type="im.message_collected",
+        event_version=2,
+        aggregate_id="c1",
+        payload={
+            "messenger": "whatsapp",
+            "messageId": "m1",
+            "chatId": "c1",
+            "text": "second",
+        },
+    )
+
+    result_1 = await service.handle(event_1)
+    assert result_1 is True
+    result_2 = await service.handle(event_2)
+    assert result_2 is True
+
+    assert repo.upsert_message.await_count == 2
