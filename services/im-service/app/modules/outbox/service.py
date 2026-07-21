@@ -19,8 +19,13 @@ class OutboxService:
         created_at: datetime | None = None,
         raw: dict | None = None,
         correlation_id: str | None = None,
+        replay: bool = False,
     ) -> None:
-        dedupe_key = f"im.message_collected:{messenger}:{chat_id}:{message_id}"
+        if replay:
+            dedupe_key = f"replay-v2:im.message_collected:{messenger}:{chat_id}:{message_id}"
+            logger.debug("Replay emit: messenger=%s message_id=%s dedupe_key=%s", messenger, message_id, dedupe_key)
+        else:
+            dedupe_key = f"im.message_collected:{messenger}:{chat_id}:{message_id}"
         has_extra = any(v is not None for v in (chat_name, author_id, author_name, text, content_url, content_type, created_at))
         if has_extra:
             payload = {

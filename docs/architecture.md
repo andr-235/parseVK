@@ -42,7 +42,7 @@ Frontend (React/Vite) → API Gateway → Identity / Tasks / Content / Moderatio
 ### Владение данными (после PR-B)
 
 - **content-service** — `ContentPost`, `ContentComment`, `ContentMessage`, `ContentSearchDocument`; search, сообщения мониторинга.
-- **im-service** — `Wappi`, `ImGroup`, `MonitoringGroup` (с FK к `ImGroup`), polling, лента сообщений.
+- **im-service** — `Wappi`, `ImGroup`, `MonitoringGroup` (с FK к `ImGroup`), `replay_progress`, polling, лента сообщений.
 
 ## Трёхслойная архитектура сервиса
 
@@ -114,6 +114,24 @@ Client (frontend) → Router → Service → Client (upstream)
 В tasks-service (`TaskExecutionService`) строка задачи читается через `SELECT ... FOR UPDATE` — `get_task_by_id_for_update()`. Это блокирует запись на уровне строки до конца транзакции, не давая двум конкурентным вызовам одновременно сменить статус, назначить executor или перезаписать `run_id`. Так защищаются границы жизненного цикла: Kafka-потребитель и lease worker не мешают друг другу.
 
 Этот паттерн используется в потоке запуска задач между vk-service и tasks-service: двухфазная транзакция гарантирует идемпотентность обработки события, а `FOR UPDATE` — сериализованный доступ к состоянию задачи.
+
+### Historical Replay (im-service → content-service)
+
+PR-C2.1 introduced a resumable historical replay mechanism that re-publishes all
+source `ImMessage` rows through the v2 event contract (`im.message_collected v2`):
+
+- **Dedupe key namespace:** `replay-v2:im.message_collected:{messenger}:{chat_id}:{message_id}`
+  — separate from the live `im.message_collected:` prefix to avoid silent no-ops
+  against already-published v1 events.
+- **Cursor table:** `replay_progress` (single row, column `last_im_message_id`)
+  tracks the last replayed ImMessage ID for resumable batch processing.
+- **Processor:** `ReplayBatchProcessor` in im-service reads source rows, maps fields,
+  and emits outbox events with `replay=True`.
+- **Idempotency:** content-service uses natural-key upsert + `projection_version=2`
+  to upgrade any existing v1 skeleton without duplicate rows.
+- **Toggle:** `settings.replay_enabled` (default `true`) controls the startup replay batch.
+- **Scope:** One batch (100 messages) runs on startup via `asyncio.create_task` in
+  `lifespan()`. Full historical sweep requires external orchestration via `run_full()`.
 
 ## Git-процесс
 

@@ -128,3 +128,39 @@ async def test_emit_v2_raw_none_excluded(service, outbox_repo):
     kwargs = outbox_repo.add_event.call_args.kwargs
     payload = kwargs["payload"]
     assert "metadata" not in payload
+
+
+@pytest.mark.asyncio
+async def test_replay_dedupe_key_prefix(service, outbox_repo):
+    """When replay=True, dedupe_key should have replay-v2: prefix."""
+    await service.emit_message_collected(
+        messenger="whatsapp",
+        message_id="msg_replay",
+        chat_id="chat_replay",
+        replay=True,
+    )
+    kwargs = outbox_repo.add_event.call_args.kwargs
+    assert kwargs["dedupe_key"] == "replay-v2:im.message_collected:whatsapp:chat_replay:msg_replay"
+
+
+@pytest.mark.asyncio
+async def test_replay_default_key_unchanged(service, outbox_repo):
+    """When replay=False (default), dedupe_key should remain unchanged with im.message_collected: prefix."""
+    await service.emit_message_collected(
+        messenger="whatsapp",
+        message_id="msg_normal",
+        chat_id="chat_normal",
+    )
+    kwargs = outbox_repo.add_event.call_args.kwargs
+    assert kwargs["dedupe_key"] == "im.message_collected:whatsapp:chat_normal:msg_normal"
+
+    # Also verify explicit replay=False
+    outbox_repo.reset_mock()
+    await service.emit_message_collected(
+        messenger="telegram",
+        message_id="msg_normal_2",
+        chat_id="chat_normal_2",
+        replay=False,
+    )
+    kwargs = outbox_repo.add_event.call_args.kwargs
+    assert kwargs["dedupe_key"] == "im.message_collected:telegram:chat_normal_2:msg_normal_2"
