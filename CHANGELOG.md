@@ -1,3 +1,10 @@
+## [0.60.1](https://github.com/andr-235/parseVK/compare/v0.60.0...v0.60.1) (2026-07-21)
+
+
+### Bug Fixes
+
+* **migration:** add rollback marker to backfill and create alembic validation script ([a169542](https://github.com/andr-235/parseVK/commit/a1695424bf52add9ad666a6c8e914dce4126f5ce))
+
 # [0.60.0](https://github.com/andr-235/parseVK/compare/v0.59.2...v0.60.0) (2026-07-21)
 
 
