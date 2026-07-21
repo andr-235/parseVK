@@ -102,17 +102,17 @@ Open questions:
   - **Validation:** Run after Task 1 — should pass with single head
 
 ### Phase 5: Tests
-- [ ] Task 5: Write tests for im-service migration linearization
+- [x] Task 5: Write tests for im-service migration linearization
   - **Files:** `services/im-service/tests/test_migrations.py` (new)
   - **Content:** Test that revision chain is linear, test head count, test upgrade/downgrade round-trip for 20260720 chain
   - **Dependencies:** Task 1 must be complete
-- [ ] Task 6: Write tests for content-service revision ID fix
+- [x] Task 6: Write tests for content-service revision ID fix
   - **Files:** `services/content-service/tests/test_migrations.py` (new)
   - **Content:** Test that revision ID is <= 32 chars, test upgrade consistency
   - **Dependencies:** Task 2 must be complete
 
 ### Phase 6: Rollout Documentation
-- [ ] Task 7: Document staged production rollout sequence
+- [x] Task 7: Document staged production rollout sequence
   - **File:** `services/im-service/docs/migration-repair-rollout.md` (new) or add to PR description
   - **Content:** Exact production deployment sequence with verification steps at each stage
   - Include: pre-flight checks, dry-run, commit, verification, smoke-test
