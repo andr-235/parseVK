@@ -1,7 +1,7 @@
 """add im_group_id to monitoring_groups
 
 Revision ID: 20260720_0001
-Revises: 20260626_0004
+Revises: pr5_unify_consumer_name_im
 Create Date: 2026-07-20 00:00:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "20260720_0001"
-down_revision: str | None = "20260626_0004"
+down_revision: str | None = "pr5_unify_consumer_name_im"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

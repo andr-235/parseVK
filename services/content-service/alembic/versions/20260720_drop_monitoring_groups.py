@@ -1,6 +1,6 @@
 """drop monitoring_groups table
 
-Revision ID: 20260720_0001_drop_monitoring_groups
+Revision ID: 20260720_drop_monitoring_groups
 Revises: f7c1b2d3e4a5
 """
 
@@ -9,7 +9,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "20260720_0001_drop_monitoring_groups"
+revision: str = "20260720_drop_monitoring_groups"
 down_revision: str | Sequence[str] | None = "f7c1b2d3e4a5"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

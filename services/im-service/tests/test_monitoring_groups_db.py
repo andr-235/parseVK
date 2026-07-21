@@ -122,7 +122,7 @@ def test_migration_sql_contains_required_changes(capsys):
     assert "foreign key" in upgrade_sql and "im_group_id" in upgrade_sql
     assert "unique" in upgrade_sql and "im_group_id" in upgrade_sql
 
-    command.downgrade(cfg, "20260720_0001:20260626_0004", sql=True)
+    command.downgrade(cfg, "20260720_0001:pr5_unify_consumer_name_im", sql=True)
     downgrade_sql = capsys.readouterr().out.lower()
 
     assert "drop column im_group_id" in downgrade_sql
