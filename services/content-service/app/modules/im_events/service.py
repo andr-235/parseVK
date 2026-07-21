@@ -70,36 +70,38 @@ class ImEventRepository:
         metadata_raw: dict | None = None,
         created_at: datetime | None = None,
     ) -> None:
-        stmt = (
-            pg_insert(ImMessage)
-            .values(
-                messenger=messenger,
-                external_id=message_id,
-                chat_external_id=chat_id,
-                projection_version=projection_version,
-                chat_name=chat_name,
-                author=author,
-                text=text,
-                content_url=content_url,
-                content_type=content_type,
-                metadata_raw=metadata_raw,
-                created_at=created_at,
-                ingested_at=utcnow(),
-            )
-            .on_conflict_do_update(
-                constraint="uq_im_messages_natural_key",
-                set_={
-                    "projection_version": projection_version,
-                    "chat_name": chat_name,
-                    "author": author,
-                    "text": text,
-                    "content_url": content_url,
-                    "content_type": content_type,
-                    "metadata_raw": metadata_raw,
-                    "created_at": created_at,
-                    "ingested_at": utcnow(),
-                },
-            )
+        logger.debug(
+            "Upsert message: messenger=%s external_id=%s projection_version=%s",
+            messenger, message_id, projection_version,
+        )
+        stmt = pg_insert(ImMessage).values(
+            messenger=messenger,
+            external_id=message_id,
+            chat_external_id=chat_id,
+            projection_version=projection_version,
+            chat_name=chat_name,
+            author=author,
+            text=text,
+            content_url=content_url,
+            content_type=content_type,
+            metadata_raw=metadata_raw,
+            created_at=created_at,
+            ingested_at=utcnow(),
+        )
+        stmt = stmt.on_conflict_do_update(
+            constraint="uq_im_messages_natural_key",
+            set_={
+                "projection_version": projection_version,
+                "chat_name": chat_name,
+                "author": author,
+                "text": text,
+                "content_url": content_url,
+                "content_type": content_type,
+                "metadata_raw": metadata_raw,
+                "created_at": created_at,
+                "ingested_at": utcnow(),
+            },
+            where=ImMessage.projection_version <= stmt.excluded.projection_version,
         )
         await self.session.execute(stmt)
 
@@ -124,6 +126,7 @@ class ImEventService:
                     messenger=validated["messenger"],
                     message_id=validated["messageId"],
                     chat_id=validated["chatId"],
+                    projection_version=1,
                 )
             else:
                 # v2 payload — full snapshot

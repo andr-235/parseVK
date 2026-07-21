@@ -295,6 +295,7 @@ cache = {}
 | Deploy Runbook | docs/deploy-runbook.md | Production deployment guide |
 | Design System | docs/design.md | Design tokens, theme, components |
 | Product | docs/product.md | Product requirements and user stories |
+| ADR | docs/adr/ | Architecture Decision Records |
 
 ## AI Context Files
 
@@ -312,5 +313,6 @@ cache = {}
 | docs/deploy-runbook.md | Production deployment guide |
 | docs/design.md | Design system tokens and component guidelines |
 | docs/product.md | Product requirements and user stories |
+| docs/adr/ | Architecture Decision Records |
 
 ---

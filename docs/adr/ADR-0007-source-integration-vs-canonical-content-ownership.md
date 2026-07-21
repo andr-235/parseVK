@@ -1,7 +1,7 @@
 # ADR-0007: Source Integration vs Canonical Content Ownership
 
 ## Status
-proposed
+partially implemented
 
 ## Date
 2026-07-17
@@ -93,10 +93,11 @@ We establish a clear ownership split between source services and content-service
 
 The following files in the codebase demonstrate the current state:
 
-- **Partial IM event:** `services/im-service/app/modules/outbox/service.py:16` — payload only `{"messenger", "messageId", "chatId"}`
-- **Skeleton consumer:** `services/content-service/app/modules/im_events/service.py:45-54` — `upsert_message` sets only 3 fields
+- **IM event outbox (v1 + v2):** `services/im-service/app/modules/outbox/service.py:24-68` — `emit_message_collected` produces v2 snapshots (full message data) when extras are present, v1 skeletons otherwise
+- **IM event consumer (v1 + v2):** `services/content-service/app/modules/im_events/service.py:121-145` — `handle()` validates by `event_version`, calling `upsert_message` with `projection_version=1` for v1 or full v2 snapshot fields
+- **Version-aware upsert:** `services/content-service/app/modules/im_events/service.py:93-107` — `WHERE im_messages.projection_version <= excluded.projection_version` prevents v1 events from downgrading v2 projections
 - **Complete VK event (reference):** `services/vk-service/app/services/domain_events_service.py:47` — payload includes full `post` dict
-- **Duplicate MonitoringGroup:** `services/content-service/app/db/models.py:146` and `services/im-service/app/db/models.py:120` — nearly identical models
+- **Duplicate MonitoringGroup:** `services/content-service/app/db/models.py` and `services/im-service/app/db/models.py` — nearly identical models (PR-B in progress)
 - **Dual proxying:** `services/api-gateway/app/modules/monitoring/` (→ content-service) and `services/api-gateway/app/modules/im/` (→ im-service)
 
 ## Consequences
@@ -109,22 +110,25 @@ The following files in the codebase demonstrate the current state:
 - Clear target schema for messaging projections: `ContentConversation`, `ContentActor`, `ContentMessage` in content-service
 
 ### Negative
-- IM event contract (`im.message_collected`) must be expanded from identifier-only to full message snapshot — requires coordinated changes in im-service (producer) and content-service (consumer)
+- IM event contract (`im.message_collected`) has been expanded to support v2 snapshots (PR-C1) — im-service producer emits v2 when extras available, content-service consumer handles both versions. Projection monotonicity is enforced (PR-C2.0). Reconciliation replay still pending (PR-C2.1).
 - content-service must remove its duplicate MonitoringGroup model, CRUD endpoints, and `sync=true` behavior — coordinated migration with im-service (downstream PR-B)
 - Telegram content events do not exist yet — a new event contract and topic are needed, deferred to a separate PR
 - API Gateway routing for `/api/v1/monitoring/groups` must be redirected from content-service to im-service
 
-### Migration Path
+### Migration Path (Actual)
 
-The following PR sequence will implement this ADR:
+The ADR is being implemented through the following PR sequence (PR-D superseded by Track C):
 
-| PR | Scope | Services |
-|----|-------|----------|
-| PR-A | **This ADR** — document the decision | docs |
-| PR-B1..B5 | Monitoring ownership cleanup — remove duplicate MonitoringGroup from content-service | content-service, im-service |
-| PR-C | Unified content search — create `ContentSearchDocument` read model | content-service |
-| PR-D | IM event contract v2 — expand `im.message_collected` payload | im-service, content-service |
-| PR-F | Notifier rename/cleanup — split user-facing feed state from polling cursors | im-service |
+| PR | Status | Scope | Services |
+|----|--------|-------|----------|
+| PR-A | ✅ | **This ADR** — document the decision | docs |
+| PR-B1..B5 | 🔄 | Monitoring ownership cleanup — remove duplicate MonitoringGroup from content-service | content-service, im-service |
+| PR-C1 | ✅ | IM event contract v2 — expand `im.message_collected` payload with v2 snapshot (event_version=2, projection_version, natural key) | im-service, content-service |
+| PR-C2.0 | ✅ | Projection monotonicity — version-aware upsert WHERE clause prevents v1→v2 projection downgrade | content-service |
+| PR-C2.1 | ⬜ | Replay-v2 namespace — separate dedupe_key prefix for historical replay events | im-service, content-service |
+| PR-C3 | ⬜ | Shared schemas — extract event contracts to `libs/py/common/` | common |
+| PR-C4 | ⬜ | Dedupe key refactoring — replace natural key hash with deterministic replay-safe key | content-service |
+| PR-F | ⬜ | Notifier rename/cleanup — split user-facing feed state from polling cursors | im-service |
 
 ## Alternatives considered
 
