@@ -143,19 +143,4 @@ class ImMessage(Base):
     ingested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 
 
-class MonitoringGroup(Base):
-    __tablename__ = "monitoring_groups"
-    __table_args__ = (
-        UniqueConstraint("messenger", "chat_id", name="uq_monitoring_groups_messenger_chat"),
-        Index("ix_monitoring_groups_messenger", "messenger"),
-        Index("ix_monitoring_groups_category", "category"),
-    )
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    messenger: Mapped[str] = mapped_column(String(32), nullable=False)  # "whatsapp" или "max"
-    chat_id: Mapped[str] = mapped_column(Text, nullable=False)
-    name: Mapped[str] = mapped_column(Text, nullable=False)
-    category: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
 
