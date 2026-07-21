@@ -1,3 +1,13 @@
+# [0.62.0](https://github.com/andr-235/parseVK/compare/v0.61.0...v0.62.0) (2026-07-21)
+
+
+### Features
+
+* **content:** add version-aware upsert to prevent projection downgrade ([8590265](https://github.com/andr-235/parseVK/commit/8590265e85588793af149659619a52e33937259f))
+* **im:** implement historical replay with replay-v2 dedupe namespace ([60d96f0](https://github.com/andr-235/parseVK/commit/60d96f02060acd29c0a3186431f4a3bb6b5f9c3d))
+* **im:** merge PR-C2.0 projection hardening ([f62f6cf](https://github.com/andr-235/parseVK/commit/f62f6cf33259567adb5d47df5ac7df61e87c47f4))
+* **im:** merge PR-C2.1 historical replay ([43ed4df](https://github.com/andr-235/parseVK/commit/43ed4df251db0bad5e82c47761e3699ba2b61688))
+
 # [0.61.0](https://github.com/andr-235/parseVK/compare/v0.60.1...v0.61.0) (2026-07-21)
 
 
