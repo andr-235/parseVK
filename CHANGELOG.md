@@ -1,3 +1,18 @@
+# [0.60.0](https://github.com/andr-235/parseVK/compare/v0.59.2...v0.60.0) (2026-07-21)
+
+
+### Bug Fixes
+
+* **migration:** linearize im-service Alembic graph and shorten content-service revision ID ([1d49f1f](https://github.com/andr-235/parseVK/commit/1d49f1f165dd48229622aeeb13b5ebc6e662e488))
+
+
+### Features
+
+* **api-gateway:** switch /monitoring/groups to im-service with response adapter ([7c60f14](https://github.com/andr-235/parseVK/commit/7c60f1430a09344f6b6ebb6bafe4b5665f606dbd))
+* **content-service:** deprecate and remove duplicate MonitoringGroup ([bf74a06](https://github.com/andr-235/parseVK/commit/bf74a061e3c208585a20e5903c9dbfa4eb20ebaf))
+* **im-service:** add im_group_id FK, category filter, and indexes to MonitoringGroup ([f7f8e4a](https://github.com/andr-235/parseVK/commit/f7f8e4a873465e56a5fdf03e33fd4aced4d88719))
+* PR-B monitoring ownership cleanup (Merge branch 'feature/pr-b-monitoring-ownership-cleanup') ([836e031](https://github.com/andr-235/parseVK/commit/836e031033aef44835965fa296d3919e5b3571bc))
+
 ## [0.59.2](https://github.com/andr-235/parseVK/compare/v0.59.1...v0.59.2) (2026-07-17)
 
 
