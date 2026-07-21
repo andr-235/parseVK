@@ -1,3 +1,13 @@
+# [0.61.0](https://github.com/andr-235/parseVK/compare/v0.60.1...v0.61.0) (2026-07-21)
+
+
+### Features
+
+* **db:** add Alembic migration for im_messages projection_version + natural key ([042bca9](https://github.com/andr-235/parseVK/commit/042bca96be8cb8f375948dffe81864b049f86df8))
+* **events:** add ImMessageCollectedPayload v2 contract ([490e13b](https://github.com/andr-235/parseVK/commit/490e13b3b9bc21223ae028b6054817450fce669d))
+* **im:** add im.message_collected v2 snapshot contract ([14e41dd](https://github.com/andr-235/parseVK/commit/14e41dd23e3d76e96712c6a2a297d92e3e11d484))
+* **im:** merge PR-C1 snapshot contract v2 ([17c24d7](https://github.com/andr-235/parseVK/commit/17c24d73eabe879b5edebbeee910b9663c3b7c65))
+
 ## [0.60.1](https://github.com/andr-235/parseVK/compare/v0.60.0...v0.60.1) (2026-07-21)
 
 
