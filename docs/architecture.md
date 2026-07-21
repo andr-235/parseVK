@@ -33,11 +33,16 @@ Frontend (React/Vite) → API Gateway → Identity / Tasks / Content / Moderatio
 | **identity-service** | Аутентификация (JWT), пользователи, роли |
 | **tasks-service** | Оркестрация задач парсинга |
 | **vk-service** | Интеграция с API ВКонтакте |
-| **content-service** | Хранилище авторов и групп |
+| **content-service** | Хранилище авторов, групп, постов, комментариев, поисковых документов и сообщений мониторинга |
 | **telegram-service** | Клиент Telegram (Telethon), импорт и матчинг |
 | **listings-service** | Объявления и выгрузка CSV |
 | **moderation-service** | Пайплайн модерации контента |
-| **im-service** | Интеграция с мессенджерами (WhatsApp, Wappi.pro) |
+| **im-service** | Интеграция с мессенджерами (WhatsApp, Wappi.pro); владелец ImGroup и MonitoringGroup (с FK к ImGroup), polling, лента сообщений |
+
+### Владение данными (после PR-B)
+
+- **content-service** — `ContentPost`, `ContentComment`, `ContentMessage`, `ContentSearchDocument`; search, сообщения мониторинга.
+- **im-service** — `Wappi`, `ImGroup`, `MonitoringGroup` (с FK к `ImGroup`), polling, лента сообщений.
 
 ## Трёхслойная архитектура сервиса
 

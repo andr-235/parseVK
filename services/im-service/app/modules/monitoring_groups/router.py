@@ -20,10 +20,11 @@ router = APIRouter(prefix="/internal/monitoring", tags=["monitoring_groups"])
 async def list_groups(
     messenger: str | None = None,
     search: str | None = None,
+    category: str | None = None,
     token: str = Depends(require_internal_token),
     service: MonitoringGroupsService = Depends(get_monitoring_groups_service),
 ) -> list[MonitoringGroupResponse]:
-    rows = await service.list_groups(messenger, search)
+    rows = await service.list_groups(messenger, search, category)
     return [MonitoringGroupResponse.model_validate(r) for r in rows]
 
 
@@ -34,7 +35,7 @@ async def create_group(
     token: str = Depends(require_internal_token),
     service: MonitoringGroupsService = Depends(get_monitoring_groups_service),
 ) -> MonitoringGroupResponse:
-    result = await service.create_group(body.messenger, body.chat_id, body.name, body.category)
+    result = await service.create_group(body.messenger, body.chat_id, body.name, body.category, body.im_group_id)
     if result is None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

@@ -7,6 +7,18 @@ from app.modules.auth.service import GatewayAuthService
 
 
 class MonitoringGatewayService(BaseGatewayService):
+    """Gateway service for /monitoring/groups endpoints (backed by im-service)."""
+
+    def __init__(self, client: ServiceClient | None = None, auth_service: GatewayAuthService | None = None):
+        super().__init__(
+            client or ServiceClient(service_name="IM", base_url=settings.im_base_url, internal_token=settings.internal_service_token),
+            auth_service,
+        )
+
+
+class MonitoringMessagesGatewayService(BaseGatewayService):
+    """Gateway service for /monitoring/messages endpoints (backed by content-service)."""
+
     def __init__(self, client: ServiceClient | None = None, auth_service: GatewayAuthService | None = None):
         super().__init__(
             client or ServiceClient(service_name="Content", base_url=settings.content_base_url, internal_token=settings.internal_service_token),
@@ -16,3 +28,7 @@ class MonitoringGatewayService(BaseGatewayService):
 
 def get_monitoring_gateway_service() -> MonitoringGatewayService:
     return MonitoringGatewayService()
+
+
+def get_monitoring_messages_gateway_service() -> MonitoringMessagesGatewayService:
+    return MonitoringMessagesGatewayService()
