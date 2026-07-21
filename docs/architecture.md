@@ -115,6 +115,41 @@ Client (frontend) → Router → Service → Client (upstream)
 
 Этот паттерн используется в потоке запуска задач между vk-service и tasks-service: двухфазная транзакция гарантирует идемпотентность обработки события, а `FOR UPDATE` — сериализованный доступ к состоянию задачи.
 
+## Event Consumer Projections
+
+Для асинхронной обработки событий из Kafka каждый consumer следует паттерну: проверка `is_processed` (ProcessedEvent) → демаршаллинг payload → запись проекции → отметка обработанным → коммит. Идемпотентность обеспечивается на двух уровнях:
+
+1. **ProcessedEvent таблица** — предотвращает повторную обработку одного и того же `event_id` (защита от дублирующей доставки Kafka)
+2. **Natural key + ON CONFLICT DO UPDATE** — гарантирует уникальность проекции по бизнес-ключу (messenger + external_id + chat_external_id), второй вызов с тем же natural key обновляет существующую строку
+
+### Версионирование проекций (PR-C1 + PR-C2.0)
+
+Для IM-сообщений (`im.message_collected`) применяется двухуровневое версионирование:
+
+- **event_version** — версия контракта события (v1 = минимальный payload с тремя полями, v2 = полный снэпшот с текстом, автором, метаданными)
+- **projection_version** — версия строки проекции в `content-service`, хранящаяся в столбце `im_messages.projection_version`
+
+Consumer определяет версию через `validate_im_payload(event.event_version, event.payload)`:
+- v1 → `upsert_message(projection_version=1, ...)` — только идентификаторы
+- v2 → `upsert_message(projection_version=2, ...)` — полный снэпшот с текстом, автором, контентом
+
+**Ключевая защита:** `ON CONFLICT DO UPDATE` содержит `WHERE im_messages.projection_version <= excluded.projection_version`. Это означает:
+- v2-событие (version=2) **может обновить** v1-строку (1 <= 2) — апгрейд проекции
+- v1-событие (version=1) **не может обновить** v2-строку (2 <= 1 → false) — даунгрейд блокирован
+- v1→v1 (1 <= 1) проходит — подтверждение существующего скелета
+- v2→v2 (2 <= 2) проходит — обновление полной проекции
+
+Это гарантирует **монотонность проекции**: поздние v1-события (out-of-order delivery) никогда не затрёт полную v2-проекцию.
+
+Сгенерированный SQL:
+```sql
+ON CONFLICT ON CONSTRAINT uq_im_messages_natural_key
+DO UPDATE SET projection_version = 2, ...
+WHERE im_messages.projection_version <= excluded.projection_version
+```
+
+Детали реализации: PR-C1 (контракт v2), PR-C2.0 (version-aware upsert), ADR-0007.
+
 ## Git-процесс
 
 ```
