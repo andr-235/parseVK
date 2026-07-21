@@ -102,14 +102,22 @@ async def process_group(
                 mg.im_group_id = im_group.id
                 return ("matched", im_group.id)
 
+            origin_marker = {"origin": "monitoring_group_backfill", "monitoring_group_id": mg.id}
             stub = ImGroup(
                 messenger=mg.messenger,
                 external_chat_id=mg.chat_id,
                 name=mg.name,
                 category=mg.category,
+                raw=origin_marker,
             )
             session.add(stub)
             await session.flush()
+            logger.info(
+                "Created stub ImGroup id=%d for MonitoringGroup id=%d with origin=%s",
+                stub.id,
+                mg.id,
+                origin_marker["origin"],
+            )
             lookup[(mg.messenger, mg.chat_id)] = stub
             mg.im_group_id = stub.id
             return ("stub_created", stub.id)

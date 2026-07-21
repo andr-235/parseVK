@@ -80,7 +80,7 @@ Open questions:
   - **Test:** Write a test that checks the revision chain is linear and ends at one head.
 
 ### Phase 2: Fix content-service Revision ID
-- [ ] Task 2: Shorten content-service migration revision ID
+- [x] Task 2: Shorten content-service migration revision ID
   - **File:** `services/content-service/alembic/versions/20260720_0001_drop_monitoring_groups.py`
   - **Action:** Rename file to `20260720_drop_monitoring_groups.py`, update `revision` string inside from `"20260720_0001_drop_monitoring_groups"` to `"20260720_drop_monitoring_groups"`
   - **Validation:** Verify all references match the new revision ID
@@ -88,14 +88,14 @@ Open questions:
   - **Risk:** This is a published migration on the merge head — coordinate with team on timing
 
 ### Phase 3: Add Rollback Marker to Backfill
-- [ ] Task 3: Add origin marker to stub ImGroup creation in backfill script
+- [x] Task 3: Add origin marker to stub ImGroup creation in backfill script
   - **File:** `services/im-service/scripts/backfill_im_group_id.py`
   - **Action:** When creating stub ImGroup for unmatched MonitoringGroup, add `raw={"origin": "monitoring_group_backfill", "monitoring_group_id": mg.id}`
   - **Validation:** Verify stub ImGroup records are distinguishable from real ones after downgrade
   - **Logging:** Log stub creation with origin marker at INFO level
 
 ### Phase 4: CI Validation Script
-- [ ] Task 4: Create `validate_alembic_graphs.py` script
+- [x] Task 4: Create `validate_alembic_graphs.py` script
   - **File (new):** `services/im-service/scripts/validate_alembic_graphs.py`
   - **Action:** Script that runs `alembic heads` and asserts exactly one head. Fail with non-zero exit code if multiple heads detected
   - **Logging:** Print head count and head revision IDs. ERROR if multiple heads.
