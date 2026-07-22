@@ -1,3 +1,11 @@
+# [0.65.0](https://github.com/andr-235/parseVK/compare/v0.64.0...v0.65.0) (2026-07-22)
+
+
+### Features
+
+* **gateway:** add SearchGatewayService and switch search endpoints to content-service ([b4496a8](https://github.com/andr-235/parseVK/commit/b4496a8eedee35bcaaaf12e52b4b4908ba6d8fc8))
+* **gateway:** PR-C4 gateway cut-over — IM search routed to content-service ([fc0b382](https://github.com/andr-235/parseVK/commit/fc0b382a9924fc7b9956ab9718c2982ac186b02b))
+
 # [0.64.0](https://github.com/andr-235/parseVK/compare/v0.63.0...v0.64.0) (2026-07-22)
 
 
