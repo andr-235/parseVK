@@ -296,3 +296,76 @@ async def test_run_batch_passes_all_fields():
     assert kwargs["content_type"] == "image"
     assert kwargs["raw"] == {"source": "replay", "media_id": "12345"}
     assert kwargs["created_at"] == created_at
+
+
+@pytest.mark.anyio
+async def test_outbox_failure_does_not_advance_progress():
+    """If emit_message_collected raises, progress must NOT be saved."""
+    outbox = AsyncMock(spec=OutboxService)
+    outbox.emit_message_collected.side_effect = RuntimeError("Outbox write failed")
+    
+    messages = [_make_message(1), _make_message(2)]
+    progress = SimpleNamespace(last_im_message_id=0)
+    session = _make_session(messages=messages, progress=progress)
+    factory = MagicMock(return_value=session)
+    
+    processor = ReplayBatchProcessor(factory)
+    processor._make_outbox_service = MagicMock(return_value=outbox)
+    processor._save_progress = AsyncMock()
+    
+    with pytest.raises(RuntimeError, match="Outbox write failed"):
+        await processor.run_batch(batch_size=10)
+    
+    # Progress must NOT be saved when outbox fails
+    processor._save_progress.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_select_for_update_is_called_on_replay_progress():
+    """Verify SELECT ... FOR UPDATE is used on ReplayProgress query."""
+    outbox = AsyncMock(spec=OutboxService)
+    progress = SimpleNamespace(last_im_message_id=0)
+    session = _make_session(messages=[], progress=progress)
+    factory = MagicMock(return_value=session)
+    
+    processor = ReplayBatchProcessor(factory)
+    processor._make_outbox_service = MagicMock(return_value=outbox)
+    await processor.run_batch(batch_size=10)
+    
+    scalar_call = session.scalar.await_args[0][0]
+    scalar_str = str(scalar_call)
+    assert "replay_progress" in scalar_str, "Query must target replay_progress table"
+    assert "FOR UPDATE" in scalar_str.upper(), "Query must use SELECT FOR UPDATE"
+
+
+@pytest.mark.anyio
+async def test_restart_resumes_after_committed_batch():
+    """After a committed batch, restart resumes from last_im_message_id."""
+    outbox = AsyncMock(spec=OutboxService)
+    
+    # Batch 1: 100 messages, progress at 0
+    messages_batch1 = [_make_message(i) for i in range(1, 101)]
+    progress1 = SimpleNamespace(last_im_message_id=0)
+    session1 = _make_session(messages=messages_batch1, progress=progress1)
+    
+    # Batch 2: no messages, progress at 100 (committed from batch 1)
+    messages_batch2: list = []
+    progress2 = SimpleNamespace(last_im_message_id=100)
+    session2 = _make_session(messages=messages_batch2, progress=progress2)
+    
+    factory = MagicMock(side_effect=[session1, session2])
+    
+    processor = ReplayBatchProcessor(factory)
+    processor._make_outbox_service = MagicMock(return_value=outbox)
+    
+    # First batch
+    result1 = await processor.run_batch(batch_size=100)
+    assert result1.processed_count == 100
+    assert result1.last_im_message_id == 100
+    assert result1.has_more is True
+    
+    # Second batch after restart — reads WHERE id > 100, finds nothing
+    result2 = await processor.run_batch(batch_size=100)
+    assert result2.processed_count == 0
+    assert result2.last_im_message_id == 100
+    assert result2.has_more is False
