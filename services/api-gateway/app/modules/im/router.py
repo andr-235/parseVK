@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from app.modules.im.service import ImGatewayService, get_im_gateway_service
+import logging
+from app.modules.im.service import ImGatewayService, SearchGatewayService, get_im_gateway_service, get_search_gateway_service
 from fastapi import APIRouter, Body, Depends, Request
 
 router = APIRouter(prefix="/api/v1/im", tags=["im"])
@@ -11,9 +12,12 @@ router = APIRouter(prefix="/api/v1/im", tags=["im"])
 @router.get("/search/messages")
 async def search_messages(
     request: Request,
-    service: ImGatewayService = Depends(get_im_gateway_service),
+    service: SearchGatewayService = Depends(get_search_gateway_service),
 ):
+    logger = logging.getLogger(__name__)
     params = dict(request.query_params)
+    logger.info("Search request routed to content-service: GET /internal/search/messages")
+    logger.debug("Search params: %s", {k: v for k, v in params.items() if k != "q" or "(hidden)"})
     return await service.forward_json(request, "GET", "/internal/search/messages", params=params)
 
 
@@ -21,8 +25,11 @@ async def search_messages(
 async def search_messages_post(
     request: Request,
     payload: Annotated[dict[str, Any], Body()],
-    service: ImGatewayService = Depends(get_im_gateway_service),
+    service: SearchGatewayService = Depends(get_search_gateway_service),
 ):
+    logger = logging.getLogger(__name__)
+    logger.info("Search request routed to content-service: POST /internal/search/messages/search")
+    logger.debug("Search payload keys: %s", list(payload.keys()) if isinstance(payload, dict) else type(payload).__name__)
     return await service.forward_json(request, "POST", "/internal/search/messages/search", json=payload)
 
 
