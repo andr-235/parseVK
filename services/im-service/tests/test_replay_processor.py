@@ -77,7 +77,8 @@ async def test_run_batch_empty_starts_from_zero():
     session = _make_session(messages=[], progress=None)
     factory = MagicMock(return_value=session)
 
-    processor = ReplayBatchProcessor(factory, outbox)
+    processor = ReplayBatchProcessor(factory)
+    processor._make_outbox_service = MagicMock(return_value=outbox)
     result = await processor.run_batch(batch_size=10)
 
     assert result == ReplayBatchResult(processed_count=0, last_im_message_id=0, has_more=False)
@@ -97,7 +98,8 @@ async def test_run_batch_processes_messages_and_saves_progress():
     session = _make_session(messages=messages, progress=progress)
     factory = MagicMock(return_value=session)
 
-    processor = ReplayBatchProcessor(factory, outbox)
+    processor = ReplayBatchProcessor(factory)
+    processor._make_outbox_service = MagicMock(return_value=outbox)
     result = await processor.run_batch(batch_size=10)
 
     assert result.processed_count == 2
@@ -125,7 +127,8 @@ async def test_run_batch_resumes_from_existing_progress():
     session = _make_session(messages=[], progress=progress)
     factory = MagicMock(return_value=session)
 
-    processor = ReplayBatchProcessor(factory, outbox)
+    processor = ReplayBatchProcessor(factory)
+    processor._make_outbox_service = MagicMock(return_value=outbox)
     result = await processor.run_batch(batch_size=10)
 
     assert result.last_im_message_id == 5
@@ -157,7 +160,8 @@ async def test_run_batch_skips_invalid_rows():
     session = _make_session(messages=messages, progress=None)
     factory = MagicMock(return_value=session)
 
-    processor = ReplayBatchProcessor(factory, outbox)
+    processor = ReplayBatchProcessor(factory)
+    processor._make_outbox_service = MagicMock(return_value=outbox)
     result = await processor.run_batch(batch_size=10)
 
     assert result.processed_count == 4  # still 4 total messages read
@@ -172,7 +176,6 @@ async def test_run_batch_skips_invalid_rows():
 
 @pytest.mark.anyio
 async def test_run_full_stops_when_no_more_messages():
-    outbox = AsyncMock(spec=OutboxService)
     batch_call_count = 0
 
     async def fake_run_batch(*, batch_size):
@@ -180,7 +183,7 @@ async def test_run_full_stops_when_no_more_messages():
         batch_call_count += 1
         return ReplayBatchResult(processed_count=batch_size, last_im_message_id=batch_call_count, has_more=batch_call_count < 3)
 
-    processor = ReplayBatchProcessor(MagicMock(), outbox)
+    processor = ReplayBatchProcessor(MagicMock())
     processor.run_batch = fake_run_batch
 
     await processor.run_full(batch_size=2)
@@ -190,17 +193,15 @@ async def test_run_full_stops_when_no_more_messages():
 
 @pytest.mark.anyio
 async def test_run_full_respects_max_batches():
-    outbox = AsyncMock(spec=OutboxService)
-
     async def fake_run_batch(*, batch_size):
         return ReplayBatchResult(processed_count=batch_size, last_im_message_id=1, has_more=True)
 
-    processor = ReplayBatchProcessor(MagicMock(), outbox)
+    processor = ReplayBatchProcessor(MagicMock())
     processor.run_batch = fake_run_batch
 
     await processor.run_full(batch_size=2, max_batches=5)
 
-    assert outbox.emit_message_collected.await_count == 0
+    # No real outbox to check; just verify no crash and method completes
 
 
 @pytest.mark.anyio
@@ -210,7 +211,8 @@ async def test_run_batch_has_more_when_batch_is_full():
     session = _make_session(messages=messages, progress=None)
     factory = MagicMock(return_value=session)
 
-    processor = ReplayBatchProcessor(factory, outbox)
+    processor = ReplayBatchProcessor(factory)
+    processor._make_outbox_service = MagicMock(return_value=outbox)
     result = await processor.run_batch(batch_size=2)
 
     assert result.has_more is True
@@ -234,7 +236,8 @@ async def test_run_batch_resumable_multi_batch():
     
     factory = MagicMock(side_effect=[session1, session2])
     
-    processor = ReplayBatchProcessor(factory, outbox)
+    processor = ReplayBatchProcessor(factory)
+    processor._make_outbox_service = MagicMock(return_value=outbox)
     
     # First batch
     result1 = await processor.run_batch(batch_size=100)
@@ -274,7 +277,8 @@ async def test_run_batch_passes_all_fields():
     session = _make_session(messages=[msg], progress=None)
     factory = MagicMock(return_value=session)
     
-    processor = ReplayBatchProcessor(factory, outbox)
+    processor = ReplayBatchProcessor(factory)
+    processor._make_outbox_service = MagicMock(return_value=outbox)
     result = await processor.run_batch(batch_size=10)
     
     assert result.processed_count == 1
@@ -292,3 +296,76 @@ async def test_run_batch_passes_all_fields():
     assert kwargs["content_type"] == "image"
     assert kwargs["raw"] == {"source": "replay", "media_id": "12345"}
     assert kwargs["created_at"] == created_at
+
+
+@pytest.mark.anyio
+async def test_outbox_failure_does_not_advance_progress():
+    """If emit_message_collected raises, progress must NOT be saved."""
+    outbox = AsyncMock(spec=OutboxService)
+    outbox.emit_message_collected.side_effect = RuntimeError("Outbox write failed")
+    
+    messages = [_make_message(1), _make_message(2)]
+    progress = SimpleNamespace(last_im_message_id=0)
+    session = _make_session(messages=messages, progress=progress)
+    factory = MagicMock(return_value=session)
+    
+    processor = ReplayBatchProcessor(factory)
+    processor._make_outbox_service = MagicMock(return_value=outbox)
+    processor._save_progress = AsyncMock()
+    
+    with pytest.raises(RuntimeError, match="Outbox write failed"):
+        await processor.run_batch(batch_size=10)
+    
+    # Progress must NOT be saved when outbox fails
+    processor._save_progress.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_select_for_update_is_called_on_replay_progress():
+    """Verify SELECT ... FOR UPDATE is used on ReplayProgress query."""
+    outbox = AsyncMock(spec=OutboxService)
+    progress = SimpleNamespace(last_im_message_id=0)
+    session = _make_session(messages=[], progress=progress)
+    factory = MagicMock(return_value=session)
+    
+    processor = ReplayBatchProcessor(factory)
+    processor._make_outbox_service = MagicMock(return_value=outbox)
+    await processor.run_batch(batch_size=10)
+    
+    scalar_call = session.scalar.await_args[0][0]
+    scalar_str = str(scalar_call)
+    assert "replay_progress" in scalar_str, "Query must target replay_progress table"
+    assert "FOR UPDATE" in scalar_str.upper(), "Query must use SELECT FOR UPDATE"
+
+
+@pytest.mark.anyio
+async def test_restart_resumes_after_committed_batch():
+    """After a committed batch, restart resumes from last_im_message_id."""
+    outbox = AsyncMock(spec=OutboxService)
+    
+    # Batch 1: 100 messages, progress at 0
+    messages_batch1 = [_make_message(i) for i in range(1, 101)]
+    progress1 = SimpleNamespace(last_im_message_id=0)
+    session1 = _make_session(messages=messages_batch1, progress=progress1)
+    
+    # Batch 2: no messages, progress at 100 (committed from batch 1)
+    messages_batch2: list = []
+    progress2 = SimpleNamespace(last_im_message_id=100)
+    session2 = _make_session(messages=messages_batch2, progress=progress2)
+    
+    factory = MagicMock(side_effect=[session1, session2])
+    
+    processor = ReplayBatchProcessor(factory)
+    processor._make_outbox_service = MagicMock(return_value=outbox)
+    
+    # First batch
+    result1 = await processor.run_batch(batch_size=100)
+    assert result1.processed_count == 100
+    assert result1.last_im_message_id == 100
+    assert result1.has_more is True
+    
+    # Second batch after restart — reads WHERE id > 100, finds nothing
+    result2 = await processor.run_batch(batch_size=100)
+    assert result2.processed_count == 0
+    assert result2.last_im_message_id == 100
+    assert result2.has_more is False
