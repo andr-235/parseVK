@@ -55,5 +55,6 @@ class PageInfo(BaseModel):
 class KeywordSearchResponse(BaseModel):
     items: list[SearchMessageItem]
     pageInfo: PageInfo = Field(default_factory=PageInfo)
+    scanned: int | None = None
     total: None = None
     totalMode: str = "not_calculated"

@@ -10,8 +10,16 @@ from _service_path import use_service_path
 use_service_path()
 
 from app.clients.base import ServiceClientHTTPError, ServiceClientUnavailableError
+from app.core.config import settings
 from app.core.exceptions import BackendServiceError, BackendUnavailableError
 from app.modules._base import forward_service_request
+from app.modules.im.service import (
+    ContentSearchGatewayService,
+    ImSearchGatewayService,
+    get_search_gateway_service,
+)
+from prometheus_client import REGISTRY
+from app.modules.im.metrics import search_duration as search_duration_metric, search_requests
 
 
 class RecordingIMClient:
@@ -261,6 +269,20 @@ async def test_search_messages_post_routes_to_content_service():
     }
 
 
+def test_get_search_gateway_service_defaults_to_content_backend(monkeypatch):
+    monkeypatch.setattr(settings, "im_search_backend", "content")
+    service = get_search_gateway_service()
+    assert isinstance(service, ContentSearchGatewayService)
+    assert service.client.base_url == "http://content-service:8000"
+
+
+def test_get_search_gateway_service_selects_im_backend(monkeypatch):
+    monkeypatch.setattr(settings, "im_search_backend", "im")
+    service = get_search_gateway_service()
+    assert isinstance(service, ImSearchGatewayService)
+    assert service.client.base_url == "http://im-service:8000"
+
+
 @pytest.mark.asyncio
 async def test_notifier_endpoints_still_use_im_service():
     """Notifier endpoints must NOT be switched to content-service — they stay on im-service."""
@@ -288,3 +310,26 @@ async def test_groups_endpoints_still_use_im_service():
     assert result == {"items": [], "total": 0}
     assert client.calls[0]["method"] == "GET"
     assert client.calls[0]["path"] == "/internal/monitoring/groups"
+
+
+def test_gateway_search_requests_metric_exists():
+    """Verify the search_requests counter exists in the registry with expected labels."""
+    # Prometheus client only creates a labeled time series on first use,
+    # so initialize the expected label combination before reading the registry.
+    search_requests.labels(backend="content-service", method="GET", outcome="success").inc(0)
+    value = REGISTRY.get_sample_value(
+        "gateway_search_requests_total",
+        {"backend": "content-service", "method": "GET", "outcome": "success"},
+    )
+    assert value is not None, "gateway_search_requests_total metric should exist in registry"
+
+
+def test_gateway_search_duration_metric_exists():
+    """Verify the search_duration histogram exists in the registry."""
+    # Initialize the labeled time series so the histogram exposes a _created sample.
+    search_duration_metric.labels(backend="content-service", method="GET").observe(0.001)
+    created = REGISTRY.get_sample_value(
+        "gateway_search_duration_seconds_created",
+        {"backend": "content-service", "method": "GET"},
+    )
+    assert created is not None, "gateway_search_duration_seconds histogram should exist in registry"

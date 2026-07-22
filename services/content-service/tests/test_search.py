@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from prometheus_client import REGISTRY
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _service_path import use_service_path
@@ -63,7 +64,7 @@ class FakeRepository:
             if kws:
                 matched.append(msg)
                 matched_kws.append(kws)
-        return matched, matched_kws, False, None
+        return matched, matched_kws, False, None, len(self.rows)
 
 
 @pytest.fixture
@@ -169,6 +170,7 @@ async def test_search_endpoint_post_keywords(client, fake_repo):
     assert response.status_code == 200
     data = response.json()
     assert data["totalMode"] == "not_calculated"
+    assert data["scanned"] == 2
     assert any("hello" in item.get("matched_keywords", []) for item in data["items"])
     assert fake_repo.calls[0][0] == "search_messages_by_keywords"
 
@@ -188,3 +190,52 @@ async def test_internal_token_required(search_app):
     async with AsyncClient(transport=ASGITransport(app=search_app), base_url="http://test") as client:
         response = await client.get("/internal/search/messages")
     assert response.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_search_keyword_duration_histogram(fake_repo):
+    """Keyword search should record duration histogram metric."""
+    svc = SearchService(repository=fake_repo)
+    # Execute keyword search
+    await svc.search_messages_by_keywords(SimpleNamespace(
+        cursor=None,
+        keywords=["hello"],
+        only_with_keywords=True,
+        limit=10,
+        messenger=None,
+        dateFrom=None,
+        dateTo=None,
+        chat_id=None,
+        author=None,
+    ))
+    # Check that the _created metric exists (histogram was initialized and observed)
+    created = REGISTRY.get_sample_value("content_search_duration_seconds_created", {"mode": "keyword"})
+    assert created is not None and created > 0, "duration histogram should have been created/observed"
+
+
+@pytest.mark.anyio
+async def test_search_keyword_rows_scanned_histogram(fake_repo):
+    """Keyword search should record rows_scanned histogram metric."""
+    svc = SearchService(repository=fake_repo)
+    await svc.search_messages_by_keywords(SimpleNamespace(
+        cursor=None,
+        keywords=["hello"],
+        only_with_keywords=True,
+        limit=10,
+        messenger=None,
+        dateFrom=None,
+        dateTo=None,
+        chat_id=None,
+        author=None,
+    ))
+    created = REGISTRY.get_sample_value("content_search_rows_scanned_created", {"mode": "keyword"})
+    assert created is not None and created > 0, "rows_scanned histogram should have been created/observed"
+
+
+@pytest.mark.anyio
+async def test_search_simple_duration_histogram(fake_repo):
+    """Simple search should also record duration histogram."""
+    svc = SearchService(repository=fake_repo)
+    await svc.search_messages("whatsapp", None, None, None, 1, 10)
+    created = REGISTRY.get_sample_value("content_search_duration_seconds_created", {"mode": "simple"})
+    assert created is not None and created > 0, "simple search duration histogram should have been created/observed"
