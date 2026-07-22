@@ -202,7 +202,38 @@ This is an intermediate step toward the gateway cut-over planned in PR-C4.
 - **Known limitation:** `im_messages.text` currently has no `pg_trgm`/`GIN`
   index. `ILIKE %query%` scans will degrade as the table grows. A `GIN` index
   with `gin_trgm_ops` on `im_messages.text` should be evaluated for
-  production-scale performance. This limitation is parity with `im-service`.
+   production-scale performance. This limitation is parity with `im-service`.
+
+## Gateway Cut-Over (PR-C4)
+
+Starting from PR-C4, the API Gateway routes IM search traffic to `content-service`
+instead of `im-service`:
+
+- **Before C4:** `GET /api/v1/im/search/messages` → `im-service:8000/internal/search/messages`
+- **After C4:**  `GET /api/v1/im/search/messages` → `content-service:8000/internal/search/messages`
+- **Same for POST:** `/api/v1/im/messages/search` → `content-service:8000/internal/search/messages/search`
+
+### What changed (api-gateway)
+
+- A new `SearchGatewayService` class in `services/api-gateway/app/modules/im/service.py`
+  proxies search requests to `settings.content_base_url` (content-service) instead of
+  `settings.im_base_url` (im-service).
+- The IM router's search endpoints (`GET /search/messages`, `POST /messages/search`)
+  now inject `SearchGatewayService` via FastAPI `Depends`.
+- Non-search endpoints under `/api/v1/im/` (notifier, monitoring groups) remain on
+  `ImGatewayService` targeting `im-service`.
+
+### Scope
+
+- **Frontend:** no changes — the public API paths `/api/v1/im/search/messages` and
+  `/api/v1/im/messages/search` are preserved.
+- **`im-service` search module:** preserved but no longer reachable through the
+  gateway. Direct internal calls to `im-service` search still work for backward
+  compatibility.
+- **Config:** no new environment variables — `GATEWAY_CONTENT_BASE_URL` was already
+  configured in Docker Compose.
+- **PR-C4 is intermediate:** full `im-service` search deprecation is tracked as
+  future work.
 
 ## Git-процесс
 
