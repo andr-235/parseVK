@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     kafka_topic_im: str = "parsevk.im.events"
     kafka_consumer_enabled: bool = False
     outbox_publish_enabled: bool = False
-    replay_enabled: bool = True
+    replay_enabled: bool = False
 
     wappi_api_url: str = "https://wappi.pro"
     wappi_api_token: str = ""
