@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import logging
 from typing import Annotated, Any
 
-import logging
-from app.modules.im.service import ImGatewayService, SearchGatewayService, get_im_gateway_service, get_search_gateway_service
 from fastapi import APIRouter, Body, Depends, Request
+
+from app.modules.im.service import (
+    ImGatewayService,
+    SearchGatewayService,
+    get_im_gateway_service,
+    get_search_gateway_service,
+)
 
 router = APIRouter(prefix="/api/v1/im", tags=["im"])
 
