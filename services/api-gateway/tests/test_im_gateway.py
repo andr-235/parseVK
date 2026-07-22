@@ -212,3 +212,79 @@ async def test_im_maps_unavailable_upstream_to_502():
 
     assert exc_info.value.status_code == 502
     assert "IM service is unavailable" in exc_info.value.detail
+
+
+class RecordingContentClient:
+    base_url = "http://content-service:8000"
+    service_name = "Content-Search"
+
+    def __init__(self, response: dict):
+        self.response = response
+        self.calls: list[dict] = []
+
+    async def request(self, method: str, path: str, **kwargs):
+        self.calls.append({"method": method, "path": path, **kwargs})
+        return self.response
+
+
+@pytest.mark.asyncio
+async def test_search_messages_routes_to_content_service():
+    """Search GET requests should be routed to content-service (not im-service)."""
+    client = RecordingContentClient({"items": [], "total": 0, "page": 1, "limit": 50})
+
+    result = await forward_service_request(
+        client, "GET", "/internal/search/messages",
+        params={"messenger": "whatsapp", "q": "hello"},
+    )
+
+    assert result == {"items": [], "total": 0, "page": 1, "limit": 50}
+    assert len(client.calls) == 1
+    assert client.calls[0]["method"] == "GET"
+    assert client.calls[0]["path"] == "/internal/search/messages"
+    assert client.calls[0]["params"] == {"messenger": "whatsapp", "q": "hello"}
+
+
+@pytest.mark.asyncio
+async def test_search_messages_post_routes_to_content_service():
+    """Search POST requests should be routed to content-service."""
+    client = RecordingContentClient({"items": [], "total": 0, "page": 1, "limit": 25})
+
+    await forward_service_request(
+        client, "POST", "/internal/search/messages/search",
+        json={"messenger": "whatsapp", "only_with_keywords": True, "keywords": ["test"], "page": 1, "limit": 25},
+    )
+
+    assert client.calls[0]["method"] == "POST"
+    assert client.calls[0]["path"] == "/internal/search/messages/search"
+    assert client.calls[0].get("json") == {
+        "messenger": "whatsapp", "only_with_keywords": True, "keywords": ["test"], "page": 1, "limit": 25,
+    }
+
+
+@pytest.mark.asyncio
+async def test_notifier_endpoints_still_use_im_service():
+    """Notifier endpoints must NOT be switched to content-service — they stay on im-service."""
+    client = RecordingIMClient({"user_id": "user-1", "messenger": "whatsapp", "last_seen_message_id": 0})
+
+    await forward_service_request(
+        client, "GET", "/internal/notifier/state",
+        params={"messenger": "whatsapp"},
+    )
+
+    assert client.calls[0]["path"] == "/internal/notifier/state"
+    assert client.calls[0]["params"] == {"messenger": "whatsapp"}
+
+
+@pytest.mark.asyncio
+async def test_groups_endpoints_still_use_im_service():
+    """Monitoring groups endpoints must NOT be switched — they stay on im-service."""
+    client = RecordingIMClient({"items": [], "total": 0})
+
+    result = await forward_service_request(
+        client, "GET", "/internal/monitoring/groups",
+        params={"messenger": "whatsapp"},
+    )
+
+    assert result == {"items": [], "total": 0}
+    assert client.calls[0]["method"] == "GET"
+    assert client.calls[0]["path"] == "/internal/monitoring/groups"
