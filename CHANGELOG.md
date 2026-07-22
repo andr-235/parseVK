@@ -1,3 +1,17 @@
+# [0.63.0](https://github.com/andr-235/parseVK/compare/v0.62.0...v0.63.0) (2026-07-22)
+
+
+### Bug Fixes
+
+* make ReplayBatchProcessor transactionally atomic with SELECT FOR UPDATE ([e08253c](https://github.com/andr-235/parseVK/commit/e08253c60ae1e17d69b60edff909a5085b3f962e))
+* remove hidden startup replay, set replay_enabled=false by default ([3fc611f](https://github.com/andr-235/parseVK/commit/3fc611f4580090c3a4a18a156fff38a1fe911e5c))
+
+
+### Features
+
+* add one-shot replay internal endpoints ([8d71fb1](https://github.com/andr-235/parseVK/commit/8d71fb14af4762a3557d724affc0042fd75b46b5))
+* **im:** merge PR-C2.2 replay atomicity and lifecycle cleanup ([032e4b8](https://github.com/andr-235/parseVK/commit/032e4b8f53e590752620fbb11e03872ffe7ec836))
+
 # [0.62.0](https://github.com/andr-235/parseVK/compare/v0.61.0...v0.62.0) (2026-07-21)
 
 
