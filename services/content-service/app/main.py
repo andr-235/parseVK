@@ -81,9 +81,11 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=503, detail=f"Database is not ready: {str(e)}") from e
 
     from app.modules.monitoring.router import router as monitoring_router
+    from app.modules.search.router import router as search_router
 
     app.include_router(content_router)
     app.include_router(monitoring_router)
+    app.include_router(search_router)
 
     Instrumentator().instrument(app).expose(app)
 
