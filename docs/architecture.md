@@ -181,6 +181,29 @@ with explicit one-shot endpoints.
   - Replay is no longer automatic on startup. Explicit triggering via these
     endpoints replaces the old hidden `lifespan()` startup replay.
 
+## IM Search Ownership Transfer (PR-C3)
+
+`content-service` now implements the same search API as `im-service`:
+`GET /internal/search/messages` and `POST /internal/search/messages/search`.
+This is an intermediate step toward the gateway cut-over planned in PR-C4.
+
+- **Storage:** search queries run directly against the `content-service.im_messages`
+  projection table, not against a separate search document. There is no
+  `ContentSearchDocument` involvement for IM-only search yet.
+- **Sorting:** deterministic ordering with
+  `ORDER BY created_at DESC NULLS LAST, id DESC`.
+- **Stable identity:** every result includes `message_key`, computed as
+  `{messenger}:{chat_external_id}:{external_id}`.
+- **Security:** both endpoints require the `X-Internal-Service-Token` header.
+- **Scope:** `im-service` search is **not** removed; PR-C3 only adds parity in
+  `content-service`.
+- **Projection versions:** search does **not** filter by `projection_version`;
+  all versions are returned, matching `im-service` behavior.
+- **Known limitation:** `im_messages.text` currently has no `pg_trgm`/`GIN`
+  index. `ILIKE %query%` scans will degrade as the table grows. A `GIN` index
+  with `gin_trgm_ops` on `im_messages.text` should be evaluated for
+  production-scale performance. This limitation is parity with `im-service`.
+
 ## Git-процесс
 
 ```
