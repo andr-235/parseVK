@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.modules.monitoring_groups.router import router as monitoring_groups_router
 from app.modules.notifier.router import router as notifier_router
 from app.modules.outbox.publisher import publish_outbox_forever
+from app.modules.replay.router import router as replay_router
 from app.modules.search.router import router as search_router
 from app.modules.tasks.consumer import TaskEventsConsumer
 
@@ -113,6 +114,7 @@ def create_app() -> FastAPI:
     app.include_router(monitoring_groups_router)
     app.include_router(search_router)
     app.include_router(notifier_router)
+    app.include_router(replay_router)
 
     @app.get("/health")
     async def health() -> dict[str, str]:
