@@ -1,3 +1,13 @@
+# [0.64.0](https://github.com/andr-235/parseVK/compare/v0.63.0...v0.64.0) (2026-07-22)
+
+
+### Features
+
+* **content-service:** add search schemas and repository ([b5c0e78](https://github.com/andr-235/parseVK/commit/b5c0e78cca9d54183e8321faabbe3df9d8f7078c))
+* **content-service:** add search service and router ([c0c1c72](https://github.com/andr-235/parseVK/commit/c0c1c720ba8ad199476297ca7e908852f80fff26))
+* **content-service:** PR-C3 content-service search parity with im-service ([1ee0bcd](https://github.com/andr-235/parseVK/commit/1ee0bcd2f398b1cc5a5f7c77cb6f226de3ff2b39))
+* **content-service:** wire search router into main.py ([31ac8f0](https://github.com/andr-235/parseVK/commit/31ac8f0077b129a5c1b397b32a3c0a7d440985be))
+
 # [0.63.0](https://github.com/andr-235/parseVK/compare/v0.62.0...v0.63.0) (2026-07-22)
 
 
