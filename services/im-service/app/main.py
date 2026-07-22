@@ -78,17 +78,12 @@ async def lifespan(app: FastAPI):
 
     async def _run_replay_on_startup():
         from app.db.session import SessionLocal
-        from app.modules.outbox.repository import OutboxRepository
-        from app.modules.outbox.service import OutboxService
         from app.modules.replay.processor import ReplayBatchProcessor
 
-        async with SessionLocal() as session, session.begin():
-            repo = OutboxRepository(session)
-            outbox = OutboxService(repo)
-            processor = ReplayBatchProcessor(SessionLocal, outbox)
-            result = await processor.run_batch(batch_size=100)
-            if result.processed_count > 0:
-                logger.info("Startup replay batch complete: %d messages enqueued", result.processed_count)
+        processor = ReplayBatchProcessor(SessionLocal)
+        result = await processor.run_batch(batch_size=100)
+        if result.processed_count > 0:
+            logger.info("Startup replay batch complete: %d messages enqueued", result.processed_count)
 
     if settings.kafka_consumer_enabled:
         consumer_task = asyncio.create_task(

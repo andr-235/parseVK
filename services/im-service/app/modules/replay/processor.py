@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.db.models import ImMessage, ReplayProgress, utcnow
+from app.modules.outbox.repository import OutboxRepository
 from app.modules.outbox.service import OutboxService
 
 logger = logging.getLogger(__name__)
@@ -24,15 +25,20 @@ class ReplayBatchProcessor:
     def __init__(
         self,
         db_session_factory: async_sessionmaker[AsyncSession],
-        outbox_service: OutboxService,
     ) -> None:
         self.db_session_factory = db_session_factory
-        self.outbox_service = outbox_service
+
+    def _make_outbox_service(self, session: AsyncSession) -> OutboxService:
+        return OutboxService(OutboxRepository(session))
 
     async def run_batch(self, *, batch_size: int = 100) -> ReplayBatchResult:
         async with self.db_session_factory() as session:
             async with session.begin():
-                progress = await session.scalar(select(ReplayProgress))
+                outbox_service = self._make_outbox_service(session)
+
+                progress = await session.scalar(
+                    select(ReplayProgress).with_for_update()
+                )
                 last_id = progress.last_im_message_id if progress else 0
 
                 result = await session.scalars(
@@ -60,7 +66,7 @@ class ReplayBatchProcessor:
                         msg.messenger,
                         msg.external_id,
                     )
-                    await self.outbox_service.emit_message_collected(
+                    await outbox_service.emit_message_collected(
                         replay=True,
                         messenger=msg.messenger,
                         message_id=msg.external_id,
@@ -87,11 +93,6 @@ class ReplayBatchProcessor:
                     processed_count,
                     last_id,
                     has_more,
-                )
-                logger.debug(
-                    "Replay batch complete: %d messages, progress saved at id=%s",
-                    processed_count,
-                    last_id,
                 )
 
                 return ReplayBatchResult(
