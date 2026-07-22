@@ -153,20 +153,33 @@ WHERE im_messages.projection_version <= excluded.projection_version
 ### Historical Replay (im-service → content-service)
 
 PR-C2.1 introduced a resumable historical replay mechanism that re-publishes all
-source `ImMessage` rows through the v2 event contract (`im.message_collected v2`):
+source `ImMessage` rows through the v2 event contract (`im.message_collected v2`).
+PR-C2.2 fixed a transaction atomicity defect and replaced the hidden startup replay
+with explicit one-shot endpoints.
 
 - **Dedupe key namespace:** `replay-v2:im.message_collected:{messenger}:{chat_id}:{message_id}`
   — separate from the live `im.message_collected:` prefix to avoid silent no-ops
   against already-published v1 events.
-- **Cursor table:** `replay_progress` (single row, column `last_im_message_id`)
-  tracks the last replayed ImMessage ID for resumable batch processing.
+- **Cursor table:** `replay_progress` (single row, column `last_im_message_id`,
+  locked with `SELECT FOR UPDATE`) tracks the last replayed ImMessage ID for
+  resumable batch processing.
 - **Processor:** `ReplayBatchProcessor` in im-service reads source rows, maps fields,
   and emits outbox events with `replay=True`.
+- **Transaction atomicity:** Outbox events and progress cursor are written in the
+  same database transaction. A crash between outbox insert and progress save will
+  roll back both — zero event loss. `SELECT FOR UPDATE` on `replay_progress`
+  prevents concurrent processors from claiming the same batch.
 - **Idempotency:** content-service uses natural-key upsert + `projection_version=2`
   to upgrade any existing v1 skeleton without duplicate rows.
-- **Toggle:** `settings.replay_enabled` (default `true`) controls the startup replay batch.
-- **Scope:** One batch (100 messages) runs on startup via `asyncio.create_task` in
-  `lifespan()`. Full historical sweep requires external orchestration via `run_full()`.
+- **Toggle:** `settings.replay_enabled` (default `false`) must be set to `true`
+  before the replay endpoints accept requests.
+- **One-shot endpoints (PR-C2.2):**
+  - `POST /internal/replay/run` — processes one batch (configurable via
+    `?batch_size=100`) and returns cursor state.
+  - `POST /internal/replay/run-full` — drains all remaining rows in batches.
+  - Both endpoints require `X-Internal-Service-Token` header.
+  - Replay is no longer automatic on startup. Explicit triggering via these
+    endpoints replaces the old hidden `lifespan()` startup replay.
 
 ## Git-процесс
 
