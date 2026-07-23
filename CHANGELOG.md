@@ -1,3 +1,10 @@
+## [0.67.4](https://github.com/andr-235/parseVK/compare/v0.67.3...v0.67.4) (2026-07-23)
+
+
+### Bug Fixes
+
+* **im:** explicit event_version=2 in replay processor ([348985c](https://github.com/andr-235/parseVK/commit/348985c2f72921b2f18ace9e2729c8a34e6d1a99))
+
 ## [0.67.3](https://github.com/andr-235/parseVK/compare/v0.67.2...v0.67.3) (2026-07-23)
 
 
