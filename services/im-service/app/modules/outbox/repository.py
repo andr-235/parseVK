@@ -30,7 +30,6 @@ class OutboxRepository:
         dedupe_key: str | None = None,
     ) -> bool:
         stmt = insert(OutboxEvent).values(
-            id=OutboxEvent.id.default.arg,
             event_type=event_type,
             event_version=event_version,
             aggregate_type=aggregate_type,
