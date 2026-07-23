@@ -1,3 +1,10 @@
+## [0.67.3](https://github.com/andr-235/parseVK/compare/v0.67.2...v0.67.3) (2026-07-23)
+
+
+### Bug Fixes
+
+* **im:** persist cursor to ImMessengerCursor table after successful cycle ([6b34241](https://github.com/andr-235/parseVK/commit/6b34241cbb7ca34d8d43bf80f300340b60ac7ea1))
+
 ## [0.67.2](https://github.com/andr-235/parseVK/compare/v0.67.1...v0.67.2) (2026-07-23)
 
 
