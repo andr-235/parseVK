@@ -21,7 +21,7 @@ class OutboxService:
         correlation_id: str | None = None,
         replay: bool = False,
         event_version: int = 1,
-    ) -> None:
+    ) -> bool:
         if replay:
             dedupe_key = f"replay-v2:im.message_collected:{messenger}:{chat_id}:{message_id}"
             logger.debug("Replay emit: messenger=%s message_id=%s dedupe_key=%s", messenger, message_id, dedupe_key)
@@ -80,7 +80,7 @@ class OutboxService:
                 )
 
         logger.info("Emitting im.message_collected v%d for %s:%s:%s", event_version, messenger, chat_id, message_id)
-        await self.repository.add_event(
+        return await self.repository.add_event(
             event_type="im.message_collected",
             aggregate_type="im_message",
             aggregate_id=f"{messenger}:{chat_id}:{message_id}",

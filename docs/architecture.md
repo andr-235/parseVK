@@ -181,6 +181,86 @@ with explicit one-shot endpoints.
   - Replay is no longer automatic on startup. Explicit triggering via these
     endpoints replaces the old hidden `lifespan()` startup replay.
 
+### Live IM Poller (PR-C2.3)
+
+PR-C2.3 hardened the live WhatsApp polling pipeline (`WappiPoller`) to reliably emit
+complete v2 snapshots through the outbox, replacing the previous shared-session approach
+with session-per-chat transactions and cursor-based safety.
+
+**NUL sanitization (defence in depth):**
+
+- **Ingress:** `sanitize_source_payload()` in `poller/service.py` strips NUL bytes from
+  `chat.raw` before `upsert_group()`. Returns a `SanitizationResult` with a `replacements`
+  counter tracked via `im_poller_sanitized_values_total`.
+- **Defence layer 2:** `map_raw_to_normalized()` in `mapper.py` strips NUL from all
+  string fields via `sanitize_normalized_field()` before constructing the
+  `NormalizedImMessage`.
+- **Repository layer:** `repository.py` applies `sanitize_postgres_text()` to every
+  string field on write as a final defence-in-depth barrier.
+
+**Session-per-chat / transaction-per-chat:**
+
+- Each chat iteration in `poll_messenger()` opens its own SQLAlchemy session and
+  wraps the work in `session.begin()`. A failure for one chat does not affect other
+  chats (rolls back and continues to the next chat).
+- Per-chat session lifecycle: `factory()` → `begin()` → upsert group + fetch messages
+  + process + outbox emission → `__aexit__` (commit on success, rollback on exception).
+
+**Outbox v2 emission in the poller path:**
+
+- Inside each chat transaction, the poller creates `OutboxRepository(session)` and
+  `OutboxService(repository)`.
+- `process_chat_messages()` receives an `emit_message_collected_fn` callback that calls
+  `outbox.emit_message_collected(..., event_version=2)` for each normalized message.
+- The outbox event uses dedupe key `im.message_collected:{messenger}:{chat_id}:{message_id}`
+  (same as v1) with `ON CONFLICT DO NOTHING` for idempotency.
+- The callback is awaited and returns the `bool` result from `add_event()`, tracked via
+  `im_poller_outbox_events_total{result="inserted|deduplicated"}`.
+
+**Cursor safety:**
+
+- `WappiPoller` maintains a per-messenger in-memory cursor (`_last_poll[messenger]`)
+  initialized from the `ImMessengerCursor` table in `start()`.
+- Each poll cycle captures `cycle_started_at` and `previous_cursor` before iterating
+  over chats. All `list_messages()` calls use `time_from=previous_cursor`.
+- The cursor is advanced to `cycle_started_at` **only** if ALL chats in the cycle
+  succeeded (no fetch, sanitize, DB, or outbox failure).
+- If any chat fails, cursor is NOT advanced — the next poll cycle will retry from
+  the same position.
+- A `list_chats()` failure is also treated as a cycle failure (no cursor advance).
+- `poll_messenger()` returns `tuple[int, bool]` — total message count and an
+  `all_succeeded` flag.
+- Prometheus metrics: `im_poller_failures_total{stage="fetch|process"}`,
+  `im_poller_chat_runs_total{status="started|success"}`.
+
+**Operational runbook snippet:**
+
+1. **Verify counters:**
+   - `im_poller_messages_processed_total{messenger="whatsapp|max"}` — increasing
+     indicates messages are being collected and projected.
+   - `im_poller_outbox_events_total{messenger="..."}` — split by `result="inserted"`
+     (new) and `result="deduplicated"` (already seen).
+   - `im_poller_chat_runs_total{status="success"}` — should increase per poll cycle.
+2. **Verify logs:**
+   - `"poll_messenger: cursor advanced messenger=whatsapp to=..."` — expected after
+     each successful poll cycle.
+   - `"poll_messenger: cycle summary messenger=whatsapp success=True processed=N"` —
+     logged at the end of each messenger cycle.
+3. **On failures:**
+   - `im_poller_failures_total` increasing → inspect per-chat logs around the failure
+     timestamp.
+   - Cursor should NOT have advanced (check `"poll_messenger: cursor NOT advanced
+     messenger=..."` warning).
+   - The next poll cycle will retry automatically.
+
+**Historical recovery as a next step:**
+
+Messages that were published as v1 before C2.3 deployment and already exist in
+`outbox_events` with the same dedupe key will be silently deduplicated by
+`ON CONFLICT DO NOTHING`. These messages can be recovered through the existing
+one-shot replay endpoints (`POST /internal/replay/run-full`), which use the
+`replay-v2:` dedupe namespace and bypass the live dedupe collision.
+
 ## IM Search Ownership Transfer (PR-C3)
 
 `content-service` now implements the same search API as `im-service`:

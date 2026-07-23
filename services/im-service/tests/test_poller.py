@@ -119,9 +119,10 @@ async def test_poll_messenger_processes_chats(mock_session_factory, mock_repo, m
                 wappi_client=mock_wappi,
                 max_client=mock_max,
             )
-            result = await poller.poll_messenger("whatsapp")
+            result, ok = await poller.poll_messenger("whatsapp")
 
     assert result == 1
+    assert ok is True
     assert mock_session_factory.call_count == 2
     mock_repo.upsert_group.assert_awaited()
     assert mock_process.await_count == 2
@@ -144,9 +145,10 @@ async def test_poll_messenger_skips_known_chat_ids(mock_session_factory, mock_re
                 wappi_client=mock_wappi,
                 max_client=mock_max,
             )
-            result = await poller.poll_messenger("whatsapp")
+            result, ok = await poller.poll_messenger("whatsapp")
 
     assert result == 0
+    assert ok is True
     # upsert_group called only for non-skipped chat
     mock_repo.upsert_group.assert_awaited_with("whatsapp", "333", "Good", {"id": "333", "name": "Good"})
 
@@ -163,9 +165,10 @@ async def test_poll_messenger_handles_list_chats_error(mock_session_factory, moc
             wappi_client=mock_wappi,
             max_client=MagicMock(),
         )
-        result = await poller.poll_messenger("whatsapp")
+        result, ok = await poller.poll_messenger("whatsapp")
 
     assert result == 0
+    assert ok is False
     mock_repo.upsert_group.assert_not_called()
     mock_session_factory.assert_not_called()
 
@@ -184,9 +187,10 @@ async def test_poll_messenger_handles_list_messages_error(mock_session_factory, 
                 wappi_client=mock_wappi,
                 max_client=MagicMock(),
             )
-            result = await poller.poll_messenger("whatsapp")
+            result, ok = await poller.poll_messenger("whatsapp")
 
     assert result == 0
+    assert ok is False
     mock_repo.upsert_group.assert_awaited_once()
     mock_process.assert_not_called()
 
@@ -208,9 +212,10 @@ async def test_poll_messenger_process_failure_rolls_back(mock_session, mock_sess
                 wappi_client=mock_wappi,
                 max_client=MagicMock(),
             )
-            result = await poller.poll_messenger("whatsapp")
+            result, ok = await poller.poll_messenger("whatsapp")
 
     assert result == 0
+    assert ok is False
     # begin context manager should be entered and exited (rollback on exception)
     session_cm.__aenter__.assert_awaited_once()
     session_cm.__aexit__.assert_awaited_once()
