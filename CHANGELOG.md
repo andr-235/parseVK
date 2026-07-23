@@ -1,3 +1,16 @@
+# [0.67.0](https://github.com/andr-235/parseVK/compare/v0.66.0...v0.67.0) (2026-07-23)
+
+
+### Bug Fixes
+
+* **im:** add ingress sanitization and normalized message contract ([e3bd3f6](https://github.com/andr-235/parseVK/commit/e3bd3f67dfda6e43d6e14c3d8f0abe32c50ff37f))
+
+
+### Features
+
+* **im:** add cursor safety, Prometheus counters and architecture docs ([5826618](https://github.com/andr-235/parseVK/commit/5826618af1166ceccf07ad4ccfbbb92d02f30d06))
+* **im:** add outbox emission to poller and cursor safety ([dd41a27](https://github.com/andr-235/parseVK/commit/dd41a27015f0845e3cb3c1a8f53b9f501f22155c))
+
 # [0.66.0](https://github.com/andr-235/parseVK/compare/v0.65.0...v0.66.0) (2026-07-23)
 
 
