@@ -108,7 +108,7 @@ class SearchRepository:
     async def search_messages_by_keywords(
         self,
         dto: SearchMessagesRequest,
-    ) -> tuple[list[ImMessage], list[list[str]], bool, str | None]:
+    ) -> tuple[list[ImMessage], list[list[str]], bool, str | None, int]:
         conditions = []
         if dto.messenger:
             conditions.append(ImMessage.messenger == dto.messenger)
@@ -175,4 +175,9 @@ class SearchRepository:
             next_cursor = scan_cursor
             has_more = True
 
-        return page_msgs, page_kws, has_more, next_cursor
+        logger.info(
+            "[SearchRepository.search_messages_by_keywords] completed scan=%d results=%d",
+            total_scanned,
+            len(page_msgs),
+        )
+        return page_msgs, page_kws, has_more, next_cursor, total_scanned

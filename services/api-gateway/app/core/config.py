@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     vk_service_base_url: str = "http://vk-service:8000"
     telegram_service_base_url: str = "http://telegram-service:8000"
     im_base_url: str = "http://im-service:8000"
+    im_search_backend: str = "content"
     internal_service_token: str = "dev-internal-token"
 
     listings_import_max_bytes: int = 5 * 1024 * 1024

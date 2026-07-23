@@ -7,22 +7,22 @@ from fastapi import APIRouter, Body, Depends, Request
 
 from app.modules.im.service import (
     ImGatewayService,
-    SearchGatewayService,
     get_im_gateway_service,
     get_search_gateway_service,
 )
+from app.modules._base import BaseGatewayService
 
 router = APIRouter(prefix="/api/v1/im", tags=["im"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/search/messages")
 async def search_messages(
     request: Request,
-    service: SearchGatewayService = Depends(get_search_gateway_service),
+    service: BaseGatewayService = Depends(get_search_gateway_service),
 ):
-    logger = logging.getLogger(__name__)
     params = dict(request.query_params)
-    logger.info("Search request routed to content-service: GET /internal/search/messages")
+    logger.info("Search request routed to %s: GET /internal/search/messages", service.client.base_url)
     logger.debug("Search params: %s", {k: v for k, v in params.items() if k != "q" or "(hidden)"})
     return await service.forward_json(request, "GET", "/internal/search/messages", params=params)
 
@@ -31,10 +31,9 @@ async def search_messages(
 async def search_messages_post(
     request: Request,
     payload: Annotated[dict[str, Any], Body()],
-    service: SearchGatewayService = Depends(get_search_gateway_service),
+    service: BaseGatewayService = Depends(get_search_gateway_service),
 ):
-    logger = logging.getLogger(__name__)
-    logger.info("Search request routed to content-service: POST /internal/search/messages/search")
+    logger.info("Search request routed to %s: POST /internal/search/messages/search", service.client.base_url)
     logger.debug("Search payload keys: %s", list(payload.keys()) if isinstance(payload, dict) else type(payload).__name__)
     return await service.forward_json(request, "POST", "/internal/search/messages/search", json=payload)
 

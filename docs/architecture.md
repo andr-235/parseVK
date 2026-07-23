@@ -215,11 +215,11 @@ instead of `im-service`:
 
 ### What changed (api-gateway)
 
-- A new `SearchGatewayService` class in `services/api-gateway/app/modules/im/service.py`
-  proxies search requests to `settings.content_base_url` (content-service) instead of
+- `SearchGatewayService` renamed to `ContentSearchGatewayService` in `services/api-gateway/app/modules/im/service.py`
+  — proxies search requests to `settings.content_base_url` (content-service) instead of
   `settings.im_base_url` (im-service).
 - The IM router's search endpoints (`GET /search/messages`, `POST /messages/search`)
-  now inject `SearchGatewayService` via FastAPI `Depends`.
+  now inject `ContentSearchGatewayService` (or `ImSearchGatewayService` when rollback is active) via a configurable `Depends` factory.
 - Non-search endpoints under `/api/v1/im/` (notifier, monitoring groups) remain on
   `ImGatewayService` targeting `im-service`.
 
@@ -234,6 +234,46 @@ instead of `im-service`:
   configured in Docker Compose.
 - **PR-C4 is intermediate:** full `im-service` search deprecation is tracked as
   future work.
+
+### C4.1 — Stabilization
+
+#### Configurable search backend
+
+A rollback switch was added in C4.1: `GATEWAY_IM_SEARCH_BACKEND` environment variable.
+
+- `content` (default) — search requests are routed to `content-service` (same as C4)
+- `im` — search requests are routed to `im-service` (rollback path)
+
+The switch is implemented via a selector factory function (`get_search_gateway_service()`) at the FastAPI dependency level — no if/else in the router.
+
+**Rollback procedure:**
+1. Set `GATEWAY_IM_SEARCH_BACKEND=im` in Docker Compose or .env
+2. Redeploy `api-gateway`
+3. Verify IM search works via `im-service`
+4. Fix the issue in `content-service`
+5. Switch `GATEWAY_IM_SEARCH_BACKEND=content`
+6. Redeploy `api-gateway`
+
+No automatic fallback — manual switch only. Automatic fallback would hide degradation.
+
+#### Search observability metrics
+
+Four Prometheus metrics were added in C4.1:
+
+| Metric | Type | Labels | Service |
+|--------|------|--------|---------|
+| `content_search_duration_seconds` | Histogram | `mode` (simple\|keyword) | content-service |
+| `content_search_rows_scanned` | Histogram | `mode` (keyword) | content-service |
+| `gateway_search_requests_total` | Counter | `backend`, `method`, `outcome` | api-gateway |
+| `gateway_search_duration_seconds` | Histogram | `backend`, `method` | api-gateway |
+
+#### Keyword search response
+
+The keyword search response (`POST /api/v1/im/messages/search` with `onlyWithKeywords=true`) now includes a `scanned` field indicating how many rows were scanned during the Python batch scan.
+
+#### ADR-0007 update
+
+The migration table in ADR-0007 has been updated to reflect actual implementation history. A Single-Source-of-Truth rule for status resolution was added.
 
 ## Git-процесс
 

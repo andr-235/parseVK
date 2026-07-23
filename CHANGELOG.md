@@ -1,3 +1,15 @@
+# [0.66.0](https://github.com/andr-235/parseVK/compare/v0.65.0...v0.66.0) (Unreleased)
+
+### Features
+
+* **gateway:** add configurable IM search backend rollback (GATEWAY_IM_SEARCH_BACKEND) ([d7c947b](https://github.com/andr-235/parseVK/commit/d7c947bc9a94f1a12de4f2b9c01f19062cb219d2))
+* **content-service:** add search observability metrics (4 Prometheus counters/histograms) ([d7c947b](https://github.com/andr-235/parseVK/commit/d7c947bc9a94f1a12de4f2b9c01f19062cb219d2))
+* **content-service:** return rows_scanned from keyword search API response ([d7c947b](https://github.com/andr-235/parseVK/commit/d7c947bc9a94f1a12de4f2b9c01f19062cb219d2))
+
+### Documentation
+
+* **adr:** update ADR-0007 migration table to reflect actual implementation history ([aa772ad](https://github.com/andr-235/parseVK/commit/aa772ad1f3a59fd53014bf55ae974412a6ad4c45))
+
 # [0.65.0](https://github.com/andr-235/parseVK/compare/v0.64.0...v0.65.0) (2026-07-22)
 
 
