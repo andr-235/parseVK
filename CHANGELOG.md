@@ -1,3 +1,10 @@
+## [0.67.6](https://github.com/andr-235/parseVK/compare/v0.67.5...v0.67.6) (2026-07-23)
+
+
+### Bug Fixes
+
+* **infra:** increase kafka message.max.bytes to 5MB ([848670e](https://github.com/andr-235/parseVK/commit/848670e8e1023dea192f34664c8b2510be1923a4))
+
 ## [0.67.5](https://github.com/andr-235/parseVK/compare/v0.67.4...v0.67.5) (2026-07-23)
 
 
