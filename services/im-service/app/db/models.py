@@ -169,3 +169,11 @@ class ReplayProgress(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
     last_im_message_id: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class ImMessengerCursor(Base):
+    __tablename__ = "im_messenger_cursors"
+
+    messenger: Mapped[str] = mapped_column(String(32), primary_key=True)
+    last_poll: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)

@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from app.modules.ingestion.extraction import _extract_text as _extract_text_from_extraction
+
 WAPPI_CHATS_ENDPOINT = "/api/sync/chats/get"
 WAPPI_MESSAGES_ENDPOINT = "/api/sync/messages/get"
 
@@ -44,31 +46,7 @@ class WappiMessage:
 
     @staticmethod
     def _extract_text(payload: dict) -> str | None:
-        for path in (
-            ("body",), ("caption",), ("text", "body"),
-            ("image", "caption"), ("video", "caption"),
-            ("document", "caption"), ("gif", "caption"),
-            ("link_preview", "body"),
-            ("interactive", "body", "text"),
-            ("interactive", "header", "text"),
-            ("buttons", "text"), ("list", "body"),
-            ("system", "body"), ("hsm", "body"),
-            ("poll", "title"), ("order", "title"),
-            ("order", "text"), ("group_invite", "body"),
-            ("newsletter_invite", "body"),
-            ("admin_invite", "body"), ("catalog", "title"),
-            ("catalog", "description"), ("location", "address"),
-            ("location", "name"), ("action", "comment"),
-        ):
-            value = payload
-            for key in path:
-                if not isinstance(value, dict):
-                    break
-                value = value.get(key)
-            else:
-                if isinstance(value, str) and value.strip():
-                    return value.strip()
-        return None
+        return _extract_text_from_extraction(payload)
 
 
 class WappiChat:

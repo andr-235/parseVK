@@ -28,7 +28,7 @@ class OutboxRepository:
         event_version: int = 1,
         correlation_id: str | None = None,
         dedupe_key: str | None = None,
-    ) -> None:
+    ) -> bool:
         stmt = insert(OutboxEvent).values(
             id=OutboxEvent.id.default.arg,
             event_type=event_type,
@@ -42,13 +42,14 @@ class OutboxRepository:
             attempts=0,
             next_attempt_at=utcnow(),
             created_at=utcnow(),
-        )
+        ).returning(OutboxEvent.id)
         if dedupe_key:
             stmt = stmt.on_conflict_do_nothing(
                 index_elements=[OutboxEvent.__table__.c.dedupe_key],
                 index_where=OutboxEvent.__table__.c.dedupe_key.is_not(None),
             )
-        await self.session.execute(stmt)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none() is not None
 
     async def list_pending(self, *, limit: int = 100) -> list[OutboxEvent]:
         result = await self.session.scalars(
