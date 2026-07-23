@@ -46,6 +46,8 @@ curl http://localhost:3002/api/v1/tasks \
 | [Deploy Runbook](docs/deploy-runbook.md) | Production deployment |
 | [Design System](docs/design.md) | Дизайн-токены, тема оформления |
 | [PRODUCT](docs/product.md) | Описание продукта и пользователей |
+| [Workflows](docs/workflow/) | AI-воркфлоу для разработчиков |
+| [Superpowers](docs/superpowers/) | Аудиты, планы, спецификации |
 | [AGENTS](AGENTS.md) | AI Playbook для разработчиков |
 | [ADR](docs/adr/) | Architecture Decision Records |
 

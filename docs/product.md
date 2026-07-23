@@ -1,4 +1,4 @@
-[Back to README](../README.md) · [Design System →](design.md)
+[← Design System](design.md) · [Back to README](../README.md)
 
 # Product
 

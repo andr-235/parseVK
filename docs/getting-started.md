@@ -86,8 +86,6 @@ docker compose up -d vk-db kafka
 
 **Миграции БД не запускаются:** проверьте `docker compose ps` и `*_DATABASE_URL`.
 
-**CI падает с ошибками про `api/` / Prisma:** CI-файл устарел — FastAPI-сервисы пока не добавлены.
-
 ## См. также
 
 - [Архитектура](architecture.md) — структура сервисов и data flow

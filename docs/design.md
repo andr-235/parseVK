@@ -1,3 +1,5 @@
+[← Deploy Runbook](deploy-runbook.md) · [Back to README](../README.md) · [Product →](product.md)
+
 ---
 name: ParseVK
 description: Social media analytics platform for identifying violations in comments and posts
@@ -58,8 +60,6 @@ spacing:
   lg: 24px
   xl: 32px
 ---
-
-[Back to README](../README.md)
 
 # Design System: ParseVK
 
