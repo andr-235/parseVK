@@ -1,3 +1,10 @@
+## [0.67.5](https://github.com/andr-235/parseVK/compare/v0.67.4...v0.67.5) (2026-07-23)
+
+
+### Bug Fixes
+
+* **im:** increase kafka max request size to 5MB, wrap DLQ in try/except ([2dad6fc](https://github.com/andr-235/parseVK/commit/2dad6fc6191978e16586a78ddebbafebb0766330))
+
 ## [0.67.4](https://github.com/andr-235/parseVK/compare/v0.67.3...v0.67.4) (2026-07-23)
 
 
