@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     kafka_bootstrap_servers: str = "kafka:9092"
     kafka_topic_tasks: str = "parsevk.tasks.events"
     kafka_topic_im: str = "parsevk.im.events"
+    kafka_max_request_size: int = 5_242_880  # 5 MB
     kafka_consumer_enabled: bool = False
     outbox_publish_enabled: bool = False
     replay_enabled: bool = False
