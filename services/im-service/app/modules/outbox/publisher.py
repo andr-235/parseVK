@@ -32,6 +32,7 @@ class OutboxPublisher:
                 await producer.start()
                 try:
                     for event in events:
+                        is_failed = False
                         try:
                             key = str(event.payload.get("taskId") or event.aggregate_id).encode("utf-8")
                             value = json.dumps({
