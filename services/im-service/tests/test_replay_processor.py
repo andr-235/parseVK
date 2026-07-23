@@ -54,6 +54,7 @@ def _make_message(
     content_url=None,
     content_type=None,
     metadata_raw=None,
+    raw=None,
     created_at=None,
 ):
     return SimpleNamespace(
@@ -67,6 +68,7 @@ def _make_message(
         content_url=content_url,
         content_type=content_type,
         metadata_raw=metadata_raw,
+        raw=raw,
         created_at=created_at,
     )
 
@@ -146,7 +148,7 @@ async def test_run_batch_skips_invalid_rows():
             messenger="whatsapp", external_id=f"ext_{id}",
             chat_external_id=f"chat_{id}", chat_name=None,
             author=None, text=None, content_url=None,
-            content_type=None, metadata_raw=None, created_at=None,
+            content_type=None, metadata_raw=None, raw=None, created_at=None,
         )
         defaults.update(overrides)
         return SimpleNamespace(id=id, **defaults)
@@ -168,6 +170,7 @@ async def test_run_batch_skips_invalid_rows():
     assert outbox.emit_message_collected.await_count == 1  # only msg 4 processed
     outbox.emit_message_collected.assert_awaited_with(
         replay=True,
+        event_version=2,
         messenger="whatsapp", message_id="ext_4", chat_id="chat_4",
         chat_name=None, author_name=None, text=None,
         content_url=None, content_type=None, raw=None, created_at=None,
@@ -296,6 +299,7 @@ async def test_run_batch_passes_all_fields():
     assert kwargs["content_type"] == "image"
     assert kwargs["raw"] == {"source": "replay", "media_id": "12345"}
     assert kwargs["created_at"] == created_at
+    assert kwargs["event_version"] == 2
 
 
 @pytest.mark.anyio
@@ -369,3 +373,41 @@ async def test_restart_resumes_after_committed_batch():
     assert result2.processed_count == 0
     assert result2.last_im_message_id == 100
     assert result2.has_more is False
+
+
+@pytest.mark.anyio
+async def test_run_batch_replay_emits_v2_for_minimal_message():
+    """Replay must always emit event_version=2 even for a minimal message."""
+    outbox = AsyncMock(spec=OutboxService)
+
+    msg = _make_message(
+        1,
+        messenger="whatsapp",
+        external_id="msg_1",
+        chat_external_id="chat_1",
+        # no optional fields
+    )
+
+    session = _make_session(messages=[msg], progress=None)
+    factory = MagicMock(return_value=session)
+
+    processor = ReplayBatchProcessor(factory)
+    processor._make_outbox_service = MagicMock(return_value=outbox)
+    result = await processor.run_batch(batch_size=10)
+
+    assert result.processed_count == 1
+    outbox.emit_message_collected.assert_awaited_once()
+    kwargs = outbox.emit_message_collected.await_args.kwargs
+
+    assert kwargs["replay"] is True
+    assert kwargs["event_version"] == 2
+    assert kwargs["messenger"] == "whatsapp"
+    assert kwargs["message_id"] == "msg_1"
+    assert kwargs["chat_id"] == "chat_1"
+    assert kwargs["chat_name"] is None
+    assert kwargs["author_name"] is None
+    assert kwargs["text"] is None
+    assert kwargs["content_url"] is None
+    assert kwargs["content_type"] is None
+    assert kwargs["raw"] is None
+    assert kwargs["created_at"] is None

@@ -68,6 +68,7 @@ class ReplayBatchProcessor:
                     )
                     await outbox_service.emit_message_collected(
                         replay=True,
+                        event_version=2,
                         messenger=msg.messenger,
                         message_id=msg.external_id,
                         chat_id=msg.chat_external_id,
@@ -76,7 +77,7 @@ class ReplayBatchProcessor:
                         text=msg.text,
                         content_url=msg.content_url,
                         content_type=msg.content_type,
-                        raw=msg.metadata_raw,
+                        raw=msg.raw or msg.metadata_raw,
                         created_at=msg.created_at,
                     )
 
