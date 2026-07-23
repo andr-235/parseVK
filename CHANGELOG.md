@@ -1,3 +1,10 @@
+## [0.67.2](https://github.com/andr-235/parseVK/compare/v0.67.1...v0.67.2) (2026-07-23)
+
+
+### Bug Fixes
+
+* **im:** define is_failed before try in outbox publisher ([04b8200](https://github.com/andr-235/parseVK/commit/04b820048b34fa0dcf79a1ec8c1eb62d017b79d0))
+
 ## [0.67.1](https://github.com/andr-235/parseVK/compare/v0.67.0...v0.67.1) (2026-07-23)
 
 
