@@ -1,3 +1,10 @@
+## [0.67.1](https://github.com/andr-235/parseVK/compare/v0.67.0...v0.67.1) (2026-07-23)
+
+
+### Bug Fixes
+
+* **im:** generate outbox UUID defaults correctly ([f0c1320](https://github.com/andr-235/parseVK/commit/f0c13206cd85ee1a39a271eaf33e8074d2954c96))
+
 # [0.67.0](https://github.com/andr-235/parseVK/compare/v0.66.0...v0.67.0) (2026-07-23)
 
 
