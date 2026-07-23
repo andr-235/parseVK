@@ -5,6 +5,7 @@ from datetime import datetime
 
 from prometheus_client import Counter
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 
 from app.core.config import settings
 from app.db.models import ImMessage, ImMessengerCursor
@@ -85,6 +86,34 @@ class WappiPoller:
                         self._last_poll[messenger] = now
                         logger.info("Poller %s: no previous data, starting from now", messenger)
 
+    async def _persist_cursor(self, messenger: str, last_poll: int) -> bool:
+        """Persist cursor to DB. Returns True on success, False on failure."""
+        try:
+            async with self.session_factory() as session:
+                async with session.begin():
+                    stmt = (
+                        insert(ImMessengerCursor)
+                        .values(
+                            messenger=messenger,
+                            last_poll=last_poll,
+                        )
+                        .on_conflict_do_update(
+                            index_elements=[ImMessengerCursor.messenger],
+                            set_={
+                                "last_poll": last_poll,
+                                "updated_at": func.now(),
+                            },
+                        )
+                    )
+                    await session.execute(stmt)
+            return True
+        except Exception as exc:
+            logger.error(
+                "poll_messenger: cursor persist failed messenger=%s error=%s",
+                messenger, exc,
+            )
+            return False
+
     async def poll_messenger(self, messenger: str) -> tuple[int, bool]:
         client = self._wappi if messenger == "whatsapp" else self._max
         cycle_started_at = int(time.time())
@@ -152,17 +181,10 @@ class WappiPoller:
                             include_system=settings.wappi_include_system,
                             upsert_message_fn=repository.upsert_message,
                             emit_message_collected_fn=(
-                                lambda n: _track_outbox_event(
+                                lambda n, outbox=outbox: _track_outbox_event(
                                     messenger, outbox, n,
                                 )
                             ),
-                        )
-                        total += count
-                        _poller_messages_processed.labels(messenger=messenger).inc(count)
-                        _poller_chat_runs.labels(messenger=messenger, status="success").inc()
-                        logger.info(
-                            "poll_messenger: chat=%s transaction committed messages=%d",
-                            chat.chat_id, count,
                         )
                     except Exception as exc:
                         logger.error(
@@ -172,16 +194,40 @@ class WappiPoller:
                         chat_failed = True
                         _poller_failures.labels(messenger=messenger, stage="process").inc()
                         # Transaction will roll back on __aexit__
+                        continue  # skip this chat, move to next
+
+                    if count:
+                        logger.info(
+                            "poll_messenger: chat=%s transaction committed messages=%d",
+                            chat.chat_id, count,
+                        )
+                        _poller_messages_processed.labels(messenger=messenger).inc(count)
+                        _poller_chat_runs.labels(messenger=messenger, status="success").inc()
+                    total += count
 
         logger.info(
             "poll_messenger: cycle summary messenger=%s success=%s processed=%d",
             messenger, not chat_failed, total,
         )
         if not chat_failed and chat_count > 0:
-            self._last_poll[messenger] = cycle_started_at
-            logger.info("poll_messenger: cursor advanced messenger=%s to=%d", messenger, cycle_started_at)
+            persisted = await self._persist_cursor(messenger, cycle_started_at)
+            if persisted:
+                self._last_poll[messenger] = cycle_started_at
+                logger.info(
+                    "poll_messenger: cursor advanced messenger=%s to=%d",
+                    messenger, cycle_started_at,
+                )
+            else:
+                chat_failed = True
+                logger.warning(
+                    "poll_messenger: cursor persist FAILED messenger=%s — NOT advanced",
+                    messenger,
+                )
         elif chat_failed:
-            logger.warning("poll_messenger: cursor NOT advanced messenger=%s due to chat failures", messenger)
+            logger.warning(
+                "poll_messenger: cursor NOT advanced messenger=%s due to chat failures",
+                messenger,
+            )
 
         return total, not chat_failed
 

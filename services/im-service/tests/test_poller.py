@@ -113,13 +113,16 @@ async def test_poll_messenger_processes_chats(mock_session_factory, mock_repo, m
 
     with patch("app.modules.poller.service.IngestionRepository", return_value=mock_repo):
         with patch("app.modules.poller.service.process_chat_messages", new_callable=AsyncMock) as mock_process:
-            mock_process.side_effect = [1, 0]
-            poller = WappiPoller(
-                session_factory=mock_session_factory,
-                wappi_client=mock_wappi,
-                max_client=mock_max,
-            )
-            result, ok = await poller.poll_messenger("whatsapp")
+            with patch.object(
+                WappiPoller, "_persist_cursor", new_callable=AsyncMock, return_value=True,
+            ):
+                mock_process.side_effect = [1, 0]
+                poller = WappiPoller(
+                    session_factory=mock_session_factory,
+                    wappi_client=mock_wappi,
+                    max_client=mock_max,
+                )
+                result, ok = await poller.poll_messenger("whatsapp")
 
     assert result == 1
     assert ok is True
@@ -282,12 +285,15 @@ async def test_poll_messenger_one_session_per_chat(mock_session_factory, mock_re
     mock_wappi.list_messages.return_value = []
 
     with patch("app.modules.poller.service.IngestionRepository", return_value=mock_repo):
-        poller = WappiPoller(
-            session_factory=mock_session_factory,
-            wappi_client=mock_wappi,
-            max_client=MagicMock(),
-        )
-        await poller.poll_messenger("whatsapp")
+        with patch.object(
+            WappiPoller, "_persist_cursor", new_callable=AsyncMock, return_value=True,
+        ):
+            poller = WappiPoller(
+                session_factory=mock_session_factory,
+                wappi_client=mock_wappi,
+                max_client=MagicMock(),
+            )
+            await poller.poll_messenger("whatsapp")
 
     assert mock_session_factory.call_count == len(sample_chats)
 
@@ -457,3 +463,74 @@ async def test_poll_messenger_empty_optional_fields_handled(mock_session_factory
         "metadata": {"id": "m1"},
     }
     assert "Emitting im.message_collected v2 for whatsapp:111:m1" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_poll_messenger_persists_cursor_on_success(mock_session_factory, mock_repo, mock_wappi):
+    from app.modules.poller.service import WappiPoller
+
+    mock_wappi.list_chats.return_value = [WappiChat({"id": "111", "name": "Chat A"})]
+    mock_wappi.list_messages.return_value = []
+
+    with patch("app.modules.poller.service.IngestionRepository", return_value=mock_repo):
+        with patch.object(
+            WappiPoller, "_persist_cursor", new_callable=AsyncMock, return_value=True,
+        ) as mock_persist:
+            poller = WappiPoller(
+                session_factory=mock_session_factory,
+                wappi_client=mock_wappi,
+                max_client=MagicMock(),
+            )
+            result, ok = await poller.poll_messenger("whatsapp")
+
+    assert ok is True
+    mock_persist.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_poll_messenger_does_not_persist_cursor_on_failure(mock_session_factory, mock_repo, mock_wappi):
+    from app.modules.poller.service import WappiPoller
+
+    mock_wappi.list_chats.return_value = [WappiChat({"id": "111", "name": "Chat A"})]
+    mock_wappi.list_messages.return_value = [{"id": "m1"}]
+
+    with patch("app.modules.poller.service.IngestionRepository", return_value=mock_repo):
+        with patch(
+            "app.modules.poller.service.process_chat_messages",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("Processing failed"),
+        ):
+            with patch.object(
+                WappiPoller, "_persist_cursor", new_callable=AsyncMock, return_value=True,
+            ) as mock_persist:
+                poller = WappiPoller(
+                    session_factory=mock_session_factory,
+                    wappi_client=mock_wappi,
+                    max_client=MagicMock(),
+                )
+                result, ok = await poller.poll_messenger("whatsapp")
+
+    assert ok is False
+    mock_persist.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_poll_messenger_cursor_persist_failure_returns_false(mock_session_factory, mock_repo, mock_wappi):
+    from app.modules.poller.service import WappiPoller
+
+    mock_wappi.list_chats.return_value = [WappiChat({"id": "111", "name": "Chat A"})]
+    mock_wappi.list_messages.return_value = []
+
+    with patch("app.modules.poller.service.IngestionRepository", return_value=mock_repo):
+        with patch.object(
+            WappiPoller, "_persist_cursor", new_callable=AsyncMock, return_value=False,
+        ) as mock_persist:
+            poller = WappiPoller(
+                session_factory=mock_session_factory,
+                wappi_client=mock_wappi,
+                max_client=MagicMock(),
+            )
+            result, ok = await poller.poll_messenger("whatsapp")
+
+    assert ok is False
+    mock_persist.assert_awaited_once()
