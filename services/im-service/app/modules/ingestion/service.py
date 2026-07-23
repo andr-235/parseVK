@@ -66,7 +66,7 @@ class IngestionService:
                     processed = await process_chat_messages(
                         messenger, chat_id, raw_messages,
                         include_system=settings.wappi_include_system,
-                        upsert_message_fn=lambda md: self.repository.upsert_message(messenger, md),
+                        upsert_message_fn=self.repository.upsert_message,
                         emit_message_collected_fn=(
                             lambda n: outbox.emit_message_collected(
                                 messenger=n.messenger, message_id=n.external_id,
@@ -79,6 +79,7 @@ class IngestionService:
                                 content_type=n.content_type,
                                 created_at=n.created_at,
                                 raw=n.raw,
+                                event_version=2,
                             )
                         ) if outbox else None,
                     )

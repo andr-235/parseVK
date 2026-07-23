@@ -69,12 +69,9 @@ async def lifespan(app: FastAPI):
 
     async def run_poller():
         from app.db.session import SessionLocal
-        from app.modules.ingestion.repository import IngestionRepository
         from app.modules.poller.service import run_poller_forever
 
-        async with SessionLocal() as session:
-            repository = IngestionRepository(session)
-            await run_poller_forever(repository, poll_interval=settings.wappi_poll_interval)
+        await run_poller_forever(SessionLocal, poll_interval=settings.wappi_poll_interval)
 
     if settings.kafka_consumer_enabled:
         consumer_task = asyncio.create_task(

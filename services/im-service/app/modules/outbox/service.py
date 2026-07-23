@@ -20,14 +20,16 @@ class OutboxService:
         raw: dict | None = None,
         correlation_id: str | None = None,
         replay: bool = False,
+        event_version: int = 1,
     ) -> None:
         if replay:
             dedupe_key = f"replay-v2:im.message_collected:{messenger}:{chat_id}:{message_id}"
             logger.debug("Replay emit: messenger=%s message_id=%s dedupe_key=%s", messenger, message_id, dedupe_key)
         else:
             dedupe_key = f"im.message_collected:{messenger}:{chat_id}:{message_id}"
-        has_extra = any(v is not None for v in (chat_name, author_id, author_name, text, content_url, content_type, created_at))
-        if has_extra:
+
+        if event_version == 2:
+            # Explicit v2: skip heuristic, always build full payload
             payload = {
                 "messenger": messenger,
                 "messageId": message_id,
@@ -42,35 +44,51 @@ class OutboxService:
                 "metadata": raw,
             }
             payload = {k: v for k, v in payload.items() if v is not None}
-            logger.info("Emitting im.message_collected v2 for %s:%s:%s", messenger, chat_id, message_id)
             logger.debug(
-                "Emitting im.message_collected v2: messenger=%s message_id=%s has_text=%s",
-                messenger, message_id, text is not None,
-            )
-            await self.repository.add_event(
-                event_type="im.message_collected",
-                aggregate_type="im_message",
-                aggregate_id=f"{messenger}:{chat_id}:{message_id}",
-                correlation_id=correlation_id,
-                dedupe_key=dedupe_key,
-                event_version=2,
-                payload=payload,
+                "Emitting im.message_collected v2 (explicit): messenger=%s message_id=%s event_version=%d",
+                messenger, message_id, event_version,
             )
         else:
-            # v1 compatible: minimal payload with 3 fields
-            logger.debug(
-                "Emitting im.message_collected v1: messenger=%s message_id=%s",
-                messenger, message_id,
-            )
-            await self.repository.add_event(
-                event_type="im.message_collected",
-                aggregate_type="im_message",
-                aggregate_id=f"{messenger}:{chat_id}:{message_id}",
-                correlation_id=correlation_id,
-                dedupe_key=dedupe_key,
-                event_version=1,
-                payload={"messenger": messenger, "messageId": message_id, "chatId": chat_id},
-            )
+            # v1: heuristic — v2 only if extras exist, otherwise v1 minimal
+            has_extra = any(v is not None for v in (chat_name, author_id, author_name, text, content_url, content_type, created_at))
+            if has_extra:
+                payload = {
+                    "messenger": messenger,
+                    "messageId": message_id,
+                    "chatId": chat_id,
+                    "chatName": chat_name,
+                    "authorId": author_id,
+                    "authorName": author_name,
+                    "text": text,
+                    "contentUrl": content_url,
+                    "contentType": content_type,
+                    "createdAt": created_at.isoformat() if created_at else None,
+                    "metadata": raw,
+                }
+                payload = {k: v for k, v in payload.items() if v is not None}
+                event_version = 2  # upgrade to v2
+                logger.debug(
+                    "Emitting im.message_collected v2 (heuristic): messenger=%s message_id=%s",
+                    messenger, message_id,
+                )
+            else:
+                # v1 compatible: minimal payload with 3 fields
+                payload = {"messenger": messenger, "messageId": message_id, "chatId": chat_id}
+                logger.debug(
+                    "Emitting im.message_collected v1: messenger=%s message_id=%s",
+                    messenger, message_id,
+                )
+
+        logger.info("Emitting im.message_collected v%d for %s:%s:%s", event_version, messenger, chat_id, message_id)
+        await self.repository.add_event(
+            event_type="im.message_collected",
+            aggregate_type="im_message",
+            aggregate_id=f"{messenger}:{chat_id}:{message_id}",
+            correlation_id=correlation_id,
+            dedupe_key=dedupe_key,
+            event_version=event_version,
+            payload=payload,
+        )
 
     async def emit_group_collected(
         self, *, messenger: str, chat_id: str,
