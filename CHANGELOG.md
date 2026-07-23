@@ -1,3 +1,11 @@
+# [0.66.0](https://github.com/andr-235/parseVK/compare/v0.65.0...v0.66.0) (2026-07-23)
+
+
+### Features
+
+* add search metrics infrastructure and configurable backend rollback ([d7c947b](https://github.com/andr-235/parseVK/commit/d7c947bc9ad51a77ab55711b3360baa3c112aef6))
+* merge C4.1 stabilization (docs sync, search metrics, rollback switch) ([ea753fb](https://github.com/andr-235/parseVK/commit/ea753fb744161c6f40331cfc8c8a52ea97d202bd))
+
 # [0.66.0](https://github.com/andr-235/parseVK/compare/v0.65.0...v0.66.0) (Unreleased)
 
 ### Features
