@@ -1,3 +1,10 @@
+## [0.68.1](https://github.com/andr-235/parseVK/compare/v0.68.0...v0.68.1) (2026-07-24)
+
+
+### Bug Fixes
+
+* **content:** add schema+table check to index helpers, add online tests ([c172e45](https://github.com/andr-235/parseVK/commit/c172e45947c327d6cdc2bf64aaf4db9db72787a3))
+
 # [0.68.0](https://github.com/andr-235/parseVK/compare/v0.67.6...v0.68.0) (2026-07-24)
 
 
