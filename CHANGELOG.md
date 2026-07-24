@@ -1,3 +1,16 @@
+# [0.68.0](https://github.com/andr-235/parseVK/compare/v0.67.6...v0.68.0) (2026-07-24)
+
+
+### Bug Fixes
+
+* **content:** handle invalid concurrent index in pg_trgm migration ([2beeb04](https://github.com/andr-235/parseVK/commit/2beeb04e70a566bcfa76986c100ddadeead299da))
+
+
+### Features
+
+* **content:** add pg_trgm GIN index on im_messages.text ([42b47c5](https://github.com/andr-235/parseVK/commit/42b47c542e2443c65852f589db3c1964a37faaad))
+* **content:** add pg_trgm GIN index on im_messages.text ([c614ec4](https://github.com/andr-235/parseVK/commit/c614ec43cb1d34a581897cf77b608bf4ee7c115a))
+
 ## [0.67.6](https://github.com/andr-235/parseVK/compare/v0.67.5...v0.67.6) (2026-07-23)
 
 
