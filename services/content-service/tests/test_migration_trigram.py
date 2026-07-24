@@ -62,3 +62,12 @@ def test_trigram_migration_is_head(script: ScriptDirectory) -> None:
     assert heads[0] == "20260724_add_pg_trgm_index", (
         f"Expected head '20260724_add_pg_trgm_index', got {heads[0]!r}"
     )
+
+
+def test_trigram_migration_has_index_name_constant(script: ScriptDirectory) -> None:
+    """Verify the migration defines INDEX_NAME constant."""
+    rev = script.get_revision("20260724_add_pg_trgm_index")
+    assert rev is not None
+    module = rev.module
+    assert hasattr(module, "INDEX_NAME"), "Migration must define INDEX_NAME constant"
+    assert module.INDEX_NAME == "ix_im_messages_text_trgm"

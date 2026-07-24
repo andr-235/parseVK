@@ -17,18 +17,56 @@ down_revision: str | Sequence[str] | None = "20260720_im_messages_projection"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+INDEX_NAME = "ix_im_messages_text_trgm"
+
+
+def _index_exists() -> bool:
+    """Check if the index exists in pg_class."""
+    conn = op.get_bind()
+    result = conn.execute(
+        sa.text(
+            "SELECT 1 FROM pg_class WHERE relname = :name AND relkind = 'i'"
+        ),
+        {"name": INDEX_NAME},
+    )
+    return result.scalar() is not None
+
+
+def _index_is_valid() -> bool:
+    """Check if the index is valid (indisvalid = true)."""
+    conn = op.get_bind()
+    result = conn.execute(
+        sa.text(
+            "SELECT i.indisvalid "
+            "FROM pg_index i "
+            "JOIN pg_class c ON c.oid = i.indexrelid "
+            "WHERE c.relname = :name"
+        ),
+        {"name": INDEX_NAME},
+    )
+    row = result.fetchone()
+    return row is not None and row[0]
+
 
 def upgrade() -> None:
-    # CREATE EXTENSION and CREATE INDEX CONCURRENTLY cannot run inside a
-    # transaction. Use autocommit_block to commit any active transaction first,
-    # execute the DDL in autocommit mode, and then resume normal transactional
-    # behavior for the remainder of the migration script.
     with op.get_context().autocommit_block():
         op.execute(sa.text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
+
+        if _index_exists():
+            if _index_is_valid():
+                # Index already exists and is valid — nothing to do
+                return
+            # Index exists but is invalid (e.g. after a failed CONCURRENTLY)
+            op.execute(
+                sa.text(
+                    f"DROP INDEX CONCURRENTLY IF EXISTS {INDEX_NAME}"
+                )
+            )
+
         op.execute(
             sa.text(
-                "CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_im_messages_text_trgm "
-                "ON im_messages USING gin (text gin_trgm_ops)"
+                f"CREATE INDEX CONCURRENTLY {INDEX_NAME} "
+                f"ON im_messages USING gin (text gin_trgm_ops)"
             )
         )
 
@@ -36,5 +74,5 @@ def upgrade() -> None:
 def downgrade() -> None:
     with op.get_context().autocommit_block():
         op.execute(
-            sa.text("DROP INDEX CONCURRENTLY IF EXISTS ix_im_messages_text_trgm")
+            sa.text(f"DROP INDEX CONCURRENTLY IF EXISTS {INDEX_NAME}")
         )
