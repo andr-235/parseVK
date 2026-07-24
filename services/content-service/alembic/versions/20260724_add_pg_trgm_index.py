@@ -21,11 +21,18 @@ INDEX_NAME = "ix_im_messages_text_trgm"
 
 
 def _index_exists() -> bool:
-    """Check if the index exists in pg_class."""
+    """Check if the index exists on im_messages in the public schema."""
     conn = op.get_bind()
     result = conn.execute(
         sa.text(
-            "SELECT 1 FROM pg_class WHERE relname = :name AND relkind = 'i'"
+            "SELECT 1 "
+            "FROM pg_index i "
+            "JOIN pg_class idx ON idx.oid = i.indexrelid "
+            "JOIN pg_class tbl ON tbl.oid = i.indrelid "
+            "JOIN pg_namespace nsp ON nsp.oid = idx.relnamespace "
+            "WHERE idx.relname = :name "
+            "  AND tbl.relname = 'im_messages' "
+            "  AND nsp.nspname = 'public'"
         ),
         {"name": INDEX_NAME},
     )
@@ -39,8 +46,12 @@ def _index_is_valid() -> bool:
         sa.text(
             "SELECT i.indisvalid "
             "FROM pg_index i "
-            "JOIN pg_class c ON c.oid = i.indexrelid "
-            "WHERE c.relname = :name"
+            "JOIN pg_class idx ON idx.oid = i.indexrelid "
+            "JOIN pg_class tbl ON tbl.oid = i.indrelid "
+            "JOIN pg_namespace nsp ON nsp.oid = idx.relnamespace "
+            "WHERE idx.relname = :name "
+            "  AND tbl.relname = 'im_messages' "
+            "  AND nsp.nspname = 'public'"
         ),
         {"name": INDEX_NAME},
     )
