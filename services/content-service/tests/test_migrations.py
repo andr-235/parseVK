@@ -71,3 +71,16 @@ def test_single_head(script: ScriptDirectory) -> None:
     assert len(heads) == 1, (
         f"Expected exactly one head, got {len(heads)}: {heads}"
     )
+
+
+def test_trigram_migration_revision_id(script: ScriptDirectory) -> None:
+    """Verify the pg_trgm migration exists with a 32-char-compatible revision ID."""
+    rev = script.get_revision("20260724_add_pg_trgm_index")
+    assert rev is not None, (
+        "Revision '20260724_add_pg_trgm_index' not found in the migration chain"
+    )
+    assert len(rev.revision) <= 32, (
+        f"Revision {rev.revision!r} has {len(rev.revision)} characters, "
+        f"expected <= 32"
+    )
+    assert rev.doc == "add pg_trgm extension and gin index on im_messages.text"
