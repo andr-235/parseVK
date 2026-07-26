@@ -11,8 +11,11 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.services.task_events_service import TaskEventsService
+from datetime import UTC
+
 from common.events import TaskEvent, get_task_id
+
+from app.services.task_events_service import TaskEventsService
 
 
 @pytest.fixture
@@ -121,7 +124,7 @@ async def test_created_event_calls_start_execution():
 
     result = await handler.handle(task_event)
 
-    assert result.status == "running"
+    assert result.status == "pending"
     assert tasks_client.calls == [
         ("start", 1, str(task_event.event_id), {"request_id": str(task_event.event_id), "correlation_id": "corr-1"})
     ]
@@ -238,7 +241,7 @@ async def test_resumed_event_requeues_failed_run_with_new_run_id():
     result = await handler.handle(task_event)
 
     assert result is not None
-    assert result.status == "running"
+    assert result.status == "pending"
     assert result.run_id == str(task_event.event_id)
 
 
@@ -402,5 +405,117 @@ async def test_event_is_marked_processed_after_phase_a():
     task_event = event(task_id=1)
     result = await handler.handle(task_event)
 
-    assert result.status == "running"
+    assert result.status == "pending"
     assert (handler.consumer_name, task_event.event_id) in repository.processed
+
+
+@pytest.mark.anyio
+async def test_consumer_leaves_run_in_pending_after_phase_b():
+    repository = FakeRepository()
+    tasks_client = FakeTasksClient()
+    handler = TaskEventsService(repository, tasks_client)
+    task_event = event()
+
+    result = await handler.handle(task_event)
+
+    assert result is not None
+    assert result.status == "pending"
+    assert repository.runs[1].status == "pending"
+    assert (handler.consumer_name, task_event.event_id) in repository.processed
+
+
+@pytest.mark.anyio
+async def test_worker_claims_null_lease_running_task(db_session):
+    from datetime import datetime, timedelta
+
+    from app.infrastructure.db.models.tasks import VkTaskRun
+    from app.infrastructure.db.repositories.task_queue import SqlAlchemyTaskQueueRepository
+
+    run = VkTaskRun(
+        task_id=1,
+        owner_user_id="user-1",
+        run_id="run-1",
+        status="running",
+        scope="selected",
+        mode="recent_posts",
+        group_ids=[1],
+        post_limit=10,
+        lease_expires_at=None,
+    )
+    db_session.add(run)
+    await db_session.flush()
+
+    repo = SqlAlchemyTaskQueueRepository(db_session)
+    result = await repo.claim_next(
+        worker_id="worker-1",
+        lease_expires_at=datetime.now(UTC) + timedelta(minutes=5),
+    )
+
+    assert result is not None
+    assert result.task_id == 1
+    assert result.lease_owner == "worker-1"
+    assert result.status == "running"
+
+
+@pytest.mark.anyio
+async def test_worker_does_not_claim_valid_active_lease(db_session):
+    from datetime import datetime, timedelta
+
+    from app.infrastructure.db.models.tasks import VkTaskRun
+    from app.infrastructure.db.repositories.task_queue import SqlAlchemyTaskQueueRepository
+
+    future = datetime.now(UTC) + timedelta(minutes=5)
+    run = VkTaskRun(
+        task_id=1,
+        owner_user_id="user-1",
+        run_id="run-1",
+        status="running",
+        scope="selected",
+        mode="recent_posts",
+        group_ids=[1],
+        post_limit=10,
+        lease_owner="worker-1",
+        lease_expires_at=future,
+    )
+    db_session.add(run)
+    await db_session.flush()
+
+    repo = SqlAlchemyTaskQueueRepository(db_session)
+    result = await repo.claim_next(
+        worker_id="worker-2",
+        lease_expires_at=future + timedelta(minutes=5),
+    )
+
+    assert result is None
+
+
+@pytest.mark.anyio
+async def test_regression_lost_task_fixed(db_session):
+    from datetime import datetime, timedelta
+
+    from app.infrastructure.db.models.tasks import VkTaskRun
+    from app.infrastructure.db.repositories.task_queue import SqlAlchemyTaskQueueRepository
+
+    run = VkTaskRun(
+        task_id=1,
+        owner_user_id="user-1",
+        run_id="run-1",
+        status="pending",
+        scope="selected",
+        mode="recent_posts",
+        group_ids=[1],
+        post_limit=10,
+    )
+    db_session.add(run)
+    await db_session.flush()
+
+    repo = SqlAlchemyTaskQueueRepository(db_session)
+    result = await repo.claim_next(
+        worker_id="worker-1",
+        lease_expires_at=datetime.now(UTC) + timedelta(minutes=5),
+    )
+
+    assert result is not None
+    assert result.task_id == 1
+    assert result.status == "running"
+    assert result.lease_owner == "worker-1"
