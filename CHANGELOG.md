@@ -1,3 +1,11 @@
+## [0.68.2](https://github.com/andr-235/parseVK/compare/v0.68.1...v0.68.2) (2026-07-26)
+
+
+### Bug Fixes
+
+* **tasks-service:** repair automation task contract with execution_run_id and full payload ([a93d09c](https://github.com/andr-235/parseVK/commit/a93d09c81257852cfd0bb9ee62867f21f209e4e4)), closes [#PR-P1-phase2](https://github.com/andr-235/parseVK/issues/PR-P1-phase2)
+* **vk-service:** remove Phase C race condition and add NULL lease recovery ([d9fb9c5](https://github.com/andr-235/parseVK/commit/d9fb9c580225d35c6b531e96a442f9d165b30d80)), closes [#PR-P1-phase1](https://github.com/andr-235/parseVK/issues/PR-P1-phase1)
+
 ## [0.68.1](https://github.com/andr-235/parseVK/compare/v0.68.0...v0.68.1) (2026-07-24)
 
 
