@@ -172,6 +172,20 @@ class TaskEventsService:
         return task_run
 
     async def _handle_created_or_resumed(self, event: TaskEvent) -> VkTaskRun | None:
+        # Detect legacy automation events with partial payload
+        payload = event.payload
+        _event_type = event.event_type
+        if _event_type == "task.automation_run_requested":
+            missing = [k for k in ("runId", "scope", "mode", "groupIds", "postLimit") if k not in payload]
+            if missing:
+                logger.warning(
+                    "[TaskEventsService] Legacy automation event detected for task_id=%s, missing fields: %s. "
+                    "Defaults may produce incorrect behavior (e.g., scope='all' instead of selected groups). "
+                    "Consider removing old automation events from outbox/Kafka before next deployment.",
+                    get_task_id(event),
+                    missing,
+                )
+
         task_id = get_task_id(event)
         run_id = str(event.payload.get("runId") or event.event_id)
         task_run = await self.repository.get_task_run(task_id)
@@ -182,7 +196,7 @@ class TaskEventsService:
             if task_run.run_id == run_id and task_run.status in {"pending", "running"}:
                 return None
             values: dict = {"run_id": run_id, "updated_at": utcnow()}
-            if task_run.status == "failed":
+            if event.event_type == "task.resumed" and task_run.status == "failed":
                 values.update(
                     status="pending",
                     finished_at=None,
