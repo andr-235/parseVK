@@ -1,8 +1,10 @@
 import logging
 from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 from app.db.models import Task, TaskAuditLog, TaskAutomationSettings
 from app.modules.automation.schemas import AutomationSettingsUpdate
+from app.modules.tasks.event_payloads import task_request_payload
 from app.modules.tasks.mapper import task_to_response
 
 logger = logging.getLogger(__name__)
@@ -86,6 +88,13 @@ class AutomationService:
                 "reason": "Нет завершённых задач для повторного запуска",
                 "settings": await self._settings_response(owner_user_id, settings),
             }
+        execution_run_id = str(uuid4())
+        logger.debug(
+            "[AutomationService.run] Creating task owner_user_id=%s base_task_id=%s execution_run_id=%s",
+            owner_user_id,
+            base_task.id,
+            execution_run_id,
+        )
         task = await self.tasks.create_task(
             Task(
                 owner_user_id=owner_user_id,
@@ -102,7 +111,13 @@ class AutomationService:
                 group_ids=base_task.group_ids,
                 post_limit=settings.post_limit,
                 source="automation",
+                execution_run_id=execution_run_id,
             )
+        )
+        logger.info(
+            "[AutomationService.run] Created automation task id=%s with execution_run_id=%s",
+            task.id,
+            task.execution_run_id,
         )
         await self.tasks.add_audit(
             TaskAuditLog(
@@ -124,13 +139,22 @@ class AutomationService:
                 event_data={"started": True, "taskId": str(task.id)},
             )
         )
+        payload = task_request_payload(task, owner_user_id)
+        logger.debug(
+            "[AutomationService.run] Publishing automation run requested payload=%s",
+            payload,
+        )
         await self.outbox.add_event(
             event_type="task.automation_run_requested",
             aggregate_type="task",
             aggregate_id=str(task.id),
             correlation_id=correlation_id,
             dedupe_key=f"task.automation_run_requested:{task.id}",
-            payload={"taskId": str(task.id), "ownerUserId": owner_user_id, "source": "automation"},
+            payload=payload,
+        )
+        logger.info(
+            "[AutomationService.run] Published automation run requested for task_id=%s with full contract",
+            task.id,
         )
         await self.repository.update_last_run_at(settings)
         return {
