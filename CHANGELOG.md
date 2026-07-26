@@ -1,3 +1,11 @@
+## [0.68.3](https://github.com/andr-235/parseVK/compare/v0.68.2...v0.68.3) (2026-07-26)
+
+
+### Bug Fixes
+
+* **vk-service:** scope failed→pending to task.resumed only, add legacy payload warn ([7947713](https://github.com/andr-235/parseVK/commit/7947713d26bc842ce98049f6164242630f4053f9))
+* **vk-service:** scope failed→pending to task.resumed only, add legacy payload warn ([983ae68](https://github.com/andr-235/parseVK/commit/983ae680539b4afe109a2cf8d1826d6c808d33fa))
+
 ## [0.68.2](https://github.com/andr-235/parseVK/compare/v0.68.1...v0.68.2) (2026-07-26)
 
 
