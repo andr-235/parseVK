@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime
 
 from sqlalchemy import and_, or_, select, update
@@ -7,6 +8,8 @@ from app.domain.entities.tasks import VkTaskRun as VkTaskRunEntity
 from app.domain.repositories.task_queue import TaskQueueRepository
 from app.infrastructure.db.models.tasks import VkTaskRun
 from app.infrastructure.db.repositories.tasks import _to_task_run_entity
+
+logger = logging.getLogger("vk-service")
 
 
 def utcnow() -> datetime:
@@ -26,7 +29,13 @@ class SqlAlchemyTaskQueueRepository(TaskQueueRepository):
             .where(
                 or_(
                     and_(VkTaskRun.status == "pending", VkTaskRun.available_at <= now),
-                    and_(VkTaskRun.status == "running", VkTaskRun.lease_expires_at <= now),
+                    and_(
+                        VkTaskRun.status == "running",
+                        or_(
+                            VkTaskRun.lease_expires_at.is_(None),
+                            VkTaskRun.lease_expires_at <= now,
+                        ),
+                    ),
                 )
             )
             .order_by(VkTaskRun.available_at, VkTaskRun.created_at)
@@ -35,6 +44,17 @@ class SqlAlchemyTaskQueueRepository(TaskQueueRepository):
         )
         if model is None:
             return None
+        if model.lease_expires_at is None:
+            logger.info(
+                "[TaskQueueRepository.claim_next] Claimed task_id=%s with NULL lease (recovery)",
+                model.task_id,
+            )
+        else:
+            logger.debug(
+                "[TaskQueueRepository.claim_next] Claimed task_id=%s with lease expires at %s",
+                model.task_id,
+                model.lease_expires_at,
+            )
         model.status = "running"
         model.attempts += 1
         model.lease_owner = worker_id

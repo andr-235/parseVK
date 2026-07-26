@@ -41,24 +41,23 @@ class TaskEventsService:
 
     Phase B (HTTP call, no open transaction):
         - Call tasks_service.start_execution()
-        - On 200: continue to Phase C
+        - On 200: leave run in "pending" for the worker to claim
         - On 409: mark local run as failed (conflict — another worker won)
         - On 404: mark local run as failed (task was deleted)
         - On other errors: leave run in "pending" for lease worker recovery
 
-    Phase C (short DB transaction):
-        - Update VkTaskRun status to "running"
-        - Commit
+    The consumer intentionally does NOT set status="running". The worker is
+    responsible for claiming the run via claim_next() and setting its own
+    lease_owner/lease_expires_at. This avoids the race condition where a
+    NULL lease makes the row unclaimable (SQL NULL <= now is UNKNOWN).
 
-    Why mark_processed is in Phase A, not Phase C:
-        If mark_processed were in Phase C and the process crashed after
-        Phase B success but before Phase C commit, the event would be
-        redelivered — is_processed would return False, causing duplicate
-        handling. With mark_processed in Phase A, even if Phase C never
-        commits, the event is idempotent. The run stays in "pending" and
-        the lease worker (TaskExecutor) picks it up via claim_next(),
-        calls start_execution with the same run_id, gets 200 (idempotent),
-        and updates the local run.
+    Why mark_processed is in Phase A, not Phase B:
+        If mark_processed were delayed and the process crashed after
+        Phase B success, the event would be redelivered — is_processed would
+        return False, causing duplicate handling. With mark_processed in Phase A,
+        the event is idempotent. The run stays in "pending" and the lease worker
+        (TaskExecutor) picks it up via claim_next(), calls start_execution with the
+        same run_id, gets 200 (idempotent), and updates the local run.
     """
 
     def __init__(
@@ -110,6 +109,11 @@ class TaskEventsService:
                 self.consumer_name, event.event_id, event.event_type
             )
 
+        logger.debug(
+            "[TaskEventsService.phase_b] Phase B entry for task_id=%s run_id=%s",
+            task_id,
+            run_id,
+        )
         logger.info(
             "Phase B: calling tasks-service start_execution for task_id=%s run_id=%s",
             task_id,
@@ -146,21 +150,25 @@ class TaskEventsService:
                         updated_at=utcnow(),
                     )
                 return None
+            logger.warning(
+                "[TaskEventsService.phase_b] Phase B unexpected status %s for task_id=%s run_id=%s, leaving run pending for retry",
+                exc.response.status_code,
+                task_id,
+                run_id,
+            )
             raise
 
         logger.info(
-            "Phase C: marking task run as running for task_id=%s run_id=%s",
+            "[TaskEventsService.phase_b] Phase B complete for task_id=%s run_id=%s, leaving run in pending for worker",
             task_id,
             run_id,
         )
-        async with self.repository.session.begin():
-            await self.repository.update_task_run(
-                task_id,
-                status="running",
-                started_at=task_run.started_at or utcnow(),
-                updated_at=utcnow(),
-            )
-            task_run = await self.repository.get_task_run(task_id)
+        logger.debug(
+            "[TaskEventsService.phase_b] Phase B exit for task_id=%s run_id=%s",
+            task_id,
+            run_id,
+        )
+        task_run = await self.repository.get_task_run(task_id)
         return task_run
 
     async def _handle_created_or_resumed(self, event: TaskEvent) -> VkTaskRun | None:
@@ -173,9 +181,14 @@ class TaskEventsService:
                 return None
             if task_run.run_id == run_id and task_run.status in {"pending", "running"}:
                 return None
-            task_run = await self.repository.update_task_run(
-                task_id, run_id=run_id, updated_at=utcnow()
-            )
+            values: dict = {"run_id": run_id, "updated_at": utcnow()}
+            if task_run.status == "failed":
+                values.update(
+                    status="pending",
+                    finished_at=None,
+                    last_error=None,
+                )
+            task_run = await self.repository.update_task_run(task_id, **values)
         else:
             task_run = await self.repository.create_task_run(
                 task_id=task_id,
