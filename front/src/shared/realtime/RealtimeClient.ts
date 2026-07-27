@@ -26,11 +26,11 @@ export class RealtimeClient {
   private seenEventIds: Set<string> = new Set()
   private isConnected = false
   private maxRetries: number
-  private dedupWindowMs: number
 
   constructor(options?: { maxRetries?: number; dedupWindowMs?: number }) {
     this.maxRetries = options?.maxRetries ?? DEFAULT_RECONNECT_CONFIG.maxRetries
-    this.dedupWindowMs = options?.dedupWindowMs ?? 60_000
+    // dedupWindowMs accepted but not yet wired; noop to suppress TS6133
+    void options?.dedupWindowMs
 
     // Restore cursor from sessionStorage
     const stored = sessionStorage.getItem(CURSOR_KEY)

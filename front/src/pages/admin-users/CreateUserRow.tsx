@@ -38,7 +38,7 @@ export function CreateUserRow({ expanded, onToggle, onCreated }: Props) {
       <div className="flex flex-wrap items-end gap-3">
         <Input aria-label="Логин" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="username" />
         <Input aria-label="Пароль" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Минимум 12 символов" />
-        <Select value={role} options={ROLE_OPTIONS} onChange={setRole} label="Роль" optionLabels={{ user: 'Пользователь', admin: 'Админ' }} />
+        <Select<UserRole> value={role} options={ROLE_OPTIONS} onChange={setRole} label="Роль" optionLabels={{ user: 'Пользователь', admin: 'Админ' }} />
         <Button type="submit" variant="primary" size="sm" disabled={invalid || mutation.isPending} icon={<Check size={14} />}>Создать</Button>
         <Button type="button" variant="secondary" size="sm" onClick={onToggle} disabled={mutation.isPending} icon={<X size={14} />}>Отмена</Button>
       </div>

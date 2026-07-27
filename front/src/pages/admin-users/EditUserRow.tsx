@@ -28,7 +28,7 @@ export function EditUserRow({ user, onSaved, onCancel }: Props) {
             <Checkbox checked={isActive} onChange={(event) => setIsActive(event.target.checked)} />
             {isActive ? 'Активен' : 'Неактивен'}
           </label>
-          <Select value={role} options={ROLE_OPTIONS} onChange={setRole} label="Роль" optionLabels={{ user: 'Пользователь', admin: 'Админ' }} />
+          <Select<UserRole> value={role} options={ROLE_OPTIONS} onChange={setRole} label="Роль" optionLabels={{ user: 'Пользователь', admin: 'Админ' }} />
           <Button type="submit" variant="primary" size="sm" disabled={mutation.isPending} icon={<Check size={14} />}>Сохранить</Button>
           <Button type="button" variant="secondary" size="sm" onClick={onCancel} disabled={mutation.isPending} icon={<X size={14} />}>Отмена</Button>
         </form>
