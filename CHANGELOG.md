@@ -1,3 +1,10 @@
+## [0.69.1](https://github.com/andr-235/parseVK/compare/v0.69.0...v0.69.1) (2026-07-27)
+
+
+### Bug Fixes
+
+* **vk:** account completed/failed post stats on restart, add real crash/resume e2e test ([7ae3ad0](https://github.com/andr-235/parseVK/commit/7ae3ad070a6dd13828b0aa0e5605e567edd83953))
+
 # [0.69.0](https://github.com/andr-235/parseVK/compare/v0.68.3...v0.69.0) (2026-07-27)
 
 
