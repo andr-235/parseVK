@@ -58,6 +58,21 @@ class FakeRepository:
     async def set_post_comments_count(self, post_external_key, count):
         self.comment_counts[post_external_key] = count
 
+    async def get_comment_ids_for_post(self, post_key):
+        owner_id, post_id = post_key.split(":")
+        return {
+            comment["id"]
+            for comment, _ in self.comments
+            if str(comment.get("owner_id", 0)) == owner_id
+            and str(comment.get("post_id", 0)) == post_id
+        }
+
+    async def get_comment_ids_by_external_keys(self, keys):
+        result = {}
+        for key in keys:
+            result[key] = await self.get_comment_ids_for_post(key)
+        return result
+
     async def save(self):
         self.saved += 1
 
@@ -141,6 +156,8 @@ async def test_projection_handles_batch_comments():
         "vk.comments_collected",
         {
             "taskId": 10,
+            "runId": "run-123",
+            "batchId": "batch-1",
             "comments": [
                 {"owner_id": -1, "post_id": 3, "id": 4},
                 {"owner_id": -1, "post_id": 3, "id": 5},
@@ -158,7 +175,16 @@ async def test_projection_handles_batch_comments():
     assert len(outbox.events) == 1
     assert outbox.events[0]["event_type"] == "content.comments_projected"
     assert outbox.events[0]["aggregate_id"] == "-1:3"
-    assert outbox.events[0]["payload"]["insertedCount"] == 2
+    payload = outbox.events[0]["payload"]
+    assert payload["insertedCount"] == 2
+    assert payload["updatedCount"] == 0
+    assert payload["totalCount"] == 2
+    assert payload["taskId"] == 10
+    assert payload["runId"] == "run-123"
+    assert payload["ownerId"] == -1
+    assert payload["postId"] == 3
+    assert payload["batchId"] == "batch-1"
+    assert payload["projectedAt"]
     assert repository.saved == 1
 
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-proposed
+accepted
 
 ## Date
 
@@ -323,6 +323,6 @@ The following feature flags control the behavior of the realtime event-driven co
 
 ## Links
 
-- Issue: https://github.com/andr-235/parseVK/issues/XXX
+- Issue: https://github.com/andr-235/parseVK/issues/4
 - Plan: `.ai-factory/plans/pr-p2b-realtime-contour.md`
 - Related ADR: `docs/adr/ADR-0007-source-integration-vs-canonical-content-ownership.md`

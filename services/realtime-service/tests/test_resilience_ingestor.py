@@ -78,17 +78,34 @@ async def test_safety_catchup_recovers_missed_events():
 
 
 # scenario: 8 - Lost NOTIFY
-@pytest.mark.skip(reason="requires running DB with LISTEN/NOTIFY")
 @pytest.mark.anyio
 async def test_lost_notify_recovered_by_periodic_query():
-    """
-    Procedure:
-    1. Start realtime-service consumer.
-    2. Publish a content.comments_projected event to Kafka.
-    3. Block or drop the PostgreSQL NOTIFY so the SSE poll worker misses it.
-    4. Wait for the safety catch-up interval (5s by default).
-    5. Assert the SSE poll worker re-queries realtime_events and delivers the event.
-    """
+    """Safety catch-up detects missed events and wakes listeners via pg_notify."""
+    from app.modules.retention import cleaner
+    cleaner._last_sequence_id = None
+
+    try:
+        session_factory = _fake_session_factory()
+        session = session_factory.return_value
+        session.scalar.return_value = 3
+
+        # First call initializes the cursor; no pg_notify yet.
+        count = await safety_catchup(session_factory)
+        assert count == 3
+        session.execute.assert_not_awaited()
+
+        # Simulate missed events: max sequence_id jumps ahead.
+        session.scalar.return_value = 5
+        session.execute.return_value = AsyncMock()
+
+        count = await safety_catchup(session_factory)
+        assert count == 5
+        session.execute.assert_awaited_once()
+        notify_stmt = session.execute.await_args[0][0]
+        assert "pg_notify" in str(notify_stmt)
+        assert session.execute.await_args[0][1] == {"seq": "5"}
+    finally:
+        cleaner._last_sequence_id = None
 
 
 # scenario: 15 (partial) - Task event out-of-order

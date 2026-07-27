@@ -53,16 +53,25 @@ class FakeRepository:
         self.incremented.append(post_external_key)
 
     async def count_comments_for_post_by_key(self, post_external_key):
-        owner_id, post_id = post_external_key.split(":")
-        return sum(
-            1
-            for comment, _ in self.comments
-            if str(comment.get("owner_id", 0)) == owner_id
-            and str(comment.get("post_id", 0)) == post_id
-        )
+        return len(await self.get_comment_ids_for_post(post_external_key))
 
     async def set_post_comments_count(self, post_external_key, count):
         self.comment_counts[post_external_key] = count
+
+    async def get_comment_ids_for_post(self, post_key):
+        owner_id, post_id = post_key.split(":")
+        return {
+            comment["id"]
+            for comment, _ in self.comments
+            if str(comment.get("owner_id", 0)) == owner_id
+            and str(comment.get("post_id", 0)) == post_id
+        }
+
+    async def get_comment_ids_by_external_keys(self, keys):
+        result = {}
+        for key in keys:
+            result[key] = await self.get_comment_ids_for_post(key)
+        return result
 
     async def save(self):
         if self.outbox:
@@ -107,6 +116,8 @@ async def test_overlapping_batches_exact_count():
         "vk.comments_collected",
         {
             "taskId": 10,
+            "runId": "run-1",
+            "batchId": "batch-1",
             "comments": [
                 {"owner_id": -1, "post_id": 3, "id": 4},
                 {"owner_id": -1, "post_id": 3, "id": 5},
@@ -118,7 +129,10 @@ async def test_overlapping_batches_exact_count():
         "vk.comments_collected",
         {
             "taskId": 10,
+            "runId": "run-1",
+            "batchId": "batch-2",
             "comments": [
+                {"owner_id": -1, "post_id": 3, "id": 5},
                 {"owner_id": -1, "post_id": 3, "id": 6},
                 {"owner_id": -1, "post_id": 3, "id": 7},
             ],
@@ -131,10 +145,16 @@ async def test_overlapping_batches_exact_count():
 
     comment_ids = {comment["id"] for comment, _ in repository.comments}
     assert comment_ids == {4, 5, 6, 7}
-    assert len(repository.comments) == 4
+    assert len(repository.comments) == 5
     assert repository.comment_counts == {"-1:3": 4}
     assert len(outbox.events) == 2
     assert all(event["event_type"] == "content.comments_projected" for event in outbox.events)
+    assert outbox.events[0]["payload"]["insertedCount"] == 2
+    assert outbox.events[0]["payload"]["updatedCount"] == 0
+    assert outbox.events[0]["payload"]["totalCount"] == 2
+    assert outbox.events[1]["payload"]["insertedCount"] == 2
+    assert outbox.events[1]["payload"]["updatedCount"] == 1
+    assert outbox.events[1]["payload"]["totalCount"] == 4
 
 
 # scenario: 4 - Crash before commit
@@ -189,3 +209,31 @@ async def test_crash_after_commit_outbox_retained():
     # Simulate outbox publisher recovery: the pending row is picked up and published.
     outbox.events[0]["status"] = "published"
     assert outbox.events[0]["status"] == "published"
+
+
+# scenario: duplicate batch event is idempotent
+@pytest.mark.anyio
+async def test_duplicate_batch_event_is_idempotent():
+    """Processing the same vk.comments_collected event twice should be a no-op on second call."""
+    outbox = FakeOutboxService()
+    repository = FakeRepository(outbox=outbox)
+    service = ProjectionService(repository, outbox)
+
+    event = envelope(
+        "vk.comments_collected",
+        {
+            "taskId": 10,
+            "comments": [{"owner_id": -1, "post_id": 3, "id": 4}],
+            "authors": [],
+        },
+    )
+
+    # First call — normal processing
+    assert await service.handle(event) is True
+    assert len(repository.comments) == 1
+    assert len(outbox.events) == 1
+
+    # Second call with the same event_id — should be idempotent
+    assert await service.handle(event) is False
+    assert len(repository.comments) == 1  # no duplicate comment upsert
+    assert len(outbox.events) == 1  # no duplicate outbox event

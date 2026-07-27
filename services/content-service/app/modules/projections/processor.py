@@ -212,5 +212,26 @@ class ProjectionRepository:
             .values(comments_count=count, updated_at=utcnow())
         )
 
+    async def get_comment_ids_for_post(self, post_key: str) -> set[int]:
+        """Return set of comment IDs for a post identified by external_key like 'owner_id:post_id'."""
+        result = await self.session.scalars(
+            select(ContentComment.vk_comment_id)
+            .where(ContentComment.post_external_key == post_key)
+        )
+        return set(result.all())
+
+    async def get_comment_ids_by_external_keys(self, keys: list[str]) -> dict[str, set[int]]:
+        """Return mapping of post external_key to set of comment IDs for multiple posts."""
+        if not keys:
+            return {}
+        result = await self.session.execute(
+            select(ContentComment.post_external_key, ContentComment.vk_comment_id)
+            .where(ContentComment.post_external_key.in_(keys))
+        )
+        mapping: dict[str, set[int]] = {}
+        for post_key, comment_id in result.all():
+            mapping.setdefault(post_key, set()).add(comment_id)
+        return mapping
+
     async def save(self) -> None:
         await self.session.flush()

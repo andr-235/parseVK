@@ -25,6 +25,9 @@ except ValueError:
 RETENTION_HOURS = settings.retention_hours
 CATCHUP_INTERVAL = settings.safety_catchup_seconds
 
+# Last known maximum sequence_id observed by safety_catchup.
+_last_sequence_id: int | None = None
+
 
 async def cleanup_expired_events(session_factory: async_sessionmaker) -> int:
     """Delete events with expires_at < now. Returns number of deleted rows."""
@@ -48,20 +51,38 @@ async def cleanup_expired_events(session_factory: async_sessionmaker) -> int:
 
 
 async def safety_catchup(session_factory: async_sessionmaker) -> int:
-    """Safety catch-up: checks how many events exist and logs a metric.
+    """Safety catch-up: detect missed notifications and wake listeners.
 
-    This serves as a passive monitoring safety net. The actual catch-up 
-    logic is embedded in the SSE handler (polling every 500ms). This function
-    just logs and reports the total event count for observability.
-    Returns the total number of events in the table.
+    Compares the current MAX(sequence_id) with the last observed cursor. If
+    new events appeared that the shared LISTEN/NOTIFY listener may have missed
+    (e.g. after a reconnect), the function emits pg_notify with the latest
+    sequence_id so all subscribers re-query the database and catch up.
+
+    Returns the current maximum sequence_id (or 0 if the table is empty).
     """
+    global _last_sequence_id
+
     async with session_factory() as session:
-        result = await session.scalar(text("SELECT COUNT(*) FROM realtime_events"))
-        count = result or 0
-        if count > 0:
-            catchup_total.inc(count)
-            logger.debug("Safety catch-up: found %d events in realtime_events", count)
-        return count
+        max_seq = await session.scalar(text("SELECT MAX(sequence_id) FROM realtime_events"))
+        if max_seq is None:
+            return 0
+
+        if _last_sequence_id is not None and max_seq > _last_sequence_id:
+            gap = max_seq - _last_sequence_id
+            catchup_total.inc(gap)
+            logger.warning(
+                "Safety catch-up: detected %d missed events (cursor=%d, max=%d), waking listeners",
+                gap, _last_sequence_id, max_seq,
+            )
+            await session.execute(
+                text("SELECT pg_notify('realtime_events', :seq)"),
+                {"seq": str(max_seq)},
+            )
+        elif _last_sequence_id is None:
+            logger.debug("Safety catch-up: initialized cursor at %d", max_seq)
+
+        _last_sequence_id = max_seq
+        return max_seq
 
 
 async def retention_loop(session_factory: async_sessionmaker) -> None:

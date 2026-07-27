@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -13,10 +13,22 @@ import type { Comment } from '../../types/comments'
 
 export function CommentsPage() {
   const [selectedCommentId, setSelectedCommentId] = useState<number | null>(null)
-  const [selectedComment, setSelectedComment] = useState<Comment | null>(null)
   const [queryError, setQueryError] = useState<string | null>(null)
+
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+
+  /** Derive selected comment from the latest cached query data (never stale). */
+  const selectedComment = useMemo(() => {
+    if (selectedCommentId === null) return null
+    const allData = queryClient.getQueriesData<{ comments: Comment[] }>({ queryKey: ['comments'] })
+    for (const [, data] of allData) {
+      if (!data?.comments) continue
+      const found = data.comments.find((c) => c.id === selectedCommentId)
+      if (found) return found
+    }
+    return null
+  }, [queryClient, selectedCommentId])
   const { feedback, showFeedback, dismissFeedback } = useFeedback()
 
   const addToWatchlistMutation = useMutation({
@@ -53,18 +65,11 @@ export function CommentsPage() {
   }, [addToWatchlistMutation])
 
   const handleSelect = useCallback((c: Comment) => {
-    if (selectedCommentId === c.id) {
-      setSelectedCommentId(null)
-      setSelectedComment(null)
-    } else {
-      setSelectedCommentId(c.id)
-      setSelectedComment(c)
-    }
-  }, [selectedCommentId])
+    setSelectedCommentId((prev) => (prev === c.id ? null : c.id))
+  }, [])
 
   const handleClose = useCallback(() => {
     setSelectedCommentId(null)
-    setSelectedComment(null)
   }, [])
 
   const handleRetry = useCallback(() => {

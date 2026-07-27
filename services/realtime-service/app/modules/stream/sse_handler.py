@@ -19,17 +19,14 @@ try:
     connected_clients = Gauge("realtime_connected_clients", "Active SSE connections")
     replayed_total = Counter("realtime_replayed_events_total", "Replayed events")
     resync_total = Counter("realtime_resync_required_total", "Resync required sent")
-    slow_clients_dropped_total = Counter("realtime_slow_clients_dropped_total", "Slow clients dropped")
 except ValueError:
     from prometheus_client.registry import REGISTRY
     connected_clients = REGISTRY._names_to_collectors.get("realtime_connected_clients")
     replayed_total = REGISTRY._names_to_collectors.get("realtime_replayed_events_total")
     resync_total = REGISTRY._names_to_collectors.get("realtime_resync_required_total")
-    slow_clients_dropped_total = REGISTRY._names_to_collectors.get("realtime_slow_clients_dropped_total")
 
 HEARTBEAT_INTERVAL = settings.sse_heartbeat_seconds
-MAX_QUEUE_SIZE = settings.max_send_queue_size
-POLL_INTERVAL = 0.5  # 500ms
+POLL_INTERVAL = 0.5  # 500ms safety timeout when no listener notification arrives
 
 
 def _format_sse(event_id: str, event_type: str, data: dict) -> str:
@@ -82,12 +79,20 @@ async def _query_events_after(session_factory, last_seq: int, audience_types: li
         } for r in rows]
 
 
-async def stream_events(session_factory, last_event_id: int | None, audience_types: list[str] | None, audience_id: str | None, x_user_id: str | None = None):
+async def stream_events(
+    session_factory,
+    last_event_id: int | None,
+    audience_types: list[str] | None,
+    audience_id: str | None,
+    x_user_id: str | None = None,
+    listener=None,
+):
     """
     Async generator for SSE streaming.
 
     Phase 1: Replay past events from DB (if lastEventId provided).
-    Phase 2: Poll for new events every 500ms, send heartbeats every 15s.
+    Phase 2: Subscribe to the shared LISTEN/NOTIFY listener and query for new
+             events on each notification, with a 500ms safety timeout.
 
     If x_user_id is provided (e.g. from the gateway), it overrides audience_id.
     """
@@ -124,7 +129,7 @@ async def stream_events(session_factory, last_event_id: int | None, audience_typ
             logger.info("Cursor %d expired (retention=%d..%d), sent resync_required", last_event_id, min_seq, max_seq)
             return
 
-        events = await _query_events_after(session_factory, last_event_id, audience_types, effective_audience_id)
+        events = await _query_events_after(session_factory, last_event_id, audience_types, effective_audience_id, limit=1000)
         for event in events:
             yield _format_sse(
                 event_id=str(event["sequence_id"]),
@@ -136,50 +141,55 @@ async def stream_events(session_factory, last_event_id: int | None, audience_typ
 
         logger.debug("Replayed %d events from seq=%d", len(events), last_event_id)
 
-    # ── Phase 2: Live streaming via polling ──
+    # ── Phase 2: Live streaming via LISTEN/NOTIFY ──
     connected_clients.inc()
     client_id = id(session_factory)
     logger.info("SSE client connected id=%s", client_id)
 
     try:
-        send_queue: asyncio.Queue[dict] = asyncio.Queue(maxsize=MAX_QUEUE_SIZE)
+        notify_queue: asyncio.Queue[int] = asyncio.Queue()
+        subscriber_id = f"sse-{client_id}"
 
-        async def poll_worker():
-            """Poll for new events and push to send queue."""
-            while True:
-                await asyncio.sleep(POLL_INTERVAL)
-                try:
-                    events = await _query_events_after(
-                        session_factory, local_last_seen, audience_types, effective_audience_id, limit=100,
-                    )
-                    for event in events:
-                        try:
-                            await asyncio.wait_for(send_queue.put(event), timeout=1.0)
-                        except asyncio.TimeoutError:
-                            logger.warning("Send queue full for client id=%s, dropping", client_id)
-                            slow_clients_dropped_total.inc()
-                            return
-                except asyncio.CancelledError:
-                    return
-                except Exception as exc:
-                    logger.error("Poll worker error id=%s: %s", client_id, exc)
+        def on_notify(seq: int):
+            try:
+                notify_queue.put_nowait(seq)
+            except asyncio.QueueFull:
+                logger.warning("Notify queue full for client id=%s, dropping", client_id)
 
-        poll_task = asyncio.create_task(poll_worker())
+        if listener is not None:
+            listener.subscribe(subscriber_id, on_notify)
+
         last_heartbeat = datetime.now(UTC)
 
         try:
             while True:
-                # Check for new events with timeout to allow heartbeat interleaving
-                try:
-                    event = await asyncio.wait_for(send_queue.get(), timeout=1.0)
+                # Wait for a notification (or safety timeout) then query for new events.
+                # The notification is only a wake-up signal; the DB query is the source
+                # of truth and handles missed or batched notifications.
+                if listener is not None:
+                    try:
+                        await asyncio.wait_for(notify_queue.get(), timeout=POLL_INTERVAL)
+                    except asyncio.TimeoutError:
+                        pass
+                else:
+                    # Fallback when no listener is provided (e.g. isolated tests).
+                    await asyncio.sleep(POLL_INTERVAL)
+
+                events = await _query_events_after(
+                    session_factory,
+                    local_last_seen,
+                    audience_types,
+                    effective_audience_id,
+                    limit=100,
+                )
+
+                for event in events:
                     yield _format_sse(
                         event_id=str(event["sequence_id"]),
                         event_type=event["event_type"],
                         data=event["payload"],
                     )
                     local_last_seen = event["sequence_id"]
-                except asyncio.TimeoutError:
-                    pass
 
                 # Heartbeat
                 now = datetime.now(UTC)
@@ -188,11 +198,8 @@ async def stream_events(session_factory, last_event_id: int | None, audience_typ
                     last_heartbeat = now
 
         finally:
-            poll_task.cancel()
-            try:
-                await poll_task
-            except asyncio.CancelledError:
-                pass
+            if listener is not None:
+                listener.unsubscribe(subscriber_id)
 
     finally:
         connected_clients.dec()

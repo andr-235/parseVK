@@ -15,16 +15,47 @@ from app.modules.stream.sse_handler import stream_events
 
 
 # scenario: 9 - SSE reconnect with Last-Event-ID
-@pytest.mark.skip(reason="requires running realtime-service")
 @pytest.mark.anyio
 async def test_sse_reconnect_replays_after_last_event_id():
-    """
-    Procedure:
-    1. Open an SSE stream without a cursor and wait for a few events.
-    2. Disconnect the client (abort the HTTP connection).
-    3. Reconnect with Last-Event-ID set to the last seen sequence_id.
-    4. Assert that events with sequence_id > Last-Event-ID are replayed before live events resume.
-    """
+    """SSE with Last-Event-ID should replay only events after that ID."""
+    from contextlib import asynccontextmanager
+
+    class FakeSession:
+        async def execute(self, query):
+            class FakeResult:
+                def one(self):
+                    return (1, 3)
+            return FakeResult()
+
+    @asynccontextmanager
+    async def mock_session_factory():
+        yield FakeSession()
+
+    replay_events = [
+        {"sequence_id": 2, "event_id": "ev-2", "event_type": "content.comments_projected", "payload": {"n": 2}},
+        {"sequence_id": 3, "event_id": "ev-3", "event_type": "content.comments_projected", "payload": {"n": 3}},
+    ]
+
+    with (
+        patch.object(sse_handler, "_query_events_after", return_value=replay_events) as mock_query,
+    ):
+        chunks = []
+        async for chunk in stream_events(
+            mock_session_factory, last_event_id=1, audience_types=["authenticated"], audience_id=None
+        ):
+            chunks.append(chunk)
+            if len(chunks) >= 2:
+                break
+
+    mock_query.assert_awaited_once_with(
+        mock_session_factory, 1, ["authenticated"], None, limit=1000
+    )
+    yielded_ids = []
+    for chunk in chunks:
+        for line in chunk.splitlines():
+            if line.startswith("id: "):
+                yielded_ids.append(int(line.split("id: ")[1]))
+    assert yielded_ids == [2, 3]
 
 
 # scenario: 10 - Cursor beyond retention

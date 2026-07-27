@@ -1,4 +1,5 @@
 import logging
+from datetime import UTC, datetime
 
 from common.events import VkEvent
 
@@ -37,10 +38,31 @@ class ProjectionService:
         comments = payload.get("comments", [])
         authors = payload.get("authors", [])
         task_id = payload.get("taskId")
+        run_id = payload.get("runId")
+        batch_id = payload.get("batchId")
 
         if not comments and not authors:
             logger.debug("Empty batch eventId=%s, skipping projection", event.event_id)
             return
+
+        # Collect post keys to determine affected posts
+        post_keys = set()
+        for comment in comments:
+            owner_id = comment.get("owner_id", 0)
+            post_id = comment.get("post_id", 0)
+            post_keys.add(f"{owner_id}:{post_id}")
+
+        # Pre-query existing comment IDs for affected posts to distinguish inserts from updates
+        existing_ids = set()
+        for post_key in post_keys:
+            ids = await self.repository.get_comment_ids_for_post(post_key)
+            existing_ids.update(ids)
+
+        # Count actual inserts vs updates
+        incoming_ids = {c.get("id") for c in comments if c.get("id") is not None}
+        new_ids = incoming_ids - existing_ids
+        inserted_count = len(new_ids)
+        updated_count = len(comments) - inserted_count
 
         # Bulk upsert authors
         author_count = 0
@@ -49,34 +71,41 @@ class ProjectionService:
             author_count += 1
 
         # Bulk upsert comments
-        comment_count = 0
-        post_keys = set()
         for comment in comments:
             await self.repository.upsert_comment(comment, task_id=task_id)
-            comment_count += 1
-            owner_id = comment.get("owner_id", 0)
-            post_id = comment.get("post_id", 0)
-            post_keys.add(f"{owner_id}:{post_id}")
 
         # Recalculate exact comment counts per post
         for post_key in post_keys:
             exact_count = await self.repository.count_comments_for_post_by_key(post_key)
             await self.repository.set_post_comments_count(post_key, exact_count)
 
-        # Publish projection event (only if rows changed)
+        # Get owner_id and post_id from the batch (first comment or payload)
+        owner_id = payload.get("ownerId")
+        post_id = payload.get("postId")
+        if owner_id is None and comments:
+            owner_id = comments[0].get("owner_id")
+        if post_id is None and comments:
+            post_id = comments[0].get("post_id")
+
         total_count_after = (
             await self.repository.count_comments_for_post_by_key(next(iter(post_keys)))
             if len(post_keys) == 1
             else 0
         )
 
-        if comment_count > 0 or author_count > 0:
+        if inserted_count > 0 or author_count > 0:
             if self.outbox_service:
                 projection_payload = {
-                    "insertedCount": comment_count,
-                    "updatedCount": 0,  # Simplified — actual counts require diff tracking
+                    "insertedCount": inserted_count,
+                    "updatedCount": updated_count,
                     "totalCount": total_count_after,
                     "projectionRevision": 1,
+                    "taskId": task_id,
+                    "runId": run_id,
+                    "ownerId": owner_id,
+                    "postId": post_id,
+                    "batchId": batch_id,
+                    "projectedAt": datetime.now(UTC).isoformat(),
                 }
                 await self.outbox_service.add_event(
                     event_type="content.comments_projected",
@@ -87,6 +116,7 @@ class ProjectionService:
                 )
 
         logger.info(
-            "Projected batch eventId=%s comments=%d authors=%d posts=%d",
-            event.event_id, comment_count, author_count, len(post_keys),
+            "Projected batch eventId=%s comments=%d (inserted=%d, updated=%d) authors=%d posts=%s",
+            event.event_id, len(comments), inserted_count, updated_count, author_count, post_keys,
         )
+

@@ -9,6 +9,11 @@ from app.core.config import settings
 from app.db.session import SessionLocal as session_factory
 from app.modules.retention.cleaner import catchup_loop, retention_loop
 from app.modules.stream.dependencies import verify_internal_token
+from app.modules.stream.listener import RealtimeListener
+
+# Convert SQLAlchemy asyncpg DSN to plain asyncpg DSN for LISTEN/NOTIFY.
+listener_dsn = settings.database_url.replace("postgresql+asyncpg://", "postgresql://")
+realtime_listener = RealtimeListener(listener_dsn)
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +48,9 @@ async def supervise(name: str, coro_factory, health_flag: list[bool] | None = No
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Realtime service starting")
+
+    # Start shared LISTEN/NOTIFY listener
+    await realtime_listener.start()
 
     # Start background tasks
     _retention_task = asyncio.create_task(retention_loop(session_factory))
@@ -94,6 +102,9 @@ async def lifespan(app: FastAPI):
             with suppress(asyncio.CancelledError):
                 await _catchup_task
 
+        # Stop shared listener
+        await realtime_listener.stop()
+
         logger.info("All background tasks stopped")
 
 
@@ -134,7 +145,7 @@ def create_app() -> FastAPI:
         audience_types = [t.strip() for t in audienceType.split(",")] if audienceType else None
 
         return StreamingResponse(
-            stream_events(session_factory, lastEventId, audience_types, audienceId, x_user_id),
+            stream_events(session_factory, lastEventId, audience_types, audienceId, x_user_id, realtime_listener),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",

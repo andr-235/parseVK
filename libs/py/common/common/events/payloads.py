@@ -45,6 +45,12 @@ class ContentCommentsProjectedV1(BaseModel):
     updatedCount: int
     totalCount: int
     projectionRevision: int
+    taskId: int | None = None
+    runId: str | None = None
+    ownerId: int | None = None
+    postId: int | None = None
+    batchId: str | None = None
+    projectedAt: str  # ISO 8601 datetime
 
 
 class TaskStateChangedV1(BaseModel):
