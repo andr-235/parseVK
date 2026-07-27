@@ -23,7 +23,6 @@ class DataCollector:
         tasks_client: TasksClient,
         outbox=None,
         on_error: Callable[[str], str] | None = None,
-        checkpoint: Callable[[], Awaitable[None]] | None = None,
         page_committer: Callable[[], Awaitable[None]] | None = None,
         checkpoint_store: IngestionCheckpointStore | None = None,
     ):
@@ -35,7 +34,6 @@ class DataCollector:
         self.progress = ProgressReporter(
             tasks_client=tasks_client,
             outbox=outbox,
-            checkpoint=checkpoint,
         )
 
         self.group_collector = GroupCollector(
@@ -187,9 +185,6 @@ class DataCollector:
                     continue
 
                 await self.progress.report(task_run, result, correlation_id)
-
-            if not posts:
-                await self.progress.checkpoint()
 
         logger.debug(
             "[collect] END task_id=%s run_id=%s stats=%s",

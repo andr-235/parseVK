@@ -64,7 +64,6 @@ def get_ingestion_service(session: AsyncSession) -> IngestionService:
         tasks_client=_tasks_client,
         outbox=outbox_service,
         on_error=sanitize_error,
-        checkpoint=session.commit,
         page_committer=session.commit,
         checkpoint_store=checkpoint_store,
     )

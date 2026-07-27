@@ -1,12 +1,7 @@
-from collections.abc import Awaitable, Callable
 from typing import Any
 
 from app.infrastructure.tasks_client.client import TasksClient
 from app.services.ingestion.result import IngestionResult
-
-
-async def _noop_checkpoint() -> None:
-    return None
 
 
 class ProgressReporter:
@@ -15,11 +10,9 @@ class ProgressReporter:
         *,
         tasks_client: TasksClient,
         outbox=None,
-        checkpoint: Callable[[], Awaitable[None]] | None = None,
     ):
         self.tasks_client = tasks_client
         self.outbox = outbox
-        self.checkpoint = checkpoint or _noop_checkpoint
 
     async def report(
         self,
@@ -37,7 +30,6 @@ class ProgressReporter:
                 stats=result.stats(),
                 correlation_id=correlation_id,
             )
-        await self.checkpoint()
         await self.tasks_client.update_progress(
             task_run.task_id,
             task_run.run_id,
