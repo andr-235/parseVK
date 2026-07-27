@@ -59,7 +59,7 @@ class TaskExecutionService:
         task = await self.repository.touch_task(task)
         await self.outbox.add_event(
             event_type="task.state_changed", aggregate_type="task", aggregate_id=str(task.id),
-            correlation_id=correlation_id, dedupe_key=f"task.state_changed:{task.id}:running",
+            correlation_id=correlation_id, dedupe_key=f"task.state_changed:{task.id}:running:{task.revision}",
             payload=task_state_changed_payload(task),
         )
         logger.debug("Published task.state_changed (running) for task %s", task.id)
@@ -125,13 +125,13 @@ class TaskExecutionService:
             },
         )
         logger.info("Published task.completed outbox event for task %s", task.id)
+        task = await self.repository.touch_task(task)
         await self.outbox.add_event(
             event_type="task.state_changed", aggregate_type="task", aggregate_id=str(task.id),
-            correlation_id=correlation_id, dedupe_key=f"task.state_changed:{task.id}:done",
+            correlation_id=correlation_id, dedupe_key=f"task.state_changed:{task.id}:done:{task.revision}",
             payload=task_state_changed_payload(task),
         )
         logger.debug("Published task.state_changed (done) for task %s", task.id)
-        task = await self.repository.touch_task(task)
         if self._on_complete:
             await self._on_complete(task_id=task_id, task=task)
         return task_to_response(task)
@@ -169,11 +169,11 @@ class TaskExecutionService:
             },
         )
         logger.info("Published task.failed outbox event for task %s", task.id)
+        task = await self.repository.touch_task(task)
         await self.outbox.add_event(
             event_type="task.state_changed", aggregate_type="task", aggregate_id=str(task.id),
-            correlation_id=correlation_id, dedupe_key=f"task.state_changed:{task.id}:failed",
+            correlation_id=correlation_id, dedupe_key=f"task.state_changed:{task.id}:failed:{task.revision}",
             payload=task_state_changed_payload(task),
         )
         logger.debug("Published task.state_changed (failed) for task %s", task.id)
-        task = await self.repository.touch_task(task)
         return task_to_response(task)

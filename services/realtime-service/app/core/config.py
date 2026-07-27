@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     kafka_bootstrap_servers: str = "kafka:9092"
     kafka_topic_content: str = "parsevk.content.events"
     kafka_topic_tasks: str = "parsevk.tasks.events"
+    kafka_dlq_topic: str = "parsevk.realtime.dlq"
     kafka_consumer_enabled: bool = False
     realtime_service_enabled: bool = True
     kafka_consumer_group: str = "realtime-service-group"

@@ -1,16 +1,16 @@
-# Graph Report - parseVK  (2026-07-27)
+# Graph Report - parseVK  (2026-07-28)
 
 ## Corpus Check
-- 1613 files · ~1,038,107 words
+- 1620 files · ~1,040,269 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 16373 nodes · 25091 edges · 1144 communities (1004 shown, 140 thin omitted)
-- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 828 edges (avg confidence: 0.67)
+- 16434 nodes · 25216 edges · 1137 communities (998 shown, 139 thin omitted)
+- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 833 edges (avg confidence: 0.67)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `4e2a286e`
+- Built from commit: `ab461244`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -984,24 +984,18 @@
 - comment_collector.py
 - Codex: Visual Direction & Asset Production
 - [0.69.0](https://github.com/andr-235/parseVK/compare/v0.68.3...v0.69.0) (2026-07-27)
-- Codex: Visual Direction & Asset Production
 - [0.70.0](https://github.com/andr-235/parseVK/compare/v0.69.3...v0.70.0) (2026-07-27)
-- test_supervise.py
-- _make_capturing_client
 - 20260724_add_pg_trgm_index.py
 - Dropdown & Overlay Positioning
 - PR-S2 — Optional total count in IM search
 - PR-S3 — Keyset pagination for IM search
-- Dropdown & Overlay Positioning
 - test_event_schemas.py
-- FakeCommentsGatewayService
 - sendEvent
 - PR-P1 Hardening: Post-release Checklist
 - create_outbox_metrics
 - Settings
 - get_session
 - test_two_replicas_both_see_all_events
-- .__init__
 - parsevk-realtime-service
 
 ## God Nodes (most connected - your core abstractions)
@@ -1009,8 +1003,8 @@
 2. `BackendServiceError` - 62 edges
 3. `BackendUnavailableError` - 58 edges
 4. `forward_service_request()` - 54 edges
-5. `Button()` - 51 edges
-6. `WorkerHealth` - 51 edges
+5. `WorkerHealth` - 52 edges
+6. `Button()` - 51 edges
 7. `ContentService` - 49 edges
 8. `create_app()` - 47 edges
 9. `KeywordsGatewayService` - 43 edges
@@ -1018,9 +1012,9 @@
 
 ## Surprising Connections (you probably didn't know these)
 - `injectVariantsFromSource()` --indirect_call--> `wrapper()`  [INFERRED]
-  .opencode/skills/impeccable/scripts/live-browser.js → front/src/pages/admin-users/__tests__/AdminUsersPage.test.tsx
+  .agents/skills/impeccable/scripts/live-browser.js → front/src/pages/admin-users/__tests__/AdminUsersPage.test.tsx
 - `startVariantObserver()` --indirect_call--> `wrapper()`  [INFERRED]
-  .opencode/skills/impeccable/scripts/live-browser.js → front/src/pages/admin-users/__tests__/AdminUsersPage.test.tsx
+  .agents/skills/impeccable/scripts/live-browser.js → front/src/pages/admin-users/__tests__/AdminUsersPage.test.tsx
 - `add_identity_event()` --calls--> `EventEnvelope`  [INFERRED]
   services/identity-service/app/modules/outbox/service.py → libs/py/common/common/events/base.py
 - `test_identity_event_roundtrip()` --calls--> `EventEnvelope`  [INFERRED]
@@ -1031,51 +1025,51 @@
 ## Import Cycles
 - None detected.
 
-## Communities (1144 total, 140 thin omitted)
+## Communities (1137 total, 139 thin omitted)
 
 ### Community 0 - "BackendServiceError"
 Cohesion: 0.05
-Nodes (69): BackendServiceError, BackendUnavailableError, GatewayError, Any, Exception, Backend service is unavailable (connection refused, timeout)., Base domain exception for API Gateway.      All service-layer exceptions inherit, Error from a backend service (internal HTTP call failed).      Wraps ServiceClie (+61 more)
+Nodes (71): Any, AsyncClient, Exception, Timeout, ServiceClientError, ServiceClientHTTPError, ServiceClientUnavailableError, BackendServiceError (+63 more)
 
 ### Community 1 - "vk-service/app/api/dependencies.py"
 Cohesion: 0.08
-Nodes (32): CamelModel, BaseModel, download_xlsx(), get_job(), get_raw_logs(), AsyncSession, BackgroundTasks, FileResponse (+24 more)
+Nodes (31): download_xlsx(), get_job(), get_raw_logs(), AsyncSession, BackgroundTasks, FileResponse, UUID, run_export_job_background() (+23 more)
 
 ### Community 2 - "BackendUnavailableError"
-Cohesion: 0.04
-Nodes (85): FriendsJobState, Any, Universally redacts sensitive keys and values from logs, errors, and JSON respon, redact_secrets(), FriendsExportAdapter, Any, FriendsExportStartResponse, FriendsJobDetailResponse (+77 more)
+Cohesion: 0.05
+Nodes (79): FriendsJobState, Any, Universally redacts sensitive keys and values from logs, errors, and JSON respon, redact_secrets(), FriendsExportAdapter, Any, FriendsExportStartResponse, FriendsJobDetailResponse (+71 more)
 
 ### Community 3 - "FriendsExportPage.tsx"
 Cohesion: 0.03
 Nodes (75): ExportLogList(), ExportLogListProps, getLogClassName(), ExportResultsPanel(), ExportResultsPanelProps, ExportStatusPanel(), ExportStatusPanelProps, statusClassName (+67 more)
 
 ### Community 4 - "WorkerHealth"
-Cohesion: 0.03
-Nodes (81): WorkerHealth dataclass for typed background worker diagnostics.  Tracks five lif, Typed health state for a background worker.      Properties:         running: Tr, Worker is healthy when running, has completed at least one successful         cy, Mark worker as started (running=True)., Mark a successful cycle. Updates timestamp, clears cycle error., Mark a recoverable cycle error. Worker continues running.          Unlike mark_c, Mark a crash. Worker stopped and will be restarted by supervisor.          Sets, Mark worker as gracefully stopped (running=False). (+73 more)
+Cohesion: 0.07
+Nodes (27): Typed health state for a background worker.      Properties:         running: Tr, Worker is healthy when running, has completed at least one successful         cy, Mark worker as started (running=True)., Mark a successful cycle. Updates timestamp, clears cycle error., Mark a recoverable cycle error. Worker continues running.          Unlike mark_c, Mark a crash. Worker stopped and will be restarted by supervisor.          Sets, Mark worker as gracefully stopped (running=False)., WorkerHealth (+19 more)
 
 ### Community 5 - "client.ts"
-Cohesion: 0.04
-Nodes (66): AdminOutlet(), AdminUsersPage, AuthorAnalysisPage, AuthorsPage, AuthOutlet(), ChangePasswordPage, CommentsPage, GroupsPage (+58 more)
+Cohesion: 0.05
+Nodes (56): AdminOutlet(), AdminUsersPage, AuthorAnalysisPage, AuthorsPage, AuthOutlet(), ChangePasswordPage, CommentsPage, GroupsPage (+48 more)
 
 ### Community 6 - "GatewayAuthService"
-Cohesion: 0.11
-Nodes (17): IdentityClient, Any, IdentityClientError, IdentityClientHTTPError, IdentityClientMethods, IdentityClientUnavailableError, Any, Exception (+9 more)
+Cohesion: 0.09
+Nodes (19): IdentityClient, Any, IdentityClientError, IdentityClientHTTPError, IdentityClientMethods, IdentityClientUnavailableError, Any, Exception (+11 more)
 
 ### Community 7 - "CommentsTable.tsx"
-Cohesion: 0.07
-Nodes (35): CommentDetail(), Props, mockComment, escapeRegex(), HighlightedText(), HighlightedTextProps, intersectRanges(), StatusCell() (+27 more)
+Cohesion: 0.06
+Nodes (40): CommentDetail(), Props, mockComment, escapeRegex(), HighlightedText(), HighlightedTextProps, intersectRanges(), commentColumns (+32 more)
 
 ### Community 8 - "TaskAuditLog"
 Cohesion: 0.08
-Nodes (40): Composition root for tasks-service.  Creates service instances with all dependen, TaskAuditLog, OutboxService, AsyncSession, Task CRUD service.  Encapsulates creation, listing, retrieval, and audit-log acc, CRUD operations for tasks: create, list, get, audit log., TasksCrudService, task_identity_payload() (+32 more)
+Nodes (38): Composition root for tasks-service.  Creates service instances with all dependen, Global exception handlers for tasks-service.  Maps domain task exceptions and un, Map task domain exceptions to HTTP status codes.      Args:         request: The, _task_error_handler(), TaskAuditLog, OutboxService, AsyncSession, Task CRUD service.  Encapsulates creation, listing, retrieval, and audit-log acc (+30 more)
 
 ### Community 9 - "request_ids"
-Cohesion: 0.07
-Nodes (35): add_keyword(), bulk_add_keywords(), delete_all_keywords(), delete_keyword(), get_keywords(), Body, Request, UploadFile (+27 more)
+Cohesion: 0.09
+Nodes (25): add_keyword_form_exclusion(), add_manual_keyword_form(), get_keyword_forms(), get_recalculation_job_status(), Body, Request, rebuild_keyword_forms(), recalculate_keyword_matches() (+17 more)
 
 ### Community 10 - "test_content_services_unit.py"
-Cohesion: 0.05
-Nodes (21): AuthorContentService, AuthorRepositoryProto, Any, Protocol, GroupContentService, GroupRepositoryProto, Protocol, enrich_author_summaries_helper() (+13 more)
+Cohesion: 0.06
+Nodes (18): AuthorContentService, AuthorRepositoryProto, Any, Protocol, GroupContentService, GroupRepositoryProto, Protocol, enrich_author_summaries_helper() (+10 more)
 
 ### Community 11 - "PhotoAnalysisService"
 Cohesion: 0.06
@@ -1083,11 +1077,11 @@ Nodes (36): PhotoAnalysis, WebhookModerationAdapter, PhotoAnalysisClient, Any, A
 
 ### Community 12 - "AutomationService"
 Cohesion: 0.07
-Nodes (35): Background worker: check and run due automation every 30 seconds.      Algorithm, run_automation_scheduler_forever(), create_lifespan(), FastAPI, Background workers for tasks-service.  Workers are long-running asyncio tasks th, Build a FastAPI lifespan that starts supervised background workers.      Args:, BaseSettings, Settings (+27 more)
+Nodes (38): Background worker: check and run due automation every 30 seconds.      Algorithm, run_automation_scheduler_forever(), create_lifespan(), FastAPI, Background workers for tasks-service.  Workers are long-running asyncio tasks th, Build a FastAPI lifespan that starts supervised background workers.      Args:, BaseSettings, Settings (+30 more)
 
 ### Community 13 - "SqlAlchemyIngestionRepository"
-Cohesion: 0.08
-Nodes (32): VkAuthor, VkComment, VkGroup, VkPost, Base, datetime, utcnow(), VkAuthor (+24 more)
+Cohesion: 0.05
+Nodes (37): VkAuthor, VkComment, VkGroup, VkPost, AuthorRepository, ABC, CommentRepository, ABC (+29 more)
 
 ### Community 14 - "VkApiDomainError"
 Cohesion: 0.10
@@ -1095,23 +1089,23 @@ Nodes (19): map_vk_error(), RuntimeError, VkApiAuthError, VkApiCaptchaError, VkA
 
 ### Community 15 - "IngestionService"
 Cohesion: 0.07
-Nodes (26): BaseSettings, Settings, BaseSettings, Settings, IngestionService, Any, IngestionResult, fake_vk_session_factory() (+18 more)
+Nodes (30): BaseSettings, Settings, get_ingestion_service(), IngestionService, IngestionPipeline, TasksClient, IngestionService, Any (+22 more)
 
 ### Community 16 - "WatchlistPage.tsx"
-Cohesion: 0.09
-Nodes (33): AddAuthorForm(), AddAuthorFormProps, AuthorItem(), AuthorItemProps, CommentItem(), CommentItemProps, AuthorDetailsSkeleton(), AuthorListSkeleton() (+25 more)
+Cohesion: 0.08
+Nodes (36): AddAuthorForm(), AddAuthorFormProps, AuthorItem(), AuthorItemProps, CommentItem(), CommentItemProps, SettingsPanel(), SettingsPanelProps (+28 more)
 
 ### Community 17 - "vk-service/app/bootstrap.py"
-Cohesion: 0.06
-Nodes (26): get_ingestion_service(), get_task_events_handler(), AsyncSession, IngestionService, AsyncClient, TasksClient, GroupCollector, Any (+18 more)
+Cohesion: 0.08
+Nodes (17): AsyncClient, TasksClient, GroupCollector, Any, TasksClient, VkApiAdapter, ProgressReporter, Any (+9 more)
 
 ### Community 18 - "vk-service/tests/conftest.py"
-Cohesion: 0.09
-Nodes (29): do_run_migrations(), Connection, run_async_migrations(), run_migrations_online(), Base, DeclarativeBase, OkFriendsJobLog, OkFriendsRecord (+21 more)
+Cohesion: 0.08
+Nodes (42): do_run_migrations(), Connection, run_async_migrations(), run_migrations_online(), Base, DeclarativeBase, OkFriendsExportJob, OkFriendsJobLog (+34 more)
 
 ### Community 19 - "ListingsGatewayService"
-Cohesion: 0.07
-Nodes (28): delete_listing(), export_listings(), import_data(), list_listings(), Any, Body, Request, update_listing() (+20 more)
+Cohesion: 0.11
+Nodes (12): app(), ClosableFile, fake_service(), FakeAuthService, FakeContentClient, FakeListingsGatewayService, FakeRequest, FormRaisesRequest (+4 more)
 
 ### Community 20 - "OutboxService"
 Cohesion: 0.07
@@ -1122,8 +1116,8 @@ Cohesion: 0.07
 Nodes (25): Select, ContentAuthor, ContentComment, ContentGroup, ContentPost, AuthorRepository, AsyncSession, BaseContentRepository (+17 more)
 
 ### Community 22 - "content-service/tests/test_search.py"
-Cohesion: 0.06
-Nodes (36): ImMessage, MonitoringRepository, AsyncSession, datetime, get_search_service(), AsyncSession, SearchService, _build_cursor() (+28 more)
+Cohesion: 0.05
+Nodes (44): get_search_service, get_search_service(), AsyncSession, SearchService, _build_cursor(), _order_by(), _parse_cursor(), AsyncSession (+36 more)
 
 ### Community 23 - "admin-users.ts"
 Cohesion: 0.07
@@ -1131,7 +1125,7 @@ Nodes (44): columns, adminUsersError(), AdminUsersPage(), AdminUsersTable(), Pro
 
 ### Community 24 - "VkApiPort"
 Cohesion: 0.06
-Nodes (34): get_vk_client_dep(), FastAPI, register_routers(), fetch_vk_id_from_public_html(), normalize_identifier(), AsyncSession, save_single_group(), delete_all_groups() (+26 more)
+Nodes (41): get_ingestion_service_dep(), get_ok_friends_repository_dep(), get_ok_friends_service_dep(), get_vk_client_dep(), get_vk_friends_repository_dep(), get_vk_friends_service_dep(), get_vk_groups_service_dep(), AsyncSession (+33 more)
 
 ### Community 25 - "lifespan.py"
 Cohesion: 0.22
@@ -1139,27 +1133,27 @@ Nodes (25): check_alembic(), check_create_app_pattern(), check_database_session_
 
 ### Community 26 - "GroupsPage.tsx"
 Cohesion: 0.06
-Nodes (51): PageShell(), PageShellProps, FeedbackToast(), BatchActionBar(), BatchActionBarProps, ICONS, commentColumns, CommentsTable() (+43 more)
+Nodes (47): Button(), Checkbox(), CheckboxProps, BatchActionBar(), BatchActionBarProps, ICONS, Column, PAGE_SIZE_OPTIONS (+39 more)
 
 ### Community 27 - "KeywordsService"
-Cohesion: 0.07
+Cohesion: 0.08
 Nodes (36): add_keyword(), add_keyword_form_exclusion(), add_manual_keyword_form(), bulk_add_keywords(), delete_all_keywords(), delete_keyword(), get_keyword_forms(), get_keywords() (+28 more)
 
 ### Community 28 - "OkApiClient"
-Cohesion: 0.13
-Nodes (8): calculate_md5(), OkApiClient, Any, AsyncClient, sign_ok_request(), TestCredentials, TestSignOkRequest, service()
+Cohesion: 0.07
+Nodes (17): calculate_md5(), OkApiClient, Any, AsyncClient, sign_ok_request(), _assert_raises(), _make_capturing_client(), _make_client() (+9 more)
 
 ### Community 29 - "WatchlistService"
 Cohesion: 0.08
 Nodes (34): WatchlistAuthor, WatchlistSettings, create_author(), delete_author(), get_author_details(), get_settings(), get_watchlist_service(), list_authors() (+26 more)
 
 ### Community 30 - "TasksService"
-Cohesion: 0.08
-Nodes (33): cancel_task(), check_task(), complete_execution(), create_parse_task(), delete_task(), fail_execution(), get_task(), get_task_audit_log() (+25 more)
+Cohesion: 0.07
+Nodes (36): require_internal_token(), require_owner_user_id(), cancel_task(), check_task(), complete_execution(), create_parse_task(), delete_task(), fail_execution() (+28 more)
 
 ### Community 31 - "ContentService"
-Cohesion: 0.07
-Nodes (23): require_internal_token(), delete_author(), get_author(), list_authors(), list_authors_bulk(), refresh_authors(), verify_author(), get_content_service() (+15 more)
+Cohesion: 0.05
+Nodes (26): require_internal_token(), delete_author(), get_author(), list_authors(), list_authors_bulk(), refresh_authors(), verify_author(), get_content_service() (+18 more)
 
 ### Community 32 - "UsersService"
 Cohesion: 0.10
@@ -1167,19 +1161,19 @@ Nodes (36): create_user(), delete_user(), issue_temporary_password(), list_users
 
 ### Community 33 - "AuthorsPage.tsx"
 Cohesion: 0.06
-Nodes (32): AuthorAvatar(), ActionState, AuthorRow, DateCell(), NumCell(), AuthorsPage(), exportToCsv(), AuthorAvatar() (+24 more)
+Nodes (36): AuthorAvatar(), ActionState, AuthorRow, DateCell(), NumCell(), AuthorsPage(), columns, exportToCsv() (+28 more)
 
 ### Community 34 - "tests/test_outbox.py"
 Cohesion: 0.06
-Nodes (33): Create an OutboxPublisher wired with repository, producer, and topic names., AutomationRunResponse, AutomationSettingsResponse, AutomationSettingsUpdate, BaseModel, kafka_key_for_event(), OutboxEvent, UUID (+25 more)
+Nodes (35): get_automation_service(), get_tasks_service(), AsyncSession, FastAPI dependency injection hooks for tasks-service.  Routes service creation t, ApplicationFactory, AsyncSession, OutboxService, Composition root for tasks-service.      One session per use case — all reposito (+27 more)
 
 ### Community 35 - "OutboxService"
 Cohesion: 0.08
-Nodes (39): datetime, ReplayProgress, utcnow(), OutboxService, datetime, async_sessionmaker, AsyncSession, OutboxService (+31 more)
+Nodes (37): ReplayProgress, OutboxService, datetime, async_sessionmaker, AsyncSession, OutboxService, Replay processor for re-emitting historical ImMessage rows via outbox., ReplayBatchProcessor (+29 more)
 
 ### Community 36 - "index.ts"
-Cohesion: 0.04
-Nodes (54): Button(), ButtonProps, Semantic, semanticStyles, Size, sizeStyles, Variant, variantStyles (+46 more)
+Cohesion: 0.05
+Nodes (40): ButtonProps, Semantic, semanticStyles, Size, sizeStyles, Variant, variantStyles, ConfirmAction() (+32 more)
 
 ### Community 37 - "content-service/tests/test_content_api.py"
 Cohesion: 0.06
@@ -1190,12 +1184,12 @@ Cohesion: 0.04
 Nodes (47): 1. Overview, 2. Colors, 3. Typography, 4. Elevation, 5. Components, 6. Do's and Don'ts, 7. UI/UX: человекоцентричные правила, Buttons (+39 more)
 
 ### Community 39 - "AuthService"
-Cohesion: 0.09
-Nodes (23): hash_password(), require_internal_token(), verify_password(), AuthError, AuthResult, AuthService, BadAuthRequest, OutboxRepo (+15 more)
+Cohesion: 0.10
+Nodes (19): JwtService, AuthError, AuthResult, AuthService, BadAuthRequest, OutboxRepo, Exception, Protocol (+11 more)
 
 ### Community 40 - "VkApiClient"
 Cohesion: 0.04
-Nodes (23): Any, Exception, RuntimeError, Resolve and cache the VK API object (synchronous, called from thread)., VkApiBaseClient, VkApiConfigurationError, datetime, VkApiClient (+15 more)
+Nodes (27): datetime, Any, Exception, RuntimeError, Resolve and cache the VK API object (synchronous, called from thread)., VkApiBaseClient, VkApiConfigurationError, datetime (+19 more)
 
 ### Community 41 - "4. Magefile (mage)"
 Cohesion: 0.04
@@ -1214,8 +1208,8 @@ Cohesion: 0.04
 Nodes (47): API Security, Artifact Ownership and Config Policy, Authentication, Authentication & Sessions, Checklist, Checklist, Client-Facing Logging & Errors, Command Injection (+39 more)
 
 ### Community 45 - ".agents/skills/impeccable/scripts/live-browser.js"
-Cohesion: 0.09
-Nodes (47): bufferToBase64(), buildCollapsible(), buildColorModels(), buildListHtml(), buildRadiiModels(), buildTypographyModels(), captureAndEmit(), captureElementToBlob() (+39 more)
+Cohesion: 0.11
+Nodes (40): buildCollapsible(), buildColorModels(), buildDesignHeader(), buildListHtml(), buildRadiiModels(), buildTypographyModels(), copyToClipboard(), cssSafe() (+32 more)
 
 ### Community 46 - "4. Magefile (mage)"
 Cohesion: 0.04
@@ -1226,36 +1220,36 @@ Cohesion: 0.04
 Nodes (47): API Security, Artifact Ownership and Config Policy, Authentication, Authentication & Sessions, Checklist, Checklist, Client-Facing Logging & Errors, Command Injection (+39 more)
 
 ### Community 48 - "create_app"
-Cohesion: 0.04
-Nodes (38): create_app(), Create and configure the tasks-service FastAPI application.      Registers route, use_service_path(), app(), FakeAutomationService, headers(), test_automation_settings_route_is_not_task_id_route(), test_manual_run_no_completed_task_is_noop() (+30 more)
+Cohesion: 0.06
+Nodes (35): JSONResponse, Exception, FastAPI, Request, Return a generic 500 response for unhandled exceptions.      Args:         reque, Register task domain and fallback exception handlers on the app.      Args:, register_exception_handlers(), _unhandled_exception_handler() (+27 more)
 
 ### Community 49 - "SqlAlchemyOkFriendsRepository"
-Cohesion: 0.06
-Nodes (36): OkFriendsExportJobEntity, OkFriendsJobLogEntity, OkFriendsExportJob, OkFriendsJobLog, OkFriendsRecord, OkFriendsRepository, ABC, Any (+28 more)
+Cohesion: 0.08
+Nodes (27): OkFriendsExportJobEntity, OkFriendsJobLogEntity, Any, Universally redacts sensitive keys and values from logs, errors, and JSON respon, redact_secrets(), OkFriendsExportJob, OkFriendsJobLog, OkFriendsRecord (+19 more)
 
 ### Community 50 - ".opencode/skills/impeccable/scripts/live-browser.js"
 Cohesion: 0.09
-Nodes (45): bufferToBase64(), buildCollapsible(), buildColorModels(), buildListHtml(), buildRadiiModels(), buildTypographyModels(), captureAndEmit(), captureElementToBlob() (+37 more)
+Nodes (46): bufferToBase64(), buildCollapsible(), buildColorModels(), buildListHtml(), buildRadiiModels(), buildTypographyModels(), captureAndEmit(), captureElementToBlob() (+38 more)
 
 ### Community 51 - "ServiceClient"
 Cohesion: 0.19
 Nodes (4): ModerationServiceClient, Any, ContentServiceClient, ContentServiceClient
 
 ### Community 52 - "MonitoringPage.tsx"
-Cohesion: 0.10
-Nodes (37): MESSENGER_OPTIONS, MonitoringGroupForm(), Props, messengerLabels, MonitoringMessageDetail(), Props, EditingState, Messenger (+29 more)
+Cohesion: 0.09
+Nodes (38): MESSENGER_OPTIONS, MonitoringGroupForm(), Props, messengerLabels, MonitoringMessageDetail(), Props, EditingState, Messenger (+30 more)
 
 ### Community 53 - "TasksPage.tsx"
-Cohesion: 0.11
-Nodes (32): AutomationPanel(), Props, MODE_LABELS, Props, STATUS_LABELS, STATUS_STYLES, TaskRow, columns (+24 more)
+Cohesion: 0.09
+Nodes (39): AutomationPanel(), Props, CreateTaskForm(), MODE_ITEMS, MODE_LABELS, Props, SCOPE_OPTIONS, MODE_LABELS (+31 more)
 
 ### Community 54 - "ContentGatewayService"
 Cohesion: 0.09
-Nodes (37): ContentServiceClient, Any, Fetch existing groups by VK IDs.          Thin HTTP wrapper — no business logic., delete_all_groups(), delete_group(), get_group(), list_groups(), Any (+29 more)
+Nodes (36): ContentServiceClient, Any, Fetch existing groups by VK IDs.          Thin HTTP wrapper — no business logic., delete_all_groups(), delete_group(), get_group(), list_groups(), Any (+28 more)
 
 ### Community 55 - "telegram.ts"
-Cohesion: 0.10
-Nodes (30): LIMIT_OPTIONS, TelegramDeanonForm(), TelegramDeanonFormProps, TelegramLogViewer(), TelegramLogViewerProps, TelegramTaskTable(), TelegramTaskTableProps, useTelegramTasks() (+22 more)
+Cohesion: 0.09
+Nodes (32): PageShell(), PageShellProps, LIMIT_OPTIONS, TelegramDeanonForm(), TelegramDeanonFormProps, TelegramLogViewer(), TelegramLogViewerProps, TelegramTaskTable() (+24 more)
 
 ### Community 56 - "CommentsGatewayService"
 Cohesion: 0.13
@@ -1278,16 +1272,16 @@ Cohesion: 0.12
 Nodes (42): ALLOWED_PATHS, applyUpdates(), buildKeyBlock(), buildSectionBlock(), collectTopLevelHeaders(), convertEol(), detectEol(), ensureSection() (+34 more)
 
 ### Community 61 - "content-service/tests/test_projection_consumer.py"
-Cohesion: 0.07
-Nodes (21): ContentOutboxEvent, ProcessedEvent, Base, async_sessionmaker, ProjectionConsumer, async_sessionmaker, ContentOutboxService, AsyncSession (+13 more)
+Cohesion: 0.08
+Nodes (17): ProjectionConsumer, async_sessionmaker, ContentOutboxService, AsyncSession, Content-service outbox service for projection events., Manages outbox events in content-service's own outbox table., ProjectionService, Handle vk.comments_collected batch event. (+9 more)
 
 ### Community 62 - "VkServiceClient"
 Cohesion: 0.07
-Nodes (26): VkServiceClient, ProviderFriendsAdapter, VkServiceClient, Shared vk-service backed adapter for provider-specific friends export paths., OkFriendsAdapter, VkServiceClient, OK compatibility wrapper for the shared friends export adapter.      Import path, VkServiceClient (+18 more)
+Nodes (27): VkServiceClient, ProviderFriendsAdapter, VkServiceClient, Shared vk-service backed adapter for provider-specific friends export paths., OkFriendsAdapter, VkServiceClient, OK compatibility wrapper for the shared friends export adapter.      Import path, get_ok_friends_service() (+19 more)
 
 ### Community 63 - "utc_now"
-Cohesion: 0.10
-Nodes (23): do_run_migrations(), Connection, run_migrations_online(), Base, DeclarativeBase, OutboxEvent, datetime, utc_now() (+15 more)
+Cohesion: 0.09
+Nodes (25): do_run_migrations(), Connection, run_migrations_online(), Base, DeclarativeBase, OutboxEvent, datetime, utc_now() (+17 more)
 
 ### Community 64 - "VK and Content Services Design"
 Cohesion: 0.05
@@ -1295,11 +1289,11 @@ Nodes (39): API Contracts, `content_authors`, `content_comments`, `content_group
 
 ### Community 65 - "KeywordsPage.tsx"
 Cohesion: 0.10
-Nodes (32): FormsExpand(), Props, ActionState, KeywordRow, Props, getErrorMessage(), KeywordsPage(), apiDelete() (+24 more)
+Nodes (35): TableSkeleton(), FormsExpand(), Props, ActionState, KeywordRow, Props, columns, getErrorMessage() (+27 more)
 
 ### Community 66 - "ImEvent"
-Cohesion: 0.11
-Nodes (23): ImEvent, TestImEvent, ImEventConsumer, ImEventRepository, ImEventService, AsyncSession, datetime, UUID (+15 more)
+Cohesion: 0.09
+Nodes (27): ImEvent, TestImEvent, ImMessage, ProcessedEvent, Base, ImEventConsumer, async_sessionmaker, ImEventRepository (+19 more)
 
 ### Community 67 - "Staged Production Rollout — PR-B Migration Repair"
 Cohesion: 0.05
@@ -1307,7 +1301,7 @@ Nodes (39): 1.1 — Verify alembic graph (im-service), 1.2 — Validate alembic 
 
 ### Community 68 - "test_backfill.py"
 Cohesion: 0.13
-Nodes (30): MonitoringGroup, count_null_im_group_ids(), fetch_monitoring_groups_with_null_im_group_id(), find_im_group(), main(), process_group(), Any, ImGroup (+22 more)
+Nodes (29): count_null_im_group_ids(), fetch_monitoring_groups_with_null_im_group_id(), find_im_group(), main(), process_group(), Any, ImGroup, Process a single MonitoringGroup and return a status tuple.      Status values: (+21 more)
 
 ### Community 69 - "Loop - Reflex Iteration Workflow"
 Cohesion: 0.05
@@ -1351,15 +1345,15 @@ Nodes (32): AdminClaims, AdminService, get_admin_users_gateway_service(), Any, r
 
 ### Community 79 - "CHANGELOG.md"
 Cohesion: 0.04
-Nodes (45): [0.32.0](https://github.com/andr-235/parseVK/compare/v0.31.4...v0.32.0) (2026-06-15), [0.33.0](https://github.com/andr-235/parseVK/compare/v0.32.2...v0.33.0) (2026-06-17), [0.37.0](https://github.com/andr-235/parseVK/compare/v0.36.0...v0.37.0) (2026-06-18), [0.39.0](https://github.com/andr-235/parseVK/compare/v0.38.0...v0.39.0) (2026-06-19), [0.44.0](https://github.com/andr-235/parseVK/compare/v0.43.0...v0.44.0) (2026-06-23), [0.47.0](https://github.com/andr-235/parseVK/compare/v0.46.0...v0.47.0) (2026-06-26), [0.48.0](https://github.com/andr-235/parseVK/compare/v0.47.0...v0.48.0) (2026-06-26), [0.52.0](https://github.com/andr-235/parseVK/compare/v0.51.0...v0.52.0) (2026-06-29) (+37 more)
+Nodes (46): [0.32.0](https://github.com/andr-235/parseVK/compare/v0.31.4...v0.32.0) (2026-06-15), [0.33.0](https://github.com/andr-235/parseVK/compare/v0.32.2...v0.33.0) (2026-06-17), [0.37.0](https://github.com/andr-235/parseVK/compare/v0.36.0...v0.37.0) (2026-06-18), [0.39.0](https://github.com/andr-235/parseVK/compare/v0.38.0...v0.39.0) (2026-06-19), [0.44.0](https://github.com/andr-235/parseVK/compare/v0.43.0...v0.44.0) (2026-06-23), [0.47.0](https://github.com/andr-235/parseVK/compare/v0.46.0...v0.47.0) (2026-06-26), [0.48.0](https://github.com/andr-235/parseVK/compare/v0.47.0...v0.48.0) (2026-06-26), [0.52.0](https://github.com/andr-235/parseVK/compare/v0.51.0...v0.52.0) (2026-06-29) (+38 more)
 
 ### Community 80 - "TaskEventsService"
-Cohesion: 0.12
-Nodes (22): TaskEvent, get_group_ids(), get_messenger(), get_mode(), get_owner_user_id(), get_post_limit(), get_scope(), get_task_id() (+14 more)
+Cohesion: 0.07
+Nodes (38): ConsumerEvent, EventEnvelope, BaseModel, TaskEvent, VkEvent, get_group_ids(), get_messenger(), get_mode() (+30 more)
 
 ### Community 81 - "InternalServiceClient"
-Cohesion: 0.05
-Nodes (30): Any, AsyncClient, BaseException, Exception, Timeout, ServiceClient, ServiceClientError, ServiceClientHTTPError (+22 more)
+Cohesion: 0.10
+Nodes (19): InternalClientError, InternalClientHTTPError, InternalClientUnavailableError, Any, Exception, Base error for internal service client failures., _get_service_bytes(), InternalServiceClient (+11 more)
 
 ### Community 82 - "Dockerize — Docker Configuration Generator"
 Cohesion: 0.06
@@ -1378,8 +1372,8 @@ Cohesion: 0.06
 Nodes (35): 0.0 Load config.yaml, 0.1 Load Ownership and Gate Contract, 0.2 Find Plan File, 0.2 Read Plan & Tasks, 0.3 Gather Changed Files, 1.1 Read Task Description, 1.2 Verify Implementation Exists, 1.3 Build Checklist (+27 more)
 
 ### Community 86 - "common/events/__init__.py"
-Cohesion: 0.15
-Nodes (16): ConsumerEvent, EventEnvelope, BaseModel, VkEvent, ContentCommentsProjectedV1, ImMessageCollectedPayload, Any, BaseModel (+8 more)
+Cohesion: 0.16
+Nodes (16): delete_listing(), export_listings(), import_data(), list_listings(), Any, Body, Request, update_listing() (+8 more)
 
 ### Community 87 - "Dockerize — Docker Configuration Generator"
 Cohesion: 0.06
@@ -1390,11 +1384,11 @@ Cohesion: 0.06
 Nodes (35): 0.0 Load config.yaml, 0.1 Load Ownership and Gate Contract, 0.2 Find Plan File, 0.2 Read Plan & Tasks, 0.3 Gather Changed Files, 1.1 Read Task Description, 1.2 Verify Implementation Exists, 1.3 Build Checklist (+27 more)
 
 ### Community 89 - "SqlAlchemyOutboxRepository"
-Cohesion: 0.09
-Nodes (22): OutboxEventEntity, OutboxEvent, OutboxRepository, ABC, OutboxEvent, UUID, Append a new domain event to transaction outbox queue table., Fetch list of pending events that are due to publish. (+14 more)
+Cohesion: 0.07
+Nodes (25): OutboxEventEntity, OutboxEvent, OutboxRepository, ABC, OutboxEvent, UUID, Append a new domain event to transaction outbox queue table., Fetch list of pending events that are due to publish. (+17 more)
 
 ### Community 90 - "SqlAlchemyTaskEventsRepository"
-Cohesion: 0.10
+Cohesion: 0.11
 Nodes (22): Base, VkTaskRun, AsyncSession, datetime, VkTaskRunEntity, SqlAlchemyTaskQueueRepository, utcnow(), AsyncSession (+14 more)
 
 ### Community 91 - "Security Checklist"
@@ -1411,15 +1405,15 @@ Nodes (34): Invite-ссылки, `normalizeTelegramIdentifier` util, Numeric id,
 
 ### Community 94 - "resumeSession"
 Cohesion: 0.11
-Nodes (33): actionLabel(), buildConfigureRow(), buildConfirmedRow(), buildDots(), buildGeneratingRow(), buildSavingRow(), checkpointPayload(), clearHandled() (+25 more)
+Nodes (34): wrapper(), actionLabel(), buildConfigureRow(), buildConfirmedRow(), buildDots(), buildGeneratingRow(), buildSavingRow(), checkpointPayload() (+26 more)
 
 ### Community 95 - "Keyword"
-Cohesion: 0.12
-Nodes (17): Keyword, KeywordForm, KeywordFormExclusion, KeywordRecalculationJob, Base, datetime, utcnow(), KeywordCrudService (+9 more)
+Cohesion: 0.11
+Nodes (19): Keyword, KeywordForm, KeywordFormExclusion, Base, KeywordCrudService, AsyncSession, BackgroundTasks, Keyword (+11 more)
 
 ### Community 96 - "SqlAlchemyVkFriendsRepository"
-Cohesion: 0.08
-Nodes (30): Any, Universally redacts sensitive keys and values from logs, errors, and JSON respon, redact_secrets(), VkFriendsExportJob, VkFriendsJobLog, VkFriendsRecord, ABC, VkFriendsExportJob (+22 more)
+Cohesion: 0.10
+Nodes (21): JobStatus, Enum, str, Any, AsyncSession, UUID, VkFriendsExportJob, VkFriendsJobLog (+13 more)
 
 ### Community 97 - "OkFriendsExportService"
 Cohesion: 0.14
@@ -1434,8 +1428,8 @@ Cohesion: 0.06
 Nodes (33): 1.1 Scan for Existing Build Files, 1.2 Determine Mode, 2.1 Primary Language, 2.2 Package manager & build entrypoints, 2.3 Framework Detection, 2.4 Docker (Deep Scan), 2.5 CI/CD, 2.6 Database & Migrations (+25 more)
 
 ### Community 100 - "resumeSession"
-Cohesion: 0.16
-Nodes (23): clearHandled(), clearScrollY(), clearSession(), cycleVariant(), extractContext(), handleGo(), hideShaderOverlay(), id8() (+15 more)
+Cohesion: 0.11
+Nodes (33): actionLabel(), buildConfigureRow(), buildConfirmedRow(), buildDots(), buildGeneratingRow(), buildSavingRow(), checkpointPayload(), clearHandled() (+25 more)
 
 ### Community 101 - "Chunk 3: Migrate API service files"
 Cohesion: 0.06
@@ -1450,20 +1444,20 @@ Cohesion: 0.06
 Nodes (33): 1.1 Scan for Existing Build Files, 1.2 Determine Mode, 2.1 Primary Language, 2.2 Package manager & build entrypoints, 2.3 Framework Detection, 2.4 Docker (Deep Scan), 2.5 CI/CD, 2.6 Database & Migrations (+25 more)
 
 ### Community 104 - ".opencode/skills/impeccable/SKILL.md"
-Cohesion: 0.13
-Nodes (13): Extract Flow, Step 1: Discover the Design System, Step 2: Identify Patterns, Step 3: Plan Extraction, Step 4: Extract & Enrich, Step 5: Migrate, Step 6: Document, 1. Context gathering (+5 more)
+Cohesion: 0.08
+Nodes (22): Extract Flow, Step 1: Discover the Design System, Step 2: Identify Patterns, Step 3: Plan Extraction, Step 4: Extract & Enrich, Step 5: Migrate, Step 6: Document, 1. Context gathering (+14 more)
 
 ### Community 105 - "test_etl_monitoring_groups.py"
 Cohesion: 0.16
 Nodes (31): _category_distribution(), _count_distinct_messenger_chat_id(), _count_rows(), DbConfig, ETLStats, _find_im_group_id(), _insert_monitoring_group(), load_db_config() (+23 more)
 
 ### Community 106 - "create_app"
-Cohesion: 0.08
-Nodes (12): get_session(), AsyncSession, create_app(), lifespan(), FastAPI, supervise(), app(), app() (+4 more)
+Cohesion: 0.07
+Nodes (17): ProcessedEvent, get_session(), AsyncSession, create_app(), lifespan(), FastAPI, supervise(), async_sessionmaker (+9 more)
 
 ### Community 107 - "TelegramTgmbaseService"
 Cohesion: 0.09
-Nodes (18): get_tgmbase_service(), AsyncSession, create_run(), exclude_chat(), export_run(), get_contacts(), get_result_messages(), get_results() (+10 more)
+Nodes (21): get_tgmbase_service(), AsyncSession, create_run(), exclude_chat(), export_run(), get_contacts(), get_files(), get_result_messages() (+13 more)
 
 ### Community 108 - "Workflow"
 Cohesion: 0.06
@@ -1514,16 +1508,16 @@ Cohesion: 0.14
 Nodes (26): BaseGatewayService, Any, HTTPException, Request, Forward request to backend service.          Deprecated: will be replaced by dir, create_monitoring_group(), delete_monitoring_group(), get_new_messages() (+18 more)
 
 ### Community 120 - "MonitoringGroupsRepository"
-Cohesion: 0.10
-Nodes (19): do_run_migrations(), run_migrations_online(), Base, DeclarativeBase, ImGroup, MonitoringGroupsRepository, AsyncSession, db_engine() (+11 more)
+Cohesion: 0.09
+Nodes (24): Base, DeclarativeBase, ImGroup, ImUserNotifierState, MonitoringGroup, Base, datetime, utcnow() (+16 more)
 
 ### Community 121 - "NotifierRepository"
-Cohesion: 0.13
-Nodes (16): ImUserNotifierState, get_notifier_service(), AsyncSession, NotifierRepository, AsyncSession, get_new_messages(), get_state(), update_state() (+8 more)
+Cohesion: 0.15
+Nodes (15): get_notifier_service(), AsyncSession, NotifierRepository, AsyncSession, get_new_messages(), get_state(), update_state(), NotifierStateResponse (+7 more)
 
 ### Community 122 - "test_task_consumer.py"
-Cohesion: 0.15
-Nodes (23): Handles incoming TaskEvent Kafka messages with a two-phase transaction pattern., TaskEventsService, async_sessionmaker, TaskEventsConsumer, event(), FakeRepository, FakeTaskRun, FakeTasksClient (+15 more)
+Cohesion: 0.12
+Nodes (27): get_task_events_handler(), AsyncSession, TaskEventsRepository, TasksClient, Handles incoming TaskEvent Kafka messages with a two-phase transaction pattern., TaskEventsService, async_sessionmaker, TaskEventsConsumer (+19 more)
 
 ### Community 123 - "CI — Pipeline Configuration Generator"
 Cohesion: 0.06
@@ -1554,8 +1548,8 @@ Cohesion: 0.06
 Nodes (31): 1. Sticky-блок запуска, 2. Sticky-панель обзора батча, 3. Основная рабочая область `master-detail`, 4. Адаптивный режим, Tgmbase Search UI/UX Design, UI State, Быстрые фильтры, Во время поиска (+23 more)
 
 ### Community 130 - "moderation-service/tests/test_content_api.py"
-Cohesion: 0.15
-Nodes (15): get_moderation_service(), AsyncSession, app(), headers(), keywords передаётся как повторяющийся query-параметр., readStatus=unread/read/all возвращает stats-поля., search query parameter принимается корректно., has_more в cursor-ответе — bool, не просто наличие items. (+7 more)
+Cohesion: 0.09
+Nodes (26): setup_opentelemetry(), create_app(), lifespan(), FastAPI, supervise(), get_moderation_service(), AsyncSession, publish_watchlist_monitor_forever() (+18 more)
 
 ### Community 131 - "CI — Pipeline Configuration Generator"
 Cohesion: 0.06
@@ -1566,16 +1560,16 @@ Cohesion: 0.17
 Nodes (31): cleanup_output(), convert_github_blob_url(), download_url(), extract_path(), extract_pdf(), extract_pdf_with_python(), extract_source(), ExtractedDocument (+23 more)
 
 ### Community 133 - ".opencode/skills/impeccable/reference/craft.md"
-Cohesion: 0.15
-Nodes (8): Duration: The 100/300/500 Rule, Easing: Pick the Right Curve, Motion Design, Perceived Performance, Performance, Premium Motion Materials, Reduced Motion, Staggered Animations
+Cohesion: 0.06
+Nodes (27): After This File, Codex: Visual Direction & Asset Production, Four stop points before code, Step A: Explore Directions with the User, Step B: Generate the Brand Palette First, Step C: Generate 1-3 Visual Mocks Against the Palette, Step D: Approval Loop, Step E: Mock Fidelity Inventory (+19 more)
 
 ### Community 134 - "upsert.py"
 Cohesion: 0.10
 Nodes (24): ColumnMap, const(), _default_target_dsn(), gen_uuid(), json_dumps(), main(), map_bool(), map_int() (+16 more)
 
 ### Community 135 - "ModerationService"
-Cohesion: 0.08
-Nodes (25): require_internal_token(), get_session(), AsyncSession, InvalidVkCommentEvent, map_vk_comment_event(), Any, datetime, _required_int() (+17 more)
+Cohesion: 0.09
+Nodes (14): ModerationService, async_sessionmaker, AsyncSession, Task, _DualResult, make_comment(), make_undated_comment(), RecordingSession (+6 more)
 
 ### Community 136 - ".agent/skills/aif-build-automation/templates/magefile-full.go"
 Cohesion: 0.09
@@ -1598,12 +1592,12 @@ Cohesion: 0.14
 Nodes (29): be(), bt(), Ce(), Ct(), _e(), Ee(), Et(), Gt() (+21 more)
 
 ### Community 141 - "utcnow"
-Cohesion: 0.06
-Nodes (23): do_run_migrations(), Connection, run_async_migrations(), run_migrations_online(), Automation scheduler background worker for tasks-service.  Periodically evaluate, Base, DeclarativeBase, OutboxEvent (+15 more)
+Cohesion: 0.11
+Nodes (14): do_run_migrations(), Connection, run_async_migrations(), run_migrations_online(), Base, DeclarativeBase, OutboxEvent, Base (+6 more)
 
 ### Community 142 - "TelegramTgmbaseMapper"
-Cohesion: 0.15
-Nodes (10): DlMatchRun, _dump_schema(), TelegramTgmbaseMapper, get_files(), DlImportFileSchema, normalize_phone_number(), normalize_tgmbase_query(), test_mapper_builds_dl_match_result_with_typed_user_schema() (+2 more)
+Cohesion: 0.18
+Nodes (8): _dump_schema(), TelegramTgmbaseMapper, normalize_phone_number(), normalize_tgmbase_query(), test_exporter_writes_match_and_message_sheets(), test_mapper_builds_dl_match_result_with_typed_user_schema(), test_mapper_builds_search_profile_and_candidate(), test_search_component_keeps_query_and_summary_contracts()
 
 ### Community 143 - "Дизайн: локальный pre-push quality gate"
 Cohesion: 0.06
@@ -1630,12 +1624,12 @@ Cohesion: 0.19
 Nodes (12): DSNs, ETL, load_dsns(), main(), now(), parse_args(), Any, datetime (+4 more)
 
 ### Community 149 - "WatchlistGatewayService"
-Cohesion: 0.09
-Nodes (37): Request, request_ids(), list_comments(), list_comments_cursor(), Body, Request, search_comments(), update_comment_status() (+29 more)
+Cohesion: 0.06
+Nodes (52): get_jwks(), Any, require_auth(), Request, request_ids(), list_comments(), list_comments_cursor(), Body (+44 more)
 
 ### Community 150 - "tasks/consumer.py"
-Cohesion: 0.12
-Nodes (16): ImTaskRun, ProcessedEvent, Base, async_sessionmaker, TasksClient, TaskEventsConsumer, Task event helpers for im-service.  Re-exports shared helpers from common.events, AsyncSession (+8 more)
+Cohesion: 0.11
+Nodes (6): PostsClient, Any, datetime, Asynchronously iterate comment pages for a wall post.          Yields dictionari, TestPostsClientGetComments, TestPostsClientIterCommentPages
 
 ### Community 151 - "2. Docker Compose Best Practices"
 Cohesion: 0.07
@@ -1646,8 +1640,8 @@ Cohesion: 0.07
 Nodes (29): 1. Dockerfile Best Practices, 2. Docker Compose Best Practices, 3. Dev vs Production Patterns, 4. Infrastructure Services Reference, Angie vs Nginx, Anti-Patterns, Anti-Patterns, Base Image Selection (+21 more)
 
 ### Community 153 - "handleClick"
-Cohesion: 0.19
-Nodes (24): cleanup(), closeTunePopover(), connectSSE(), handleClick(), handleDiscard(), handleKeyDown(), handleMouseMove(), handleServerLost() (+16 more)
+Cohesion: 0.14
+Nodes (30): cleanup(), closeTunePopover(), connectSSE(), desc(), handleAccept(), handleClick(), handleDiscard(), handleKeyDown() (+22 more)
 
 ### Community 154 - "Дизайн: internal Telegram identifiers для sync участников"
 Cohesion: 0.07
@@ -1670,7 +1664,7 @@ Cohesion: 0.14
 Nodes (30): cleanup(), closeTunePopover(), connectSSE(), desc(), handleAccept(), handleClick(), handleDiscard(), handleKeyDown() (+22 more)
 
 ### Community 159 - "BaseApiClient"
-Cohesion: 0.09
+Cohesion: 0.10
 Nodes (11): BaseApiClient, _is_retryable(), Any, BaseException, Async HTTP client for Wappi.pro and Max API with tenacity retry.  Public interfa, api_client(), test_extract_items(), test_format_message_date_uses_utc() (+3 more)
 
 ### Community 160 - "Architecture Knowledge Base"
@@ -1702,8 +1696,8 @@ Cohesion: 0.07
 Nodes (28): Application Service (Use Case Orchestration), Architecture Knowledge Base, Code Examples (Language-Agnostic Pseudo-Code), Core Principles, Decision Matrix, Dependency Rules, Distributed Patterns, Domain Service vs Application Service (+20 more)
 
 ### Community 167 - ".opencode/skills/impeccable/reference/layout.md"
-Cohesion: 0.13
-Nodes (14): Cards Are Not Required, Container Queries, Depth & Elevation, Grid Systems, Hierarchy Through Multiple Dimensions, Name Tokens Semantically, Optical Adjustments, Spacing Systems (+6 more)
+Cohesion: 0.07
+Nodes (27): Assess Current Layout, Break Card Grid Monotony, Choose the Right Layout Tool, Create Visual Rhythm, Establish a Spacing System, Improve Layout Systematically, Live-mode signature params, Manage Depth & Elevation (+19 more)
 
 ### Community 168 - "1. GitHub Actions"
 Cohesion: 0.07
@@ -1738,8 +1732,8 @@ Cohesion: 0.12
 Nodes (25): acknowledgePendingEvent(), annotRoot, args, broadcast(), CONTEXT_DIR, createRequestHandler(), { detectScript, sessionPath, livePath }, __dirname (+17 more)
 
 ### Community 176 - "VkFriendsExportService"
-Cohesion: 0.16
-Nodes (20): Any, UUID, VkFriendsExportService, _as_dict(), format_cell_value(), map_vk_user_to_flat_dto(), Any, _to_boolean() (+12 more)
+Cohesion: 0.18
+Nodes (19): Any, UUID, VkFriendsExportService, _as_dict(), format_cell_value(), map_vk_user_to_flat_dto(), Any, _to_boolean() (+11 more)
 
 ### Community 177 - ".agents/skills/impeccable/scripts/live-session-store.mjs"
 Cohesion: 0.14
@@ -1763,15 +1757,15 @@ Nodes (21): getLegacyLiveSessionsDir(), readLiveServerInfo(), completeCli(), com
 
 ### Community 182 - "build_keyword_candidates"
 Cohesion: 0.09
-Nodes (24): build_keyword_candidates(), build_match_pattern(), KeywordCandidate, KeywordMatcher, match_keyword_candidates(), Keyword, async_sessionmaker, datetime (+16 more)
+Nodes (26): KeywordRecalculationJob, build_keyword_candidates(), build_match_pattern(), KeywordCandidate, KeywordMatcher, match_keyword_candidates(), Keyword, async_sessionmaker (+18 more)
 
 ### Community 183 - "TasksRepository"
 Cohesion: 0.12
 Nodes (11): Task, AsyncSession, OutboxService, AsyncSession, OutboxService, AsyncSession, Task, Fetch a task by primary key with SELECT ... FOR UPDATE.          Acquires a row- (+3 more)
 
 ### Community 184 - "task_runtime.py"
-Cohesion: 0.16
-Nodes (8): get_tasks_client(), TasksClient, lease_deadline(), datetime, TaskLeaseStore, build_task_worker(), async_sessionmaker, TaskWorker
+Cohesion: 0.13
+Nodes (10): get_tasks_client(), TasksClient, lease_deadline(), datetime, TaskLeaseStore, build_task_worker(), async_sessionmaker, TaskWorker (+2 more)
 
 ### Community 185 - "Compose Security"
 Cohesion: 0.08
@@ -1814,8 +1808,8 @@ Cohesion: 0.12
 Nodes (24): _allowlist_matches(), apply_allowlist(), build_code_block_ranges(), check_base64_blocks(), check_html_comments(), check_zero_width_chars(), is_in_code_block(), load_allowlist() (+16 more)
 
 ### Community 195 - "el"
-Cohesion: 0.16
-Nodes (25): barPaletteForTheme(), buildDesignHeader(), buildParamsPanel(), defangOutsideHandlers(), designPanelCss(), detectPageTheme(), el(), fetchDesignSystem() (+17 more)
+Cohesion: 0.17
+Nodes (24): barPaletteForTheme(), buildDesignHeader(), buildParamsPanel(), defangOutsideHandlers(), designPanelCss(), detectPageTheme(), el(), fetchDesignSystem() (+16 more)
 
 ### Community 196 - "api-gateway/app/modules/monitoring/router.py"
 Cohesion: 0.15
@@ -1831,7 +1825,7 @@ Nodes (24): Component translation rules, Narrative mapping, Pitfalls, Scan mode 
 
 ### Community 199 - "el"
 Cohesion: 0.20
-Nodes (21): barPaletteForTheme(), buildDesignHeader(), defangOutsideHandlers(), designPanelCss(), detectPageTheme(), fetchDesignSystem(), init(), initActionPicker() (+13 more)
+Nodes (20): barPaletteForTheme(), buildParamsPanel(), defangOutsideHandlers(), designPanelCss(), detectPageTheme(), el(), formatRangeValue(), init() (+12 more)
 
 ### Community 200 - "compilerOptions"
 Cohesion: 0.08
@@ -1850,12 +1844,12 @@ Cohesion: 0.09
 Nodes (20): _call_content_service(), _call_im_service(), _FakeContentMonitoringService, _make_im_group_row(), _make_mock_db_session(), _MockResult, _MockScalarResult, Path (+12 more)
 
 ### Community 204 - "hash_password"
-Cohesion: 0.16
-Nodes (5): FakeOutbox, FakeRefreshRepo, FakeUsersRepo, make_user(), test_login_emits_identity_event()
+Cohesion: 0.11
+Nodes (11): hash_password(), require_internal_token(), verify_password(), UserRole, FakeOutbox, FakeRefreshRepo, FakeUsersRepo, make_user() (+3 more)
 
 ### Community 205 - "telegram-service/app/modules/telegram_tgmbase/schemas.py"
-Cohesion: 0.17
-Nodes (23): search_tgmbase(), DlImportBatchSchema, BaseModel, TelegramDlImportContactSchema, TelegramDlImportContactsPageSchema, TelegramDlImportUploadResponseSchema, TelegramDlMatchMessageSchema, TelegramDlMatchResultContactSchema (+15 more)
+Cohesion: 0.18
+Nodes (22): search_tgmbase(), DlImportBatchSchema, DlImportFileSchema, BaseModel, TelegramDlImportContactSchema, TelegramDlImportUploadResponseSchema, TelegramDlMatchMessageSchema, TelegramDlMatchResultContactSchema (+14 more)
 
 ### Community 206 - "Workflow"
 Cohesion: 0.08
@@ -1886,8 +1880,8 @@ Cohesion: 0.08
 Nodes (23): API, Backend, Frontend, `GET /api/telegram/dl-match/runs/:id`, `GET /api/telegram/dl-match/runs/:id/export`, `GET /api/telegram/dl-match/runs/:id/results`, `POST /api/telegram/dl-match/runs`, Telegram DL Match Queue Design (+15 more)
 
 ### Community 213 - "get_monitoring_service"
-Cohesion: 0.12
-Nodes (17): get_session, get_session(), AsyncSession, get_monitoring_service(), AsyncSession, Depends, get_messages(), parse_list_param() (+9 more)
+Cohesion: 0.09
+Nodes (20): get_session, get_session(), AsyncSession, get_monitoring_service(), AsyncSession, Depends, MonitoringRepository, AsyncSession (+12 more)
 
 ### Community 214 - "Workflow"
 Cohesion: 0.08
@@ -1898,19 +1892,19 @@ Cohesion: 0.08
 Nodes (23): append-arrays, append-string, Cleanup, Consent prompt template, CSP detection (first-time only), Drift-heal warning, Exit, First-time setup (config missing or invalid) (+15 more)
 
 ### Community 216 - "identity-service/app/modules/auth/router.py"
-Cohesion: 0.16
-Nodes (21): get_session(), AsyncSession, change_password(), jwks(), login(), logout(), me(), AuthResponse (+13 more)
+Cohesion: 0.17
+Nodes (20): get_session(), AsyncSession, change_password(), login(), logout(), me(), AuthResponse, ChangePasswordRequest (+12 more)
 
 ### Community 217 - "MaxApiClient"
-Cohesion: 0.12
+Cohesion: 0.11
 Nodes (15): TasksClient, MaxApiClient, datetime, WappiClient, _coerce_timestamp(), Any, WappiMessage, test_max_client_close() (+7 more)
 
 ### Community 218 - "moderation-service/tests/test_projection_consumer.py"
-Cohesion: 0.26
-Nodes (12): envelope(), FakeCrud, FakeKeywordRepository, FakeSession, service_with(), test_handle_batch_event_saves_matching_comments_and_marks_processed(), test_handle_batch_event_skips_invalid_comments_and_continues(), test_handle_batch_event_with_no_matches_marks_processed_only() (+4 more)
+Cohesion: 0.18
+Nodes (15): ProjectionConsumer, envelope(), FakeCrud, FakeKeywordRepository, FakeSession, service_with(), test_handle_batch_event_saves_matching_comments_and_marks_processed(), test_handle_batch_event_skips_invalid_comments_and_continues() (+7 more)
 
 ### Community 219 - "VkApiBaseClient"
-Cohesion: 0.09
+Cohesion: 0.10
 Nodes (21): CheckpointData, VkIngestionCheckpoint, AsyncSession, datetime, SqlAlchemyIngestionCheckpointStore, utcnow(), IngestionRepository, SqlAlchemyIngestionRepository (+13 more)
 
 ### Community 220 - "Architecture Patterns Guide"
@@ -1938,20 +1932,20 @@ Cohesion: 0.17
 Nodes (10): KafkaProducer, OutboxPublisher, OutboxEvent, Protocol, FakeProducer, FakeSession, make_event(), test_publisher_marks_failed_event_for_retry() (+2 more)
 
 ### Community 226 - "ModerationComment"
-Cohesion: 0.09
-Nodes (16): ModerationComment, ProcessedEvent, ModerationCrudService, Any, AsyncSession, UUID, FakeModerationService, _DualResult (+8 more)
+Cohesion: 0.17
+Nodes (7): ModerationComment, ProcessedEvent, ModerationCrudService, Any, AsyncSession, UUID, FakeModerationService
 
 ### Community 227 - "listings-service/app/modules/listings/service.py"
-Cohesion: 0.23
-Nodes (13): date_value(), float_value(), integer_value(), normalize_manual_overrides(), normalize_url(), datetime, resolve_source_date(), resolve_source_string() (+5 more)
+Cohesion: 0.18
+Nodes (17): date_value(), float_value(), integer_value(), normalize_manual_overrides(), normalize_url(), datetime, raise_validation(), resolve_source_date() (+9 more)
 
 ### Community 228 - "AI Factory - Project Setup"
 Cohesion: 0.09
 Nodes (21): AGENTS.md Generation, AI Factory - Project Setup, Artifact Ownership, Canonical Server Templates, CRITICAL: Do NOT Implement, CRITICAL: Security Scanning, Filesystem, GitHub (+13 more)
 
 ### Community 229 - "Codex Agent Playbook"
-Cohesion: 0.08
-Nodes (25): AI Context Files, 🔄 CI/CD и автоматизация, Codex Agent Playbook, 🚦 Core Repository Instructions (Основные ИИ-правила), Documentation, graphify, Pipeline, Project Structure & Microservices (+17 more)
+Cohesion: 0.07
+Nodes (26): AI Context Files, 🔄 CI/CD и автоматизация, Codex Agent Playbook, 🚦 Core Repository Instructions (Основные ИИ-правила), Documentation, graphify, Pipeline, Project Structure & Microservices (+18 more)
 
 ### Community 230 - ".agents/skills/impeccable/scripts/live-wrap.mjs"
 Cohesion: 0.18
@@ -1970,19 +1964,19 @@ Cohesion: 0.09
 Nodes (21): auth-session, Candidate under review, ci-cd-security, Confirmed candidate, Confirmed candidate, Confirmed candidate, Confirmed candidate, Criteria (+13 more)
 
 ### Community 234 - "ValueError"
-Cohesion: 0.13
-Nodes (8): main(), _metadata(), Path, TelegramDlMatchExporter, DlMatchRuns, AsyncSession, test_exporter_writes_match_and_message_sheets(), ValueError
+Cohesion: 0.17
+Nodes (4): DlMatchRun, TelegramDlMatchExporter, DlMatchRuns, AsyncSession
 
 ### Community 235 - ".opencode/skills/impeccable/scripts/live-wrap.mjs"
 Cohesion: 0.18
 Nodes (20): hasGeneratedHeader(), HEADER_MARKERS, isGeneratedFile(), isGitIgnored(), argVal(), buildCssAuthoring(), buildCssSelectorPrefixExamples(), buildSearchQueries() (+12 more)
 
 ### Community 236 - "test_listings_api.py"
-Cohesion: 0.15
-Nodes (11): create_app(), lifespan(), FastAPI, app(), FakeListingsService, headers(), service(), test_data_import_accepts_legacy_single_object_and_array_forms() (+3 more)
+Cohesion: 0.13
+Nodes (12): create_app(), lifespan(), FastAPI, use_service_path(), app(), FakeListingsService, headers(), service() (+4 more)
 
 ### Community 237 - "listings-service/tests/test_schemas.py"
-Cohesion: 0.20
+Cohesion: 0.17
 Nodes (16): update_listing(), ListingImportItem, ListingImportPayload, ListingResponse, ListingsListResponse, ListingUpdateRequest, BaseModel, test_listing_import_item_invalid_image_type() (+8 more)
 
 ### Community 238 - "TelegramDlImportParser"
@@ -1990,8 +1984,8 @@ Cohesion: 0.21
 Nodes (5): DlImportService, AsyncSession, datetime, utcnow(), AsyncSession
 
 ### Community 239 - "FakeLeaseStore"
-Cohesion: 0.16
-Nodes (13): build_executor(), FakeLeaseStore, FakeSession, FakeTasksClient, VkTaskRun, task_run(), test_executor_cancels_work_when_lease_is_lost(), test_executor_completes_frozen_task_via_repository() (+5 more)
+Cohesion: 0.22
+Nodes (12): build_executor(), FakeLeaseStore, FakeTasksClient, VkTaskRun, task_run(), test_executor_cancels_work_when_lease_is_lost(), test_executor_completes_frozen_task_via_repository(), test_executor_stops_after_max_recovery_attempts() (+4 more)
 
 ### Community 240 - "Best Practices Guide"
 Cohesion: 0.10
@@ -2054,8 +2048,8 @@ Cohesion: 0.10
 Nodes (20): Animate complex properties, Assess What "Extraordinary" Means Here, For data-heavy interfaces, For functional UI, For performance-critical UI, For visual/marketing surfaces, Implement with Discipline, Interact with the device (+12 more)
 
 ### Community 255 - "create_app"
-Cohesion: 0.26
-Nodes (10): AuthResponse, AuthUser, ChangePasswordRequest, LoginRequest, BaseModel, FakeGatewayService, get_fake_service(), test_logout_deletes_cookie() (+2 more)
+Cohesion: 0.12
+Nodes (15): AppLayout(), Header(), HeaderProps, Select(), SelectProps, HelpModal(), HelpModalProps, StatusCell() (+7 more)
 
 ### Community 256 - ".agent/skills/aif-build-automation/templates/magefile-basic.go"
 Cohesion: 0.12
@@ -2095,27 +2089,27 @@ Nodes (19): Clean Up, Code Quality, Color & Contrast, Content & Copy, Design Sys
 
 ### Community 265 - "test_comments_router.py"
 Cohesion: 0.22
-Nodes (20): create_app(), fake_service(), make_authed_client_ctx(), Retrieve the per-test token stored by inject_jwks_cache., Multiple keywords must be preserved, not collapsed into one., The X-Internal-Service-Token must not appear in any response body., Return AsyncClient context manager with Authorization header., test_comments_cursor_returns_camel_case() (+12 more)
+Nodes (15): fake_service(), FakeCommentsGatewayService, make_authed_client_ctx(), Retrieve the per-test token stored by inject_jwks_cache., Multiple keywords must be preserved, not collapsed into one., The X-Internal-Service-Token must not appear in any response body., Return AsyncClient context manager with Authorization header., test_comments_cursor_returns_camel_case() (+7 more)
 
 ### Community 266 - "create_app"
-Cohesion: 0.16
-Nodes (11): create_app(), lifespan(), FastAPI, use_service_path(), app(), test_health_returns_up(), test_ready_returns_ready(), test_ready_returns_service_unavailable() (+3 more)
+Cohesion: 0.09
+Nodes (23): create_app(), lifespan(), FastAPI, use_service_path(), app(), test_health_returns_up(), test_ready_returns_ready(), test_ready_returns_service_unavailable() (+15 more)
 
 ### Community 267 - "User"
-Cohesion: 0.14
-Nodes (8): User, AsyncSession, UUID, UsersRepository, StrEnum, SortDirection, UserSortField, UserRole
+Cohesion: 0.16
+Nodes (7): User, AsyncSession, UUID, UsersRepository, StrEnum, SortDirection, UserSortField
 
 ### Community 268 - "monitoring_groups/router.py"
-Cohesion: 0.17
-Nodes (13): require_internal_token(), require_owner_user_id(), get_monitoring_groups_service(), AsyncSession, create_group(), delete_group(), list_groups(), update_group() (+5 more)
+Cohesion: 0.13
+Nodes (22): Run a background coroutine with exponential backoff restart on crash.      The s, supervise(), BaseException, Tests for supervise() — background worker supervisor.  Covers crash restart, exp, Supervise works without health parameter — no errors., Supervisor never calls mark_cycle_success — workers do this themselves., On unhandled exception, supervisor calls mark_crashed and running stays False af, Raised inside supervise's asyncio.sleep mock to terminate the infinite retry loo (+14 more)
 
 ### Community 269 - "WappiPoller"
-Cohesion: 0.10
-Nodes (27): ImMessengerCursor, Persist cursor to DB. Returns True on success, False on failure., run_poller_forever(), WappiPoller, WappiChat, _capture_emit_callback(), mock_max(), Run poll_messenger with a single chat and capture the outbox callback. (+19 more)
+Cohesion: 0.11
+Nodes (26): ImMessengerCursor, run_poller_forever(), WappiPoller, WappiChat, _capture_emit_callback(), mock_max(), Run poll_messenger with a single chat and capture the outbox callback., sample_chats() (+18 more)
 
 ### Community 270 - "test_moderation_service.py"
-Cohesion: 0.11
-Nodes (26): AuthUser, bearer_token(), Request, validate_csrf(), change_password(), create_auth_service(), delete_auth_cookies(), login() (+18 more)
+Cohesion: 0.10
+Nodes (28): AuthUser, bearer_token(), Request, validate_csrf(), change_password(), create_auth_service(), delete_auth_cookies(), login() (+20 more)
 
 ### Community 271 - "Skill Development Best Practices"
 Cohesion: 0.11
@@ -2174,11 +2168,11 @@ Cohesion: 0.11
 Nodes (18): outbox_repo(), correlation_id should be forwarded to repository., Create a mock OutboxRepository., Ensure None values in metadata/raw are excluded from v2 payload., When replay=True, dedupe_key should have replay-v2: prefix., When replay=False (default), dedupe_key should remain unchanged with im.message_, Create OutboxService with mocked repository., When no extra fields provided, should emit version 1 minimal payload. (+10 more)
 
 ### Community 285 - "ListingsService"
-Cohesion: 0.24
-Nodes (5): use_service_path(), FakeRepository, test_import_creates_updates_and_preserves_manual_overrides(), test_import_partial_failures_and_duplicate_skip_when_update_disabled(), test_import_rejects_empty_payload()
+Cohesion: 0.08
+Nodes (34): WireEvent, Base, RealtimeEvent, _calculate_expires_at(), consume_topic_forever(), ingest_event(), _map_audience(), _produce_dlq() (+26 more)
 
 ### Community 286 - "TelegramApiClient"
-Cohesion: 0.14
+Cohesion: 0.13
 Nodes (11): parse_proxy_url(), Client utilizing Telethon (MTProto) for Telegram API interactions.     Incorpora, Helper method to ensure the Telethon client is connected and authorized., Gracefully disconnects the client., Retrieves the list of all dialogs (groups, channels, chats) for the logged-in us, Retrieves channel/group metadata., Retrieves a list of participants from a target channel or group.         Support, Cleans up input target (e.g. stripping spaces, @ symbol, resolving t.me links) (+3 more)
 
 ### Community 287 - "Linters & Formatters"
@@ -2266,8 +2260,8 @@ Cohesion: 0.11
 Nodes (17): Accent Color Application, Accessibility, Assess Color Opportunity, Background & Surfaces, Balance & Refinement, Borders & Accents, Cohesion, Data Visualization (+9 more)
 
 ### Community 308 - "Interaction Design"
-Cohesion: 0.17
-Nodes (12): Destructive Actions: Undo > Confirm, Focus Rings: Do Them Right, Form Design: The Non-Obvious, Gesture Discoverability, Interaction Design, Keyboard Navigation Patterns, Loading States, Modals: The Inert Approach (+4 more)
+Cohesion: 0.11
+Nodes (18): Anti-Patterns, CSS Anchor Positioning, Destructive Actions: Undo > Confirm, Dropdown & Overlay Positioning, Fixed Positioning Fallback, Focus Rings: Do Them Right, Form Design: The Non-Obvious, Gesture Discoverability (+10 more)
 
 ### Community 309 - ".opencode/skills/impeccable/scripts/impeccable-paths.mjs"
 Cohesion: 0.20
@@ -2282,12 +2276,12 @@ Cohesion: 0.21
 Nodes (17): appendOriginToDirective(), buildTagBlock(), commentClose(), commentOpen(), CONFIG_PATH, __dirname, findCspMetaTags(), getAttr() (+9 more)
 
 ### Community 312 - "test_monitoring_groups.py"
-Cohesion: 0.15
-Nodes (8): _make_row(), MockResult, MockScalarResult, test_create_group_with_im_group_id(), test_list_groups_filters_by_category(), test_list_groups_includes_im_group_id(), test_repository_list_by_messenger_filters_by_category(), test_update_group_includes_im_group_id()
+Cohesion: 0.14
+Nodes (9): app(), _make_row(), MockResult, MockScalarResult, test_create_group_with_im_group_id(), test_list_groups_filters_by_category(), test_list_groups_includes_im_group_id(), test_repository_list_by_messenger_filters_by_category() (+1 more)
 
 ### Community 313 - "test_tasks_api.py"
-Cohesion: 0.12
-Nodes (18): Counter, OutboxMessage, _create_dlq_counter(), OutboxPublisher, OutboxRepository, Shared outbox publisher — claim → publish → mark cycle.  Follows the tasks-servi, Publishes pending outbox events to Kafka.      Does NOT manage the Kafka produce, OutboxRepository (+10 more)
+Cohesion: 0.10
+Nodes (21): Counter, create_outbox_metrics(), Prometheus metrics for outbox publisher., Create and return outbox metric collectors., OutboxMessage, _create_dlq_counter(), OutboxPublisher, OutboxRepository (+13 more)
 
 ### Community 314 - "Workflow"
 Cohesion: 0.12
@@ -2342,19 +2336,19 @@ Cohesion: 0.12
 Nodes (17): 1. Basic Skill (Reference), 2. Task Skill (Action), 3. Visual Skill (Output), 4. Research Skill (Explore), Additional Resources, Argument Detection, Artifact Ownership and Config Policy, Best Practices (+9 more)
 
 ### Community 327 - "FakeGatewayService"
-Cohesion: 0.21
-Nodes (7): FakeGatewayService, get_fake_service(), test_change_password_accepts_frontend_camel_case_payload(), test_login_sets_refresh_cookie(), test_me_calls_identity_after_token_validation(), get_service(), AsyncSession
+Cohesion: 0.19
+Nodes (8): get_auth_service(), FakeGatewayService, get_fake_service(), test_change_password_accepts_frontend_camel_case_payload(), test_login_sets_refresh_cookie(), test_me_calls_identity_after_token_validation(), get_service(), AsyncSession
 
 ### Community 328 - "FakeSession"
-Cohesion: 0.13
-Nodes (7): main(), seed_admin(), add_identity_event(), AsyncSession, FakeSession, FakeSessionFactory, test_seed_admin_is_idempotent()
+Cohesion: 0.15
+Nodes (5): main(), seed_admin(), FakeSession, FakeSessionFactory, test_seed_admin_is_idempotent()
 
 ### Community 329 - "create_app"
 Cohesion: 0.20
 Nodes (11): create_app(), FastAPI, UserDto, FakeService, get_fake_service(), test_internal_auth_requires_service_token(), test_internal_me_accepts_service_token(), test_jwks_is_public() (+3 more)
 
 ### Community 330 - "ingestion/service.py"
-Cohesion: 0.33
+Cohesion: 0.36
 Nodes (3): IngestionResult, IngestionService, Any
 
 ### Community 331 - "TaskEventsRepository"
@@ -2434,8 +2428,8 @@ Cohesion: 0.12
 Nodes (16): 5.10 Subscribe to Derived State, 5.11 Use Functional setState Updates, 5.12 Use Lazy State Initialization, 5.13 Use Transitions for Non-Urgent Updates, 5.14 Use useDeferredValue for Expensive Derived Renders, 5.15 Use useRef for Transient Values, 5.1 Calculate Derived State During Rendering, 5.2 Defer State Reads to Usage Point (+8 more)
 
 ### Community 350 - "TasksGatewayService"
-Cohesion: 0.32
-Nodes (14): cancel_task(), check_task(), create_parse_task(), delete_task(), get_audit_log(), get_automation_settings(), get_task(), list_tasks() (+6 more)
+Cohesion: 0.10
+Nodes (27): BaseException, ServiceClient, ListingsClient, Any, analyze_author_photos(), delete_analyses(), get_summary(), list_author_analyses() (+19 more)
 
 ### Community 351 - "test_content_gateway.py"
 Cohesion: 0.17
@@ -2474,8 +2468,8 @@ Cohesion: 0.13
 Nodes (15): Accessibility Considerations, Anti-reflexes worth defending against, Classic Typography Principles, Fluid Type, Font Selection & Pairing, Modern Web Typography, Modular Scale & Hierarchy, OpenType Features (+7 more)
 
 ### Community 360 - "refreshParamsPanel"
-Cohesion: 0.24
-Nodes (14): applyParamDefaults(), applyParamValue(), buildParamsPanel(), closedClipPath(), formatRangeValue(), getVisibleVariantEl(), hideParamsPanel(), openTunePopover() (+6 more)
+Cohesion: 0.22
+Nodes (15): applyParamDefaults(), applyParamValue(), buildCyclingRow(), closedClipPath(), getVisibleVariantEl(), hideParamsPanel(), navBtn(), openTunePopover() (+7 more)
 
 ### Community 361 - "Code Review Assistant"
 Cohesion: 0.13
@@ -2494,8 +2488,8 @@ Cohesion: 0.13
 Nodes (14): Final Verification Checklist, PR Slicing, Pre-flight Before PR-015, Shared Rules, Source Spec, Task 1: PR-015 Tasks Execution Internal API, Task 2: PR-016 VK Service Skeleton, DB, Alembic, Health, Task 3: PR-017 VK Consumer and Task Lifecycle Callbacks (+6 more)
 
 ### Community 365 - "content-service/app/modules/search/router.py"
-Cohesion: 0.20
-Nodes (12): get_search_service, Depends, SearchMessagesRequest, SearchService, search_messages(), search_messages_post(), KeywordSearchResponse, PageInfo (+4 more)
+Cohesion: 0.10
+Nodes (21): publish_outbox_forever(), Outbox publisher background worker for tasks-service.  Creates a single long-liv, Background worker: create producer once, publish outbox events every 2s., Tests for background workers lifecycle., Worker stops producer on normal exit via CancelledError., supervise runs a worker that completes without error., Producer.stop() called in finally when CancelledError occurs after start., supervise no longer marks cycle success; just lifecycle flags. (+13 more)
 
 ### Community 366 - ".opencode/skills/aif-explore/SKILL.md"
 Cohesion: 0.13
@@ -2530,12 +2524,12 @@ Cohesion: 0.13
 Nodes (14): 1. Eliminating Waterfalls (CRITICAL), 2. Bundle Size Optimization (CRITICAL), 3. Server-Side Performance (HIGH), 4. Client-Side Data Fetching (MEDIUM-HIGH), 5. Re-render Optimization (MEDIUM), 6. Rendering Performance (MEDIUM), 7. JavaScript Performance (LOW-MEDIUM), 8. Advanced Patterns (LOW) (+6 more)
 
 ### Community 374 - "test_jwt_validation.py"
-Cohesion: 0.38
-Nodes (5): get_comments_gateway_service(), inject_jwks_cache(), service(), test_list_comments_returns_gateway_status_for_moderation_unavailable(), UnavailableCommentsGatewayService
+Cohesion: 0.21
+Nodes (13): validate_access_token(), get_comments_gateway_service(), inject_jwks_cache(), service(), test_list_comments_returns_gateway_status_for_moderation_unavailable(), UnavailableCommentsGatewayService, inject_jwks_cache(), Before each test: generate a fresh key-pair and set it as the JWKS cache,     so (+5 more)
 
 ### Community 375 - "jwt.py"
-Cohesion: 0.25
-Nodes (14): BaseSettings, Settings, build_jwks(), _dev_key_pair(), get_private_key_pem(), get_public_key_pem(), issue_access_token(), _normalize_pem() (+6 more)
+Cohesion: 0.30
+Nodes (13): build_jwks(), _dev_key_pair(), get_private_key_pem(), get_public_key_pem(), issue_access_token(), _normalize_pem(), datetime, Development-only RSA key pair.      Important:     - generated once per process; (+5 more)
 
 ### Community 376 - "RefreshToken"
 Cohesion: 0.17
@@ -2546,12 +2540,12 @@ Cohesion: 0.20
 Nodes (14): _get_script(), ScriptDirectory, Tests for alembic migration graph linearization.  Verifies the migration revisio, Build an Alembic *ScriptDirectory* from the project's ``alembic.ini``., Walk from *head* backwards through *down_revision* to the root., The migration graph must have exactly one head., Walk from the head to root and verify every revision is visited.      If the cha, Verify ``20260720_0001`` directly depends on ``pr5_unify_consumer_name_im``. (+6 more)
 
 ### Community 378 - "telegram_service/router.py"
-Cohesion: 0.20
-Nodes (12): require_internal_token(), cancel_job(), download_xlsx(), get_dialogs(), get_job(), Response, TelegramExportStartResponse, TelegramJobDetailResponse (+4 more)
+Cohesion: 0.07
+Nodes (30): CamelModel, BaseModel, require_internal_token(), get_session(), AsyncSession, create_app(), FastAPI, cancel_job() (+22 more)
 
 ### Community 379 - "test_telegram_tgmbase.py"
-Cohesion: 0.14
-Nodes (10): TelegramDlImportParser, TelegramDlImportParseResult, TelegramDlImportRow, normalize_tgmbase_query(), mock_parse_result(), test_get_contacts_returns_paginated_result(), test_get_files_returns_empty_list(), test_normalize_tgmbase_query() (+2 more)
+Cohesion: 0.15
+Nodes (8): main(), _metadata(), Path, TelegramDlImportParser, TelegramDlImportParseResult, TelegramDlImportRow, mock_parse_result(), ValueError
 
 ### Community 380 - "Request Examples"
 Cohesion: 0.14
@@ -2583,7 +2577,7 @@ Nodes (13): AI Factory Rules - Project Conventions, Mode A: Direct Add, Mode B: 
 
 ### Community 387 - "Brand register"
 Cohesion: 0.08
-Nodes (22): get_automation_service(), get_tasks_service(), AsyncSession, FastAPI dependency injection hooks for tasks-service.  Routes service creation t, ApplicationFactory, AsyncSession, OutboxService, Composition root for tasks-service.      One session per use case — all reposito (+14 more)
+Nodes (15): Automation scheduler background worker for tasks-service.  Periodically evaluate, TaskAutomationSettings, AutomationRepository, AsyncSession, Task, Return owner_user_id list of enabled automation settings., Load settings for a specific owner. Returns None if not found., FakeAutomationRepository (+7 more)
 
 ### Community 388 - "Handle `generate`"
 Cohesion: 0.14
@@ -2602,8 +2596,8 @@ Cohesion: 0.14
 Nodes (14): [0.52.1](https://github.com/andr-235/parseVK/compare/v0.52.0...v0.52.1) (2026-06-29), [0.52.2](https://github.com/andr-235/parseVK/compare/v0.52.1...v0.52.2) (2026-06-29), [0.52.3](https://github.com/andr-235/parseVK/compare/v0.52.2...v0.52.3) (2026-06-29), [0.52.4](https://github.com/andr-235/parseVK/compare/v0.52.3...v0.52.4) (2026-06-30), [0.52.5](https://github.com/andr-235/parseVK/compare/v0.52.4...v0.52.5) (2026-06-30), [0.52.6](https://github.com/andr-235/parseVK/compare/v0.52.5...v0.52.6) (2026-06-30), [0.53.0](https://github.com/andr-235/parseVK/compare/v0.52.6...v0.53.0) (2026-06-30), Bug Fixes (+6 more)
 
 ### Community 392 - "Эндпоинты"
-Cohesion: 0.14
-Nodes (14): Admin users (`/api/v1/admin/users`), Comments (`/api/v1/comments`), Content (`/api/v1/content`), Identity (`/api/v1/auth`), IM (`/api/v1/im`), Keywords (`/api/v1/moderation/keywords`), Listings (`/api/v1/listings`), Monitoring (`/api/v1/monitoring`) (+6 more)
+Cohesion: 0.13
+Nodes (15): Admin users (`/api/v1/admin/users`), Comments (`/api/v1/comments`), Content (`/api/v1/content`), Identity (`/api/v1/auth`), IM (`/api/v1/im`), Keywords (`/api/v1/moderation/keywords`), Listings (`/api/v1/listings`), Monitoring (`/api/v1/monitoring`) (+7 more)
 
 ### Community 393 - "Auth Session Refresh Implementation Plan"
 Cohesion: 0.14
@@ -2634,8 +2628,8 @@ Cohesion: 0.14
 Nodes (13): AI Factory Rules - Project Conventions, Mode A: Direct Add, Mode B: Interactive, Mode C: Area Rules, Rules, Rules Hierarchy, Step 0.1: Load Skill Context, Step 0: Load Config (+5 more)
 
 ### Community 400 - "Brand register"
-Cohesion: 0.07
-Nodes (25): Brand bans (on top of the shared absolute bans), Brand permissions, Brand register, Color, Font selection procedure, Imagery, Layout, Motion (+17 more)
+Cohesion: 0.08
+Nodes (22): Amplify the Design, Assess Current State, Color Intensification, Composition Boldness, Motion & Animation, Plan Amplification, Register, Spatial Drama (+14 more)
 
 ### Community 401 - "Handle `generate`"
 Cohesion: 0.14
@@ -2690,8 +2684,8 @@ Cohesion: 0.15
 Nodes (12): File Map, Final Verification Checklist, PR Slices, Source Spec, Task 1: PR-008 Tasks Service Skeleton, DB, Alembic, Health, Task 2: PR-009 Tasks API With Owner Scoping, Task 3: PR-010 Automation Settings and Manual Run, Task 4: PR-011 Task Outbox Path (+4 more)
 
 ### Community 414 - "jwt_service.py"
-Cohesion: 0.23
-Nodes (8): stable_sha256(), JwtService, UUID, generate_refresh_token(), hash_ip(), hash_refresh_token(), hash_user_agent(), verify_refresh_token()
+Cohesion: 0.21
+Nodes (8): stable_sha256(), hash_public_value(), UUID, generate_refresh_token(), hash_ip(), hash_refresh_token(), hash_user_agent(), verify_refresh_token()
 
 ### Community 415 - "AI Factory - Project Setup"
 Cohesion: 0.15
@@ -2706,16 +2700,16 @@ Cohesion: 0.32
 Nodes (11): kebab(), listSnapshotsForSlug(), main(), nowFilenameStamp(), parseFrontmatter(), readLatestSnapshot(), readTrend(), serializeFrontmatter() (+3 more)
 
 ### Community 418 - "k"
-Cohesion: 0.21
-Nodes (14): ae(), dt(), er(), fe(), ft(), jt(), k(), Kt() (+6 more)
+Cohesion: 0.23
+Nodes (13): ae(), dt(), er(), fe(), ft(), jt(), k(), Kt() (+5 more)
 
 ### Community 419 - "FakeRepository"
-Cohesion: 0.26
-Nodes (5): FakeRepository, make_user(), test_last_active_admin_cannot_be_deleted(), test_last_active_admin_cannot_be_demoted_or_deactivated(), test_temporary_password_sets_flag_and_revokes_sessions()
+Cohesion: 0.16
+Nodes (7): app(), fake_service(), FakeTasksService, headers(), test_create_scope_all_ignores_group_ids(), test_list_uses_pagination_defaults(), test_selected_scope_requires_group_ids()
 
 ### Community 420 - "TelegramServiceRepository"
-Cohesion: 0.28
-Nodes (6): Base, TelegramJob, TelegramJobLog, AsyncSession, UUID, TelegramServiceRepository
+Cohesion: 0.14
+Nodes (14): do_run_migrations(), Connection, run_async_migrations(), run_migrations_online(), Base, DeclarativeBase, Base, datetime (+6 more)
 
 ### Community 421 - "Readability Checklist — "New User Eyes""
 Cohesion: 0.17
@@ -2846,8 +2840,8 @@ Cohesion: 0.35
 Nodes (9): build_csv_filename(), csv_line(), _field_value(), format_csv_header(), format_csv_row(), normalize_csv_value(), parse_csv_fields(), export_listings_csv() (+1 more)
 
 ### Community 454 - "VkTaskRun"
-Cohesion: 0.16
-Nodes (11): ProcessedEvent, VkTaskRun, VkTaskRun, TaskCompletionRecorder, LeaseLostError, RuntimeError, VkTaskRun, TaskExecutor (+3 more)
+Cohesion: 0.26
+Nodes (6): ProcessedEvent, VkTaskRun, VkTaskRun, TaskCompletionRecorder, LeaseLostError, RuntimeError
 
 ### Community 455 - "Workflow"
 Cohesion: 0.18
@@ -3002,36 +2996,36 @@ Cohesion: 0.18
 Nodes (10): 3.10 Use after() for Non-Blocking Operations, 3.1 Authenticate Server Actions Like API Routes, 3.2 Avoid Duplicate Serialization in RSC Props, 3.3 Avoid Shared Module State for Request Data, 3.4 Cross-Request LRU Caching, 3.5 Hoist Static I/O to Module Level, 3.6 Minimize Serialization at RSC Boundaries, 3.7 Parallel Data Fetching with Component Composition (+2 more)
 
 ### Community 493 - "test_photo_analysis_gateway.py"
-Cohesion: 0.12
-Nodes (19): validate_access_token(), inject_jwks_cache(), Before each test: generate a fresh key-pair and set it as the JWKS cache,     so, key_pair(), make_token(), test_validate_access_token_accepts_valid_token(), test_validate_access_token_rejects_expired_token(), test_validate_access_token_rejects_invalid_claims() (+11 more)
+Cohesion: 0.22
+Nodes (6): app(), fake_service(), FakePhotoAnalysisGatewayService, inject_jwks_cache(), test_photo_analysis_gateway_authorized_happy_path(), _token()
 
 ### Community 494 - "content-service/app/db/models.py"
-Cohesion: 0.25
-Nodes (8): do_run_migrations(), Connection, run_async_migrations(), run_migrations_online(), Base, DeclarativeBase, datetime, utcnow()
+Cohesion: 0.06
+Nodes (36): do_run_migrations(), Connection, run_async_migrations(), run_migrations_online(), Content-service background workers., publish_outbox_forever(), Content-service outbox publisher background worker.  Creates a single long-lived, Background worker: create producer once, publish outbox events every 2s. (+28 more)
 
 ### Community 495 - "content-service/tests/test_migrations.py"
-Cohesion: 0.21
-Nodes (12): ScriptDirectory, Tests for content-service migration integrity.  Verifies: - All revision IDs in, Provide the Alembic ScriptDirectory for the content-service., Verify every revision ID in the chain is <= 32 characters.      Alembic internal, Verify the drop_monitoring_groups revision ID is the shortened form.      The or, Verify the migration chain has exactly one head., Verify the pg_trgm migration exists with a 32-char-compatible revision ID., script() (+4 more)
+Cohesion: 0.20
+Nodes (9): ImTaskRun, Task event helpers for im-service.  Re-exports shared helpers from common.events, AsyncSession, datetime, TasksClient, UUID, TaskEventsHandler, TaskEventsRepository (+1 more)
 
 ### Community 496 - "WappiMessage"
-Cohesion: 0.11
-Nodes (29): get_ingestion_service_dep(), get_ok_friends_repository_dep(), get_ok_friends_service_dep(), get_vk_friends_repository_dep(), get_vk_friends_service_dep(), get_vk_groups_service_dep(), AsyncSession, IngestionService (+21 more)
+Cohesion: 0.08
+Nodes (33): download_xlsx(), get_job(), get_raw_logs(), AsyncSession, BackgroundTasks, FileResponse, UUID, run_export_job_background() (+25 more)
 
 ### Community 497 - "moderation-service/app/db/models.py"
-Cohesion: 0.32
-Nodes (6): do_run_migrations(), Connection, run_async_migrations(), run_migrations_online(), Base, DeclarativeBase
-
-### Community 498 - "telegram-service/app/db/models.py"
 Cohesion: 0.25
 Nodes (8): do_run_migrations(), Connection, run_async_migrations(), run_migrations_online(), Base, DeclarativeBase, datetime, utcnow()
 
+### Community 498 - "telegram-service/app/db/models.py"
+Cohesion: 0.15
+Nodes (9): GatewayError, Any, Exception, Base domain exception for API Gateway.      All service-layer exceptions inherit, ServiceAuthError, ServiceConflictError, ServiceForbiddenError, ServiceNotFoundError (+1 more)
+
 ### Community 499 - "telegram_service/service.py"
-Cohesion: 0.29
-Nodes (8): Enum, str, TelegramExportStartResponse, TelegramJobDetailResponse, TelegramJobLogEntry, TelegramJobState, TelegramJobStatus, TelegramJobDetailResponse
+Cohesion: 0.21
+Nodes (13): require_internal_token(), get_session(), AsyncSession, list_comments(), list_comments_cursor(), update_comment_status(), update_read_status(), CommentModerationCursorList (+5 more)
 
 ### Community 500 - "UUID"
-Cohesion: 0.24
-Nodes (4): Math_round_custom(), TelegramExportStartResponse, UUID, Launches a live parsing task for message events.
+Cohesion: 0.21
+Nodes (11): require_internal_token(), require_owner_user_id(), create_group(), delete_group(), list_groups(), update_group(), MonitoringGroupCreateRequest, MonitoringGroupResponse (+3 more)
 
 ### Community 501 - "Distillation Protocol"
 Cohesion: 0.20
@@ -3170,8 +3164,8 @@ Cohesion: 0.20
 Nodes (10): Build fails with "Process completed with exit code 1", Changed Services Detection, Container fails to start, Deploy Runbook, Deployment Flow, Manual Deploy, Overview, Pre-deployment Checklist (+2 more)
 
 ### Community 535 - "Getting Started"
-Cohesion: 0.20
-Nodes (10): Getting Started, Troubleshooting, Быстрый старт (Docker), Команды быстрого доступа, Локальная разработка, Микросервис (Python), Пакетный менеджер uv, Предварительные требования (+2 more)
+Cohesion: 0.18
+Nodes (11): Getting Started, Realtime-сервис, Troubleshooting, Быстрый старт (Docker), Команды быстрого доступа, Локальная разработка, Микросервис (Python), Пакетный менеджер uv (+3 more)
 
 ### Community 536 - "Telegram DL Match Redesign Implementation Plan"
 Cohesion: 0.20
@@ -3250,8 +3244,8 @@ Cohesion: 0.20
 Nodes (9): Color, Components, Layout, Motion, Product bans (on top of the shared absolute bans), Product permissions, Product register, The product slop test (+1 more)
 
 ### Community 555 - "qt"
-Cohesion: 0.31
-Nodes (9): de(), Ie(), Lt(), Mt(), oe(), Ot(), qt(), Re() (+1 more)
+Cohesion: 0.27
+Nodes (10): de(), Ie(), Lt(), Mt(), oe(), Ot(), qt(), Re() (+2 more)
 
 ### Community 556 - "React Best Practices"
 Cohesion: 0.20
@@ -3262,8 +3256,8 @@ Cohesion: 0.20
 Nodes (9): 1. Eliminating Waterfalls (async), 2. Bundle Size Optimization (bundle), 3. Server-Side Performance (server), 4. Client-Side Data Fetching (client), 5. Re-render Optimization (rerender), 6. Rendering Performance (rendering), 7. JavaScript Performance (js), 8. Advanced Patterns (advanced) (+1 more)
 
 ### Community 559 - "listings-service/app/modules/listings/router.py"
-Cohesion: 0.14
-Nodes (13): require_internal_token(), get_session(), AsyncSession, get_listings_service(), AsyncSession, delete_listing(), export_listings(), import_data() (+5 more)
+Cohesion: 0.11
+Nodes (17): require_internal_token(), get_session(), AsyncSession, get_listings_service(), AsyncSession, delete_listing(), export_listings(), import_data() (+9 more)
 
 ### Community 560 - "TaskQueueRepository"
 Cohesion: 0.29
@@ -3314,8 +3308,8 @@ Cohesion: 0.22
 Nodes (8): 1. Impatient Power User: "Alex", 2. Confused First-Timer: "Jordan", 3. Accessibility-Dependent User: "Sam", 4. Deliberate Stress Tester: "Riley", 5. Distracted Mobile User: "Casey", Persona-Based Design Testing, Project-Specific Personas, Selecting Personas
 
 ### Community 572 - "Shared design laws"
-Cohesion: 0.22
-Nodes (9): Absolute bans, Color, Copy, Layout, Motion, Shared design laws, The AI slop test, Theme (+1 more)
+Cohesion: 0.15
+Nodes (11): WorkerHealth dataclass for typed background worker diagnostics.  Tracks five lif, Shared runtime utilities for background worker health and supervision., Supervisor background worker for common runtime.  Wraps a background coroutine w, create_lifespan(), FastAPI, Background workers for identity-service., publish_outbox_forever(), Outbox publisher background worker for identity-service. (+3 more)
 
 ### Community 573 - "Key Patterns"
 Cohesion: 0.22
@@ -3330,8 +3324,8 @@ Cohesion: 0.22
 Nodes (8): Inputs, Output format, parseVK Service Migration Skill, Procedure, Purpose, Safety rules, When not to use, When to use
 
 ### Community 576 - "RequestIdMiddleware"
-Cohesion: 0.22
-Nodes (6): BaseHTTPMiddleware, new_request_id(), Request, Response, RequestIdMiddleware, FastAPI
+Cohesion: 0.17
+Nodes (16): create_app(), test_comments_require_auth(), test_comments_routes_registered(), FakeGatewayService, get_fake_service(), test_logout_deletes_cookie(), test_refresh_with_csrf_succeeds_and_rotates_cookie(), test_refresh_without_csrf_fails() (+8 more)
 
 ### Community 577 - "ADR-000: <Decision title>"
 Cohesion: 0.22
@@ -3370,8 +3364,8 @@ Cohesion: 0.22
 Nodes (8): 1. Impatient Power User: "Alex", 2. Confused First-Timer: "Jordan", 3. Accessibility-Dependent User: "Sam", 4. Deliberate Stress Tester: "Riley", 5. Distracted Mobile User: "Casey", Persona-Based Design Testing, Project-Specific Personas, Selecting Personas
 
 ### Community 586 - "Shared design laws"
-Cohesion: 0.22
-Nodes (9): Absolute bans, Color, Copy, Layout, Motion, Shared design laws, The AI slop test, Theme (+1 more)
+Cohesion: 0.14
+Nodes (13): Assess Current Layout, Break Card Grid Monotony, Choose the Right Layout Tool, Create Visual Rhythm, Establish a Spacing System, Improve Layout Systematically, Live-mode signature params, Manage Depth & Elevation (+5 more)
 
 ### Community 587 - "Docker Audit Guide"
 Cohesion: 0.25
@@ -3554,16 +3548,16 @@ Cohesion: 0.25
 Nodes (7): devDependencies, shadcn, name, private, scripts, version, shadcn
 
 ### Community 632 - "poller/service.py"
-Cohesion: 0.12
-Nodes (20): _coerce_timestamp(), _extract_author_id(), _extract_author_name(), _extract_text(), Any, datetime, Extract text from a Wappi message payload.          The payload is expected to b, Parse various timestamp formats into a timezone-aware datetime.          Returns (+12 more)
+Cohesion: 0.13
+Nodes (18): _coerce_timestamp(), _extract_author_id(), _extract_author_name(), _extract_text(), Any, datetime, Extract text from a Wappi message payload.          The payload is expected to b, Parse various timestamp formats into a timezone-aware datetime.          Returns (+10 more)
 
 ### Community 633 - "test_telegram_service.py"
 Cohesion: 0.36
 Nodes (5): client(), AsyncClient, test_health(), test_ready(), test_telegram_export_lifecycle()
 
 ### Community 634 - "TaskFinalizer"
-Cohesion: 0.10
-Nodes (25): WireEvent, Base, RealtimeEvent, _calculate_expires_at(), consume_topic_forever(), ingest_event(), _map_audience(), async_sessionmaker (+17 more)
+Cohesion: 0.14
+Nodes (14): Brand bans (on top of the shared absolute bans), Brand permissions, Brand register, Color, Font selection procedure, Imagery, Layout, Motion (+6 more)
 
 ### Community 635 - "Workflow Structure"
 Cohesion: 0.29
@@ -3774,8 +3768,8 @@ Cohesion: 0.29
 Nodes (6): Core Rule, Impeccable Asset Producer, Input Contract, Output Contract, Prompt Pattern, Workflow
 
 ### Community 688 - "Amplify the Design"
-Cohesion: 0.17
-Nodes (11): Amplify the Design, Assess Current State, Color Intensification, Composition Boldness, Motion & Animation, Plan Amplification, Register, Spatial Drama (+3 more)
+Cohesion: 0.19
+Nodes (6): app(), FakeTasksService, headers(), test_complete_and_fail_routes(), test_progress_validation_rejects_processed_gt_total(), test_start_execution_route()
 
 ### Community 689 - "1. Eliminating Waterfalls"
 Cohesion: 0.29
@@ -3874,8 +3868,8 @@ Cohesion: 0.33
 Nodes (6): [0.41.1](https://github.com/andr-235/parseVK/compare/v0.41.0...v0.41.1) (2026-06-22), [0.41.2](https://github.com/andr-235/parseVK/compare/v0.41.1...v0.41.2) (2026-06-22), [0.42.0](https://github.com/andr-235/parseVK/compare/v0.41.2...v0.42.0) (2026-06-22), Bug Fixes, Bug Fixes, Features
 
 ### Community 713 - "API Reference"
-Cohesion: 0.33
-Nodes (6): API Reference, Domain Exceptions, Архитектура Gateway, Аутентификация, См. также, Схема обработки запроса
+Cohesion: 0.29
+Nodes (7): API Reference, Domain Exceptions, Realtime SSE Stream, Архитектура Gateway, Аутентификация, См. также, Схема обработки запроса
 
 ### Community 714 - "Keywords Form Design"
 Cohesion: 0.33
@@ -3930,8 +3924,8 @@ Cohesion: 0.47
 Nodes (4): get_capabilities(), BaseModel, TelegramTgmbaseCapabilitiesResponse, TelegramTgmbaseRedactionInfo
 
 ### Community 727 - "TaskExecutor"
-Cohesion: 0.11
-Nodes (6): PostsClient, Any, datetime, Asynchronously iterate comment pages for a wall post.          Yields dictionari, TestPostsClientGetComments, TestPostsClientIterCommentPages
+Cohesion: 0.26
+Nodes (5): FakeRepository, make_user(), test_last_active_admin_cannot_be_deleted(), test_last_active_admin_cannot_be_demoted_or_deactivated(), test_temporary_password_sets_flag_and_revokes_sessions()
 
 ### Community 728 - "AI Factory Guardrails"
 Cohesion: 0.40
@@ -4026,8 +4020,8 @@ Cohesion: 0.40
 Nodes (5): 1. Basic Skill (Reference), 2. Task Skill (Action), 3. Visual Skill (Output), 4. Research Skill (Explore), Skill Types & Templates
 
 ### Community 751 - "🧱 Стандарт полноценной реализации"
-Cohesion: 0.40
-Nodes (5): Баланс с KISS и YAGNI, Запрет на недоделанные решения, Мышление на несколько шагов вперёд, 🧱 Стандарт полноценной реализации, Что считается полноценной фичей
+Cohesion: 0.17
+Nodes (11): Amplify the Design, Assess Current State, Color Intensification, Composition Boldness, Motion & Animation, Plan Amplification, Register, Spatial Drama (+3 more)
 
 ### Community 752 - "✏️ Правила редактирования кода"
 Cohesion: 0.40
@@ -4106,12 +4100,12 @@ Cohesion: 0.40
 Nodes (5): 8.1 Do Not Put Effect Events in Dependency Arrays, 8.2 Initialize App Once, Not Per Mount, 8.3 Store Event Handlers in Refs, 8.4 useEffectEvent for Stable Callback Refs, 8. Advanced Patterns
 
 ### Community 772 - "import_validator.py"
-Cohesion: 0.70
-Nodes (4): raise_validation(), Any, validate_import_item(), validate_import_items()
+Cohesion: 0.15
+Nodes (13): 1. `vk.comments_collected` v1, 2. `content.comments_projected` v1, 3. `task.state_changed` v1, Batch event vs per-comment tradeoffs, Content-service outbox decision, Decision, Delivery semantics, Event contracts (+5 more)
 
 ### Community 773 - "FakeSession"
-Cohesion: 0.11
-Nodes (17): DataCollector, Any, IngestionResult, TasksClient, VkApiAdapter, IngestionRepository, OutboxService, TasksClient (+9 more)
+Cohesion: 0.15
+Nodes (13): DataCollector, Any, IngestionResult, TasksClient, VkApiAdapter, ControllableStubVkApiClient, Stub that can raise errors for specific posts., task_run() (+5 more)
 
 ### Community 774 - "Service Containers"
 Cohesion: 0.50
@@ -4166,8 +4160,8 @@ Cohesion: 0.50
 Nodes (4): File Organization, Large Skill, Medium Skill, Small Skill
 
 ### Community 787 - "🛠️ Принципы работы"
-Cohesion: 0.07
-Nodes (27): 1. `vk.comments_collected` v1, 2. `content.comments_projected` v1, 3. `task.state_changed` v1, ADR-007: Realtime Event-Driven Contour, Alternatives considered, Batch event vs per-comment tradeoffs, Configuration & Feature Flags, Consequences (+19 more)
+Cohesion: 0.14
+Nodes (14): ADR-007: Realtime Event-Driven Contour, Alternatives considered, Configuration & Feature Flags, Consequences, Context, Date, Direct Kafka access from frontend, Links (+6 more)
 
 ### Community 788 - "[0.35.0](https://github.com/andr-235/parseVK/compare/v0.34.0...v0.35.0) (2026-06-17)"
 Cohesion: 0.50
@@ -4249,21 +4243,29 @@ Nodes (3): ParseVK — Content Service, Запуск тестов, Структ�
 Cohesion: 0.50
 Nodes (3): ParseVK — VK Service, Архитектура (Layered Architecture), Запуск тестов
 
+### Community 883 - "get_session"
+Cohesion: 0.21
+Nodes (7): OutboxEvent, UUID, Outbox publisher — re-exports the shared OutboxPublisher from common library.  T, Adapts tasks-service OutboxRepository to common OutboxRepository protocol., TasksOutboxRepositoryAdapter, _to_message(), TasksOutboxRepository
+
+### Community 884 - "telegram-service/app/main.py"
+Cohesion: 0.50
+Nodes (3): OutboxService, Persist cursor to DB. Returns True on success, False on failure., _track_outbox_event()
+
 ### Community 1078 - "test_resilience_batch.py"
 Cohesion: 0.09
 Nodes (8): FakeOutboxRepository, FakeProducer, FakeRepository, FakeTaskRun, FakeTasksClient, task_event(), test_crash_before_publish_retains_pending_outbox(), test_duplicate_batch_event_is_idempotent()
 
 ### Community 1079 - "RealtimeClient.ts"
-Cohesion: 0.12
-Nodes (13): queryClient, getAccessToken(), RealtimeClient, RealtimeEventHandler, getClient(), RealtimeContext, RealtimeContextValue, RealtimeProvider() (+5 more)
+Cohesion: 0.13
+Nodes (12): getAccessToken(), RealtimeClient, RealtimeEventHandler, getClient(), RealtimeContext, RealtimeContextValue, RealtimeProvider(), RealtimeProviderProps (+4 more)
 
 ### Community 1080 - "test_migration_trigram.py"
 Cohesion: 0.09
 Nodes (19): ScriptDirectory, Integration tests for the pg_trgm migration.  Verifies the migration is wired in, When no index exists, upgrade creates a valid GIN index., When an invalid index exists, upgrade drops and recreates it., After upgrade, pg_trgm extension must exist., After downgrade, the index must be removed., Provide the Alembic ScriptDirectory for the content-service., Verify the trigram migration is reachable in the chain. (+11 more)
 
 ### Community 1081 - "IngestionRepository"
-Cohesion: 0.10
-Nodes (14): AuthorRepository, ABC, CommentRepository, ABC, Count unique comments for a given VK post., GroupRepository, ABC, IngestionRepository (+6 more)
+Cohesion: 0.20
+Nodes (3): FakeOutboxRepository, FakeProducer, test_outbox_publisher_sends_event_and_marks_published()
 
 ### Community 1082 - "realtime-service/tests/conftest.py"
 Cohesion: 0.09
@@ -4278,124 +4280,100 @@ Cohesion: 0.09
 Nodes (22): 1. Dataset Snapshot, 2. Existing Indexes, 3. Query Matrix, 4.1 Simple search — absent term, 4.2 Simple search — rare term, 4.3 Simple search — frequent term, 4.4 COUNT(*) query, 4.5 Deep OFFSET (page 20) (+14 more)
 
 ### Community 1085 - "tasks/outbox_worker.py"
-Cohesion: 0.11
-Nodes (8): publish_outbox_forever(), async_sessionmaker, UUID, Adapts vk-service SqlAlchemyOutboxRepository to common OutboxRepository protocol, VkOutboxRepositoryAdapter, FakeOutboxRepository, FakeProducer, test_outbox_publisher_sends_event_and_marks_published()
+Cohesion: 0.22
+Nodes (6): BaseHTTPMiddleware, new_request_id(), Request, Response, RequestIdMiddleware, FastAPI
 
 ### Community 1086 - "_make_client"
-Cohesion: 0.18
-Nodes (6): _assert_raises(), _make_client(), Build OkApiClient that returns *json_data* for every GET request., Call client.friends_get() or client.users_get_info(...) and expect RuntimeError., TestFriendsGet, TestUsersGetInfo
+Cohesion: 0.20
+Nodes (10): Craft Flow, Gates: do not compress, Production bar, Step 0: Project Foundation, Step 1: Shape the Design, Step 2: Load References, Step 3: Visual Direction & Assets (Harness-Gated), Step 4: Build to Production Quality (+2 more)
 
 ### Community 1087 - "Test plan"
 Cohesion: 0.10
 Nodes (20): Decision gate, Deliverables, Objective, Out of scope, Preconditions, Production endpoints, Recommendations (choose from, do NOT implement in baseline), Scope (+12 more)
 
 ### Community 1088 - "create_app"
-Cohesion: 0.14
-Nodes (13): setup_opentelemetry(), create_app(), lifespan(), FastAPI, supervise(), ProjectionConsumer, publish_watchlist_monitor_forever(), async_sessionmaker (+5 more)
+Cohesion: 0.20
+Nodes (10): bufferToBase64(), captureAndEmit(), captureElementToBlob(), collectFontCssText(), compileShader(), inlineFontUrls(), isTransparentColor(), loadModernScreenshot() (+2 more)
 
 ### Community 1089 - "require_auth"
-Cohesion: 0.18
-Nodes (13): get_jwks(), hash_public_value(), Any, require_auth(), analyze_author_photos(), delete_analyses(), get_summary(), list_author_analyses() (+5 more)
+Cohesion: 0.29
+Nodes (4): _author_payload(), PostCollector, Any, VkApiAdapter
 
 ### Community 1090 - "lifespan.py"
-Cohesion: 0.22
-Nodes (14): mask_token(), create_app(), FastAPI, get_consumer_healthy(), get_publisher_healthy(), get_task_worker_healthy(), lifespan(), FastAPI (+6 more)
+Cohesion: 0.15
+Nodes (20): FastAPI, register_routers(), mask_token(), create_app(), FastAPI, get_consumer_healthy(), get_publisher_healthy(), get_task_worker_healthy() (+12 more)
 
 ### Community 1091 - "ProjectionRepository"
 Cohesion: 0.20
 Nodes (6): ProjectionRepository, AsyncSession, datetime, UUID, utcnow(), vk_timestamp()
 
 ### Community 1092 - "updateBarContent"
-Cohesion: 0.23
-Nodes (16): actionLabel(), buildConfigureRow(), buildConfirmedRow(), buildCyclingRow(), buildDots(), buildGeneratingRow(), buildSavingRow(), el() (+8 more)
+Cohesion: 0.22
+Nodes (9): After This File, Codex: Visual Direction & Asset Production, Four stop points before code, Step A: Explore Directions with the User, Step B: Generate the Brand Palette First, Step C: Generate 1-3 Visual Mocks Against the Palette, Step D: Approval Loop, Step E: Mock Fidelity Inventory (+1 more)
 
 ### Community 1093 - "realtime-service/app/main.py"
-Cohesion: 0.23
-Nodes (14): create_app(), lifespan(), FastAPI, supervise(), catchup_loop(), cleanup_expired_events(), async_sessionmaker, Retention cleanup and safety catch-up for the realtime-service. (+6 more)
+Cohesion: 0.18
+Nodes (16): create_app(), lifespan(), FastAPI, supervise(), catchup_loop(), cleanup_expired_events(), async_sessionmaker, Retention cleanup and safety catch-up for the realtime-service. (+8 more)
 
 ### Community 1094 - "[0.68.0](https://github.com/andr-235/parseVK/compare/v0.67.6...v0.68.0) (2026-07-24)"
 Cohesion: 0.13
 Nodes (15): [0.67.1](https://github.com/andr-235/parseVK/compare/v0.67.0...v0.67.1) (2026-07-23), [0.67.2](https://github.com/andr-235/parseVK/compare/v0.67.1...v0.67.2) (2026-07-23), [0.67.3](https://github.com/andr-235/parseVK/compare/v0.67.2...v0.67.3) (2026-07-23), [0.67.4](https://github.com/andr-235/parseVK/compare/v0.67.3...v0.67.4) (2026-07-23), [0.67.5](https://github.com/andr-235/parseVK/compare/v0.67.4...v0.67.5) (2026-07-23), [0.67.6](https://github.com/andr-235/parseVK/compare/v0.67.5...v0.67.6) (2026-07-23), [0.68.0](https://github.com/andr-235/parseVK/compare/v0.67.6...v0.68.0) (2026-07-24), Bug Fixes (+7 more)
 
-### Community 1095 - "exception_handlers.py"
-Cohesion: 0.19
-Nodes (13): JSONResponse, Exception, FastAPI, Request, Global exception handlers for tasks-service.  Maps domain task exceptions and un, Map task domain exceptions to HTTP status codes.      Args:         request: The, Return a generic 500 response for unhandled exceptions.      Args:         reque, Register task domain and fallback exception handlers on the app.      Args: (+5 more)
-
 ### Community 1096 - ".agents/skills/impeccable/reference/layout.md"
-Cohesion: 0.14
-Nodes (13): Assess Current Layout, Break Card Grid Monotony, Choose the Right Layout Tool, Create Visual Rhythm, Establish a Spacing System, Improve Layout Systematically, Live-mode signature params, Manage Depth & Elevation (+5 more)
+Cohesion: 0.25
+Nodes (6): normalize_tgmbase_query(), test_get_contacts_returns_paginated_result(), test_get_files_returns_empty_list(), test_normalize_tgmbase_query(), test_search_tgmbase_returns_empty_when_no_match(), test_upload_files_success()
 
 ### Community 1097 - ".opencode/skills/impeccable/reference/layout.md"
-Cohesion: 0.14
-Nodes (13): Assess Current Layout, Break Card Grid Monotony, Choose the Right Layout Tool, Create Visual Rhythm, Establish a Spacing System, Improve Layout Systematically, Live-mode signature params, Manage Depth & Elevation (+5 more)
+Cohesion: 0.22
+Nodes (9): Absolute bans, Color, Copy, Layout, Motion, Shared design laws, The AI slop test, Theme (+1 more)
 
 ### Community 1098 - "stream_events"
-Cohesion: 0.21
-Nodes (11): _format_heartbeat(), _format_sse(), _get_latest_sequence_id(), _query_events_after(), SSE streaming endpoint with replay and live polling., Fetch events after a sequence_id filtered by audience., Async generator for SSE streaming.      Phase 1: Replay past events from DB (if, stream_events() (+3 more)
+Cohesion: 0.20
+Nodes (12): mock_session_factory(), _format_heartbeat(), _format_sse(), _query_events_after(), SSE streaming endpoint with replay and live polling., Fetch events after a sequence_id filtered by audience., Async generator for SSE streaming.      Phase 1: Replay past events from DB (if, stream_events() (+4 more)
 
 ### Community 1099 - "PR-C2.1 Production Historical Recovery — FINAL"
 Cohesion: 0.15
 Nodes (12): By messenger, Completion date, Data integrity, Errors during recovery, Final counts, Gap explanation, Hotfixes applied, Limitations (+4 more)
 
 ### Community 1100 - "TelegramDlUploadPage.tsx"
-Cohesion: 0.24
-Nodes (11): TelegramDlUploadPage(), DlContact, DlContactsQueryParams, DlContactsResponse, DlImportBatch, DlImportBatchStatus, DlImportFile, DlImportFileStatus (+3 more)
+Cohesion: 0.39
+Nodes (3): HTTPStatusError, VkTaskRun, TaskFinalizer
 
 ### Community 1101 - ".agents/skills/impeccable/reference/bolder.md"
-Cohesion: 0.17
-Nodes (11): Amplify the Design, Assess Current State, Color Intensification, Composition Boldness, Motion & Animation, Plan Amplification, Register, Spatial Drama (+3 more)
+Cohesion: 0.33
+Nodes (6): Anti-Patterns, CSS Anchor Positioning, Dropdown & Overlay Positioning, Fixed Positioning Fallback, Popover + Anchor Combo, Portal / Teleport Pattern
 
 ### Community 1102 - "listings-service/alembic/env.py"
 Cohesion: 0.24
 Nodes (8): do_run_migrations(), Connection, run_async_migrations(), run_migrations_online(), Base, DeclarativeBase, datetime, utcnow()
 
 ### Community 1103 - "Craft Flow"
-Cohesion: 0.20
-Nodes (10): Craft Flow, Gates: do not compress, Production bar, Step 0: Project Foundation, Step 1: Shape the Design, Step 2: Load References, Step 3: Visual Direction & Assets (Harness-Gated), Step 4: Build to Production Quality (+2 more)
+Cohesion: 0.33
+Nodes (4): BaseSettings, Settings, Settings must require vk_token in production; under pytest the validator is skip, test_settings_token_validation_requires_token_when_not_in_pytest()
 
 ### Community 1104 - "PR-S1 — IM text search trigram index"
 Cohesion: 0.20
 Nodes (9): Acceptance criteria, Decision gate after PR-S1, Migration, Objective, Out of scope, PR-S1 — IM text search trigram index, Preconditions, Risks (+1 more)
 
 ### Community 1105 - "Craft Flow"
-Cohesion: 0.20
-Nodes (10): Craft Flow, Gates: do not compress, Production bar, Step 0: Project Foundation, Step 1: Shape the Design, Step 2: Load References, Step 3: Visual Direction & Assets (Harness-Gated), Step 4: Build to Production Quality (+2 more)
+Cohesion: 0.40
+Nodes (4): Any, Exception, HTTPStatusError, IngestionResult
 
 ### Community 1106 - "comment_collector.py"
-Cohesion: 0.29
-Nodes (4): _author_payload(), PostCollector, Any, VkApiAdapter
-
-### Community 1107 - "Codex: Visual Direction & Asset Production"
-Cohesion: 0.22
-Nodes (9): After This File, Codex: Visual Direction & Asset Production, Four stop points before code, Step A: Explore Directions with the User, Step B: Generate the Brand Palette First, Step C: Generate 1-3 Visual Mocks Against the Palette, Step D: Approval Loop, Step E: Mock Fidelity Inventory (+1 more)
+Cohesion: 0.73
+Nodes (5): make_service(), make_task(), test_cancel_uses_current_execution_run_in_dedupe_key(), test_resume_rejects_pending_task(), test_resume_uses_run_scoped_dedupe_key_and_row_lock()
 
 ### Community 1108 - "[0.69.0](https://github.com/andr-235/parseVK/compare/v0.68.3...v0.69.0) (2026-07-27)"
 Cohesion: 0.22
 Nodes (9): [0.68.1](https://github.com/andr-235/parseVK/compare/v0.68.0...v0.68.1) (2026-07-24), [0.68.2](https://github.com/andr-235/parseVK/compare/v0.68.1...v0.68.2) (2026-07-26), [0.68.3](https://github.com/andr-235/parseVK/compare/v0.68.2...v0.68.3) (2026-07-26), [0.69.0](https://github.com/andr-235/parseVK/compare/v0.68.3...v0.69.0) (2026-07-27), Bug Fixes, Bug Fixes, Bug Fixes, Bug Fixes (+1 more)
 
-### Community 1109 - "Codex: Visual Direction & Asset Production"
-Cohesion: 0.22
-Nodes (9): After This File, Codex: Visual Direction & Asset Production, Four stop points before code, Step A: Explore Directions with the User, Step B: Generate the Brand Palette First, Step C: Generate 1-3 Visual Mocks Against the Palette, Step D: Approval Loop, Step E: Mock Fidelity Inventory (+1 more)
-
 ### Community 1110 - "[0.70.0](https://github.com/andr-235/parseVK/compare/v0.69.3...v0.70.0) (2026-07-27)"
 Cohesion: 0.25
 Nodes (8): [0.69.1](https://github.com/andr-235/parseVK/compare/v0.69.0...v0.69.1) (2026-07-27), [0.69.2](https://github.com/andr-235/parseVK/compare/v0.69.1...v0.69.2) (2026-07-27), [0.69.3](https://github.com/andr-235/parseVK/compare/v0.69.2...v0.69.3) (2026-07-27), [0.70.0](https://github.com/andr-235/parseVK/compare/v0.69.3...v0.70.0) (2026-07-27), Bug Fixes, Bug Fixes, Bug Fixes, Features
 
-### Community 1111 - "test_supervise.py"
-Cohesion: 0.43
-Nodes (6): supervise(), test_supervise_no_health_flag(), test_supervise_restarts_until_success(), test_supervise_sets_healthy_on_success(), test_supervise_stops_on_cancelled(), test_supervise_stops_on_vk_auth_error()
-
-### Community 1112 - "_make_capturing_client"
-Cohesion: 0.39
-Nodes (3): _make_capturing_client(), Build OkApiClient that captures request URL for asserting query params., TestRequestParams
-
 ### Community 1113 - "20260724_add_pg_trgm_index.py"
 Cohesion: 0.38
 Nodes (5): _index_exists(), _index_is_valid(), Check if the index exists on im_messages in the public schema., Check if the index is valid (indisvalid = true)., upgrade()
-
-### Community 1114 - "Dropdown & Overlay Positioning"
-Cohesion: 0.33
-Nodes (6): Anti-Patterns, CSS Anchor Positioning, Dropdown & Overlay Positioning, Fixed Positioning Fallback, Popover + Anchor Combo, Portal / Teleport Pattern
 
 ### Community 1115 - "PR-S2 — Optional total count in IM search"
 Cohesion: 0.33
@@ -4405,45 +4383,41 @@ Nodes (5): Acceptance criteria, Objective, Out of scope, PR-S2 — Optional tota
 Cohesion: 0.33
 Nodes (5): Acceptance criteria, Objective, Out of scope, PR-S3 — Keyset pagination for IM search, Scope
 
-### Community 1117 - "Dropdown & Overlay Positioning"
-Cohesion: 0.33
-Nodes (6): Anti-Patterns, CSS Anchor Positioning, Dropdown & Overlay Positioning, Fixed Positioning Fallback, Popover + Anchor Combo, Portal / Teleport Pattern
-
 ### Community 1118 - "test_event_schemas.py"
 Cohesion: 0.33
 Nodes (4): Tests for shared event schema integration., TaskEventType includes all event types published by tasks-service., All event types used in tasks-service are in TaskEventType., TestTaskEventTypeCompleteness
 
 ### Community 1120 - "sendEvent"
 Cohesion: 0.50
-Nodes (4): checkpointPayload(), maybePrefetchPage(), sendCheckpoint(), sendEvent()
+Nodes (4): Инструменты и команды, Окружение, 🛠️ Принципы работы, Философия
 
 ### Community 1121 - "PR-P1 Hardening: Post-release Checklist"
 Cohesion: 0.50
 Nodes (3): Operational checks, PR-P1 Hardening: Post-release Checklist, Pre-deployment checks
 
 ### Community 1122 - "create_outbox_metrics"
-Cohesion: 0.50
-Nodes (3): create_outbox_metrics(), Prometheus metrics for outbox publisher., Create and return outbox metric collectors.
+Cohesion: 0.67
+Nodes (3): [0.66.0](https://github.com/andr-235/parseVK/compare/v0.65.0...v0.66.0) (Unreleased), Documentation, Features
 
 ## Knowledge Gaps
-- **6313 isolated node(s):** `logs.sh script`, `VERSION`, `VERSION`, `audit.sh script`, `SECTION_KEYS` (+6308 more)
+- **6317 isolated node(s):** `logs.sh script`, `VERSION`, `VERSION`, `audit.sh script`, `SECTION_KEYS` (+6312 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **140 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **139 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `wrapper()` connect `resumeSession` to `resumeSession`, `admin-users.ts`?**
-  _High betweenness centrality (0.010) - this node is a cross-community bridge._
-- **Why does `use_service_path()` connect `create_app` to `ImEvent`, `content-service/tests/test_content_api.py`, `test_content_services_unit.py`, `content-service/tests/test_migrations.py`, `content-service/tests/test_search.py`, `test_migration_trigram.py`, `FakeRepository`, `content-service/tests/test_projection_consumer.py`, `ContentService`?**
-  _High betweenness centrality (0.007) - this node is a cross-community bridge._
-- **Why does `validate_access_token()` connect `test_photo_analysis_gateway.py` to `require_auth`, `ValueError`, `test_moderation_service.py`, `create_app`?**
-  _High betweenness centrality (0.007) - this node is a cross-community bridge._
+- **Why does `DlMatchRuns` connect `ValueError` to `.agents/skills/impeccable/reference/layout.md`, `TelegramTgmbaseService`, `TelegramDlImportParser`?**
+  _High betweenness centrality (0.011) - this node is a cross-community bridge._
+- **Why does `TelegramTgmbaseService` connect `TelegramTgmbaseService` to `TelegramTgmbaseSearchService`, `.agents/skills/impeccable/reference/layout.md`, `ValueError`, `telegram-service/app/modules/telegram_tgmbase/schemas.py`, `TelegramDlImportParser`, `DlMatchProcessor`?**
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
+- **Why does `validate_access_token()` connect `test_jwt_validation.py` to `test_telegram_tgmbase.py`, `WatchlistGatewayService`, `jwt_service.py`, `test_moderation_service.py`?**
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **Are the 37 inferred relationships involving `BackendServiceError` (e.g. with `forward_authenticated()` and `AdminUsersGatewayService`) actually correct?**
   _`BackendServiceError` has 37 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 34 inferred relationships involving `BackendUnavailableError` (e.g. with `forward_authenticated()` and `AdminUsersGatewayService`) actually correct?**
   _`BackendUnavailableError` has 34 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 15 inferred relationships involving `WorkerHealth` (e.g. with `_StopTest` and `test_outbox_worker_creates_producer_once()`) actually correct?**
+  _`WorkerHealth` has 15 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `logs.sh script`, `VERSION`, `VERSION` to the rest of the system?**
-  _6313 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `BackendServiceError` be split into smaller, more focused modules?**
-  _Cohesion score 0.046336633663366336 - nodes in this community are weakly interconnected._
+  _6317 weakly-connected nodes found - possible documentation gaps or missing edges._

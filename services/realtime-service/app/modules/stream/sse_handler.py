@@ -82,12 +82,6 @@ async def _query_events_after(session_factory, last_seq: int, audience_types: li
         } for r in rows]
 
 
-async def _get_latest_sequence_id(session_factory) -> int:
-    async with session_factory() as session:
-        result = await session.scalar(text("SELECT MAX(sequence_id) FROM realtime_events"))
-        return result or 0
-
-
 async def stream_events(session_factory, last_event_id: int | None, audience_types: list[str] | None, audience_id: str | None, x_user_id: str | None = None):
     """
     Async generator for SSE streaming.
@@ -102,6 +96,34 @@ async def stream_events(session_factory, last_event_id: int | None, audience_typ
 
     # ── Phase 1: Replay ──
     if last_event_id and last_event_id > 0:
+        async with session_factory() as session:
+            result = await session.execute(
+                text("SELECT MIN(sequence_id), MAX(sequence_id) FROM realtime_events")
+            )
+            row = result.one()
+            min_seq = row[0]
+            max_seq = row[1]
+
+        if max_seq is not None and last_event_id > max_seq:
+            yield _format_sse(
+                event_id=str(max_seq),
+                event_type="resync_required",
+                data={"type": "resync_required", "cursor": max_seq},
+            )
+            resync_total.inc()
+            logger.info("Cursor %d ahead of latest (latest=%d), sent resync_required", last_event_id, max_seq)
+            return
+
+        if min_seq is not None and last_event_id < min_seq - 1:
+            yield _format_sse(
+                event_id=str(max_seq),
+                event_type="resync_required",
+                data={"type": "resync_required", "cursor": max_seq},
+            )
+            resync_total.inc()
+            logger.info("Cursor %d expired (retention=%d..%d), sent resync_required", last_event_id, min_seq, max_seq)
+            return
+
         events = await _query_events_after(session_factory, last_event_id, audience_types, effective_audience_id)
         for event in events:
             yield _format_sse(
@@ -111,17 +133,6 @@ async def stream_events(session_factory, last_event_id: int | None, audience_typ
             )
             local_last_seen = event["sequence_id"]
             replayed_total.inc()
-
-        if not events:
-            latest_seq = await _get_latest_sequence_id(session_factory)
-            if last_event_id > latest_seq:
-                yield _format_sse(
-                    event_id=str(latest_seq),
-                    event_type="resync_required",
-                    data={"type": "resync_required", "cursor": latest_seq},
-                )
-                resync_total.inc()
-                logger.info("Cursor %d beyond retention (latest=%d), sent resync_required", last_event_id, latest_seq)
 
         logger.debug("Replayed %d events from seq=%d", len(events), last_event_id)
 

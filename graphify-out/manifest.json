@@ -660,8 +660,8 @@
     "semantic_hash": ""
   },
   "front/package.json": {
-    "mtime": 1785136137.5385506,
-    "ast_hash": "652cb4709874346a015fe2335149eb29",
+    "mtime": 1785190894.945841,
+    "ast_hash": "8472c5c4040f2fcb6d3f66647386a3a1",
     "semantic_hash": ""
   },
   "front/src/App.tsx": {
@@ -895,8 +895,8 @@
     "semantic_hash": ""
   },
   "front/src/main.tsx": {
-    "mtime": 1785135483.7521966,
-    "ast_hash": "eb6906dcf31a56ed988d521ffdef87b8",
+    "mtime": 1785190263.50802,
+    "ast_hash": "aa4387373aaf450c1d52cf8466f62607",
     "semantic_hash": ""
   },
   "front/src/pages/admin-users/AdminUsersPage.tsx": {
@@ -1135,8 +1135,8 @@
     "semantic_hash": ""
   },
   "front/src/pages/tasks/TasksPage.tsx": {
-    "mtime": 1785138141.318325,
-    "ast_hash": "4a50dee6fe74583f35276c9024f9217f",
+    "mtime": 1785138487.4976301,
+    "ast_hash": "b73c45b9e953ec173cafee82f462ab22",
     "semantic_hash": ""
   },
   "front/src/pages/tasks/components/AutomationPanel.tsx": {
@@ -1690,8 +1690,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1785136137.5415509,
-    "ast_hash": "62bef729a0d728c4329032139fa8c63c",
+    "mtime": 1785190894.945841,
+    "ast_hash": "68b76962e3fcbb69c5e07f2000b96f0c",
     "semantic_hash": ""
   },
   "pyproject.toml": {
@@ -2435,8 +2435,8 @@
     "semantic_hash": ""
   },
   "services/content-service/app/core/config.py": {
-    "mtime": 1785137740.0678449,
-    "ast_hash": "d2405b5722ea22b883f45ff07435f51c",
+    "mtime": 1785190355.7071161,
+    "ast_hash": "bee1e96062c743347a0ad4d98652a69f",
     "semantic_hash": ""
   },
   "services/content-service/app/core/security.py": {
@@ -2465,8 +2465,8 @@
     "semantic_hash": ""
   },
   "services/content-service/app/main.py": {
-    "mtime": 1784683313.4384394,
-    "ast_hash": "bf044b964c599a52bb37558ed65a5f17",
+    "mtime": 1785190403.8391254,
+    "ast_hash": "43e8a9a2a72b5ad78ec3e55621d47b93",
     "semantic_hash": ""
   },
   "services/content-service/app/modules/__init__.py": {
@@ -2615,8 +2615,8 @@
     "semantic_hash": ""
   },
   "services/content-service/app/modules/projections/consumer.py": {
-    "mtime": 1782183722.281231,
-    "ast_hash": "304f14354309f2b8650b4a38f9b71608",
+    "mtime": 1785190331.3589754,
+    "ast_hash": "8cb7f47b853c403b21920e6be4f6e971",
     "semantic_hash": ""
   },
   "services/content-service/app/modules/projections/processor.py": {
@@ -3770,8 +3770,8 @@
     "semantic_hash": ""
   },
   "services/moderation-service/tests/test_projection_consumer.py": {
-    "mtime": 1785138285.9357524,
-    "ast_hash": "4dec6843d3673333bbba16d1478c722f",
+    "mtime": 1785138450.2465644,
+    "ast_hash": "f646e25b52f3d1ebf32e7a0baf138ffc",
     "semantic_hash": ""
   },
   "services/moderation-service/tests/test_projection_contract.py": {
@@ -3960,8 +3960,8 @@
     "semantic_hash": ""
   },
   "services/tasks-service/app/modules/tasks/execution_service.py": {
-    "mtime": 1785136004.5877006,
-    "ast_hash": "67c6945b64d062a65e597c781ca78bbe",
+    "mtime": 1785190764.826657,
+    "ast_hash": "da436255bd4b03c75f17f7dd96cfe8bc",
     "semantic_hash": ""
   },
   "services/tasks-service/app/modules/tasks/mapper.py": {
@@ -3990,8 +3990,8 @@
     "semantic_hash": ""
   },
   "services/tasks-service/app/modules/tasks/state_service.py": {
-    "mtime": 1785136026.094456,
-    "ast_hash": "ff53fe8900ee8146e278944de140627a",
+    "mtime": 1785190745.2267303,
+    "ast_hash": "73ef95a56d064a4dfa275021169f867c",
     "semantic_hash": ""
   },
   "services/tasks-service/pyproject.toml": {
@@ -4040,8 +4040,8 @@
     "semantic_hash": ""
   },
   "services/tasks-service/tests/test_outbox.py": {
-    "mtime": 1785132697.4807696,
-    "ast_hash": "e11de7724bba9d4516832c1ce8d1ac10",
+    "mtime": 1785190913.1954677,
+    "ast_hash": "a585b171170c534610cf87a271ea23c3",
     "semantic_hash": ""
   },
   "services/tasks-service/tests/test_task_execution_api.py": {
@@ -4055,8 +4055,8 @@
     "semantic_hash": ""
   },
   "services/tasks-service/tests/test_task_state_service.py": {
-    "mtime": 1784252527.446119,
-    "ast_hash": "d0cfbe6ccb1fa506761624a497485e9c",
+    "mtime": 1785190924.4474707,
+    "ast_hash": "0296993f6e83cade8dff1dffdbd9a172",
     "semantic_hash": ""
   },
   "services/tasks-service/tests/test_tasks_api.py": {
@@ -7755,8 +7755,8 @@
     "semantic_hash": ""
   },
   "CHANGELOG.md": {
-    "mtime": 1785136137.5375504,
-    "ast_hash": "e269eba6ed395b5f1cd417b45f4e02ae",
+    "mtime": 1785190894.945841,
+    "ast_hash": "912c954a5a53be1f8d2bf734a0e3f594",
     "semantic_hash": ""
   },
   "DESIGN.md": {
@@ -7770,8 +7770,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1784770590.3674235,
-    "ast_hash": "c3e25fc6f2ba20cebdb89b6e85d60742",
+    "mtime": 1785138780.818769,
+    "ast_hash": "530874b46a0c188d389c659b1e99ffef",
     "semantic_hash": ""
   },
   "docker-compose.yml": {
@@ -7790,18 +7790,18 @@
     "semantic_hash": ""
   },
   "docs/api.md": {
-    "mtime": 1784770570.3855479,
-    "ast_hash": "68fbb77c5966645ce20f1e83ff957ecd",
+    "mtime": 1785138801.8514998,
+    "ast_hash": "2c13b818fad1ab5ee29fb582bd1c8425",
     "semantic_hash": ""
   },
   "docs/architecture.md": {
-    "mtime": 1785126735.1158924,
-    "ast_hash": "9b8f8099c1dc1e65131365fbdd83dc32",
+    "mtime": 1785138785.0931208,
+    "ast_hash": "1bd2511b93fed50128f0bac9eb43cbf3",
     "semantic_hash": ""
   },
   "docs/configuration.md": {
-    "mtime": 1784252527.446119,
-    "ast_hash": "63c33b85acd27826a82e5a2f26b1f074",
+    "mtime": 1785138795.9900174,
+    "ast_hash": "7d017b3826bad99d68fd9f51d545b54c",
     "semantic_hash": ""
   },
   "docs/deploy-runbook.md": {
@@ -7815,8 +7815,8 @@
     "semantic_hash": ""
   },
   "docs/getting-started.md": {
-    "mtime": 1784770590.3684237,
-    "ast_hash": "7b205dff965f829668eb42080c8df3f1",
+    "mtime": 1785138797.1351118,
+    "ast_hash": "4f782e9bed009b50e92bc9e88fc4b3ed",
     "semantic_hash": ""
   },
   "docs/product.md": {
@@ -8255,8 +8255,8 @@
     "semantic_hash": ""
   },
   "front/src/shared/realtime/RealtimeProvider.tsx": {
-    "mtime": 1785135481.053492,
-    "ast_hash": "cad837635660f1091218019dee8aa2c1",
+    "mtime": 1785190260.259753,
+    "ast_hash": "26844d872c5abb05e3f5aa306ab6f3bf",
     "semantic_hash": ""
   },
   "front/src/shared/realtime/reconnectPolicy.ts": {
@@ -8305,8 +8305,8 @@
     "semantic_hash": ""
   },
   "services/api-gateway/app/modules/realtime/router.py": {
-    "mtime": 1785135221.979834,
-    "ast_hash": "22d70b7a23c08f03c34b316e58441b63",
+    "mtime": 1785190272.9857986,
+    "ast_hash": "7bed242c6288478c3d36e606f7a37435",
     "semantic_hash": ""
   },
   "services/content-service/alembic/versions/20260724_add_pg_trgm_index.py": {
@@ -8385,8 +8385,8 @@
     "semantic_hash": ""
   },
   "services/realtime-service/app/core/config.py": {
-    "mtime": 1785137740.7939072,
-    "ast_hash": "f7a0a625db01da2116be2250fa5eddce",
+    "mtime": 1785190685.4828556,
+    "ast_hash": "e67648bdc0daa8b73d8e2d20f4eb9fb9",
     "semantic_hash": ""
   },
   "services/realtime-service/app/db/__init__.py": {
@@ -8410,8 +8410,8 @@
     "semantic_hash": ""
   },
   "services/realtime-service/app/main.py": {
-    "mtime": 1785135009.0734591,
-    "ast_hash": "b3144554f3e9c073270566e0422b9509",
+    "mtime": 1785190326.3847423,
+    "ast_hash": "403436ac63b481bebcf6c89e86c1b87e",
     "semantic_hash": ""
   },
   "services/realtime-service/app/modules/ingestion/__init__.py": {
@@ -8420,8 +8420,8 @@
     "semantic_hash": ""
   },
   "services/realtime-service/app/modules/ingestion/ingestor.py": {
-    "mtime": 1785134323.4367127,
-    "ast_hash": "b24137aae79f07d8ff11d9a85139a1c0",
+    "mtime": 1785190725.0537467,
+    "ast_hash": "f9841561820c68a7f23c8498a4a1d409",
     "semantic_hash": ""
   },
   "services/realtime-service/app/modules/monitoring/__init__.py": {
@@ -8445,8 +8445,8 @@
     "semantic_hash": ""
   },
   "services/realtime-service/app/modules/stream/sse_handler.py": {
-    "mtime": 1785134502.2822175,
-    "ast_hash": "5e8ac3f3e38c5cc260197b254ff1ffa5",
+    "mtime": 1785190784.7685258,
+    "ast_hash": "6ba80727f1020e5d055e48d71fd3e689",
     "semantic_hash": ""
   },
   "services/realtime-service/pyproject.toml": {
@@ -8470,8 +8470,8 @@
     "semantic_hash": ""
   },
   "services/realtime-service/tests/test_resilience_ingestor.py": {
-    "mtime": 1785137516.044594,
-    "ast_hash": "4dc464d6873aa7ebe09e3fa9814d26b8",
+    "mtime": 1785191013.8634403,
+    "ast_hash": "d0189d9077764a422d569c9354296495",
     "semantic_hash": ""
   },
   "services/realtime-service/tests/test_resilience_scale.py": {
@@ -8480,8 +8480,8 @@
     "semantic_hash": ""
   },
   "services/realtime-service/tests/test_resilience_sse.py": {
-    "mtime": 1785137177.6925187,
-    "ast_hash": "64aaf48b93f1785e782d8f4d95c8f5db",
+    "mtime": 1785191091.6752324,
+    "ast_hash": "e77d1230c206f813722f13fc52f29136",
     "semantic_hash": ""
   },
   "services/tasks-service/alembic/versions/20260727_0005_add_task_revision.py": {
@@ -8562,6 +8562,41 @@
   "docs/tasks/search-performance-baseline.md": {
     "mtime": 1784866326.8396058,
     "ast_hash": "e75584a5e80b1805a8404891a2f58f61",
+    "semantic_hash": ""
+  },
+  "services/content-service/app/background/__init__.py": {
+    "mtime": 1785190385.1597009,
+    "ast_hash": "d11821a3cf6d00cdecaaaef4bdd82b0b",
+    "semantic_hash": ""
+  },
+  "services/content-service/app/background/outbox_worker.py": {
+    "mtime": 1785190380.2463262,
+    "ast_hash": "1b9cb9bc7e30611220769bbac5e998c2",
+    "semantic_hash": ""
+  },
+  "services/content-service/app/modules/outbox/__init__.py": {
+    "mtime": 1785190348.6487854,
+    "ast_hash": "564456e0d5c6f9b62a771a5bfa0e1cbd",
+    "semantic_hash": ""
+  },
+  "services/content-service/app/modules/outbox/publisher.py": {
+    "mtime": 1785190345.376632,
+    "ast_hash": "c0ecf6f9d436b44bb6ea2bd6da3d007d",
+    "semantic_hash": ""
+  },
+  "services/content-service/app/modules/outbox/repository.py": {
+    "mtime": 1785190337.9532843,
+    "ast_hash": "519ecc88f4ada6f0bb6d3a3e82db4e9d",
+    "semantic_hash": ""
+  },
+  "services/content-service/tests/test_outbox_publisher.py": {
+    "mtime": 1785190503.2354114,
+    "ast_hash": "4a8bdbe4993e1ad2a8c4e331df769e43",
+    "semantic_hash": ""
+  },
+  "services/realtime-service/app/modules/stream/dependencies.py": {
+    "mtime": 1785190317.2103126,
+    "ast_hash": "be6b67d4a00bab99862d40b0cc434f7c",
     "semantic_hash": ""
   }
 }

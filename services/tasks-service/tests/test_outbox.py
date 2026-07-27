@@ -125,6 +125,7 @@ async def test_tasks_service_outbox_events_contract():
     task_mock.source = "manual"
     task_mock.status = "failed"
     task_mock.execution_run_id = "run-42"
+    task_mock.revision = 5
 
     service.crud.repository.create_task = AsyncMock(return_value=task_mock)
     service.crud.repository.add_audit = AsyncMock()
@@ -182,9 +183,11 @@ async def test_tasks_service_outbox_events_contract():
     service.crud.repository.touch_task = AsyncMock(return_value=task_mock)
 
     await service.resume_task("user-1", 42)
-    resume_event = service.crud.outbox.add_event.await_args.kwargs
-    run_id = resume_event["payload"]["runId"]
-    assert resume_event == {
+    resume_call = next(
+        call for call in service.crud.outbox.add_event.await_args_list if call.kwargs["event_type"] == "task.resumed"
+    )
+    run_id = resume_call.kwargs["payload"]["runId"]
+    assert resume_call.kwargs == {
         "event_type": "task.resumed",
         "aggregate_type": "task",
         "aggregate_id": "42",
@@ -200,6 +203,10 @@ async def test_tasks_service_outbox_events_contract():
             "source": "manual",
         },
     }
+    changed_call = next(
+        call for call in service.crud.outbox.add_event.await_args_list if call.kwargs["event_type"] == "task.state_changed"
+    )
+    assert changed_call.kwargs["dedupe_key"] == f"task.state_changed:42:resumed:{task_mock.revision}"
 
 
 def _make_event(event_id: str, attempts: int = 0, status: str = "pending"):
@@ -467,6 +474,7 @@ async def test_complete_execution_publishes_outbox_event():
     task_mock.processed_items = 100
     task_mock.total_items = 200
     task_mock.stats = {"processed": 100, "total": 200}
+    task_mock.revision = 7
 
     payload = MagicMock(spec=ExecutionCompleteRequest)
     payload.run_id = "run-abc-123"
@@ -481,8 +489,11 @@ async def test_complete_execution_publishes_outbox_event():
 
     await service.complete_execution(42, payload)
 
-    service.crud.outbox.add_event.assert_called_once()
-    call_kwargs = service.crud.outbox.add_event.call_args.kwargs
+    assert service.crud.outbox.add_event.await_count == 2
+    completed_call = next(
+        call for call in service.crud.outbox.add_event.await_args_list if call.kwargs["event_type"] == "task.completed"
+    )
+    call_kwargs = completed_call.kwargs
     assert call_kwargs["event_type"] == "task.completed"
     assert call_kwargs["aggregate_type"] == "task"
     assert call_kwargs["aggregate_id"] == "42"
@@ -497,6 +508,10 @@ async def test_complete_execution_publishes_outbox_event():
     assert call_kwargs["payload"]["stats"] == {"processed": 100, "total": 200}
     assert call_kwargs["payload"]["processedItems"] == 100
     assert call_kwargs["payload"]["totalItems"] == 200
+    changed_call = next(
+        call for call in service.crud.outbox.add_event.await_args_list if call.kwargs["event_type"] == "task.state_changed"
+    )
+    assert changed_call.kwargs["dedupe_key"] == f"task.state_changed:42:done:{task_mock.revision}"
 
 
 @pytest.mark.anyio
@@ -524,6 +539,7 @@ async def test_fail_execution_publishes_outbox_event():
     task_mock.processed_items = 50
     task_mock.total_items = 200
     task_mock.stats = {"processed": 50, "total": 200}
+    task_mock.revision = 9
 
     error_message = "VK API timeout error"
     payload = MagicMock(spec=ExecutionFailRequest)
@@ -540,8 +556,11 @@ async def test_fail_execution_publishes_outbox_event():
 
     await service.fail_execution(42, payload)
 
-    service.crud.outbox.add_event.assert_called_once()
-    call_kwargs = service.crud.outbox.add_event.call_args.kwargs
+    assert service.crud.outbox.add_event.await_count == 2
+    failed_call = next(
+        call for call in service.crud.outbox.add_event.await_args_list if call.kwargs["event_type"] == "task.failed"
+    )
+    call_kwargs = failed_call.kwargs
     assert call_kwargs["event_type"] == "task.failed"
     assert call_kwargs["aggregate_type"] == "task"
     assert call_kwargs["aggregate_id"] == "42"
@@ -554,6 +573,10 @@ async def test_fail_execution_publishes_outbox_event():
     assert call_kwargs["payload"]["groupIds"] == [1, 2]
     assert call_kwargs["payload"]["postLimit"] == 10
     assert call_kwargs["payload"]["source"] == "manual"
+    changed_call = next(
+        call for call in service.crud.outbox.add_event.await_args_list if call.kwargs["event_type"] == "task.state_changed"
+    )
+    assert changed_call.kwargs["dedupe_key"] == f"task.state_changed:42:failed:{task_mock.revision}"
 
 
 @pytest.mark.anyio

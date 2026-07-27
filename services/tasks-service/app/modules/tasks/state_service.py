@@ -63,13 +63,13 @@ class TaskStateService:
             dedupe_key=f"task.resumed:{task.id}:{task.execution_run_id}",
             payload=task_request_payload(task, owner_user_id),
         )
+        task = await self.repository.touch_task(task)
         await self.outbox.add_event(
             event_type="task.state_changed", aggregate_type="task", aggregate_id=str(task.id),
-            dedupe_key=f"task.state_changed:{task.id}:resumed",
+            dedupe_key=f"task.state_changed:{task.id}:resumed:{task.revision}",
             payload=task_state_changed_payload(task),
         )
         logger.debug("Published task.state_changed (resumed) for task %s", task.id)
-        task = await self.repository.touch_task(task)
         return task_to_response(task)
 
     async def cancel_task(self, owner_user_id: str, task_id: int) -> dict | None:
@@ -101,13 +101,13 @@ class TaskStateService:
             dedupe_key=f"task.cancelled:{task.id}:{task.execution_run_id}",
             payload=task_identity_payload(task, owner_user_id),
         )
+        task = await self.repository.touch_task(task)
         await self.outbox.add_event(
             event_type="task.state_changed", aggregate_type="task", aggregate_id=str(task.id),
-            dedupe_key=f"task.state_changed:{task.id}:cancelled",
+            dedupe_key=f"task.state_changed:{task.id}:cancelled:{task.revision}",
             payload=task_state_changed_payload(task),
         )
         logger.debug("Published task.state_changed (cancelled) for task %s", task.id)
-        task = await self.repository.touch_task(task)
         return task_to_response(task)
 
     async def check_task(self, owner_user_id: str, task_id: int) -> dict | None:

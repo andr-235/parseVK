@@ -8,7 +8,7 @@ from app.modules.tasks.exceptions import TaskConflictError
 from app.modules.tasks.state_service import TaskStateService
 
 
-def make_task(status: str, run_id: str = "run-1"):
+def make_task(status: str, run_id: str = "run-1", revision: int = 3):
     return SimpleNamespace(
         id=42,
         title="VK parse",
@@ -29,6 +29,7 @@ def make_task(status: str, run_id: str = "run-1"):
         stats=None,
         skipped_groups_message=None,
         created_at=datetime.now(UTC),
+        revision=revision,
     )
 
 
@@ -51,11 +52,18 @@ async def test_resume_uses_run_scoped_dedupe_key_and_row_lock():
 
     repository.get_task_for_update.assert_awaited_once_with("user-1", 42)
     assert result["status"] == "pending"
-    run_id = outbox.add_event.await_args.kwargs["payload"]["runId"]
+    resumed_call = next(
+        call for call in outbox.add_event.await_args_list if call.kwargs["event_type"] == "task.resumed"
+    )
+    run_id = resumed_call.kwargs["payload"]["runId"]
     assert UUID(run_id)
     assert run_id != "run-7"
     assert task.execution_run_id == run_id
-    assert outbox.add_event.await_args.kwargs["dedupe_key"] == f"task.resumed:42:{run_id}"
+    assert resumed_call.kwargs["dedupe_key"] == f"task.resumed:42:{run_id}"
+    changed_call = next(
+        call for call in outbox.add_event.await_args_list if call.kwargs["event_type"] == "task.state_changed"
+    )
+    assert changed_call.kwargs["dedupe_key"] == f"task.state_changed:42:resumed:{task.revision}"
 
 
 @pytest.mark.anyio
@@ -68,10 +76,18 @@ async def test_resume_rejects_pending_task():
 
 @pytest.mark.anyio
 async def test_cancel_uses_current_execution_run_in_dedupe_key():
-    service, _, outbox = make_service(make_task("running", "run-8"))
+    task = make_task("running", "run-8")
+    service, _, outbox = make_service(task)
 
     result = await service.cancel_task("user-1", 42)
 
     assert result["status"] == "cancelled"
-    assert outbox.add_event.await_args.kwargs["dedupe_key"] == "task.cancelled:42:run-8"
-    assert outbox.add_event.await_args.kwargs["payload"]["runId"] == "run-8"
+    cancelled_call = next(
+        call for call in outbox.add_event.await_args_list if call.kwargs["event_type"] == "task.cancelled"
+    )
+    assert cancelled_call.kwargs["dedupe_key"] == "task.cancelled:42:run-8"
+    assert cancelled_call.kwargs["payload"]["runId"] == "run-8"
+    changed_call = next(
+        call for call in outbox.add_event.await_args_list if call.kwargs["event_type"] == "task.state_changed"
+    )
+    assert changed_call.kwargs["dedupe_key"] == f"task.state_changed:42:cancelled:{task.revision}"

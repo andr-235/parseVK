@@ -1,7 +1,9 @@
 import sys
+import json
 from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import AsyncMock
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -15,7 +17,8 @@ from common.events import WireEvent
 
 import app.db.session as session_module
 from app.db.models import RealtimeEvent
-from app.modules.ingestion.ingestor import _map_audience, ingest_event
+from app.core.config import settings
+from app.modules.ingestion.ingestor import _map_audience, consume_topic_forever, ingest_event
 from app.modules.retention.cleaner import safety_catchup
 
 
@@ -104,3 +107,136 @@ async def test_task_revision_protects_ordering():
     assert should_apply_task_state(5, 5) is True
     assert should_apply_task_state(5, 6) is True
     assert should_apply_task_state(5, 4) is False
+
+
+def _make_fake_consumer(messages):
+    """Return a fake AIOKafkaConsumer that iterates over ``messages`` once."""
+    class FakeConsumer:
+        def __init__(self, messages):
+            self.messages = messages
+            self.commit = AsyncMock()
+            self.start = AsyncMock()
+            self.stop = AsyncMock()
+            self._iter = None
+
+        def __aiter__(self):
+            self._iter = iter(self.messages)
+            return self
+
+        async def __anext__(self):
+            try:
+                return next(self._iter)
+            except StopIteration:
+                raise StopAsyncIteration
+
+    return FakeConsumer(messages)
+
+
+def _fake_session_factory():
+    """Return a callable that produces a fake async session usable as a context manager."""
+    session = AsyncMock()
+
+    class _BeginContext:
+        async def __aenter__(self):
+            return session
+
+        async def __aexit__(self, *args):
+            return False
+
+    session.begin = MagicMock(return_value=_BeginContext())
+
+    factory = MagicMock()
+    factory.return_value = session
+    factory.return_value.__aenter__ = AsyncMock(return_value=session)
+    factory.return_value.__aexit__ = AsyncMock(return_value=False)
+    return factory
+
+
+@pytest.mark.anyio
+async def test_ingest_event_stores_source_partition_and_offset(mock_session):
+    event_id = uuid4()
+    wire = WireEvent.model_validate(
+        {
+            "event_id": str(event_id),
+            "event_type": "content.comments_projected",
+            "event_version": 1,
+            "aggregate_type": "vk_comment",
+            "aggregate_id": "-1:3",
+            "payload": {"insertedCount": 1, "totalCount": 1},
+            "created_at": "2026-07-27T00:00:00+00:00",
+        }
+    )
+
+    mock_session.execute.side_effect = [
+        AsyncMock(rowcount=1),  # insert
+        AsyncMock(),            # pg_notify
+    ]
+    mock_session.scalar.return_value = 42
+
+    await ingest_event(mock_session, wire, "parsevk.content.events", 7, 99)
+
+    insert_stmt = mock_session.execute.call_args_list[0][0][0]
+    params = insert_stmt.compile().params
+    assert params["source_partition"] == 7
+    assert params["source_offset"] == 99
+
+
+@pytest.mark.anyio
+async def test_consume_topic_parse_error_sends_dlq_and_commits():
+    bad_msg = SimpleNamespace(value=b"not-json", partition=0, offset=0)
+    consumer = _make_fake_consumer([bad_msg])
+    session_factory = _fake_session_factory()
+
+    mock_producer = AsyncMock()
+    mock_producer.start = AsyncMock()
+    mock_producer.stop = AsyncMock()
+    mock_producer.send = AsyncMock()
+
+    with (
+        patch("app.modules.ingestion.ingestor.AIOKafkaConsumer", return_value=consumer),
+        patch("app.modules.ingestion.ingestor.AIOKafkaProducer", return_value=mock_producer),
+    ):
+        await consume_topic_forever(
+            session_factory,
+            "parsevk.content.events",
+            "localhost:9092",
+            "realtime-test-group",
+        )
+
+    mock_producer.send.assert_awaited_once_with(settings.kafka_dlq_topic, value=bad_msg.value)
+    consumer.commit.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_consume_topic_db_error_does_not_commit():
+    event_id = uuid4()
+    valid_msg = SimpleNamespace(
+        value=json.dumps(
+            {
+                "event_id": str(event_id),
+                "event_type": "content.comments_projected",
+                "event_version": 1,
+                "aggregate_type": "vk_comment",
+                "aggregate_id": "-1:3",
+                "payload": {"insertedCount": 1, "totalCount": 1},
+                "created_at": "2026-07-27T00:00:00+00:00",
+            }
+        ).encode(),
+        partition=0,
+        offset=1,
+    )
+    consumer = _make_fake_consumer([valid_msg])
+    session_factory = _fake_session_factory()
+
+    with (
+        patch("app.modules.ingestion.ingestor.AIOKafkaConsumer", return_value=consumer),
+        patch("app.modules.ingestion.ingestor.ingest_event", side_effect=RuntimeError("DB down")),
+    ):
+        await consume_topic_forever(
+            session_factory,
+            "parsevk.content.events",
+            "localhost:9092",
+            "realtime-test-group",
+        )
+
+    consumer.commit.assert_not_awaited()

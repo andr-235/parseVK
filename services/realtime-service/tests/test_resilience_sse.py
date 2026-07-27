@@ -30,13 +30,25 @@ async def test_sse_reconnect_replays_after_last_event_id():
 # scenario: 10 - Cursor beyond retention
 @pytest.mark.anyio
 async def test_cursor_beyond_retention_sends_resync():
+    from contextlib import asynccontextmanager
+
+    class FakeSession:
+        async def execute(self, query):
+            class FakeResult:
+                def one(self):
+                    return (1, 5)
+            return FakeResult()
+
+    @asynccontextmanager
+    async def mock_session_factory():
+        yield FakeSession()
+
     with (
         patch.object(sse_handler, "_query_events_after", return_value=[]) as mock_query,
-        patch.object(sse_handler, "_get_latest_sequence_id", return_value=5),
     ):
         chunks = []
         async for chunk in stream_events(
-            AsyncMock(), last_event_id=100, audience_type="authenticated", audience_id=None
+            mock_session_factory, last_event_id=100, audience_types=["authenticated"], audience_id=None
         ):
             chunks.append(chunk)
             if "resync_required" in chunk:
@@ -44,7 +56,39 @@ async def test_cursor_beyond_retention_sends_resync():
 
     assert any("resync_required" in chunk for chunk in chunks)
     assert any("cursor" in chunk for chunk in chunks)
-    mock_query.assert_awaited()
+    mock_query.assert_not_awaited()
+
+
+# scenario: 10b - Cursor expired (behind retention window)
+@pytest.mark.anyio
+async def test_cursor_expired_sends_resync():
+    from contextlib import asynccontextmanager
+
+    class FakeSession:
+        async def execute(self, query):
+            class FakeResult:
+                def one(self):
+                    return (100, 200)
+            return FakeResult()
+
+    @asynccontextmanager
+    async def mock_session_factory():
+        yield FakeSession()
+
+    with (
+        patch.object(sse_handler, "_query_events_after", return_value=[]) as mock_query,
+    ):
+        chunks = []
+        async for chunk in stream_events(
+            mock_session_factory, last_event_id=50, audience_types=["authenticated"], audience_id=None
+        ):
+            chunks.append(chunk)
+            if "resync_required" in chunk:
+                break
+
+    assert any("resync_required" in chunk for chunk in chunks)
+    assert any("\"cursor\": 200" in chunk for chunk in chunks)
+    mock_query.assert_not_awaited()
 
 
 # scenario: 11 - Slow client drop
