@@ -1,3 +1,10 @@
+## [0.69.3](https://github.com/andr-235/parseVK/compare/v0.69.2...v0.69.3) (2026-07-27)
+
+
+### Bug Fixes
+
+* **vk:** DB-backed processed_comments per page, eliminate cross-run overcount ([8ef2b61](https://github.com/andr-235/parseVK/commit/8ef2b611164a2b33316621c2e104ced85cfa8f71))
+
 ## [0.69.2](https://github.com/andr-235/parseVK/compare/v0.69.1...v0.69.2) (2026-07-27)
 
 
