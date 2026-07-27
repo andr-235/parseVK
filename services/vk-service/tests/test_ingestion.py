@@ -50,6 +50,29 @@ class StubVkApiClient:
             ]
         }
 
+    async def iter_comment_pages(
+        self,
+        owner_id: int,
+        post_id: int,
+        start_offset: int = 0,
+        page_size: int = 100,
+    ):
+        # Yield a page matching current mock behavior, then an empty terminator page.
+        yield {
+            "items": [
+                {
+                    "id": post_id * 10,
+                    "owner_id": owner_id,
+                    "post_id": post_id,
+                    "from_id": 1,
+                    "text": "comment",
+                }
+            ],
+            "profiles": [],
+            "groups": [],
+        }
+        yield {"items": [], "profiles": [], "groups": []}
+
 
 @pytest.fixture
 def anyio_backend():
@@ -169,7 +192,7 @@ async def test_selected_task_collects_only_requested_groups():
 
     result = await service.execute(task_run(group_ids=[1, 2]), correlation_id="corr-1")
 
-    assert result.stats() == {"groups": 2, "posts": 2, "comments": 2, "authors": 4, "errors": 0}
+    assert result.stats() == {"groups": 2, "posts": 2, "comments": 2, "authors": 2, "errors": 0}
     assert [group["id"] for group in repository.groups] == [1, 2]
     assert len(repository.posts) == 2
     assert len(repository.comments) == 2

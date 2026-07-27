@@ -23,10 +23,47 @@ class StubVkApiClient:
         return [{"id": gid, "name": f"Group {gid}"} for gid in group_ids]
 
     async def get_posts(self, group_id: int, *, mode: str, post_limit: int) -> dict:
-        return {"items": [{"id": group_id * 10, "owner_id": -group_id, "from_id": -group_id, "text": "post"}]}
+        return {
+            "items": [
+                {"id": group_id * 10, "owner_id": -group_id, "from_id": -group_id, "text": "post"}
+            ]
+        }
 
     async def get_comments(self, owner_id: int, post_id: int) -> dict:
-        return {"items": [{"id": post_id * 10, "owner_id": owner_id, "post_id": post_id, "from_id": 1, "text": "comment"}]}
+        return {
+            "items": [
+                {
+                    "id": post_id * 10,
+                    "owner_id": owner_id,
+                    "post_id": post_id,
+                    "from_id": 1,
+                    "text": "comment",
+                }
+            ]
+        }
+
+    async def iter_comment_pages(
+        self,
+        owner_id: int,
+        post_id: int,
+        start_offset: int = 0,
+        page_size: int = 100,
+    ):
+        # Yield a page matching current mock behavior, then an empty terminator page.
+        yield {
+            "items": [
+                {
+                    "id": post_id * 10,
+                    "owner_id": owner_id,
+                    "post_id": post_id,
+                    "from_id": 1,
+                    "text": "comment",
+                }
+            ],
+            "profiles": [],
+            "groups": [],
+        }
+        yield {"items": [], "profiles": [], "groups": []}
 
 
 @pytest.fixture

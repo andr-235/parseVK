@@ -1,8 +1,10 @@
 import logging
+from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
 from typing import Any
 
-from app.domain.exceptions.vk_api import VkApiDomainError
 from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
+from app.domain.repositories.checkpoint import CheckpointData, IngestionCheckpointStore
 from app.services.ingestion.post_collector import _author_payload as _make_author_payload
 
 logger = logging.getLogger("vk-service.ingestion")
@@ -15,37 +17,123 @@ class CommentCollector:
         adapter: VkApiAdapter,
         repository,
         outbox=None,
+        page_committer: Callable[[], Awaitable[None]] | None = None,
     ) -> None:
         self.adapter = adapter
         self.repository = repository
         self.outbox = outbox
+        self.page_committer = page_committer
 
     async def collect_for_post(
         self,
         owner_id: int,
         post_id: int,
         author_profiles: dict[int, dict],
+        task_run: Any,
+        checkpoint_store: IngestionCheckpointStore | None,
+        start_offset: int = 0,
+        group_id: int = 0,
         *,
         correlation_id: str | None = None,
-    ) -> list[dict]:
-        try:
-            comments_response = await self.adapter.get_comments(int(owner_id), int(post_id))
-        except VkApiDomainError as exc:
-            if exc.code == 212:
-                logger.warning(
-                    "Post %d_%d: access to comments denied (VK error 212), skipping",
-                    owner_id, post_id,
+    ) -> int:
+        """Collect comments for a post using paginated iteration with per-page checkpoint.
+
+        Returns the number of comments collected.
+        """
+        logger.debug(
+            "[collect_for_post] START owner_id=%d post_id=%d start_offset=%d",
+            owner_id,
+            post_id,
+            start_offset,
+        )
+
+        collected_count = 0
+        page_num = 0
+
+        async for page in self.adapter.iter_comment_pages(
+            int(owner_id),
+            int(post_id),
+            start_offset=start_offset,
+        ):
+                page_num += 1
+                page_items = page.get("items") or []
+
+                if not page_items:
+                    logger.debug(
+                        "Empty comment page for owner_id=%d post_id=%d, done collecting",
+                        owner_id,
+                        post_id,
+                    )
+                    break
+
+                for profile in page.get("profiles", []):
+                    author_profiles.setdefault(profile["id"], profile)
+                for group_profile in page.get("groups", []):
+                    author_profiles.setdefault(group_profile["id"], group_profile)
+
+                unique_from_ids = {
+                    comment["from_id"]
+                    for comment in page_items
+                    if comment.get("from_id") is not None
+                }
+                for from_id in unique_from_ids:
+                    payload = _make_author_payload(from_id, author_profiles)
+                    await self.repository.upsert_author(payload)
+                    if self.outbox:
+                        await self.outbox.emit_author_collected(payload)
+
+                for comment in page_items:
+                    await self.repository.upsert_comment(comment, task_id=task_run.task_id)
+                    if self.outbox:
+                        await self.outbox.emit_comment_collected(
+                            comment,
+                            task_id=task_run.task_id,
+                            correlation_id=correlation_id,
+                        )
+                    collected_count += 1
+
+                page_offset = start_offset + collected_count
+                last_comment = page_items[-1]
+                last_comment_id = last_comment.get("id")
+                last_comment_date: datetime | None = None
+                if last_comment.get("date"):
+                    last_comment_date = datetime.fromtimestamp(int(last_comment["date"]), tz=UTC)
+
+                logger.debug(
+                    "Comment page %d for owner_id=%d post_id=%d: saved %d comments (offset=%d)",
+                    page_num,
+                    owner_id,
+                    post_id,
+                    len(page_items),
+                    page_offset,
                 )
-                return []
-            raise
-        comments = comments_response["items"]
 
-        for profile in comments_response.get("profiles", []):
-            author_profiles.setdefault(profile["id"], profile)
-        for group_profile in comments_response.get("groups", []):
-            author_profiles.setdefault(group_profile["id"], group_profile)
+                if checkpoint_store is not None:
+                    checkpoint = CheckpointData(
+                        run_id=task_run.run_id,
+                        owner_id=owner_id,
+                        post_id=post_id,
+                        task_id=task_run.task_id,
+                        group_id=group_id,
+                        next_offset=page_offset,
+                        last_comment_id=last_comment_id,
+                        last_comment_date=last_comment_date,
+                        processed_comments=collected_count,
+                        status="in_progress",
+                    )
+                    await checkpoint_store.save(checkpoint)
 
-        return comments
+                if self.page_committer is not None:
+                    await self.page_committer()
+
+        logger.info("Collected %d comments for post %d_%d", collected_count, owner_id, post_id)
+        logger.debug(
+            "[collect_for_post] END owner_id=%d post_id=%d collected=%d",
+            owner_id,
+            post_id,
+            collected_count,
+        )
+        return collected_count
 
     async def save_comment(
         self,

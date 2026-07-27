@@ -1,4 +1,3 @@
-from collections.abc import Awaitable, Callable
 from typing import Any
 
 from app.core.config import settings
@@ -21,7 +20,6 @@ class IngestionService:
         collector: DataCollector | None = None,
         pipeline: IngestionPipeline | None = None,
         outbox_service: OutboxService | None = None,
-        checkpoint: Callable[[], Awaitable[None]] | None = None,
     ):
         self.adapter = adapter
         self.repository = repository
@@ -34,7 +32,6 @@ class IngestionService:
             tasks_client=tasks_client,
             outbox=outbox_service,
             on_error=self._sanitize_error,
-            checkpoint=checkpoint,
         )
         self.pipeline = pipeline or IngestionPipeline(
             collector=self.collector,

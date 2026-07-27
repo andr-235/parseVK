@@ -131,10 +131,7 @@ class TaskExecutor:
                 await session.rollback()
                 raise
             except Exception:
-                try:
-                    await session.commit()
-                except Exception:
-                    await session.rollback()
+                await session.rollback()
                 raise
 
     async def _heartbeat(self, task_run: VkTaskRun) -> None:

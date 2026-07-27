@@ -6,6 +6,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     Index,
+    Integer,
     String,
     Text,
     UniqueConstraint,
@@ -84,3 +85,26 @@ class VkComment(Base):
     last_task_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class VkIngestionCheckpoint(Base):
+    __tablename__ = "vk_ingestion_checkpoints"
+    __table_args__ = (
+        UniqueConstraint("run_id", "owner_id", "post_id", name="uq_vk_ingestion_checkpoints_run_owner_post"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    task_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    run_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    group_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    owner_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    post_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    next_offset: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_comment_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    last_comment_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    processed_comments: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="in_progress")
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
+    )
