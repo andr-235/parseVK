@@ -1,3 +1,10 @@
+## [0.74.7](https://github.com/andr-235/parseVK/compare/v0.74.6...v0.74.7) (2026-07-27)
+
+
+### Bug Fixes
+
+* **frontend:** bind SSE lifecycle to auth; invalidate on realtime.ready ([58243cc](https://github.com/andr-235/parseVK/commit/58243cc03f92c73dd9471aad013edd385ea95ca8))
+
 ## [0.74.6](https://github.com/andr-235/parseVK/compare/v0.74.5...v0.74.6) (2026-07-27)
 
 
