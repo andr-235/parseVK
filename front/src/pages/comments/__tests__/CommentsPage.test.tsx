@@ -34,12 +34,12 @@ vi.mock('../../../shared/api/watchlist', () => ({
   createWatchlistAuthor: vi.fn(),
 }))
 
-function createWrapper() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+function createWrapper(qc?: QueryClient) {
+  const client = qc ?? new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <MemoryRouter>
-        <QueryClientProvider client={qc}>{children}</QueryClientProvider>
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
       </MemoryRouter>
     )
   }
@@ -59,16 +59,24 @@ describe('CommentsPage', () => {
   })
 
   it('shows detail panel when comment selected', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    qc.setQueryData(['comments', {}], {
+      comments: [{ id: 1, text: 'Test', group: 'G', author: 'A', date: '01.01.2026', status: 'Новый' }],
+    })
     const user = userEvent.setup()
-    render(<CommentsPage />, { wrapper: createWrapper() })
+    render(<CommentsPage />, { wrapper: createWrapper(qc) })
     await user.click(screen.getByText('Select comment'))
     expect(screen.getByTestId('comment-detail')).toBeInTheDocument()
     expect(screen.getByText('Comment #1')).toBeInTheDocument()
   })
 
   it('closes detail panel on close', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    qc.setQueryData(['comments', {}], {
+      comments: [{ id: 1, text: 'Test', group: 'G', author: 'A', date: '01.01.2026', status: 'Новый' }],
+    })
     const user = userEvent.setup()
-    render(<CommentsPage />, { wrapper: createWrapper() })
+    render(<CommentsPage />, { wrapper: createWrapper(qc) })
     await user.click(screen.getByText('Select comment'))
     expect(screen.getByTestId('comment-detail')).toBeInTheDocument()
     await user.click(screen.getByText('Close'))
