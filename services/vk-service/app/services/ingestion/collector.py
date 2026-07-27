@@ -166,6 +166,10 @@ class DataCollector:
                         correlation_id=correlation_id,
                     )
                     result.comments += count
+                    if self.checkpoint_store is not None:
+                        await self.checkpoint_store.complete(
+                            task_run.run_id, owner_id, post_id,
+                        )
                 except Exception as error:
                     sanitized_error = self._on_error(str(error))
                     logger.error(

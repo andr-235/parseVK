@@ -46,6 +46,7 @@ class CommentCollector:
             post_id,
             start_offset,
         )
+
         collected_count = 0
         page_num = 0
 
@@ -54,15 +55,59 @@ class CommentCollector:
             int(post_id),
             start_offset=start_offset,
         ):
-            page_num += 1
-            page_items = page.get("items") or []
+                page_num += 1
+                page_items = page.get("items") or []
 
-            if not page_items:
+                if not page_items:
+                    logger.debug(
+                        "Empty comment page for owner_id=%d post_id=%d, done collecting",
+                        owner_id,
+                        post_id,
+                    )
+                    break
+
+                for profile in page.get("profiles", []):
+                    author_profiles.setdefault(profile["id"], profile)
+                for group_profile in page.get("groups", []):
+                    author_profiles.setdefault(group_profile["id"], group_profile)
+
+                unique_from_ids = {
+                    comment["from_id"]
+                    for comment in page_items
+                    if comment.get("from_id") is not None
+                }
+                for from_id in unique_from_ids:
+                    payload = _make_author_payload(from_id, author_profiles)
+                    await self.repository.upsert_author(payload)
+                    if self.outbox:
+                        await self.outbox.emit_author_collected(payload)
+
+                for comment in page_items:
+                    await self.repository.upsert_comment(comment, task_id=task_run.task_id)
+                    if self.outbox:
+                        await self.outbox.emit_comment_collected(
+                            comment,
+                            task_id=task_run.task_id,
+                            correlation_id=correlation_id,
+                        )
+                    collected_count += 1
+
+                page_offset = start_offset + collected_count
+                last_comment = page_items[-1]
+                last_comment_id = last_comment.get("id")
+                last_comment_date: datetime | None = None
+                if last_comment.get("date"):
+                    last_comment_date = datetime.fromtimestamp(int(last_comment["date"]), tz=UTC)
+
                 logger.debug(
-                    "Empty comment page for owner_id=%d post_id=%d, finalizing checkpoint",
+                    "Comment page %d for owner_id=%d post_id=%d: saved %d comments (offset=%d)",
+                    page_num,
                     owner_id,
                     post_id,
+                    len(page_items),
+                    page_offset,
                 )
+
                 if checkpoint_store is not None:
                     checkpoint = CheckpointData(
                         run_id=task_run.run_id,
@@ -70,69 +115,16 @@ class CommentCollector:
                         post_id=post_id,
                         task_id=task_run.task_id,
                         group_id=group_id,
-                        next_offset=0,
-                        status="completed",
+                        next_offset=page_offset,
+                        last_comment_id=last_comment_id,
+                        last_comment_date=last_comment_date,
+                        processed_comments=collected_count,
+                        status="in_progress",
                     )
                     await checkpoint_store.save(checkpoint)
-                break
 
-            for profile in page.get("profiles", []):
-                author_profiles.setdefault(profile["id"], profile)
-            for group_profile in page.get("groups", []):
-                author_profiles.setdefault(group_profile["id"], group_profile)
-
-            unique_from_ids = {
-                comment["from_id"] for comment in page_items if comment.get("from_id") is not None
-            }
-            for from_id in unique_from_ids:
-                payload = _make_author_payload(from_id, author_profiles)
-                await self.repository.upsert_author(payload)
-                if self.outbox:
-                    await self.outbox.emit_author_collected(payload)
-
-            for comment in page_items:
-                await self.repository.upsert_comment(comment, task_id=task_run.task_id)
-                if self.outbox:
-                    await self.outbox.emit_comment_collected(
-                        comment,
-                        task_id=task_run.task_id,
-                        correlation_id=correlation_id,
-                    )
-                collected_count += 1
-
-            page_offset = start_offset + collected_count
-            last_comment = page_items[-1]
-            last_comment_id = last_comment.get("id")
-            last_comment_date: datetime | None = None
-            if last_comment.get("date"):
-                last_comment_date = datetime.fromtimestamp(int(last_comment["date"]), tz=UTC)
-
-            logger.debug(
-                "Comment page %d for owner_id=%d post_id=%d: saved %d comments (offset=%d)",
-                page_num,
-                owner_id,
-                post_id,
-                len(page_items),
-                page_offset,
-            )
-
-            if checkpoint_store is not None:
-                checkpoint = CheckpointData(
-                    run_id=task_run.run_id,
-                    owner_id=owner_id,
-                    post_id=post_id,
-                    task_id=task_run.task_id,
-                    group_id=group_id,
-                    next_offset=page_offset,
-                    last_comment_id=last_comment_id,
-                    last_comment_date=last_comment_date,
-                    processed_comments=collected_count,
-                    status="in_progress",
-                )
-                await checkpoint_store.save(checkpoint)
-
-            if self.page_committer is not None:
-                await self.page_committer()
+                if self.page_committer is not None:
+                    await self.page_committer()
 
         logger.info("Collected %d comments for post %d_%d", collected_count, owner_id, post_id)
         logger.debug(
