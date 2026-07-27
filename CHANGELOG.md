@@ -1,3 +1,10 @@
+## [0.69.2](https://github.com/andr-235/parseVK/compare/v0.69.1...v0.69.2) (2026-07-27)
+
+
+### Bug Fixes
+
+* **vk:** precise persisted count via DB COUNT to resolve cross-run overlap ([ff1e58e](https://github.com/andr-235/parseVK/commit/ff1e58ef6d6a6a954bd817176373af948897a1a1))
+
 ## [0.69.1](https://github.com/andr-235/parseVK/compare/v0.69.0...v0.69.1) (2026-07-27)
 
 
