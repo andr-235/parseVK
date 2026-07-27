@@ -1,3 +1,10 @@
+## [0.74.2](https://github.com/andr-235/parseVK/compare/v0.74.1...v0.74.2) (2026-07-27)
+
+
+### Bug Fixes
+
+* **realtime,tasks:** hotfix wave 2 — stop data loss and fix ordering ([302ab01](https://github.com/andr-235/parseVK/commit/302ab010ded20b0cca67d16accc7875292acf400))
+
 ## [0.74.1](https://github.com/andr-235/parseVK/compare/v0.74.0...v0.74.1) (2026-07-27)
 
 
