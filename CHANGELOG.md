@@ -1,3 +1,10 @@
+# [0.70.0](https://github.com/andr-235/parseVK/compare/v0.69.3...v0.70.0) (2026-07-27)
+
+
+### Features
+
+* **common:** add shared outbox publisher and event contracts ([c4b8df6](https://github.com/andr-235/parseVK/commit/c4b8df68077dc1e869ab0728d6f113b369cf4aa9))
+
 ## [0.69.3](https://github.com/andr-235/parseVK/compare/v0.69.2...v0.69.3) (2026-07-27)
 
 
