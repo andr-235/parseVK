@@ -25,6 +25,43 @@ class ImMessageCollectedPayload(BaseModel):
     metadata: dict[str, Any] | None = None
 
 
+class VkCommentsCollectedV1(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    batchId: str
+    chunkIndex: int
+    chunkCount: int
+    comments: list[dict]
+    authors: list[dict]
+    sourcePosition: str | None = None
+    taskId: int | None = None
+    runId: str | None = None
+
+
+class ContentCommentsProjectedV1(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    insertedCount: int
+    updatedCount: int
+    totalCount: int
+    projectionRevision: int
+
+
+class TaskStateChangedV1(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    taskId: int
+    runId: str | None = None
+    ownerUserId: int
+    status: str
+    taskRevision: int
+    processedItems: int | None = None
+    totalItems: int | None = None
+    progress: float | None = None
+    stats: dict | None = None
+    changedAt: str
+
+
 def validate_im_payload(
     event_version: int, payload: dict[str, Any]
 ) -> ImMessageCollectedPayload | dict[str, Any]:

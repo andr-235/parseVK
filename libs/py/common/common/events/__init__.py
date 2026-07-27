@@ -9,7 +9,13 @@ from common.events.helpers import (
     get_scope,
     get_task_id,
 )
-from common.events.payloads import ImMessageCollectedPayload, validate_im_payload
+from common.events.payloads import (
+    ContentCommentsProjectedV1,
+    ImMessageCollectedPayload,
+    TaskStateChangedV1,
+    VkCommentsCollectedV1,
+    validate_im_payload,
+)
 from common.events.types import IdentityEventType, ImEventType, TaskEventType, VkEventType
 
 __all__ = [
@@ -32,5 +38,8 @@ __all__ = [
     "get_post_limit",
     "get_messenger",
     "ImMessageCollectedPayload",
+    "VkCommentsCollectedV1",
+    "ContentCommentsProjectedV1",
+    "TaskStateChangedV1",
     "validate_im_payload",
 ]

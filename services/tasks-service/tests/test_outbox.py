@@ -9,6 +9,8 @@ from _service_path import use_service_path
 
 use_service_path()
 
+from common.outbox.models import OutboxMessage
+
 from app.background import outbox_worker
 from app.modules.outbox.publisher import kafka_key_for_event
 
@@ -82,6 +84,13 @@ async def test_outbox_loop_continues_after_publish_error(monkeypatch):
         async def stop(self):
             pass
 
+    class FakeHealth:
+        def mark_cycle_success(self):
+            pass
+
+        def mark_cycle_error(self, error: str):
+            pass
+
     async def sleep_without_delay(seconds):
         return None
 
@@ -91,7 +100,7 @@ async def test_outbox_loop_continues_after_publish_error(monkeypatch):
     monkeypatch.setattr(outbox_worker.asyncio, "sleep", sleep_without_delay)
 
     with pytest.raises(asyncio.CancelledError):
-        await outbox_worker.publish_outbox_forever()
+        await outbox_worker.publish_outbox_forever(FakeHealth())
 
     assert calls == 2
 
@@ -216,6 +225,23 @@ def _make_event(event_id: str, attempts: int = 0, status: str = "pending"):
     return event
 
 
+def _make_message(event_id: str, attempts: int = 0):
+    from datetime import UTC, datetime
+    from uuid import UUID
+
+    return OutboxMessage(
+        id=UUID(event_id),
+        event_type="task.created",
+        event_version=1,
+        aggregate_type="task",
+        aggregate_id="42",
+        correlation_id=None,
+        payload={"taskId": "42", "ownerUserId": "u1"},
+        attempts=attempts,
+        created_at=datetime.now(UTC),
+    )
+
+
 @pytest.fixture(autouse=True)
 def enable_outbox():
     from app.core.config import settings
@@ -232,8 +258,9 @@ async def test_publish_batch_calls_mark_published_on_success():
 
     from app.modules.outbox.publisher import OutboxPublisher
 
+    message = _make_message("00000000-0000-0000-0000-000000000001")
     repo = AsyncMock()
-    repo.lock_pending.return_value = [_make_event("00000000-0000-0000-0000-000000000001")]
+    repo.claim_batch.return_value = [message]
 
     producer_instance = AsyncMock()
 
@@ -247,18 +274,19 @@ async def test_publish_batch_calls_mark_published_on_success():
     result = await publisher.publish_batch()
 
     assert result == 1
-    repo.mark_published.assert_awaited_once()
+    repo.mark_published.assert_awaited_once_with(message.id)
 
 
 @pytest.mark.anyio
 async def test_publish_batch_calls_mark_failed_on_error():
     from unittest.mock import AsyncMock
 
-    from app.modules.outbox.publisher import MAX_OUTBOX_ATTEMPTS, OutboxPublisher
+    from app.modules.outbox.publisher import OutboxPublisher
 
-    event = _make_event("00000000-0000-0000-0000-000000000002", attempts=3)
+    message = _make_message("00000000-0000-0000-0000-000000000002", attempts=3)
     repo = AsyncMock()
-    repo.lock_pending.return_value = [event]
+    repo.claim_batch.return_value = [message]
+    repo.mark_failed.return_value = False
 
     producer_instance = AsyncMock()
     producer_instance.send_and_wait = AsyncMock(side_effect=RuntimeError("kafka down"))
@@ -273,7 +301,7 @@ async def test_publish_batch_calls_mark_failed_on_error():
     result = await publisher.publish_batch()
 
     assert result == 1
-    repo.mark_failed.assert_awaited_once_with(event, "kafka down", max_attempts=MAX_OUTBOX_ATTEMPTS)
+    repo.mark_failed.assert_awaited_once_with(message.id, "kafka down")
     repo.mark_published.assert_not_awaited()
 
 
@@ -283,14 +311,17 @@ async def test_publish_batch_sends_to_dlq_after_max_attempts():
 
     from app.modules.outbox.publisher import MAX_OUTBOX_ATTEMPTS, OutboxPublisher
 
-    event = _make_event("00000000-0000-0000-0000-000000000003", attempts=MAX_OUTBOX_ATTEMPTS - 1)
+    message = _make_message(
+        "00000000-0000-0000-0000-000000000003", attempts=MAX_OUTBOX_ATTEMPTS - 1
+    )
     repo = AsyncMock()
 
-    async def mark_failed_side_effect(event, error, **kwargs):
-        event.attempts += 1
+    async def mark_failed_side_effect(event_id, error):
+        message.attempts += 1
+        return message.attempts >= MAX_OUTBOX_ATTEMPTS
 
     repo.mark_failed = AsyncMock(side_effect=mark_failed_side_effect)
-    repo.lock_pending.return_value = [event]
+    repo.claim_batch.return_value = [message]
 
     producer_instance = AsyncMock()
 
@@ -323,11 +354,17 @@ async def test_publish_batch_sends_to_dlq_after_max_attempts():
 async def test_publish_batch_no_dlq_below_max_attempts():
     from unittest.mock import AsyncMock
 
-    from app.modules.outbox.publisher import OutboxPublisher
+    from app.modules.outbox.publisher import MAX_OUTBOX_ATTEMPTS, OutboxPublisher
 
-    event = _make_event("00000000-0000-0000-0000-000000000004", attempts=1)
+    message = _make_message("00000000-0000-0000-0000-000000000004", attempts=1)
     repo = AsyncMock()
-    repo.lock_pending.return_value = [event]
+
+    async def mark_failed_side_effect(event_id, error):
+        message.attempts += 1
+        return message.attempts >= MAX_OUTBOX_ATTEMPTS
+
+    repo.mark_failed = AsyncMock(side_effect=mark_failed_side_effect)
+    repo.claim_batch.return_value = [message]
 
     producer_instance = AsyncMock()
 
@@ -527,7 +564,7 @@ async def test_publisher_does_not_create_producer():
     from app.modules.outbox.publisher import OutboxPublisher
 
     repo = AsyncMock()
-    repo.lock_pending.return_value = []
+    repo.claim_batch.return_value = []
     producer = AsyncMock()
 
     publisher = OutboxPublisher(
@@ -550,7 +587,7 @@ async def test_publisher_does_not_stop_producer():
     from app.modules.outbox.publisher import OutboxPublisher
 
     repo = AsyncMock()
-    repo.lock_pending.return_value = []
+    repo.claim_batch.return_value = []
     producer = AsyncMock()
 
     publisher = OutboxPublisher(
@@ -571,9 +608,9 @@ async def test_publisher_uses_explicit_topic_names():
 
     from app.modules.outbox.publisher import OutboxPublisher
 
-    event = _make_event("00000000-0000-0000-0000-000000000005")
+    message = _make_message("00000000-0000-0000-0000-000000000005")
     repo = AsyncMock()
-    repo.lock_pending.return_value = [event]
+    repo.claim_batch.return_value = [message]
     producer = AsyncMock()
     producer.send_and_wait = AsyncMock()
 
@@ -599,14 +636,17 @@ async def test_publisher_uses_explicit_dlq_topic():
 
     from app.modules.outbox.publisher import MAX_OUTBOX_ATTEMPTS, OutboxPublisher
 
-    event = _make_event("00000000-0000-0000-0000-000000000006", attempts=MAX_OUTBOX_ATTEMPTS - 1)
+    message = _make_message(
+        "00000000-0000-0000-0000-000000000006", attempts=MAX_OUTBOX_ATTEMPTS - 1
+    )
     repo = AsyncMock()
 
-    async def mark_failed_side_effect(event, error, **kwargs):
-        event.attempts += 1
+    async def mark_failed_side_effect(event_id, error):
+        message.attempts += 1
+        return message.attempts >= MAX_OUTBOX_ATTEMPTS
 
     repo.mark_failed = AsyncMock(side_effect=mark_failed_side_effect)
-    repo.lock_pending.return_value = [event]
+    repo.claim_batch.return_value = [message]
 
     producer = AsyncMock()
     send_calls = []

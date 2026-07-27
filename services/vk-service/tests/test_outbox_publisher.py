@@ -2,7 +2,6 @@ import json
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -11,6 +10,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _service_path import use_service_path
 
 use_service_path()
+
+from common.outbox.models import OutboxMessage
 
 from app.services.domain_events_service import OutboxService
 from app.tasks.outbox_worker import OutboxPublisher
@@ -28,30 +29,20 @@ class FakeOutboxRepository:
     async def list_pending(self, *, limit=100):
         return self.events[:limit]
 
-    async def lock_pending_batch(self, limit=100):
+    async def claim_batch(self, limit=100):
         return self.events[:limit]
 
     async def mark_published(self, event_id):
         self.published.append(event_id)
 
-    async def mark_failed_or_retry(self, event_id, error):
+    async def mark_failed(self, event_id, error):
         return False
 
 
 class FakeProducer:
-    instances = []
-
     def __init__(self, **kwargs):
         self.kwargs = kwargs
-        self.started = False
         self.sent = []
-        FakeProducer.instances.append(self)
-
-    async def start(self):
-        self.started = True
-
-    async def stop(self):
-        self.started = False
 
     async def send_and_wait(self, topic, *, key, value):
         self.sent.append({"topic": topic, "key": key, "value": value})
@@ -80,7 +71,7 @@ async def test_comment_outbox_event_contains_projection_payload():
 @pytest.mark.anyio
 async def test_outbox_publisher_sends_event_and_marks_published():
     event_id = uuid4()
-    event = SimpleNamespace(
+    event = OutboxMessage(
         id=event_id,
         event_type="vk.comment_collected",
         event_version=1,
@@ -88,15 +79,21 @@ async def test_outbox_publisher_sends_event_and_marks_published():
         aggregate_id="-1:2:3",
         correlation_id="corr-1",
         payload={"taskId": 10, "comment": {"id": 3}},
+        attempts=0,
         created_at=datetime(2026, 1, 1, tzinfo=UTC),
     )
     repository = FakeOutboxRepository([event])
-    publisher = OutboxPublisher(repository, topic="parsevk.vk.events", producer_factory=FakeProducer)
+    producer = FakeProducer()
+    publisher = OutboxPublisher(
+        repository=repository,
+        producer=producer,
+        topic="parsevk.vk.events",
+        dlq_topic="parsevk.vk.dlq",
+        namespace="vk",
+    )
 
-    published_count = await publisher.publish_pending()
-    await publisher.stop()
+    published_count = await publisher.publish_batch()
 
-    producer = FakeProducer.instances[-1]
     sent = producer.sent[0]
     envelope = json.loads(sent["value"].decode("utf-8"))
     assert published_count == 1

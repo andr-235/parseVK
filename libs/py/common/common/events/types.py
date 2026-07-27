@@ -10,6 +10,8 @@ TaskEventType = Literal[
     "task.completed",
     "task.failed",
     "task.execution_started",
+    "task.state_changed",
+    "task.execution_progressed",
     "task.checked",
 ]
 
@@ -19,6 +21,7 @@ VkEventType = Literal[
     "vk.author_collected",
     "vk.post_collected",
     "vk.comment_collected",
+    "vk.comments_collected",
     "vk.task_progress_updated",
     "vk.task_completed",
     "vk.task_failed",

@@ -59,15 +59,23 @@ class ApplicationFactory:
         settings at construction time.
         """
         from app.core.config import settings
-        from app.modules.outbox.publisher import OutboxPublisher
+        from app.modules.outbox.publisher import (
+            OutboxPublisher,
+            TasksOutboxRepositoryAdapter,
+            kafka_key_for_event,
+        )
         from app.modules.outbox.repository import OutboxRepository
 
         logger.debug("OutboxPublisher created via factory")
         return OutboxPublisher(
-            repository=OutboxRepository(self.session),
+            repository=TasksOutboxRepositoryAdapter(OutboxRepository(self.session)),
             producer=self.producer,
             topic=settings.kafka_topic_tasks,
             dlq_topic=settings.kafka_topic_tasks_dlq,
+            namespace="tasks",
+            key_fn=lambda msg: kafka_key_for_event(
+                msg.event_type, msg.payload, msg.aggregate_id
+            ),
         )
 
     def create_tasks_service(self) -> TasksService:
