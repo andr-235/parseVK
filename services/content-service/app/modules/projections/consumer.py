@@ -9,6 +9,7 @@ from app.db.models import ProcessedEvent
 from app.db.session import SessionLocal
 from common.events import VkEvent
 from common.kafka.consumer import BaseEventConsumer
+from app.modules.projections.outbox_service import ContentOutboxService
 from app.modules.projections.processor import ProjectionRepository
 from app.modules.projections.service import ProjectionService
 
@@ -48,4 +49,6 @@ class ProjectionConsumer(BaseEventConsumer):
             return
         async with self.session_factory() as session:
             async with session.begin():
-                await ProjectionService(ProjectionRepository(session)).handle(event)
+                outbox = ContentOutboxService(session)
+                service = ProjectionService(ProjectionRepository(session), outbox_service=outbox)
+                await service.handle(event)

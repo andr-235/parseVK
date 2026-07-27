@@ -6,6 +6,7 @@ from common.runtime import WorkerHealth, supervise
 from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
+from app.background import publish_outbox_forever
 from app.core.config import settings
 from app.modules.content.router import router as content_router
 from app.modules.im_events.consumer import ImEventConsumer
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 _vk_consumer_health: WorkerHealth = WorkerHealth()
 _im_consumer_health: WorkerHealth = WorkerHealth()
+_outbox_publisher_health: WorkerHealth = WorkerHealth()
 
 
 @asynccontextmanager
@@ -23,12 +25,16 @@ async def lifespan(app: FastAPI):
     im_consumer = ImEventConsumer()
     vk_task = None
     im_task = None
+    outbox_task = None
 
     async def run_vk():
         await vk_consumer.run_forever()
 
     async def run_im():
         await im_consumer.run_forever()
+
+    async def run_outbox():
+        await publish_outbox_forever(health=_outbox_publisher_health)
 
     if settings.kafka_consumer_enabled:
         vk_task = asyncio.create_task(
@@ -37,13 +43,17 @@ async def lifespan(app: FastAPI):
         im_task = asyncio.create_task(
             supervise("IM consumer", run_im, health=_im_consumer_health)
         )
+    if settings.kafka_producer_enabled:
+        outbox_task = asyncio.create_task(
+            supervise("Content outbox publisher", run_outbox, health=_outbox_publisher_health)
+        )
     try:
         yield
     finally:
-        for task in (vk_task, im_task):
+        for task in (vk_task, im_task, outbox_task):
             if task:
                 task.cancel()
-        for task in (vk_task, im_task):
+        for task in (vk_task, im_task, outbox_task):
             if task:
                 with suppress(asyncio.CancelledError):
                     await task
@@ -65,6 +75,8 @@ def create_app() -> FastAPI:
         if settings.kafka_consumer_enabled:
             result["vkConsumer"] = "healthy" if _vk_consumer_health.is_healthy else "unhealthy"
             result["imConsumer"] = "healthy" if _im_consumer_health.is_healthy else "unhealthy"
+        if settings.kafka_producer_enabled:
+            result["outboxPublisher"] = "healthy" if _outbox_publisher_health.is_healthy else "unhealthy"
         return result
 
     @app.get("/ready")

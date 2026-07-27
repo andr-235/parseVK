@@ -2,13 +2,13 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager, suppress
 
-from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
+from fastapi import Depends, FastAPI, Header, StreamingResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
 from app.db.session import SessionLocal as session_factory
 from app.modules.retention.cleaner import catchup_loop, retention_loop
+from app.modules.stream.dependencies import verify_internal_token
 
 logger = logging.getLogger(__name__)
 
@@ -121,16 +121,20 @@ def create_app() -> FastAPI:
         except Exception as e:
             raise HTTPException(status_code=503, detail=f"Database is not ready: {str(e)}") from e
 
-    @app.get("/internal/realtime/stream")
+    @app.get("/internal/realtime/stream", dependencies=[Depends(verify_internal_token)])
     async def realtime_stream(
         lastEventId: int | None = None,
         audienceType: str | None = None,
         audienceId: str | None = None,
+        x_user_id: str | None = Header(default=None, alias="X-User-ID"),
     ):
         from app.modules.stream.sse_handler import stream_events
 
+        # Parse comma-separated audience types; e.g. "authenticated,user" from gateway
+        audience_types = [t.strip() for t in audienceType.split(",")] if audienceType else None
+
         return StreamingResponse(
-            stream_events(session_factory, lastEventId, audienceType, audienceId),
+            stream_events(session_factory, lastEventId, audience_types, audienceId, x_user_id),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",

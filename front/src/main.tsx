@@ -5,6 +5,7 @@ import './index.css'
 import App from './App.tsx'
 import { ApiError } from './shared/api/client'
 import { RealtimeProvider } from './shared/realtime/RealtimeProvider'
+import { REALTIME_ENABLED } from './shared/config/realtime'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,7 +22,7 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RealtimeProvider>
+      <RealtimeProvider enabled={REALTIME_ENABLED}>
         <App />
       </RealtimeProvider>
     </QueryClientProvider>

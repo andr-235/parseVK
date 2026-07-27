@@ -45,16 +45,18 @@ def _format_heartbeat() -> str:
     return ": heartbeat\n\n"
 
 
-async def _query_events_after(session_factory, last_seq: int, audience_type: str | None, audience_id: str | None, limit: int = 1000) -> list[dict]:
+async def _query_events_after(session_factory, last_seq: int, audience_types: list[str] | None, audience_id: str | None, limit: int = 1000) -> list[dict]:
     """Fetch events after a sequence_id filtered by audience."""
     async with session_factory() as session:
         conditions = ["r.sequence_id > :last_seq"]
         params = {"last_seq": last_seq, "limit": limit}
 
-        if audience_type:
-            conditions.append("r.audience_type = :audience_type")
-            params["audience_type"] = audience_type
-        if audience_id:
+        if audience_types:
+            placeholders = [f":audience_type_{i}" for i in range(len(audience_types))]
+            conditions.append(f"r.audience_type IN ({', '.join(placeholders)})")
+            for i, at in enumerate(audience_types):
+                params[f"audience_type_{i}"] = at
+        if audience_id is not None:
             conditions.append("(r.audience_id = :audience_id OR r.audience_id IS NULL)")
             params["audience_id"] = audience_id
         else:
@@ -86,18 +88,21 @@ async def _get_latest_sequence_id(session_factory) -> int:
         return result or 0
 
 
-async def stream_events(session_factory, last_event_id: int | None, audience_type: str | None, audience_id: str | None):
+async def stream_events(session_factory, last_event_id: int | None, audience_types: list[str] | None, audience_id: str | None, x_user_id: str | None = None):
     """
     Async generator for SSE streaming.
 
     Phase 1: Replay past events from DB (if lastEventId provided).
     Phase 2: Poll for new events every 500ms, send heartbeats every 15s.
+
+    If x_user_id is provided (e.g. from the gateway), it overrides audience_id.
     """
+    effective_audience_id = x_user_id if x_user_id is not None else audience_id
     local_last_seen = last_event_id or 0
 
     # ── Phase 1: Replay ──
     if last_event_id and last_event_id > 0:
-        events = await _query_events_after(session_factory, last_event_id, audience_type, audience_id)
+        events = await _query_events_after(session_factory, last_event_id, audience_types, effective_audience_id)
         for event in events:
             yield _format_sse(
                 event_id=str(event["sequence_id"]),
@@ -134,7 +139,7 @@ async def stream_events(session_factory, last_event_id: int | None, audience_typ
                 await asyncio.sleep(POLL_INTERVAL)
                 try:
                     events = await _query_events_after(
-                        session_factory, local_last_seen, audience_type, audience_id, limit=100,
+                        session_factory, local_last_seen, audience_types, effective_audience_id, limit=100,
                     )
                     for event in events:
                         try:

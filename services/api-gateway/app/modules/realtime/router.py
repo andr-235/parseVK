@@ -37,8 +37,9 @@ async def realtime_stream(
     upstream_path = "/internal/realtime/stream"
 
     # Build query params
+    # Pass both global and user-scoped audience so task events reach the user
     params = {
-        "audienceType": "authenticated",
+        "audienceType": "authenticated,user",
         "audienceId": user_id,
     }
 

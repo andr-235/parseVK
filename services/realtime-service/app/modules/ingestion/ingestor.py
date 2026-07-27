@@ -47,13 +47,18 @@ def _map_audience(event_type: str, payload: dict) -> tuple[str, str | None]:
     if event_type == "task.state_changed":
         owner_user_id = payload.get("ownerUserId")
         return "user", str(owner_user_id) if owner_user_id is not None else None
-    # Default fallback — authenticated audience
-    return "authenticated", None
+    # Unknown event types are not broadcast until explicitly whitelisted
+    logger.warning("Unknown event type '%s' has no audience mapping, skipping", event_type)
+    return None, None
 
 
 async def ingest_event(session: AsyncSession, wire: WireEvent, source_topic: str) -> bool:
-    """Insert a single event into realtime_events. Returns True if inserted, False if duplicate."""
+    """Insert a single event into realtime_events. Returns True if inserted, False if duplicate/skipped."""
     audience_type, audience_id = _map_audience(wire.event_type, wire.payload)
+
+    if audience_type is None:
+        logger.warning("Skipping event id=%s type=%s due to unknown audience", wire.event_id, wire.event_type)
+        return False
 
     created_at = datetime.now(UTC)
     try:

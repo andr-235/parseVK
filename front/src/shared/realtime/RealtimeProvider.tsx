@@ -32,7 +32,7 @@ interface RealtimeProviderProps {
   enabled?: boolean
 }
 
-export function RealtimeProvider({ children, enabled = false }: RealtimeProviderProps) {
+export function RealtimeProvider({ children, enabled = true }: RealtimeProviderProps) {
   const [isConnected, setIsConnected] = useState(false)
   const handlersRef = useRef<Set<RealtimeEventHandler>>(new Set())
   const clientRef = useRef<RealtimeClient | null>(null)

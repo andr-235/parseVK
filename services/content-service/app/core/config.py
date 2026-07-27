@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     kafka_topic_content: str = "parsevk.content.events"
     kafka_topic_content_dlq: str = "parsevk.content.dlq"
     kafka_consumer_enabled: bool = False
+    kafka_producer_enabled: bool = False
     content_projection_events_enabled: bool = True
     photo_analysis_base_url: str | None = None
     photo_analysis_timeout_seconds: float = 1.5
