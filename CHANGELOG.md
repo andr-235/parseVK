@@ -1,3 +1,10 @@
+# [0.74.0](https://github.com/andr-235/parseVK/compare/v0.73.0...v0.74.0) (2026-07-27)
+
+
+### Features
+
+* **tasks:** canonical task state events; hardening and cleanup ([256435b](https://github.com/andr-235/parseVK/commit/256435b2eb2bb71cda429a0da0e4f7f422d4d2e1))
+
 # [0.73.0](https://github.com/andr-235/parseVK/compare/v0.72.0...v0.73.0) (2026-07-27)
 
 
