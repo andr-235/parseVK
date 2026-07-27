@@ -31,7 +31,7 @@ curl http://localhost:3002/api/v1/tasks \
 |------|-----------|
 | Бэкенд | Python 3.12+, FastAPI, SQLAlchemy 2.0 async, Kafka |
 | Фронтенд | React 19, Vite 8, Tailwind CSS 4, TypeScript 6 |
-| Базы | PostgreSQL 16.14 (8×), Redis 7.4 |
+| Базы | PostgreSQL 16.14 (9×), Redis 7.4 |
 | Инфра | Docker Compose, Prometheus, Grafana |
 
 ## Документация
@@ -50,6 +50,7 @@ curl http://localhost:3002/api/v1/tasks \
 | [Superpowers](docs/superpowers/) | Аудиты, планы, спецификации |
 | [AGENTS](AGENTS.md) | AI Playbook для разработчиков |
 | [ADR](docs/adr/) | Architecture Decision Records |
+| [ADR-007](docs/adr/adr-007-realtime-event-driven-contour.md) | Realtime event-driven contour |
 
 ## Лицензия
 

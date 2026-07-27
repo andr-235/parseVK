@@ -2,7 +2,7 @@
 
 # Архитектура
 
-> Микросервисная архитектура: 9 FastAPI-сервисов + React-фронтенд. Асинхронная коммуникация через Kafka, синхронная — HTTP через API Gateway.
+> Микросервисная архитектура: 10 FastAPI-сервисов + React-фронтенд. Асинхронная коммуникация через Kafka, синхронная — HTTP через API Gateway.
 
 ## Общая схема
 
@@ -13,7 +13,7 @@ Frontend (React/Vite) → API Gateway → Identity / Tasks / Content / Moderatio
 ```
 
 - **Kafka-топики:** `parsevk.tasks.events`, `parsevk.vk.events`, `parsevk.im.events`
-- **PostgreSQL:** 8 отдельных баз данных (по одной на сервис)
+- **PostgreSQL:** 9 отдельных баз данных (8 domain + 1 shared)
 
 ## Стек
 
@@ -38,6 +38,7 @@ Frontend (React/Vite) → API Gateway → Identity / Tasks / Content / Moderatio
 | **listings-service** | Объявления и выгрузка CSV |
 | **moderation-service** | Пайплайн модерации контента |
 | **im-service** | Интеграция с мессенджерами (WhatsApp, Wappi.pro); владелец ImGroup и MonitoringGroup (с FK к ImGroup), polling, лента сообщений |
+| **realtime-service** | Realtime event delivery via SSE. Consumes content & task events from Kafka, stores in shared realtime-db with LISTEN/NOTIFY. |
 
 ### Владение данными (после PR-B)
 
@@ -102,6 +103,7 @@ Client (frontend) → Router → Service → Client (upstream)
 3. Service-слой обогащает ответы (авторы, группы) через параллельные вызовы
 4. Для долгих операций — Kafka-события (tasks, vk, im)
 5. Каждый сервис владеет своей БД, доступ к чужим данным только через API
+6. Для событий реального времени — realtime-service доставляет их через SSE: сервисы → Kafka → realtime-service (pg_notify) → API Gateway (SSE proxy) → Frontend (RealtimeClient)
 
 ## Двухфазные транзакции и FOR UPDATE
 
@@ -508,3 +510,4 @@ Issue → Task-ветка → Реализация → PR → Review → Merge
 - [Getting Started](getting-started.md) — установка и локальная разработка
 - [API Reference](api.md) — эндпоинты Gateway
 - [Конфигурация](configuration.md) — переменные окружения
+- [ADR-007: Realtime Event-Driven Contour](adr/adr-007-realtime-event-driven-contour.md)

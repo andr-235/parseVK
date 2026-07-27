@@ -307,6 +307,20 @@ and bypass authentication/authorization controls.
 Rejected. Replicas would diverge on reconnect: a client could land on an instance
 that missed the event it was trying to replay. Shared DB solves this uniformly.
 
+## Configuration & Feature Flags
+
+The following feature flags control the behavior of the realtime event-driven contour:
+
+| Flag | Service | Default | Purpose |
+|------|---------|---------|---------|
+| `VK_SERVICE_VK_BATCH_EVENTS_ENABLED` | vk-service | `true` | Enable batch `vk.comments_collected` events (dual-emit with legacy) |
+| `VK_SERVICE_VK_LEGACY_COMMENT_EVENTS_ENABLED` | vk-service | `true` | Keep legacy per-comment `vk.comment_collected` events active |
+| `CONTENT_KAFKA_CONSUMER_ENABLED` | content-service | `false` | Enable Kafka consumer for projection events |
+| `CONTENT_CONTENT_PROJECTION_EVENTS_ENABLED` | content-service | `true` | Enable `content.comments_projected` outbox events |
+| `REALTIME_KAFKA_CONSUMER_ENABLED` | realtime-service | `false` | Enable Kafka consumer in realtime-service |
+| `REALTIME_REALTIME_SERVICE_ENABLED` | realtime-service | `true` | Master switch for realtime-service features |
+| `VITE_REALTIME_ENABLED` | frontend | `true` | Enable frontend SSE connection to realtime stream |
+
 ## Links
 
 - Issue: https://github.com/andr-235/parseVK/issues/XXX

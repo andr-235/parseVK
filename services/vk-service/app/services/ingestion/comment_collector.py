@@ -88,17 +88,9 @@ class CommentCollector:
                 for from_id in unique_from_ids:
                     payload = _make_author_payload(from_id, author_profiles)
                     await self.repository.upsert_author(payload)
-                    if self.outbox:
-                        await self.outbox.emit_author_collected(payload)
 
                 for comment in page_items:
                     await self.repository.upsert_comment(comment, task_id=task_run.task_id)
-                    if self.outbox:
-                        await self.outbox.emit_comment_collected(
-                            comment,
-                            task_id=task_run.task_id,
-                            correlation_id=correlation_id,
-                        )
                     fetched_count += 1
 
                 page_offset = start_offset + fetched_count
@@ -265,10 +257,6 @@ class CommentCollector:
     ) -> bool:
         author_added = await self._upsert_comment_author(comment, author_profiles)
         await self.repository.upsert_comment(comment, task_id=task_run.task_id)
-        if self.outbox:
-            await self.outbox.emit_comment_collected(
-                comment, task_id=task_run.task_id, correlation_id=correlation_id
-            )
         return author_added
 
     async def _upsert_comment_author(self, comment: dict, profiles: dict[int, dict]) -> bool:
@@ -277,6 +265,4 @@ class CommentCollector:
             return False
         payload = _make_author_payload(from_id, profiles)
         await self.repository.upsert_author(payload)
-        if self.outbox:
-            await self.outbox.emit_author_collected(payload)
         return True

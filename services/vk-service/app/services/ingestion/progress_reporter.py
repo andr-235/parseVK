@@ -20,16 +20,6 @@ class ProgressReporter:
         result: IngestionResult,
         correlation_id: str | None,
     ) -> None:
-        if self.outbox:
-            await self.outbox.emit_task_progress_updated(
-                task_id=task_run.task_id,
-                run_id=task_run.run_id,
-                processed_items=result.processed_items,
-                total_items=result.processed_items,
-                progress=1,
-                stats=result.stats(),
-                correlation_id=correlation_id,
-            )
         await self.tasks_client.update_progress(
             task_run.task_id,
             task_run.run_id,

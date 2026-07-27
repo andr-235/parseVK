@@ -2,7 +2,7 @@
 
 ## Overview
 
-ParseVK follows a microservice architecture with 9 independently deployable FastAPI services, a React frontend, and an API Gateway as the single entry point. Each service adheres to a strict three-tier pattern (Router → Service → Repository) with synchronous HTTP communication through the gateway and asynchronous event-driven interaction via Kafka.
+ParseVK follows a microservice architecture with 10 independently deployable FastAPI services, a React frontend, and an API Gateway as the single entry point. Each service adheres to a strict three-tier pattern (Router → Service → Repository) with synchronous HTTP communication through the gateway and asynchronous event-driven interaction via Kafka.
 
 ## Decision Rationale
 
@@ -31,6 +31,7 @@ parseVK/
 │   ├── moderation-service/        # Content moderation pipeline
 │   ├── telegram-service/          # Telegram client (Telethon) and tgmbase import/match
 │   ├── listings-service/          # Listings storage and CSV export
+│   ├── realtime-service/           # Realtime event delivery via SSE
 │   └── im-service/                # Instant messaging (WhatsApp via Wappi.pro)
 ├── libs/py/common/                # Shared Python library (models, exceptions, Kafka helpers)
 ├── monitoring/                    # Prometheus + Grafana configs
@@ -259,6 +260,7 @@ task = asyncio.create_task(
 | `parsevk.tasks.events` | 3 | tasks-service | vk-service, im-service | `task.created`, `.resumed`, `.deleted`, `.cancelled`, `.completed`, `.failed`, `.automation_settings_updated`, `.automation_run_requested` |
 | `parsevk.vk.events` | 3 | vk-service | content-service, moderation-service | `vk.group_collected`, `.group_deleted`, `.author_collected`, `.post_collected`, `.comment_collected`, `.task_progress_updated`, `.task_completed`, `.task_failed` |
 | `parsevk.im.events` | 3 | im-service | content-service | `im.message_collected`, `.group_collected`, `.task_progress_updated`, `.task_completed`, `.task_failed` |
+| `parsevk.content.events` | 3 | content-service | realtime-service | `content.comments_projected`, `.group_updated`, `.post_updated` |
 | `identity.events` | 3 | identity-service | — | `identity.user_created`, `.user_logged_in`, `.user_logged_out`, `.password_changed` |
 | `parsevk.vk.dlq` | 3 | vk-service | — | Failed vk outbox events exceeding retry limit |
 | `parsevk.im.dlq` | 3 | im-service | — | Failed im outbox events exceeding retry limit |
@@ -321,6 +323,10 @@ task = asyncio.create_task(
 | ✅ Shared Event Schemas | Done (PR5) | vk-service `TaskEventMapper` replaced with `common.events.helpers`. `get_group_ids` returns `list[int]` consistently. im-service adapted. 5 services now use shared helpers from `common.events` |
 | ❌ Distributed Tracing | Missing | No OpenTelemetry/Jaeger. `correlation_id` propagated but not traced across service boundaries |
 | ❌ `identity.events` Has No Consumers | Fire-and-Forget | Identity publishes events but no service subscribes — events are produced with zero observable effect |
+| ✅ | Real-time SSE delivery | Done | realtime-service + API Gateway proxy |
+| ✅ | LISTEN/NOTIFY fan-out | Done | Shared realtime-db with pg_notify |
+| ✅ | Batch events | Done | `vk.comments_collected` replaces per-comment |
+| ✅ | Frontend RealtimeClient | Done | React Query + EventSource + resync |
 | ❌ Exactly-Once Semantics | Missing | No `transactional.id` or explicit `enable.idempotence` config on any producer (aiokafka defaults apply) |
 
 ### Consumer Name Convention

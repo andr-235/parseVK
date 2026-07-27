@@ -88,24 +88,25 @@ async def test_handle_event_saves_matching_comment_and_marks_processed():
     crud = FakeCrud()
     service = service_with(crud, FakeKeywordRepository(["привет"]), session)
     event = envelope(
-        "vk.comment_collected",
+        "vk.comments_collected",
         {
-            "comment": {
-                "id": 789,
-                "owner_id": -123,
-                "post_id": 456,
-                "from_id": 999,
-                "date": 1600000000,
-                "text": "Привет, мир!",
-            }
+            "comments": [
+                {
+                    "id": 789,
+                    "owner_id": -123,
+                    "post_id": 456,
+                    "from_id": 999,
+                    "date": 1600000000,
+                    "text": "Привет, мир!",
+                }
+            ]
         },
     )
 
     result = await service.handle_event(event)
 
     assert result is True
-    assert session.commits == 1
-    assert crud.marked == [(event.event_id, "vk.comment_collected")]
+    assert crud.marked == [(event.event_id, "vk.comments_collected")]
     assert len(crud.upserts) == 1
     saved = crud.upserts[0]
     assert saved["external_key"] == "vk_-123_456_789"
@@ -122,16 +123,15 @@ async def test_handle_event_skips_non_matching_comment_but_marks_processed():
     crud = FakeCrud()
     service = service_with(crud, FakeKeywordRepository(["опасно"]), session)
     event = envelope(
-        "vk.comment_collected",
-        {"comment": {"id": 1, "owner_id": -1, "post_id": 2, "text": "обычный текст"}},
+        "vk.comments_collected",
+        {"comments": [{"id": 1, "owner_id": -1, "post_id": 2, "text": "обычный текст"}]},
     )
 
     result = await service.handle_event(event)
 
     assert result is True
     assert crud.upserts == []
-    assert crud.marked == [(event.event_id, "vk.comment_collected")]
-    assert session.commits == 1
+    assert crud.marked == [(event.event_id, "vk.comments_collected")]
 
 
 @pytest.mark.anyio
@@ -139,14 +139,13 @@ async def test_handle_duplicate_event_is_skipped():
     session = FakeSession()
     crud = FakeCrud(processed=True)
     service = service_with(crud, FakeKeywordRepository(["привет"]), session)
-    event = envelope("vk.comment_collected", {"comment": {"id": 1}})
+    event = envelope("vk.comments_collected", {"comments": []})
 
     result = await service.handle_event(event)
 
     assert result is False
     assert crud.upserts == []
     assert crud.marked == []
-    assert session.commits == 0
 
 
 @pytest.mark.anyio
@@ -181,7 +180,7 @@ async def test_skip_due_to_retry_backoff_commits_offset_when_in_backoff_moderati
 
     raw_value = dumps({
         "event_id": str(uuid4()),
-        "event_type": "vk.comment_collected",
+        "event_type": "vk.comments_collected",
     }).encode()
 
     row = AsyncMock()

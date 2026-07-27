@@ -220,6 +220,12 @@ API Gateway реализован по трехуровневой архитек�
 }
 ```
 
+### Realtime (`/api/v1/realtime`)
+
+| Метод | Путь | Описание | Примечание | Content-Type |
+|-------|------|---------|------------|-------------|
+| GET | `/api/v1/realtime/stream` | SSE event stream | `Last-Event-ID` header for replay | text/event-stream |
+
 ### IM (`/api/v1/im`)
 
 | Метод | Путь | Upstream | Описание |
@@ -276,8 +282,22 @@ Service-слой ответственен за:
 2. Обогащение ответов (авторы, группы) через параллельные вызовы content-service
 3. Валидацию и обработку граничных случаев
 
+## Realtime SSE Stream
+
+Эндпоинт `GET /api/v1/realtime/stream` предоставляет Server-Sent Events (SSE) поток для получения событий в реальном времени.
+
+- **Аутентификация:** требуется JWT-токен (`Authorization: Bearer <jwt>`)
+- **Reconnection:** клиент может передать заголовок `Last-Event-ID` для воспроизведения пропущенных событий после разрыва соединения
+- **Типы событий:**
+  - `content.comments_projected` — новые комментарии спроецированы в content-service
+  - `task.state_changed` — изменение статуса задачи парсинга
+- **Heartbeat:** каждые 15 секунд отправляется пустое событие для поддержания соединения
+- **Resync:** если курсор клиента выходит за пределы окна удержания (retention), сервер отправляет событие `resync_required` — клиент должен перезагрузить данные через обычные REST-эндпоинты
+- **Frontend:** на стороне клиента используется `EventSource` API, обёрнутый в `RealtimeClient` (React Query + автоматическое переподключение)
+
 ## См. также
 
 - [Архитектура](architecture.md) — взаимодействие сервисов
 - [README](../README.md) — общая информация
 - [Конфигурация](configuration.md) — переменные окружения
+- [ADR-007: Realtime Event-Driven Contour](adr/adr-007-realtime-event-driven-contour.md)

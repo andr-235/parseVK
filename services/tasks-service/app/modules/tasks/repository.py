@@ -76,6 +76,7 @@ class TasksRepository:
 
     async def touch_task(self, task: Task) -> Task:
         task.updated_at = utcnow()
+        task.revision += 1
         await self.session.flush()
         await self.session.refresh(task)
         return task

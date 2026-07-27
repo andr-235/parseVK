@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     kafka_topic_content: str = "parsevk.content.events"
     kafka_topic_tasks: str = "parsevk.tasks.events"
     kafka_consumer_enabled: bool = False
+    realtime_service_enabled: bool = True
     kafka_consumer_group: str = "realtime-service-group"
     sse_heartbeat_seconds: int = 15
     retention_hours: int = 24

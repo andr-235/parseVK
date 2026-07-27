@@ -24,6 +24,13 @@
 | `TASKS_AUTOMATION_SCHEDULER_ENABLED` | Включает фоновый планировщик автоматизации задач (tasks-service) |
 | `VITE_*` | Frontend-переменные (Vite env) |
 | `WAPPI_*` | IM-сервис (WhatsApp через Wappi.pro) |
+| `REALTIME_DATABASE_URL` | `postgresql+asyncpg://realtime:realtime@realtime-db:5432/realtime` | Realtime DB |
+| `REALTIME_KAFKA_CONSUMER_ENABLED` | `false` | Enable Kafka consumer |
+| `REALTIME_RETENTION_HOURS` | `24` | Event retention window |
+| `VK_SERVICE_VK_BATCH_EVENTS_ENABLED` | `true` | Enable batch events |
+| `VK_SERVICE_VK_LEGACY_COMMENT_EVENTS_ENABLED` | `true` | Legacy per-comment events |
+| `CONTENT_CONTENT_PROJECTION_EVENTS_ENABLED` | `true` | Projection events |
+| `VITE_REALTIME_ENABLED` | `true` | Frontend SSE connection |
 | `VPN_SERVICE_TELEGRAM_URL` | SOCKS5-прокси для Telegram |
 
 ## Пример .env

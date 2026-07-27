@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import TaskAuditLog
 from app.modules.outbox.service import OutboxService
+from app.modules.tasks.event_payloads import task_request_payload, task_state_changed_payload
 from app.modules.tasks.exceptions import TaskConflictError, TaskNotFoundError
 from app.modules.tasks.mapper import task_to_response
 from app.modules.tasks.repository import TasksRepository
@@ -56,6 +57,12 @@ class TaskExecutionService:
             event_data={"taskId": str(task.id), "runId": run_id, "worker": payload.worker},
         ))
         task = await self.repository.touch_task(task)
+        await self.outbox.add_event(
+            event_type="task.state_changed", aggregate_type="task", aggregate_id=str(task.id),
+            correlation_id=correlation_id, dedupe_key=f"task.state_changed:{task.id}:running",
+            payload=task_state_changed_payload(task),
+        )
+        logger.debug("Published task.state_changed (running) for task %s", task.id)
         return task_to_response(task)
     async def update_execution_progress(self, task_id: int, payload, request_id: str | None = None,
                                         correlation_id: str | None = None) -> dict:
@@ -75,6 +82,12 @@ class TaskExecutionService:
             payload.processed_items, payload.total_items, payload.progress, payload.stats
         )
         task = await self.repository.touch_task(task)
+        await self.outbox.add_event(
+            event_type="task.state_changed", aggregate_type="task", aggregate_id=str(task.id),
+            correlation_id=correlation_id, dedupe_key=f"task.state_changed:{task.id}:progress:{task.revision}",
+            payload=task_state_changed_payload(task),
+        )
+        logger.debug("Published task.state_changed (progress) for task %s", task.id)
         return task_to_response(task)
     async def complete_execution(self, task_id: int, payload, request_id: str | None = None,
                                   correlation_id: str | None = None) -> dict:
@@ -112,6 +125,12 @@ class TaskExecutionService:
             },
         )
         logger.info("Published task.completed outbox event for task %s", task.id)
+        await self.outbox.add_event(
+            event_type="task.state_changed", aggregate_type="task", aggregate_id=str(task.id),
+            correlation_id=correlation_id, dedupe_key=f"task.state_changed:{task.id}:done",
+            payload=task_state_changed_payload(task),
+        )
+        logger.debug("Published task.state_changed (done) for task %s", task.id)
         task = await self.repository.touch_task(task)
         if self._on_complete:
             await self._on_complete(task_id=task_id, task=task)
@@ -150,5 +169,11 @@ class TaskExecutionService:
             },
         )
         logger.info("Published task.failed outbox event for task %s", task.id)
+        await self.outbox.add_event(
+            event_type="task.state_changed", aggregate_type="task", aggregate_id=str(task.id),
+            correlation_id=correlation_id, dedupe_key=f"task.state_changed:{task.id}:failed",
+            payload=task_state_changed_payload(task),
+        )
+        logger.debug("Published task.state_changed (failed) for task %s", task.id)
         task = await self.repository.touch_task(task)
         return task_to_response(task)

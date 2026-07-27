@@ -1,3 +1,6 @@
+from datetime import UTC, datetime
+
+
 def task_request_payload(task, owner_user_id: str) -> dict:
     return {
         "taskId": str(task.id),
@@ -27,4 +30,19 @@ def task_snapshot(task) -> dict:
         "mode": task.mode,
         "groupIds": task.group_ids,
         "postLimit": task.post_limit,
+    }
+
+
+def task_state_changed_payload(task) -> dict:
+    return {
+        "taskId": task.id,
+        "runId": task.execution_run_id,
+        "ownerUserId": task.owner_user_id,
+        "status": task.status,
+        "taskRevision": task.revision,
+        "processedItems": task.processed_items,
+        "totalItems": task.total_items,
+        "progress": task.progress,
+        "stats": task.stats,
+        "changedAt": task.updated_at.isoformat() if task.updated_at else datetime.now(UTC).isoformat(),
     }

@@ -62,7 +62,7 @@ def event(payload):
     return VkEvent.model_validate(
         {
             "event_id": str(uuid4()),
-            "event_type": "vk.comment_collected",
+            "event_type": "vk.comments_collected",
             "event_version": 1,
             "aggregate_id": "-1:2:3",
             "payload": payload,
@@ -80,21 +80,22 @@ async def test_matching_vk_comment_is_returned_by_comments_list():
     await service.handle_event(
         event(
             {
-                "comment": {
-                    "id": 3,
-                    "owner_id": -1,
-                    "post_id": 2,
-                    "from_id": 42,
-                    "date": 1700000000,
-                    "text": "Это опасно",
-                }
+                "comments": [
+                    {
+                        "id": 3,
+                        "owner_id": -1,
+                        "post_id": 2,
+                        "from_id": 42,
+                        "date": 1700000000,
+                        "text": "Это опасно",
+                    }
+                ]
             }
         )
     )
 
     result = await service.get_comments(page=1, limit=25)
 
-    assert session.commits == 1
     assert result["total"] == 1
     item = result["items"][0]
     assert item.external_key == "vk_-1_2_3"
@@ -109,7 +110,7 @@ async def test_non_matching_vk_comment_is_processed_but_not_listed():
     service = ModerationService(session)
     service.crud = InMemoryModerationCrud()
     service.keyword_repository = KeywordRepository(["опасно"])
-    vk_event = event({"comment": {"id": 3, "owner_id": -1, "post_id": 2, "text": "обычно"}})
+    vk_event = event({"comments": [{"id": 3, "owner_id": -1, "post_id": 2, "text": "обычно"}]})
 
     await service.handle_event(vk_event)
     result = await service.get_comments(page=1, limit=25)

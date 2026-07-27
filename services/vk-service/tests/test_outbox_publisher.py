@@ -49,26 +49,6 @@ class FakeProducer:
 
 
 @pytest.mark.anyio
-async def test_comment_outbox_event_contains_projection_payload():
-    repository = FakeOutboxRepository()
-    service = OutboxService(repository)
-
-    await service.emit_comment_collected(
-        {"owner_id": -1, "post_id": 2, "id": 3, "text": "comment"},
-        task_id=10,
-        correlation_id="corr-1",
-    )
-
-    event = repository.added[0]
-    assert event["event_type"] == "vk.comment_collected"
-    assert event["dedupe_key"] == "vk.comment_collected:-1:2:3"
-    assert event["payload"]["vkOwnerId"] == -1
-    assert event["payload"]["vkPostId"] == 2
-    assert event["payload"]["vkCommentId"] == 3
-    assert event["payload"]["comment"]["text"] == "comment"
-
-
-@pytest.mark.anyio
 async def test_outbox_publisher_sends_event_and_marks_published():
     event_id = uuid4()
     event = OutboxMessage(

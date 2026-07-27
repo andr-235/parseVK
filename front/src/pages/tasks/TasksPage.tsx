@@ -75,16 +75,9 @@ export function TasksPage() {
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey,
     queryFn: () => fetchTasks(page, pageSize),
-    refetchInterval: (query) => {
-      const tasks = query.state.data?.tasks
-      if (!tasks) return false
-      const hasActive = tasks.some((t) => t.status === 'pending' || t.status === 'running')
-      return hasActive ? 5000 : false
-    },
   })
 
   const rawTasks = useMemo(() => data?.tasks ?? [], [data])
-  const hasActive = rawTasks.some((t) => t.status === 'pending' || t.status === 'running')
 
   const tasks = useMemo(
     () => statusFilter ? rawTasks.filter((t) => t.status === statusFilter) : rawTasks,
@@ -331,9 +324,6 @@ export function TasksPage() {
             >
               Удалить {selected.size} {pluralTasks(selected.size)}
             </Button>
-          )}
-          {hasActive && (
-            <span className="text-xs text-text-muted ml-auto">Обновление каждые 5 сек</span>
           )}
         </div>
       )}

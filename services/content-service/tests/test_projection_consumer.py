@@ -101,14 +101,22 @@ async def test_projection_upserts_vk_events_and_marks_processed():
     await service.handle(envelope("vk.author_collected", {"author": {"vk_author_id": 2, "type": "user"}}))
     await service.handle(envelope("vk.post_collected", {"taskId": 10, "post": {"owner_id": -1, "id": 3}}))
     await service.handle(
-        envelope("vk.comment_collected", {"taskId": 10, "comment": {"owner_id": -1, "post_id": 3, "id": 4}})
+        envelope(
+            "vk.comments_collected",
+            {
+                "taskId": 10,
+                "comments": [{"owner_id": -1, "post_id": 3, "id": 4}],
+                "authors": [],
+            },
+        )
     )
 
     assert repository.groups == [{"id": 1, "name": "Group"}]
     assert repository.authors == [{"vk_author_id": 2, "type": "user"}]
     assert repository.posts == [({"owner_id": -1, "id": 3}, 10)]
     assert repository.comments == [({"owner_id": -1, "post_id": 3, "id": 4}, 10)]
-    assert repository.incremented == ["-1:3"]
+    assert repository.incremented == []
+    assert repository.comment_counts == {"-1:3": 1}
     assert repository.saved == 4
 
 

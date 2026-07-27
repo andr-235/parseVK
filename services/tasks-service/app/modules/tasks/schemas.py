@@ -41,6 +41,7 @@ class TaskResponse(BaseModel):
     group_ids: list[int] = Field(alias="groupIds")
     post_limit: int | None = Field(alias="postLimit")
     source: Source
+    task_revision: int = Field(alias="taskRevision")
     stats: dict[str, Any] | None
     error: str | None
     skipped_groups_message: str | None = Field(alias="skippedGroupsMessage")

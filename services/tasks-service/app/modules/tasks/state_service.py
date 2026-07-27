@@ -15,6 +15,7 @@ from app.modules.tasks.event_payloads import (
     task_identity_payload,
     task_request_payload,
     task_snapshot,
+    task_state_changed_payload,
 )
 from app.modules.tasks.exceptions import TaskConflictError, TaskNotFoundError
 from app.modules.tasks.mapper import task_to_response
@@ -62,6 +63,12 @@ class TaskStateService:
             dedupe_key=f"task.resumed:{task.id}:{task.execution_run_id}",
             payload=task_request_payload(task, owner_user_id),
         )
+        await self.outbox.add_event(
+            event_type="task.state_changed", aggregate_type="task", aggregate_id=str(task.id),
+            dedupe_key=f"task.state_changed:{task.id}:resumed",
+            payload=task_state_changed_payload(task),
+        )
+        logger.debug("Published task.state_changed (resumed) for task %s", task.id)
         task = await self.repository.touch_task(task)
         return task_to_response(task)
 
@@ -94,6 +101,12 @@ class TaskStateService:
             dedupe_key=f"task.cancelled:{task.id}:{task.execution_run_id}",
             payload=task_identity_payload(task, owner_user_id),
         )
+        await self.outbox.add_event(
+            event_type="task.state_changed", aggregate_type="task", aggregate_id=str(task.id),
+            dedupe_key=f"task.state_changed:{task.id}:cancelled",
+            payload=task_state_changed_payload(task),
+        )
+        logger.debug("Published task.state_changed (cancelled) for task %s", task.id)
         task = await self.repository.touch_task(task)
         return task_to_response(task)
 

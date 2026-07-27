@@ -26,6 +26,20 @@ docker compose up -d
 - **Grafana:** http://localhost:3001 (admin / пароль из .env)
 - **Prometheus:** http://localhost:9090
 
+### Realtime-сервис
+
+Для запуска realtime-контура:
+
+```bash
+docker compose up -d realtime-db realtime-service
+```
+
+Для локального запуска вне Docker:
+
+```bash
+cd services/realtime-service && uv sync && uv run uvicorn app.main:app --reload --port 8008
+```
+
 ## Локальная разработка
 
 ### Фронтенд
@@ -70,6 +84,7 @@ docker compose up -d vk-db kafka
 | Команда | Где | Описание |
 |---------|-----|----------|
 | `docker compose up -d` | корень | Запуск всего стека |
+| `docker compose up -d realtime-db realtime-service` | корень | Start realtime contour |
 | `bun run dev` | `front/` | Vite dev-сервер :5173 |
 | `bun run build` | `front/` | TypeScript check + Vite build |
 | `bun run test` | `front/` | Vitest |

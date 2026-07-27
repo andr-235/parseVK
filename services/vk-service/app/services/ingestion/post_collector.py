@@ -70,8 +70,6 @@ class PostCollector:
             return False
         payload = _author_payload(from_id, profiles)
         await self.repository.upsert_author(payload)
-        if self.outbox:
-            await self.outbox.emit_author_collected(payload)
         return True
 
 

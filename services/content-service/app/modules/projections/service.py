@@ -27,12 +27,6 @@ class ProjectionService:
             await self.repository.upsert_post(event.payload["post"], task_id=event.payload.get("taskId"))
         elif event.event_type == "vk.comments_collected":
             await self._handle_batch_comments(event)
-        elif event.event_type == "vk.comment_collected":
-            comment = event.payload["comment"]
-            await self.repository.upsert_comment(comment, task_id=event.payload.get("taskId"))
-            owner_id = comment.get("owner_id", 0)
-            post_id = comment.get("post_id", 0)
-            await self.repository.increment_post_comments_count(f"{owner_id}:{post_id}")
         await self.repository.mark_processed(self.consumer_name, event.event_id, event.event_type)
         await self.repository.save()
         return True

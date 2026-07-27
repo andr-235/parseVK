@@ -72,9 +72,7 @@ class ModerationService:
         if await self.crud.is_processed(event.event_id):
             logger.info("ModerationService.handle_event: duplicate event skipped event_id=%s", event.event_id)
             return False
-        if event.event_type == "vk.comment_collected":
-            await self._handle_comment_collected(event)
-        elif event.event_type == "vk.comments_collected":
+        if event.event_type == "vk.comments_collected":
             await self._handle_comments_collected_batch(event)
         elif event.event_type == "vk.task_completed":
             await self._handle_task_completed(event)
@@ -87,32 +85,6 @@ class ModerationService:
         tasks = list(self._pending_tasks)
         self._pending_tasks.clear()
         return tasks
-
-    async def _handle_comment_collected(self, event: VkEvent) -> None:
-        comment = event.payload.get("comment") or {}
-        candidates = await self.keyword_repository.load_candidates()
-        matched_keywords = KeywordMatcher(candidates).match_text(comment.get("text"))
-        if not matched_keywords:
-            logger.info(
-                "ModerationService._handle_comment_collected: no keyword match event_id=%s matched_count=0",
-                event.event_id,
-            )
-            return
-        try:
-            payload = map_vk_comment_event(comment, matched_keywords)
-        except InvalidVkCommentEvent:
-            logger.exception(
-                "ModerationService._handle_comment_collected: invalid VK comment event_id=%s",
-                event.event_id,
-            )
-            raise
-        await self.crud.upsert_comment(payload)
-        logger.info(
-            "ModerationService._handle_comment_collected: saved comment event_id=%s key=%s matched_count=%d",
-            event.event_id,
-            payload["external_key"],
-            len(matched_keywords),
-        )
 
     async def _handle_comments_collected_batch(self, event: VkEvent) -> None:
         """Handle vk.comments_collected batch event."""
