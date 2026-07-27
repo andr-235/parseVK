@@ -1,3 +1,10 @@
+# [0.71.0](https://github.com/andr-235/parseVK/compare/v0.70.0...v0.71.0) (2026-07-27)
+
+
+### Features
+
+* **vk,content:** batch comment events and canonical projection ([a3288d2](https://github.com/andr-235/parseVK/commit/a3288d218d2dd9672090097bc85eaec488c259e2))
+
 # [0.70.0](https://github.com/andr-235/parseVK/compare/v0.69.3...v0.70.0) (2026-07-27)
 
 
