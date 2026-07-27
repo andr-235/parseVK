@@ -114,20 +114,24 @@ class DataCollector:
                 if self.checkpoint_store is not None:
                     cp = await self.checkpoint_store.load(task_run.run_id, owner_id, post_id)
                     if cp is not None and cp.status == "completed":
+                        result.comments += cp.processed_comments
                         logger.info(
-                            "Skipping completed post %d_%d (group_id=%d)",
+                            "Skipping completed post %d_%d (group_id=%d) — %d comments already counted",
                             owner_id,
                             post_id,
                             group_id,
+                            cp.processed_comments,
                         )
                         continue
                     if cp is not None and cp.status == "failed":
+                        result.comments += cp.processed_comments
                         logger.warning(
-                            "Skipping failed post %d_%d (group_id=%d): %s",
+                            "Skipping failed post %d_%d (group_id=%d): %s — %d comments already counted",
                             owner_id,
                             post_id,
                             group_id,
                             cp.last_error,
+                            cp.processed_comments,
                         )
                         result.errors.append(
                             {"owner_id": owner_id, "post_id": post_id, "error": cp.last_error}

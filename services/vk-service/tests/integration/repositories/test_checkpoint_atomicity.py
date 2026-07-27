@@ -76,36 +76,130 @@ async def test_crash_simulation_two_of_three_pages(db_session):
 
 
 @pytest.mark.anyio
-async def test_crash_resume_no_duplicates(db_session):
-    """Integration: crash after page 2, resume from offset, no duplicate comments."""
-    # Page 1: commit in its own session so it survives a crash.
-    async with SessionLocal() as session1:
-        store1 = SqlAlchemyIngestionCheckpointStore(session1)
-        cp1 = CheckpointData(
-            run_id="resume-run", owner_id=-1, post_id=100, task_id=10, group_id=1,
-            next_offset=100, processed_comments=100, status="in_progress",
-        )
-        await store1.save(cp1)
-        await session1.commit()
+async def test_crash_resume_full_flow(db_session):
+    """End-to-end: crash after 2 pages, resume with overlap, verify uniqueness and stats.
 
-    # Page 2: commit in its own session.
-    async with SessionLocal() as session2:
-        store2 = SqlAlchemyIngestionCheckpointStore(session2)
+    Scenario:
+    1. Insert comments 1-100 + checkpoint offset=100 -> COMMIT
+    2. Insert comments 101-200 + checkpoint offset=200 -> COMMIT
+    3. Simulate crash: open new session, VK returns overlap (comments 190-250)
+    4. Verify: 250 unique comments total, checkpoint completed,
+       processed_comments=261 (200 base + 61 items yielded, including overlap)
+    """
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from app.domain.repositories.checkpoint import CheckpointData
+    from app.infrastructure.db.repositories.checkpoint import SqlAlchemyIngestionCheckpointStore
+    from app.infrastructure.db.repositories.ingestion import SqlAlchemyIngestionRepository
+    from app.infrastructure.db.session import SessionLocal
+    from app.services.ingestion.comment_collector import CommentCollector
+
+    run_id = "resume-full-run"
+    task_id = 10
+    owner_id = -1
+    post_id = 100
+    group_id = 1
+
+    # ---- Phase 1: comments 1-100, checkpoint offset=100 ----
+    store1 = SqlAlchemyIngestionCheckpointStore(db_session)
+    repo1 = SqlAlchemyIngestionRepository(db_session)
+    for i in range(1, 101):
+        await repo1.upsert_comment(
+            {"id": i, "owner_id": owner_id, "post_id": post_id,
+             "from_id": 1, "text": f"comment {i}", "date": 1_700_000_000 + i},
+            task_id=task_id,
+        )
+    cp1 = CheckpointData(
+        run_id=run_id, owner_id=owner_id, post_id=post_id,
+        task_id=task_id, group_id=group_id,
+        next_offset=100, processed_comments=100, status="in_progress",
+    )
+    await store1.save(cp1)
+    await db_session.commit()
+
+    # ---- Phase 2: comments 101-200, checkpoint offset=200 ----
+    async with SessionLocal() as s2:
+        store2 = SqlAlchemyIngestionCheckpointStore(s2)
+        repo2 = SqlAlchemyIngestionRepository(s2)
+        for i in range(101, 201):
+            await repo2.upsert_comment(
+                {"id": i, "owner_id": owner_id, "post_id": post_id,
+                 "from_id": 2, "text": f"comment {i}", "date": 1_700_000_000 + i},
+                task_id=task_id,
+            )
         cp2 = CheckpointData(
-            run_id="resume-run", owner_id=-1, post_id=100, task_id=10, group_id=1,
+            run_id=run_id, owner_id=owner_id, post_id=post_id,
+            task_id=task_id, group_id=group_id,
             next_offset=200, processed_comments=200, status="in_progress",
         )
         await store2.save(cp2)
-        await session2.commit()
+        await s2.commit()
 
-    # Simulate crash: new session loads checkpoint.
-    async with SessionLocal() as new_session:
-        new_store = SqlAlchemyIngestionCheckpointStore(new_session)
-        loaded = await new_store.load("resume-run", -1, 100)
-        assert loaded is not None
-        assert loaded.next_offset == 200
-        assert loaded.processed_comments == 200
-        assert loaded.status == "in_progress"
+    # ---- Phase 3: resume with overlap (VK returns 190-250) ----
+    async with SessionLocal() as s3:
+        store3 = SqlAlchemyIngestionCheckpointStore(s3)
+        repo3 = SqlAlchemyIngestionRepository(s3)
+
+        # VK returns overlap: 190-250 (items 190-200 already exist from phases 1-2)
+        overlap_page = {
+            "items": [
+                {"id": i, "owner_id": owner_id, "post_id": post_id,
+                 "from_id": 1 if i % 2 == 0 else 2,
+                 "text": f"comment {i}", "date": 1_700_000_000 + i}
+                for i in range(190, 251)
+            ],
+            "profiles": [{"id": 1, "first_name": "Alice"}, {"id": 2, "first_name": "Bob"}],
+            "groups": [],
+        }
+        empty_page = {"items": [], "profiles": [], "groups": []}
+
+        adapter = AsyncMock(spec=[])
+        async def _iter(*args, **kwargs):
+            yield overlap_page
+            yield empty_page
+        adapter.iter_comment_pages = _iter
+
+        collector = CommentCollector(adapter=adapter, repository=repo3)
+        task_run = SimpleNamespace(task_id=task_id, run_id=run_id)
+
+        count = await collector.collect_for_post(
+            owner_id=owner_id, post_id=post_id, author_profiles={},
+            task_run=task_run, checkpoint_store=store3,
+            start_offset=200, group_id=group_id, base_processed_comments=200,
+        )
+        # VK returned 61 items (190-250 inclusive). Items 190-200 overlap with
+        # already-persisted comments and are idempotently upserted; items 201-250
+        # are new. `count` is the number of items yielded, not the unique net new.
+        # The important check is total unique comments in DB.
+        assert count == 61, f"Expected 61 items yielded, got {count}"
+        await store3.complete(run_id, owner_id, post_id)
+        await s3.commit()
+
+    # ---- Phase 4: verify final state ----
+    from sqlalchemy import func, select
+    from app.infrastructure.db.models.vk_ingestion import VkComment
+
+    async with SessionLocal() as s4:
+        store4 = SqlAlchemyIngestionCheckpointStore(s4)
+
+        # Count unique comments by id
+        result = await s4.execute(
+            select(func.count(VkComment.id.distinct())).where(
+                VkComment.vk_owner_id == owner_id,
+                VkComment.vk_post_id == post_id,
+            )
+        )
+        total_comments = result.scalar()
+        assert total_comments == 250, f"Expected 250 unique comments, got {total_comments}"
+
+        # Checkpoint should be completed. processed_comments tracks the number of
+        # comments yielded by VK (including the 11-item overlap), so it is 261
+        # even though only 250 unique comments are persisted.
+        cp = await store4.load(run_id, owner_id, post_id)
+        assert cp is not None
+        assert cp.status == "completed", f"Expected completed, got {cp.status}"
+        assert cp.processed_comments == 261, f"Expected 261, got {cp.processed_comments}"
 
 
 @pytest.mark.anyio
