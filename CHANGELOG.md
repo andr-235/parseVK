@@ -1,3 +1,11 @@
+# [0.73.0](https://github.com/andr-235/parseVK/compare/v0.72.0...v0.73.0) (2026-07-27)
+
+
+### Features
+
+* **gateway,frontend:** SSE proxy and realtime client ([a931bec](https://github.com/andr-235/parseVK/commit/a931bec10deaddbad34c6bc2b25b2b34a636efad))
+* **realtime:** add retention, catch-up, and Prometheus metrics ([d73b49c](https://github.com/andr-235/parseVK/commit/d73b49cdd9a767f6c6d2c32c0d9861ded10a0d5b))
+
 # [0.72.0](https://github.com/andr-235/parseVK/compare/v0.71.0...v0.72.0) (2026-07-27)
 
 
