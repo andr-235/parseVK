@@ -1,3 +1,10 @@
+## [0.74.4](https://github.com/andr-235/parseVK/compare/v0.74.3...v0.74.4) (2026-07-27)
+
+
+### Bug Fixes
+
+* **realtime,content,frontend:** finalize production wiring and multi-client delivery ([67980b1](https://github.com/andr-235/parseVK/commit/67980b12a73f0858c9200341e15a3c01b2b04a7d))
+
 ## [0.74.3](https://github.com/andr-235/parseVK/compare/v0.74.2...v0.74.3) (2026-07-27)
 
 
