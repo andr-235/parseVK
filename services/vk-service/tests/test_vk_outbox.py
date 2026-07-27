@@ -28,6 +28,17 @@ class StubVkApiClient:
     async def get_comments(self, owner_id: int, post_id: int) -> dict:
         return {"items": [{"id": post_id * 10, "owner_id": owner_id, "post_id": post_id, "from_id": 1, "text": "comment"}]}
 
+    async def iter_comment_pages(
+        self, owner_id: int, post_id: int,
+        start_offset: int = 0, page_size: int = 100,
+    ):
+        # Yield a single page matching current mock behavior
+        yield {
+            "items": [{"id": post_id * 10, "owner_id": owner_id, "post_id": post_id, "from_id": 1, "text": "comment"}],
+            "profiles": [],
+            "groups": [],
+        }
+
 
 @pytest.fixture
 def anyio_backend():

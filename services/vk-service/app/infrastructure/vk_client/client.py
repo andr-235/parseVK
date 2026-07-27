@@ -1,4 +1,5 @@
 import logging
+from collections.abc import AsyncIterator
 from datetime import datetime
 
 from app.infrastructure.vk_client.base import VkApiBaseClient, VkApiConfigurationError
@@ -35,6 +36,12 @@ class VkApiClient(VkApiBaseClient):
 
     async def get_comments(self, owner_id: int, post_id: int) -> dict:
         return await self._posts.get_comments(owner_id, post_id)
+
+    async def iter_comment_pages(
+        self, owner_id: int, post_id: int,
+        start_offset: int = 0, page_size: int = 100,
+    ) -> AsyncIterator[dict]:
+        return self._posts.iter_comment_pages(owner_id, post_id, start_offset=start_offset, page_size=page_size)
 
     async def get_author_comments_for_post(
         self, owner_id: int, post_id: int, author_vk_id: int,

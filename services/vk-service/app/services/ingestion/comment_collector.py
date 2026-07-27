@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from app.domain.exceptions.vk_api import VkApiDomainError
@@ -15,10 +16,12 @@ class CommentCollector:
         adapter: VkApiAdapter,
         repository,
         outbox=None,
+        page_committer: Callable[[], Awaitable[None]] | None = None,
     ) -> None:
         self.adapter = adapter
         self.repository = repository
         self.outbox = outbox
+        self.page_committer = page_committer
 
     async def collect_for_post(
         self,

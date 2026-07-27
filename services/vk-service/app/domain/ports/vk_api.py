@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import Protocol
 
@@ -12,6 +13,12 @@ class VkApiPort(Protocol):
         ...
 
     async def get_comments(self, owner_id: int, post_id: int) -> dict:
+        ...
+
+    async def iter_comment_pages(
+        self, owner_id: int, post_id: int,
+        start_offset: int = 0, page_size: int = 100,
+    ) -> AsyncIterator[dict]:
         ...
 
     async def search_groups_by_region(self, *, query: str | None = None) -> list[dict]:

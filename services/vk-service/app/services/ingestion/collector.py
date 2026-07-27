@@ -23,6 +23,7 @@ class DataCollector:
         outbox=None,
         on_error: Callable[[str], str] | None = None,
         checkpoint: Callable[[], Awaitable[None]] | None = None,
+        page_committer: Callable[[], Awaitable[None]] | None = None,
     ):
         self.adapter = adapter
         self.repository = repository
@@ -49,6 +50,7 @@ class DataCollector:
             adapter=adapter,
             repository=repository,
             outbox=outbox,
+            page_committer=page_committer,
         )
 
     async def get_group_ids(self, task_run: Any) -> list[int]:
