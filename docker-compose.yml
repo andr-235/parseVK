@@ -505,6 +505,60 @@ services:
     networks:
       - backend
 
+  realtime-db:
+    image: postgres:16.14
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: realtime
+      POSTGRES_PASSWORD: realtime
+      POSTGRES_DB: realtime
+    ports:
+      - "127.0.0.1:5440:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U realtime -d realtime"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - realtime_postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  realtime-migrate:
+    build:
+      context: .
+      dockerfile: services/realtime-service/Dockerfile
+    restart: "no"
+    depends_on:
+      realtime-db:
+        condition: service_healthy
+    environment:
+      REALTIME_DATABASE_URL: postgresql+asyncpg://realtime:realtime@realtime-db:5432/realtime
+      UV_CACHE_DIR: /tmp/uv-cache
+    command: ["uv", "run", "alembic", "upgrade", "head"]
+    networks:
+      - backend
+
+  realtime-service:
+    build:
+      context: .
+      dockerfile: services/realtime-service/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      realtime-migrate:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_started
+    environment:
+      REALTIME_DATABASE_URL: postgresql+asyncpg://realtime:realtime@realtime-db:5432/realtime
+      REALTIME_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      REALTIME_KAFKA_CONSUMER_ENABLED: "true"
+    ports:
+      - "127.0.0.1:8050:8000"
+    networks:
+      - backend
+
   telegram-db:
     image: postgres:16.14
     platform: linux/amd64
@@ -794,6 +848,8 @@ volumes:
     name: parsevk_listings_postgres_data
   telegram_postgres_data:
     name: parsevk_telegram_postgres_data
+  realtime_postgres_data:
+    name: parsevk_realtime_postgres_data
   prometheus_data:
     name: parsevk_prometheus_data
   grafana_data:
