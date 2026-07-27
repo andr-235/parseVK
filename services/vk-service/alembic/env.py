@@ -17,7 +17,7 @@ from app.infrastructure.db.models.vk_friends import (  # noqa: F401
 )
 
 # Import all domain models to ensure they are registered with DeclarativeBase metadata for Alembic
-from app.infrastructure.db.models.vk_ingestion import VkAuthor, VkComment, VkGroup, VkPost  # noqa: F401
+from app.infrastructure.db.models.vk_ingestion import VkAuthor, VkComment, VkGroup, VkPost, VkIngestionCheckpoint  # noqa: F401
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
