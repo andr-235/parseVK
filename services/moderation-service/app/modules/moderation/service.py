@@ -74,6 +74,8 @@ class ModerationService:
             return False
         if event.event_type == "vk.comment_collected":
             await self._handle_comment_collected(event)
+        elif event.event_type == "vk.comments_collected":
+            await self._handle_comments_collected_batch(event)
         elif event.event_type == "vk.task_completed":
             await self._handle_task_completed(event)
         else:
@@ -110,6 +112,47 @@ class ModerationService:
             event.event_id,
             payload["external_key"],
             len(matched_keywords),
+        )
+
+    async def _handle_comments_collected_batch(self, event: VkEvent) -> None:
+        """Handle vk.comments_collected batch event."""
+        payload = event.payload
+        comments = payload.get("comments", [])
+
+        if not comments:
+            logger.debug(
+                "ModerationService._handle_comments_collected_batch: empty batch event_id=%s",
+                event.event_id,
+            )
+            return
+
+        # Load keyword candidates once for the entire batch
+        candidates = await self.keyword_repository.load_candidates()
+        matcher = KeywordMatcher(candidates)
+        saved_count = 0
+
+        for comment in comments:
+            # Skip comments without text
+            text = comment.get("text") or ""
+            matched_keywords = matcher.match_text(text)
+            if not matched_keywords:
+                continue
+
+            try:
+                payload = map_vk_comment_event(comment, matched_keywords)
+            except InvalidVkCommentEvent:
+                logger.exception(
+                    "ModerationService._handle_comments_collected_batch: invalid comment in batch event_id=%s comment_id=%s",
+                    event.event_id, comment.get("id"),
+                )
+                continue
+
+            await self.crud.upsert_comment(payload)
+            saved_count += 1
+
+        logger.info(
+            "Processed batch event_id=%s total_comments=%d matched_saved=%d",
+            event.event_id, len(comments), saved_count,
         )
 
     async def _handle_task_completed(self, event: VkEvent) -> None:

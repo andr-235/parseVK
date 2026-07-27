@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -196,6 +196,20 @@ class ProjectionRepository:
             ContentPost.__table__.update()
             .where(ContentPost.external_key == post_external_key)
             .values(comments_count=ContentPost.comments_count + 1, updated_at=utcnow())
+        )
+
+    async def count_comments_for_post_by_key(self, post_external_key: str) -> int:
+        result = await self.session.scalar(
+            select(func.count(ContentComment.id))
+            .where(ContentComment.post_external_key == post_external_key)
+        )
+        return result or 0
+
+    async def set_post_comments_count(self, post_external_key: str, count: int) -> None:
+        await self.session.execute(
+            ContentPost.__table__.update()
+            .where(ContentPost.external_key == post_external_key)
+            .values(comments_count=count, updated_at=utcnow())
         )
 
     async def save(self) -> None:

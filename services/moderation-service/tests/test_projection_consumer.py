@@ -198,3 +198,128 @@ async def test_skip_due_to_retry_backoff_commits_offset_when_in_backoff_moderati
 
     assert result is True
     consumer._consumer.commit.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_handle_batch_event_saves_matching_comments_and_marks_processed():
+    session = FakeSession()
+    crud = FakeCrud()
+    service = service_with(crud, FakeKeywordRepository(["привет"]), session)
+    event = envelope(
+        "vk.comments_collected",
+        {
+            "comments": [
+                {
+                    "id": 1,
+                    "owner_id": -1,
+                    "post_id": 10,
+                    "from_id": 100,
+                    "date": 1600000000,
+                    "text": "Привет, мир!",
+                },
+                {
+                    "id": 2,
+                    "owner_id": -1,
+                    "post_id": 10,
+                    "from_id": 101,
+                    "date": 1600000001,
+                    "text": "Обычный текст",
+                },
+                {
+                    "id": 3,
+                    "owner_id": -1,
+                    "post_id": 10,
+                    "from_id": 102,
+                    "date": 1600000002,
+                    "text": "Привет снова",
+                },
+            ]
+        },
+    )
+
+    result = await service.handle_event(event)
+
+    assert result is True
+    assert crud.marked == [(event.event_id, "vk.comments_collected")]
+    assert len(crud.upserts) == 2
+    assert crud.upserts[0]["external_key"] == "vk_-1_10_1"
+    assert crud.upserts[1]["external_key"] == "vk_-1_10_3"
+
+
+@pytest.mark.anyio
+async def test_handle_batch_event_with_no_matches_marks_processed_only():
+    session = FakeSession()
+    crud = FakeCrud()
+    service = service_with(crud, FakeKeywordRepository(["опасно"]), session)
+    event = envelope(
+        "vk.comments_collected",
+        {
+            "comments": [
+                {"id": 1, "owner_id": -1, "post_id": 10, "text": "обычный текст"},
+                {"id": 2, "owner_id": -1, "post_id": 10, "text": "другой текст"},
+            ]
+        },
+    )
+
+    result = await service.handle_event(event)
+
+    assert result is True
+    assert crud.upserts == []
+    assert crud.marked == [(event.event_id, "vk.comments_collected")]
+
+
+@pytest.mark.anyio
+async def test_handle_empty_batch_event_marks_processed_only():
+    session = FakeSession()
+    crud = FakeCrud()
+    service = service_with(crud, FakeKeywordRepository(["привет"]), session)
+    event = envelope("vk.comments_collected", {"comments": []})
+
+    result = await service.handle_event(event)
+
+    assert result is True
+    assert crud.upserts == []
+    assert crud.marked == [(event.event_id, "vk.comments_collected")]
+
+
+@pytest.mark.anyio
+async def test_handle_batch_event_skips_invalid_comments_and_continues():
+    session = FakeSession()
+    crud = FakeCrud()
+    service = service_with(crud, FakeKeywordRepository(["привет"]), session)
+    event = envelope(
+        "vk.comments_collected",
+        {
+            "comments": [
+                {
+                    "id": 1,
+                    "owner_id": -1,
+                    "post_id": 10,
+                    "from_id": 100,
+                    "date": 1600000000,
+                    "text": "Привет, мир!",
+                },
+                {
+                    "id": None,
+                    "owner_id": -1,
+                    "post_id": 10,
+                    "text": "Привет",
+                },
+                {
+                    "id": 3,
+                    "owner_id": -1,
+                    "post_id": 10,
+                    "from_id": 102,
+                    "date": 1600000002,
+                    "text": "Привет ещё раз",
+                },
+            ]
+        },
+    )
+
+    result = await service.handle_event(event)
+
+    assert result is True
+    assert len(crud.upserts) == 2
+    assert crud.upserts[0]["external_key"] == "vk_-1_10_1"
+    assert crud.upserts[1]["external_key"] == "vk_-1_10_3"

@@ -9,8 +9,9 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.db.models import ContentAuthor, ContentComment, ContentGroup, ContentPost, ProcessedEvent
 from common.events import VkEvent
+
+from app.db.models import ContentAuthor, ContentComment, ContentGroup, ContentPost, ProcessedEvent
 from app.modules.projections.service import ProjectionService
 
 
@@ -27,6 +28,7 @@ class FakeRepository:
         self.posts = []
         self.comments = []
         self.incremented = []
+        self.comment_counts = {}
         self.saved = 0
 
     async def is_processed(self, consumer_name, event_id):
@@ -50,8 +52,22 @@ class FakeRepository:
     async def increment_post_comments_count(self, post_external_key):
         self.incremented.append(post_external_key)
 
+    async def count_comments_for_post_by_key(self, post_external_key):
+        return self.comment_counts.get(post_external_key, len(self.comments))
+
+    async def set_post_comments_count(self, post_external_key, count):
+        self.comment_counts[post_external_key] = count
+
     async def save(self):
         self.saved += 1
+
+
+class FakeOutboxService:
+    def __init__(self):
+        self.events = []
+
+    async def add_event(self, **kwargs):
+        self.events.append(kwargs)
 
 
 def envelope(event_type, payload):
@@ -108,11 +124,55 @@ async def test_duplicate_event_is_noop():
 
 
 @pytest.mark.anyio
+async def test_projection_handles_batch_comments():
+    repository = FakeRepository()
+    outbox = FakeOutboxService()
+    service = ProjectionService(repository, outbox)
+
+    event = envelope(
+        "vk.comments_collected",
+        {
+            "taskId": 10,
+            "comments": [
+                {"owner_id": -1, "post_id": 3, "id": 4},
+                {"owner_id": -1, "post_id": 3, "id": 5},
+            ],
+            "authors": [
+                {"vk_author_id": 7, "type": "user"},
+            ],
+        },
+    )
+
+    assert await service.handle(event) is True
+    assert len(repository.authors) == 1
+    assert len(repository.comments) == 2
+    assert repository.comment_counts == {"-1:3": 2}
+    assert len(outbox.events) == 1
+    assert outbox.events[0]["event_type"] == "content.comments_projected"
+    assert outbox.events[0]["aggregate_id"] == "-1:3"
+    assert outbox.events[0]["payload"]["insertedCount"] == 2
+    assert repository.saved == 1
+
+
+@pytest.mark.anyio
+async def test_projection_skips_empty_batch_without_outbox():
+    repository = FakeRepository()
+    outbox = FakeOutboxService()
+    service = ProjectionService(repository, outbox)
+
+    event = envelope("vk.comments_collected", {"comments": [], "authors": []})
+
+    assert await service.handle(event) is True
+    assert repository.authors == []
+    assert repository.comments == []
+    assert outbox.events == []
+    assert repository.saved == 1
+
+
+@pytest.mark.anyio
 async def test_handle_processing_failure_sends_to_dlq_on_malformed_msg():
     from unittest.mock import AsyncMock, patch
-    from json import dumps
-    from uuid import uuid4
-    from datetime import UTC, datetime, timedelta
+
     from app.modules.projections.consumer import ProjectionConsumer
 
     consumer = ProjectionConsumer(session_factory=AsyncMock())
@@ -131,11 +191,12 @@ async def test_handle_processing_failure_sends_to_dlq_on_malformed_msg():
 
 @pytest.mark.anyio
 async def test_skip_due_to_retry_backoff_commits_offset_when_in_backoff():
-    from unittest.mock import AsyncMock
-    from types import SimpleNamespace
-    from json import dumps
-    from uuid import uuid4
     from datetime import UTC, datetime, timedelta
+    from json import dumps
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    from uuid import uuid4
+
     from app.modules.projections.consumer import ProjectionConsumer
 
     consumer = ProjectionConsumer()

@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     kafka_bootstrap_servers: str = "kafka:9092"
     kafka_topic_vk: str = "parsevk.vk.events"
     kafka_topic_im: str = "parsevk.im.events"
+    kafka_topic_content: str = "parsevk.content.events"
+    kafka_topic_content_dlq: str = "parsevk.content.dlq"
     kafka_consumer_enabled: bool = False
     photo_analysis_base_url: str | None = None
     photo_analysis_timeout_seconds: float = 1.5

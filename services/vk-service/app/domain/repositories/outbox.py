@@ -15,6 +15,7 @@ class OutboxRepository(ABC):
         payload: dict,
         correlation_id: str | None = None,
         dedupe_key: str | None = None,
+        event_version: int = 1,
     ) -> None:
         """Append a new domain event to transaction outbox queue table."""
 

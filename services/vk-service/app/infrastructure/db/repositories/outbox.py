@@ -49,11 +49,12 @@ class SqlAlchemyOutboxRepository(OutboxRepository):
         payload: dict,
         correlation_id: str | None = None,
         dedupe_key: str | None = None,
+        event_version: int = 1,
     ) -> None:
         stmt = insert(OutboxEvent).values(
             id=uuid4(),
             event_type=event_type,
-            event_version=1,
+            event_version=event_version,
             aggregate_type=aggregate_type,
             aggregate_id=aggregate_id,
             correlation_id=correlation_id,

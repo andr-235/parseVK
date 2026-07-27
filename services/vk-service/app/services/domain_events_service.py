@@ -66,6 +66,40 @@ class OutboxService:
             },
         )
 
+    async def emit_comments_collected_batch(
+        self,
+        *,
+        batch_id: str,
+        chunk_index: int,
+        chunk_count: int,
+        comments: list[dict],
+        authors: list[dict],
+        owner_id: int,
+        post_id: int,
+        task_id: int,
+        correlation_id: str | None = None,
+        source_position: str | None = None,
+    ) -> None:
+        import json
+        payload = {
+            "batchId": batch_id,
+            "chunkIndex": chunk_index,
+            "chunkCount": chunk_count,
+            "comments": comments,
+            "authors": authors,
+            "sourcePosition": source_position,
+            "taskId": task_id,
+        }
+        await self.repository.add_event(
+            event_type="vk.comments_collected",
+            aggregate_type="vk_comment",
+            aggregate_id=f"{owner_id}:{post_id}",
+            correlation_id=correlation_id,
+            dedupe_key=f"vk.comments_collected:{batch_id}:{chunk_index}",
+            event_version=1,
+            payload=payload,
+        )
+
     async def emit_task_progress_updated(
         self,
         *,
