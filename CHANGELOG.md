@@ -1,3 +1,10 @@
+## [0.74.5](https://github.com/andr-235/parseVK/compare/v0.74.4...v0.74.5) (2026-07-27)
+
+
+### Bug Fixes
+
+* **realtime,content:** realtime.ready event and DB-backed projection revision ([1be6ddd](https://github.com/andr-235/parseVK/commit/1be6ddd5f8bff71ba0734753ea31212c98d14b15))
+
 ## [0.74.4](https://github.com/andr-235/parseVK/compare/v0.74.3...v0.74.4) (2026-07-27)
 
 
