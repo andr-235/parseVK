@@ -3,6 +3,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
+from app.domain.repositories.checkpoint import CheckpointData, IngestionCheckpointStore
 from app.infrastructure.tasks_client.client import TasksClient
 from app.services.ingestion.comment_collector import CommentCollector
 from app.services.ingestion.group_collector import GroupCollector
@@ -24,10 +25,12 @@ class DataCollector:
         on_error: Callable[[str], str] | None = None,
         checkpoint: Callable[[], Awaitable[None]] | None = None,
         page_committer: Callable[[], Awaitable[None]] | None = None,
+        checkpoint_store: IngestionCheckpointStore | None = None,
     ):
         self.adapter = adapter
         self.repository = repository
         self._on_error = on_error or (lambda msg: msg)
+        self.checkpoint_store = checkpoint_store
         self.current_result = IngestionResult()
         self.progress = ProgressReporter(
             tasks_client=tasks_client,
@@ -59,6 +62,12 @@ class DataCollector:
     async def collect(
         self, task_run: Any, group_ids: list[int], *, correlation_id: str | None = None
     ) -> IngestionResult:
+        logger.debug(
+            "[collect] START task_id=%s run_id=%s groups=%s",
+            getattr(task_run, "task_id", None),
+            getattr(task_run, "run_id", None),
+            group_ids,
+        )
         result = IngestionResult()
         result.errors = []
         self.current_result = result
@@ -88,6 +97,9 @@ class DataCollector:
             await self._enrich_user_profiles(author_profiles)
 
             for post in posts:
+                owner_id = int(post["owner_id"])
+                post_id = int(post["id"])
+
                 author_added = await self.post_collector.save_post(
                     post,
                     task_run,
@@ -98,29 +110,93 @@ class DataCollector:
                     result.authors += 1
                 result.posts += 1
 
-                post_comments = await self.comment_collector.collect_for_post(
-                    int(post["owner_id"]),
-                    int(post["id"]),
-                    author_profiles,
-                    correlation_id=correlation_id,
-                )
+                start_offset = 0
+                if self.checkpoint_store is not None:
+                    cp = await self.checkpoint_store.load(task_run.run_id, owner_id, post_id)
+                    if cp is not None and cp.status == "completed":
+                        logger.info(
+                            "Skipping completed post %d_%d (group_id=%d)",
+                            owner_id,
+                            post_id,
+                            group_id,
+                        )
+                        continue
+                    if cp is not None and cp.status == "failed":
+                        logger.warning(
+                            "Skipping failed post %d_%d (group_id=%d): %s",
+                            owner_id,
+                            post_id,
+                            group_id,
+                            cp.last_error,
+                        )
+                        result.errors.append(
+                            {"owner_id": owner_id, "post_id": post_id, "error": cp.last_error}
+                        )
+                        continue
+                    if cp is not None and cp.status == "in_progress":
+                        start_offset = cp.next_offset
+                        logger.info(
+                            "Resuming post %d_%d (group_id=%d) from offset=%d",
+                            owner_id,
+                            post_id,
+                            group_id,
+                            start_offset,
+                        )
 
-                for comment in post_comments:
-                    author_added = await self.comment_collector.save_comment(
-                        comment,
-                        task_run,
-                        author_profiles,
+                if self.checkpoint_store is not None and cp is None:
+                    await self.checkpoint_store.save(
+                        CheckpointData(
+                            run_id=task_run.run_id,
+                            owner_id=owner_id,
+                            post_id=post_id,
+                            task_id=task_run.task_id,
+                            group_id=group_id,
+                            next_offset=0,
+                            status="in_progress",
+                        )
+                    )
+
+                try:
+                    count = await self.comment_collector.collect_for_post(
+                        owner_id=owner_id,
+                        post_id=post_id,
+                        author_profiles=author_profiles,
+                        task_run=task_run,
+                        checkpoint_store=self.checkpoint_store,
+                        start_offset=start_offset,
+                        group_id=group_id,
                         correlation_id=correlation_id,
                     )
-                    if author_added:
-                        result.authors += 1
-                    result.comments += 1
+                    result.comments += count
+                except Exception as error:
+                    sanitized_error = self._on_error(str(error))
+                    logger.error(
+                        "Comment collection failed for post %d_%d (group_id=%d): %s",
+                        owner_id,
+                        post_id,
+                        group_id,
+                        sanitized_error,
+                    )
+                    result.errors.append(
+                        {"owner_id": owner_id, "post_id": post_id, "error": sanitized_error}
+                    )
+                    if self.checkpoint_store is not None:
+                        await self.checkpoint_store.fail(
+                            task_run.run_id, owner_id, post_id, sanitized_error
+                        )
+                    continue
 
                 await self.progress.report(task_run, result, correlation_id)
 
             if not posts:
                 await self.progress.checkpoint()
 
+        logger.debug(
+            "[collect] END task_id=%s run_id=%s stats=%s",
+            getattr(task_run, "task_id", None),
+            getattr(task_run, "run_id", None),
+            result.stats(),
+        )
         return result
 
     async def _enrich_user_profiles(self, profiles: dict[int, dict]) -> None:

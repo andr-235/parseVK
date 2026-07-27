@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.domain.ports.vk_api import VkApiPort
+from app.infrastructure.db.repositories.checkpoint import SqlAlchemyIngestionCheckpointStore
 from app.infrastructure.db.repositories.ingestion import SqlAlchemyIngestionRepository
 from app.infrastructure.db.repositories.ok_friends import SqlAlchemyOkFriendsRepository
 from app.infrastructure.db.repositories.outbox import SqlAlchemyOutboxRepository
@@ -49,6 +50,7 @@ def get_ingestion_service(session: AsyncSession) -> IngestionService:
     repository = SqlAlchemyIngestionRepository(session)
     outbox_repo = SqlAlchemyOutboxRepository(session)
     outbox_service = OutboxService(outbox_repo)
+    checkpoint_store = SqlAlchemyIngestionCheckpointStore(session)
 
     def sanitize_error(error: str) -> str:
         token = getattr(_vk_client, "token", None) or settings.vk_token
@@ -63,6 +65,8 @@ def get_ingestion_service(session: AsyncSession) -> IngestionService:
         outbox=outbox_service,
         on_error=sanitize_error,
         checkpoint=session.commit,
+        page_committer=session.commit,
+        checkpoint_store=checkpoint_store,
     )
     pipeline = IngestionPipeline(
         collector=collector,
