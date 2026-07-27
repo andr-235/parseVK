@@ -1,3 +1,18 @@
+# [0.69.0](https://github.com/andr-235/parseVK/compare/v0.68.3...v0.69.0) (2026-07-27)
+
+
+### Bug Fixes
+
+* **vk:** harden checkpoint ingestion — revision length, transport errors, cumulative stats, terminal commit ([b9dca4e](https://github.com/andr-235/parseVK/commit/b9dca4eb91577611985c90ae579a78f7c1219ff7))
+
+
+### Features
+
+* **vk:** add checkpoint model, port, and repository ([beeae3f](https://github.com/andr-235/parseVK/commit/beeae3f58a2124f8ce960212370abdb91d1f75c8))
+* **vk:** add iter_comment_pages to VkApiPort and page_committer to CommentCollector ([078fa29](https://github.com/andr-235/parseVK/commit/078fa290a169d661405dc0eaaf2ad8fc3ce209b1))
+* **vk:** fix error handling in TaskExecutor, wire checkpoint in DI ([cad40e4](https://github.com/andr-235/parseVK/commit/cad40e4b7684cb5096a62a954e5df30a32f8bbd7))
+* **vk:** implement paginated comment iteration with page-scoped transactions and checkpoint ([f335c10](https://github.com/andr-235/parseVK/commit/f335c108a53e99234f5a68d42687e3e49cba6615))
+
 ## [0.68.3](https://github.com/andr-235/parseVK/compare/v0.68.2...v0.68.3) (2026-07-26)
 
 
