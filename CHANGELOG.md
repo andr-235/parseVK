@@ -1,3 +1,10 @@
+## [0.74.6](https://github.com/andr-235/parseVK/compare/v0.74.5...v0.74.6) (2026-07-27)
+
+
+### Bug Fixes
+
+* **admin,realtime:** resolve TypeScript build errors ([a9545a4](https://github.com/andr-235/parseVK/commit/a9545a4e7f9f78851a05f4fe87847f430c6f2a32))
+
 ## [0.74.5](https://github.com/andr-235/parseVK/compare/v0.74.4...v0.74.5) (2026-07-27)
 
 
