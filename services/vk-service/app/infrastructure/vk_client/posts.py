@@ -217,18 +217,6 @@ class PostsClient:
                 )
             except (TimeoutError, asyncio.CancelledError):
                 raise
-            except VkApiDomainError:
-                raise
-            except Exception as exc:
-                logger.error(
-                    "Permanent page failure for owner_id=%d post_id=%d offset=%d: %s",
-                    owner_id,
-                    post_id,
-                    offset,
-                    _redact_secrets(str(exc)),
-                )
-                yield {"items": [], "profiles": [], "groups": []}
-                break
 
             items = response.get("items") or []
             profiles = response.get("profiles") or []

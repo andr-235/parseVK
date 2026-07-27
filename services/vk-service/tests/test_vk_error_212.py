@@ -487,6 +487,11 @@ class TestCommentCollectorCollectForPost:
 
     @pytest.mark.anyio
     async def test_overlap_re_read(self):
+        """Tests collector behavior when upstream returns overlapping pages.
+
+        The in-memory FakeRepository appends duplicates; real DB deduplication is
+        covered by integration tests via ON CONFLICT.
+        """
         adapter = AsyncMock(spec=[])
         adapter.iter_comment_pages = _mock_iter_comment_pages(
             [

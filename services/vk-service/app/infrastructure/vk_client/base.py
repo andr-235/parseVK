@@ -14,7 +14,7 @@ except ImportError:  # pragma: no cover
 
 from app.core.config import settings
 from app.core.redaction import redact_secrets
-from app.domain.exceptions.vk_api import map_vk_error
+from app.domain.exceptions.vk_api import map_vk_error, VkApiInfrastructureError
 from app.domain.ports.vk_api import VkApiPort
 from app.infrastructure.vk_client.session import TimeoutSession
 
@@ -89,7 +89,11 @@ class VkApiBaseClient:
             logger.warning("VK API error [%d]: %s (method=%s)", code, msg, method)
             raise map_vk_error(code, redact_secrets(msg), method) from exc
         except Exception as exc:
-            raise RuntimeError(self._safe_error_message(exc)) from exc
+            from httpx import RequestError as HttpxRequestError
+            msg = self._safe_error_message(exc)
+            if isinstance(exc, (ConnectionError, TimeoutError, HttpxRequestError, OSError)):
+                raise VkApiInfrastructureError(0, msg) from exc
+            raise RuntimeError(msg) from exc
 
     async def _call(self, method: str, **params) -> dict:
         # Thread-safe lazy initialization using double-checked locking.

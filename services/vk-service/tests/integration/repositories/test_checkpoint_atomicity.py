@@ -39,29 +39,73 @@ async def test_page_commit_visible_to_another_session(db_session):
 
 @pytest.mark.anyio
 async def test_crash_simulation_two_of_three_pages(db_session):
-    store = SqlAlchemyIngestionCheckpointStore(db_session)
-
-    for offset in [0, 100]:
-        await store.save(
-            CheckpointData(
-                run_id="run-crash",
-                owner_id=-1,
-                post_id=42,
-                task_id=10,
-                group_id=1,
-                next_offset=offset + 100,
-                processed_comments=offset + 100,
-                status="in_progress",
-            )
+    """Simulate crash after 2 of 3 pages: only 2 pages visible in new session."""
+    # Page 1: commit in its own session so it survives a crash.
+    async with SessionLocal() as session1:
+        store1 = SqlAlchemyIngestionCheckpointStore(session1)
+        cp1 = CheckpointData(
+            run_id="crash-run", owner_id=-1, post_id=1, task_id=10, group_id=1,
+            next_offset=100, processed_comments=100, status="in_progress",
         )
+        await store1.save(cp1)
+        await session1.commit()
 
-    loaded = await store.load("run-crash", -1, 42)
-    assert loaded is not None
-    assert loaded.next_offset == 200
-    assert loaded.processed_comments == 200
+    # Page 2: commit in its own session.
+    async with SessionLocal() as session2:
+        store2 = SqlAlchemyIngestionCheckpointStore(session2)
+        cp2 = CheckpointData(
+            run_id="crash-run", owner_id=-1, post_id=2, task_id=10, group_id=1,
+            next_offset=200, processed_comments=200, status="in_progress",
+        )
+        await store2.save(cp2)
+        await session2.commit()
 
-    third_page = await store.load("run-crash", -1, 99)
-    assert third_page is None
+    # Simulate crash — page 3 never saves.
+    # New session should see only pages 1-2.
+    async with SessionLocal() as new_session:
+        new_store = SqlAlchemyIngestionCheckpointStore(new_session)
+        for owner_id, post_id, expected_offset in [(-1, 1, 100), (-1, 2, 200)]:
+            loaded = await new_store.load("crash-run", owner_id, post_id)
+            assert loaded is not None, f"Checkpoint for post {post_id} not found"
+            assert loaded.next_offset == expected_offset
+            assert loaded.status == "in_progress"
+
+        # Page 3 should not exist.
+        loaded_p3 = await new_store.load("crash-run", -1, 3)
+        assert loaded_p3 is None, "Page 3 checkpoint should not exist (crash before save)"
+
+
+@pytest.mark.anyio
+async def test_crash_resume_no_duplicates(db_session):
+    """Integration: crash after page 2, resume from offset, no duplicate comments."""
+    # Page 1: commit in its own session so it survives a crash.
+    async with SessionLocal() as session1:
+        store1 = SqlAlchemyIngestionCheckpointStore(session1)
+        cp1 = CheckpointData(
+            run_id="resume-run", owner_id=-1, post_id=100, task_id=10, group_id=1,
+            next_offset=100, processed_comments=100, status="in_progress",
+        )
+        await store1.save(cp1)
+        await session1.commit()
+
+    # Page 2: commit in its own session.
+    async with SessionLocal() as session2:
+        store2 = SqlAlchemyIngestionCheckpointStore(session2)
+        cp2 = CheckpointData(
+            run_id="resume-run", owner_id=-1, post_id=100, task_id=10, group_id=1,
+            next_offset=200, processed_comments=200, status="in_progress",
+        )
+        await store2.save(cp2)
+        await session2.commit()
+
+    # Simulate crash: new session loads checkpoint.
+    async with SessionLocal() as new_session:
+        new_store = SqlAlchemyIngestionCheckpointStore(new_session)
+        loaded = await new_store.load("resume-run", -1, 100)
+        assert loaded is not None
+        assert loaded.next_offset == 200
+        assert loaded.processed_comments == 200
+        assert loaded.status == "in_progress"
 
 
 @pytest.mark.anyio

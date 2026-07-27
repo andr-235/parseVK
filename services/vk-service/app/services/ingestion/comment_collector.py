@@ -33,6 +33,7 @@ class CommentCollector:
         checkpoint_store: IngestionCheckpointStore | None,
         start_offset: int = 0,
         group_id: int = 0,
+        base_processed_comments: int = 0,
         *,
         correlation_id: str | None = None,
     ) -> int:
@@ -100,11 +101,12 @@ class CommentCollector:
                     last_comment_date = datetime.fromtimestamp(int(last_comment["date"]), tz=UTC)
 
                 logger.debug(
-                    "Comment page %d for owner_id=%d post_id=%d: saved %d comments (offset=%d)",
+                    "Comment page %d for owner_id=%d post_id=%d: saved %d comments (total=%d offset=%d)",
                     page_num,
                     owner_id,
                     post_id,
                     len(page_items),
+                    base_processed_comments + collected_count,
                     page_offset,
                 )
 
@@ -118,7 +120,7 @@ class CommentCollector:
                         next_offset=page_offset,
                         last_comment_id=last_comment_id,
                         last_comment_date=last_comment_date,
-                        processed_comments=collected_count,
+                        processed_comments=base_processed_comments + collected_count,
                         status="in_progress",
                     )
                     await checkpoint_store.save(checkpoint)

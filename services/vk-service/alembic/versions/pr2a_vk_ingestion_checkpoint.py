@@ -1,6 +1,6 @@
 """add vk ingestion checkpoints
 
-Revision ID: pr2a_add_vk_ingestion_checkpoints
+Revision ID: pr2a_vk_ingestion_checkpoint
 Revises: b8d2e3f4a5c6
 """
 
@@ -9,7 +9,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "pr2a_add_vk_ingestion_checkpoints"
+revision: str = "pr2a_vk_ingestion_checkpoint"
 down_revision: str | None = "b8d2e3f4a5c6"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

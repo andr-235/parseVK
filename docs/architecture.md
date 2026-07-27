@@ -213,6 +213,7 @@ CREATE TABLE vk_ingestion_checkpoints (
 | `app/infrastructure/vk_client/posts.py` | `iter_comment_pages()` + per-page retry |
 | `app/services/ingestion/comment_collector.py` | Постраничный сбор с checkpoint |
 | `app/services/ingestion/collector.py` | Оркестрация с checkpoint-возобновлением |
+| `alembic/versions/pr2a_vk_ingestion_checkpoint.py` | Миграция таблицы `vk_ingestion_checkpoints` |
 
 **Обработка ошибок:**
 

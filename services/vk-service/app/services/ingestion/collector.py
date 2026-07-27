@@ -30,6 +30,7 @@ class DataCollector:
         self.repository = repository
         self._on_error = on_error or (lambda msg: msg)
         self.checkpoint_store = checkpoint_store
+        self.page_committer = page_committer
         self.current_result = IngestionResult()
         self.progress = ProgressReporter(
             tasks_client=tasks_client,
@@ -109,6 +110,7 @@ class DataCollector:
                 result.posts += 1
 
                 start_offset = 0
+                cp = None
                 if self.checkpoint_store is not None:
                     cp = await self.checkpoint_store.load(task_run.run_id, owner_id, post_id)
                     if cp is not None and cp.status == "completed":
@@ -154,6 +156,8 @@ class DataCollector:
                         )
                     )
 
+                base_processed = cp.processed_comments if cp is not None else 0
+
                 try:
                     count = await self.comment_collector.collect_for_post(
                         owner_id=owner_id,
@@ -163,13 +167,16 @@ class DataCollector:
                         checkpoint_store=self.checkpoint_store,
                         start_offset=start_offset,
                         group_id=group_id,
+                        base_processed_comments=base_processed,
                         correlation_id=correlation_id,
                     )
-                    result.comments += count
+                    result.comments += base_processed + count
                     if self.checkpoint_store is not None:
                         await self.checkpoint_store.complete(
                             task_run.run_id, owner_id, post_id,
                         )
+                    if self.page_committer is not None:
+                        await self.page_committer()
                 except Exception as error:
                     sanitized_error = self._on_error(str(error))
                     logger.error(
@@ -186,6 +193,8 @@ class DataCollector:
                         await self.checkpoint_store.fail(
                             task_run.run_id, owner_id, post_id, sanitized_error
                         )
+                    if self.page_committer is not None:
+                        await self.page_committer()
                     continue
 
                 await self.progress.report(task_run, result, correlation_id)
