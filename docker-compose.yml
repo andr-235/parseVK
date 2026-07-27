@@ -135,6 +135,7 @@ services:
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.vk.dlq --partitions 3 --replication-factor 1;
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.im.dlq --partitions 3 --replication-factor 1 --config max.message.bytes=5242880;
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic identity.dlq --partitions 3 --replication-factor 1;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.realtime.dlq --partitions 3 --replication-factor 1 --config cleanup.policy=delete --config retention.ms=604800000;
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.content.events --partitions 3 --replication-factor 1;
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.content.dlq --partitions 3 --replication-factor 1
       "
@@ -379,6 +380,8 @@ services:
       CONTENT_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
       CONTENT_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       CONTENT_KAFKA_CONSUMER_ENABLED: ${CONTENT_KAFKA_CONSUMER_ENABLED:-true}
+      CONTENT_KAFKA_PRODUCER_ENABLED: ${CONTENT_KAFKA_PRODUCER_ENABLED:-true}
+      CONTENT_CONTENT_PROJECTION_EVENTS_ENABLED: ${CONTENT_CONTENT_PROJECTION_EVENTS_ENABLED:-true}
       CONTENT_KAFKA_TOPIC_IM: ${CONTENT_KAFKA_TOPIC_IM:-parsevk.im.events}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     healthcheck:

@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
+from app.core.config import settings
 from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
 from app.domain.repositories.checkpoint import CheckpointData, IngestionCheckpointStore
 from app.services.ingestion.post_collector import _author_payload as _make_author_payload
@@ -115,7 +116,7 @@ class CommentCollector:
 
                 if payload_size <= BATCH_HARD_LIMIT_BYTES:
                     # Single chunk
-                    if self.outbox:
+                    if settings.vk_batch_events_enabled and self.outbox:
                         await self.outbox.emit_comments_collected_batch(
                             batch_id=batch_id,
                             chunk_index=0,
@@ -125,6 +126,7 @@ class CommentCollector:
                             owner_id=owner_id,
                             post_id=post_id,
                             task_id=task_run.task_id,
+                            run_id=task_run.run_id,
                             correlation_id=correlation_id,
                             source_position=str(page_offset),
                         )
@@ -154,7 +156,7 @@ class CommentCollector:
                                 idx + 1, chunk_count, len(chunk_serialized), BATCH_HARD_LIMIT_BYTES,
                             )
 
-                        if self.outbox:
+                        if settings.vk_batch_events_enabled and self.outbox:
                             await self.outbox.emit_comments_collected_batch(
                                 batch_id=batch_id,
                                 chunk_index=idx,
@@ -164,6 +166,7 @@ class CommentCollector:
                                 owner_id=owner_id,
                                 post_id=post_id,
                                 task_id=task_run.task_id,
+                                run_id=task_run.run_id,
                                 correlation_id=correlation_id,
                                 source_position=str(page_offset),
                             )

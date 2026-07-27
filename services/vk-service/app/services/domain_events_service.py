@@ -47,6 +47,7 @@ class OutboxService:
         owner_id: int,
         post_id: int,
         task_id: int,
+        run_id: str | None = None,
         correlation_id: str | None = None,
         source_position: str | None = None,
     ) -> None:
@@ -59,6 +60,9 @@ class OutboxService:
             "authors": authors,
             "sourcePosition": source_position,
             "taskId": task_id,
+            "runId": run_id,
+            "ownerId": owner_id,
+            "postId": post_id,
         }
         await self.repository.add_event(
             event_type="vk.comments_collected",

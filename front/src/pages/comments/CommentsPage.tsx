@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useSyncExternalStore } from 'react'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -18,17 +18,18 @@ export function CommentsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  /** Derive selected comment from the latest cached query data (never stale). */
-  const selectedComment = useMemo(() => {
-    if (selectedCommentId === null) return null
-    const allData = queryClient.getQueriesData<{ comments: Comment[] }>({ queryKey: ['comments'] })
-    for (const [, data] of allData) {
-      if (!data?.comments) continue
-      const found = data.comments.find((c) => c.id === selectedCommentId)
-      if (found) return found
-    }
-    return null
-  }, [queryClient, selectedCommentId])
+  /** Derive selected comment from the latest cached query data (reactive). */
+  const selectedComment = useSyncExternalStore<Comment | null>(
+    useCallback(
+      (callback) => queryClient.getQueryCache().subscribe(callback),
+      [queryClient],
+    ),
+    useCallback(() => {
+      if (selectedCommentId === null) return null
+      const data = queryClient.getQueryData<{ comments: Comment[] }>(['comments'])
+      return data?.comments.find((c) => c.id === selectedCommentId) ?? null
+    }, [queryClient, selectedCommentId]),
+  )
   const { feedback, showFeedback, dismissFeedback } = useFeedback()
 
   const addToWatchlistMutation = useMutation({

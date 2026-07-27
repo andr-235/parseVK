@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 from datetime import UTC, datetime
+from uuid import uuid4
 
 from prometheus_client import Counter, Gauge
 from sqlalchemy import text
@@ -26,7 +27,7 @@ except ValueError:
     resync_total = REGISTRY._names_to_collectors.get("realtime_resync_required_total")
 
 HEARTBEAT_INTERVAL = settings.sse_heartbeat_seconds
-POLL_INTERVAL = 0.5  # 500ms safety timeout when no listener notification arrives
+POLL_INTERVAL = 5.0  # 5s safety timeout when no listener notification arrives
 
 
 def _format_sse(event_id: str, event_type: str, data: dict) -> str:
@@ -92,23 +93,28 @@ async def stream_events(
 
     Phase 1: Replay past events from DB (if lastEventId provided).
     Phase 2: Subscribe to the shared LISTEN/NOTIFY listener and query for new
-             events on each notification, with a 500ms safety timeout.
+             events on each notification, with a 5s safety timeout.
 
     If x_user_id is provided (e.g. from the gateway), it overrides audience_id.
     """
     effective_audience_id = x_user_id if x_user_id is not None else audience_id
-    local_last_seen = last_event_id or 0
+    local_last_seen = 0
 
     # ── Phase 1: Replay ──
-    if last_event_id and last_event_id > 0:
-        async with session_factory() as session:
-            result = await session.execute(
-                text("SELECT MIN(sequence_id), MAX(sequence_id) FROM realtime_events")
-            )
-            row = result.one()
-            min_seq = row[0]
-            max_seq = row[1]
+    async with session_factory() as session:
+        result = await session.execute(
+            text("SELECT MIN(sequence_id), COALESCE(MAX(sequence_id), 0) FROM realtime_events")
+        )
+        row = result.one()
+        min_seq = row[0]
+        max_seq = row[1]
 
+    if last_event_id is None:
+        last_event_id = max_seq
+
+    local_last_seen = last_event_id
+
+    if last_event_id > 0:
         if max_seq is not None and last_event_id > max_seq:
             yield _format_sse(
                 event_id=str(max_seq),
@@ -129,21 +135,22 @@ async def stream_events(
             logger.info("Cursor %d expired (retention=%d..%d), sent resync_required", last_event_id, min_seq, max_seq)
             return
 
-        events = await _query_events_after(session_factory, last_event_id, audience_types, effective_audience_id, limit=1000)
-        for event in events:
-            yield _format_sse(
-                event_id=str(event["sequence_id"]),
-                event_type=event["event_type"],
-                data=event["payload"],
-            )
-            local_last_seen = event["sequence_id"]
-            replayed_total.inc()
+        if last_event_id < max_seq:
+            events = await _query_events_after(session_factory, last_event_id, audience_types, effective_audience_id, limit=1000)
+            for event in events:
+                yield _format_sse(
+                    event_id=str(event["sequence_id"]),
+                    event_type=event["event_type"],
+                    data=event["payload"],
+                )
+                local_last_seen = event["sequence_id"]
+                replayed_total.inc()
 
-        logger.debug("Replayed %d events from seq=%d", len(events), last_event_id)
+            logger.debug("Replayed %d events from seq=%d", len(events), last_event_id)
 
     # ── Phase 2: Live streaming via LISTEN/NOTIFY ──
     connected_clients.inc()
-    client_id = id(session_factory)
+    client_id = uuid4()
     logger.info("SSE client connected id=%s", client_id)
 
     try:

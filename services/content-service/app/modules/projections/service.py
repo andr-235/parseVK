@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 
 from common.events import VkEvent
 
+from app.core.config import settings
 from app.modules.projections.outbox_service import ContentOutboxService
 from app.modules.projections.processor import CONSUMER_NAME
 
@@ -93,13 +94,13 @@ class ProjectionService:
             else 0
         )
 
-        if inserted_count > 0 or author_count > 0:
-            if self.outbox_service:
+        if inserted_count > 0 or updated_count > 0 or author_count > 0:
+            if self.outbox_service and settings.content_projection_events_enabled:
                 projection_payload = {
                     "insertedCount": inserted_count,
                     "updatedCount": updated_count,
                     "totalCount": total_count_after,
-                    "projectionRevision": 1,
+                    "projectionRevision": int(datetime.now(UTC).timestamp() * 1_000_000),
                     "taskId": task_id,
                     "runId": run_id,
                     "ownerId": owner_id,

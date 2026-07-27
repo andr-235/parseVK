@@ -63,26 +63,27 @@ async def safety_catchup(session_factory: async_sessionmaker) -> int:
     global _last_sequence_id
 
     async with session_factory() as session:
-        max_seq = await session.scalar(text("SELECT MAX(sequence_id) FROM realtime_events"))
-        if max_seq is None:
-            return 0
+        async with session.begin():
+            max_seq = await session.scalar(text("SELECT MAX(sequence_id) FROM realtime_events"))
+            if max_seq is None:
+                return 0
 
-        if _last_sequence_id is not None and max_seq > _last_sequence_id:
-            gap = max_seq - _last_sequence_id
-            catchup_total.inc(gap)
-            logger.warning(
-                "Safety catch-up: detected %d missed events (cursor=%d, max=%d), waking listeners",
-                gap, _last_sequence_id, max_seq,
-            )
-            await session.execute(
-                text("SELECT pg_notify('realtime_events', :seq)"),
-                {"seq": str(max_seq)},
-            )
-        elif _last_sequence_id is None:
-            logger.debug("Safety catch-up: initialized cursor at %d", max_seq)
+            if _last_sequence_id is not None and max_seq > _last_sequence_id:
+                gap = max_seq - _last_sequence_id
+                catchup_total.inc(gap)
+                logger.warning(
+                    "Safety catch-up: detected %d missed events (cursor=%d, max=%d), waking listeners",
+                    gap, _last_sequence_id, max_seq,
+                )
+                await session.execute(
+                    text("SELECT pg_notify('realtime_events', :seq)"),
+                    {"seq": str(max_seq)},
+                )
+            elif _last_sequence_id is None:
+                logger.debug("Safety catch-up: initialized cursor at %d", max_seq)
 
-        _last_sequence_id = max_seq
-        return max_seq
+            _last_sequence_id = max_seq
+            return max_seq
 
 
 async def retention_loop(session_factory: async_sessionmaker) -> None:

@@ -169,10 +169,10 @@ async def consume_topic_forever(
                 logger.warning("Failed to parse Kafka message from topic=%s: %s", topic, exc)
                 try:
                     await _produce_dlq(dlq_topic, msg.value, bootstrap_servers)
-                except Exception as exc_dlq:
-                    logger.exception("Failed to produce DLQ message to topic=%s: %s", dlq_topic, exc_dlq)
-                await consumer.commit()
-                continue
+                    await consumer.commit()
+                except Exception:
+                    logger.exception("DLQ publish failed for malformed message, NOT committing offset")
+                    continue
 
             # Step 2: Ingest
             try:

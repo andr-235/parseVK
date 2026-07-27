@@ -57,7 +57,7 @@ async def lifespan(app: FastAPI):
     _catchup_task = asyncio.create_task(catchup_loop(session_factory))
     logger.info("Started retention and catch-up background tasks")
 
-    if settings.kafka_consumer_enabled:
+    if settings.kafka_consumer_enabled and settings.realtime_service_enabled:
         from app.modules.ingestion.ingestor import consume_topic_forever
 
         topics = [
@@ -80,7 +80,7 @@ async def lifespan(app: FastAPI):
             _consumer_tasks.append(task)
             logger.info("Started consumer for topic=%s group=%s", topic, group)
     else:
-        logger.info("Kafka consumer disabled by configuration")
+        logger.info("Kafka consumer or realtime service disabled by configuration")
 
     try:
         yield
