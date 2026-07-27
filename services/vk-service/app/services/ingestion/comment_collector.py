@@ -48,10 +48,8 @@ class CommentCollector:
             start_offset,
         )
 
-        persisted_count = 0
         fetched_count = 0
         page_num = 0
-        seen_ids: set[int] = set()
         last_comment_id: int | None = None
         last_comment_date: datetime | None = None
 
@@ -96,9 +94,6 @@ class CommentCollector:
                             correlation_id=correlation_id,
                         )
                     fetched_count += 1
-                    if comment.get("id") not in seen_ids:
-                        persisted_count += 1
-                        seen_ids.add(comment["id"])
 
                 page_offset = start_offset + fetched_count
                 last_comment = page_items[-1]
@@ -108,16 +103,17 @@ class CommentCollector:
                 else:
                     last_comment_date = None
 
+                total_in_db = await self.repository.count_comments_for_post(owner_id, post_id)
+
                 logger.debug(
                     "Comment page %d for owner_id=%d post_id=%d: saved %d comments "
-                    "(persisted=%d fetched=%d total=%d offset=%d)",
+                    "(total_in_db=%d fetched=%d offset=%d)",
                     page_num,
                     owner_id,
                     post_id,
                     len(page_items),
-                    persisted_count,
+                    total_in_db,
                     fetched_count,
-                    base_processed_comments + persisted_count,
                     page_offset,
                 )
 
@@ -131,7 +127,7 @@ class CommentCollector:
                         next_offset=page_offset,
                         last_comment_id=last_comment_id,
                         last_comment_date=last_comment_date,
-                        processed_comments=base_processed_comments + persisted_count,
+                        processed_comments=total_in_db,
                         status="in_progress",
                     )
                     await checkpoint_store.save(checkpoint)
@@ -155,7 +151,7 @@ class CommentCollector:
                 next_offset=start_offset + fetched_count,
                 last_comment_id=last_comment_id,
                 last_comment_date=last_comment_date,
-                processed_comments=base_processed_comments + actual_new,
+                processed_comments=total_in_db,
                 status="in_progress",
             )
             await checkpoint_store.save(checkpoint)
