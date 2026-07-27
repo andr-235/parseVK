@@ -31,3 +31,9 @@ class SqlAlchemyIngestionRepository(IngestionRepository):
 
     async def upsert_comment(self, comment: dict, task_id: int) -> None:
         await self._comments.upsert_comment(comment, task_id)
+
+    async def count_comments_for_post(self, owner_id: int, post_id: int) -> int:
+        return await self._comments.count_for_post(owner_id, post_id)
+
+    async def count_for_post(self, owner_id: int, post_id: int) -> int:
+        return await self.count_comments_for_post(owner_id, post_id)

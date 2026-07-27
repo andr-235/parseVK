@@ -39,7 +39,7 @@ class CommentCollector:
     ) -> int:
         """Collect comments for a post using paginated iteration with per-page checkpoint.
 
-        Returns the number of comments collected.
+        Returns the number of *newly persisted* (unique) comments collected.
         """
         logger.debug(
             "[collect_for_post] START owner_id=%d post_id=%d start_offset=%d",
@@ -48,8 +48,12 @@ class CommentCollector:
             start_offset,
         )
 
-        collected_count = 0
+        persisted_count = 0
+        fetched_count = 0
         page_num = 0
+        seen_ids: set[int] = set()
+        last_comment_id: int | None = None
+        last_comment_date: datetime | None = None
 
         async for page in self.adapter.iter_comment_pages(
             int(owner_id),
@@ -91,22 +95,29 @@ class CommentCollector:
                             task_id=task_run.task_id,
                             correlation_id=correlation_id,
                         )
-                    collected_count += 1
+                    fetched_count += 1
+                    if comment.get("id") not in seen_ids:
+                        persisted_count += 1
+                        seen_ids.add(comment["id"])
 
-                page_offset = start_offset + collected_count
+                page_offset = start_offset + fetched_count
                 last_comment = page_items[-1]
                 last_comment_id = last_comment.get("id")
-                last_comment_date: datetime | None = None
                 if last_comment.get("date"):
                     last_comment_date = datetime.fromtimestamp(int(last_comment["date"]), tz=UTC)
+                else:
+                    last_comment_date = None
 
                 logger.debug(
-                    "Comment page %d for owner_id=%d post_id=%d: saved %d comments (total=%d offset=%d)",
+                    "Comment page %d for owner_id=%d post_id=%d: saved %d comments "
+                    "(persisted=%d fetched=%d total=%d offset=%d)",
                     page_num,
                     owner_id,
                     post_id,
                     len(page_items),
-                    base_processed_comments + collected_count,
+                    persisted_count,
+                    fetched_count,
+                    base_processed_comments + persisted_count,
                     page_offset,
                 )
 
@@ -120,7 +131,7 @@ class CommentCollector:
                         next_offset=page_offset,
                         last_comment_id=last_comment_id,
                         last_comment_date=last_comment_date,
-                        processed_comments=base_processed_comments + collected_count,
+                        processed_comments=base_processed_comments + persisted_count,
                         status="in_progress",
                     )
                     await checkpoint_store.save(checkpoint)
@@ -128,14 +139,40 @@ class CommentCollector:
                 if self.page_committer is not None:
                     await self.page_committer()
 
-        logger.info("Collected %d comments for post %d_%d", collected_count, owner_id, post_id)
+        # Reconcile with DB count to exclude cross-run overlap
+        total_in_db = await self.repository.count_comments_for_post(owner_id, post_id)
+        actual_new = total_in_db - base_processed_comments
+        if actual_new < 0:
+            actual_new = 0
+
+        if checkpoint_store is not None:
+            checkpoint = CheckpointData(
+                run_id=task_run.run_id,
+                owner_id=owner_id,
+                post_id=post_id,
+                task_id=task_run.task_id,
+                group_id=group_id,
+                next_offset=start_offset + fetched_count,
+                last_comment_id=last_comment_id,
+                last_comment_date=last_comment_date,
+                processed_comments=base_processed_comments + actual_new,
+                status="in_progress",
+            )
+            await checkpoint_store.save(checkpoint)
+
+        logger.info(
+            "Collected %d comments for post %d_%d "
+            "(fetched=%d, total_in_db=%d, base=%d)",
+            actual_new, owner_id, post_id,
+            fetched_count, total_in_db, base_processed_comments,
+        )
         logger.debug(
             "[collect_for_post] END owner_id=%d post_id=%d collected=%d",
             owner_id,
             post_id,
-            collected_count,
+            actual_new,
         )
-        return collected_count
+        return actual_new
 
     async def save_comment(
         self,

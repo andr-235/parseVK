@@ -1,10 +1,11 @@
 from datetime import UTC, datetime
 
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.infrastructure.db.models.vk_ingestion import VkComment
 from app.domain.repositories.comments import CommentRepository
+from app.infrastructure.db.models.vk_ingestion import VkComment
 
 
 def utcnow() -> datetime:
@@ -46,3 +47,11 @@ class SqlAlchemyCommentRepository(CommentRepository):
             },
         )
         await self.session.execute(stmt)
+
+    async def count_for_post(self, owner_id: int, post_id: int) -> int:
+        stmt = select(func.count()).where(
+            VkComment.vk_owner_id == owner_id,
+            VkComment.vk_post_id == post_id,
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar() or 0

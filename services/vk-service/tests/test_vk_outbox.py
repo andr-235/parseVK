@@ -104,6 +104,9 @@ class FakeIngestionRepository:
     async def upsert_comment(self, comment, *, task_id):
         return None
 
+    async def count_comments_for_post(self, owner_id: int, post_id: int) -> int:
+        return 0
+
 
 class FakeTasksClient:
     async def update_progress(self, *args, **kwargs):

@@ -41,13 +41,13 @@ class ControllableStubVkApiClient:
     async def get_comments(self, owner_id: int, post_id: int) -> dict:
         if post_id in self._fail_post_ids:
             raise VkApiInfrastructureError(10, f"Failed post {post_id}")
-        return {"items": [{"id": post_id * 10, "from_id": 1, "text": "comment"}]}
+        return {"items": [{"id": post_id * 10, "owner_id": owner_id, "post_id": post_id, "from_id": 1, "text": "comment"}]}
 
     async def iter_comment_pages(self, owner_id: int, post_id: int, start_offset: int = 0, page_size: int = 100):
         if post_id in self._fail_post_ids:
             raise VkApiInfrastructureError(10, f"Failed post {post_id}")
         yield {
-            "items": [{"id": post_id * 10, "from_id": 1, "text": "comment"}],
+            "items": [{"id": post_id * 10, "owner_id": owner_id, "post_id": post_id, "from_id": 1, "text": "comment"}],
             "profiles": [],
             "groups": [],
         }

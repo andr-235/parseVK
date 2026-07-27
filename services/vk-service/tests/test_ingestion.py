@@ -105,6 +105,18 @@ class FakeRepository:
     async def upsert_comment(self, comment, *, task_id):
         self.comments.append((comment, task_id))
 
+    async def count_comments_for_post(self, owner_id: int, post_id: int) -> int:
+        # Count unique comment IDs (simulates DB dedup)
+        def _matches(comment):
+            if "owner_id" in comment and comment["owner_id"] != owner_id:
+                return False
+            if "post_id" in comment and comment["post_id"] != post_id:
+                return False
+            return True
+
+        unique_ids = {c[0]["id"] for c in self.comments if _matches(c[0])}
+        return len(unique_ids)
+
 
 class FakeTasksClient:
     def __init__(self):

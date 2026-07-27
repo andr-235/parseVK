@@ -84,7 +84,7 @@ async def test_crash_resume_full_flow(db_session):
     2. Insert comments 101-200 + checkpoint offset=200 -> COMMIT
     3. Simulate crash: open new session, VK returns overlap (comments 190-250)
     4. Verify: 250 unique comments total, checkpoint completed,
-       processed_comments=261 (200 base + 61 items yielded, including overlap)
+       processed_comments=250 (200 base + 50 new comments persisted)
     """
     from types import SimpleNamespace
     from unittest.mock import AsyncMock
@@ -168,16 +168,14 @@ async def test_crash_resume_full_flow(db_session):
             task_run=task_run, checkpoint_store=store3,
             start_offset=200, group_id=group_id, base_processed_comments=200,
         )
-        # VK returned 61 items (190-250 inclusive). Items 190-200 overlap with
-        # already-persisted comments and are idempotently upserted; items 201-250
-        # are new. `count` is the number of items yielded, not the unique net new.
-        # The important check is total unique comments in DB.
-        assert count == 61, f"Expected 61 items yielded, got {count}"
+        # count should be 50 (items 201-250 are new; 190-200 exist from phases 1-2)
+        assert count == 50, f"Expected 50 new comments, got {count}"
         await store3.complete(run_id, owner_id, post_id)
         await s3.commit()
 
     # ---- Phase 4: verify final state ----
     from sqlalchemy import func, select
+
     from app.infrastructure.db.models.vk_ingestion import VkComment
 
     async with SessionLocal() as s4:
@@ -193,13 +191,10 @@ async def test_crash_resume_full_flow(db_session):
         total_comments = result.scalar()
         assert total_comments == 250, f"Expected 250 unique comments, got {total_comments}"
 
-        # Checkpoint should be completed. processed_comments tracks the number of
-        # comments yielded by VK (including the 11-item overlap), so it is 261
-        # even though only 250 unique comments are persisted.
         cp = await store4.load(run_id, owner_id, post_id)
         assert cp is not None
         assert cp.status == "completed", f"Expected completed, got {cp.status}"
-        assert cp.processed_comments == 261, f"Expected 261, got {cp.processed_comments}"
+        assert cp.processed_comments == 250, f"Expected 250, got {cp.processed_comments}"
 
 
 @pytest.mark.anyio
