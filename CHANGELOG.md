@@ -1,3 +1,10 @@
+# [0.72.0](https://github.com/andr-235/parseVK/compare/v0.71.0...v0.72.0) (2026-07-27)
+
+
+### Features
+
+* **realtime:** add realtime-service with Kafka ingestor and SSE endpoint ([5215430](https://github.com/andr-235/parseVK/commit/52154301edae4606e774f960d1cfdbfb05ce0584))
+
 # [0.71.0](https://github.com/andr-235/parseVK/compare/v0.70.0...v0.71.0) (2026-07-27)
 
 
