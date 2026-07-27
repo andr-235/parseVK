@@ -8,6 +8,7 @@
 
 import { createContext, useContext, useEffect, useState, useRef, useCallback, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '../../store/auth'
 import { RealtimeClient, type RealtimeEventHandler } from './RealtimeClient'
 
 interface RealtimeContextValue {
@@ -22,7 +23,7 @@ let clientInstance: RealtimeClient | null = null
 
 function getClient(): RealtimeClient {
   if (!clientInstance) {
-    clientInstance = new RealtimeClient({ maxRetries: 10 })
+    clientInstance = new RealtimeClient()
   }
   return clientInstance
 }
@@ -37,6 +38,7 @@ export function RealtimeProvider({ children, enabled = true }: RealtimeProviderP
   const handlersRef = useRef<Set<RealtimeEventHandler>>(new Set())
   const clientRef = useRef<RealtimeClient | null>(null)
   const queryClient = useQueryClient()
+  const user = useAuth((s) => s.user)
   const coalesceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const subscribe = useCallback((handler: RealtimeEventHandler): () => void => {
@@ -68,10 +70,15 @@ export function RealtimeProvider({ children, enabled = true }: RealtimeProviderP
   }, [])
 
   useEffect(() => {
-    if (!enabled) return
-
     const client = getClient()
     clientRef.current = client
+
+    if (!enabled || !user) {
+      client.disconnect()
+      return
+    }
+
+    client.resetForUser(user.id)
 
     const eventHandler: RealtimeEventHandler = (event) => {
       // Dispatch to all registered handlers
@@ -80,7 +87,13 @@ export function RealtimeProvider({ children, enabled = true }: RealtimeProviderP
       }
 
       // React Query integration
-      if (event.event === 'content.comments_projected') {
+      if (event.event === 'realtime.ready') {
+        // Initial cursor established; invalidate to catch any projection
+        // that happened between REST snapshot and SSE connection.
+        queryClient.invalidateQueries({ queryKey: ['comments'] })
+        queryClient.invalidateQueries({ queryKey: ['tasks'] })
+        console.log('[RealtimeProvider] invalidated queries after ready')
+      } else if (event.event === 'content.comments_projected') {
         invalidateComments()
       } else if (event.event === 'task.state_changed') {
         queryClient.invalidateQueries({ queryKey: ['tasks'] })
@@ -106,8 +119,9 @@ export function RealtimeProvider({ children, enabled = true }: RealtimeProviderP
     return () => {
       unsubscribe()
       clearInterval(statusInterval)
+      client.disconnect()
     }
-  }, [enabled, queryClient, invalidateComments])
+  }, [enabled, user?.id, queryClient, invalidateComments])
 
   return (
     <RealtimeContext.Provider value={{ subscribe, isConnected }}>

@@ -8,7 +8,7 @@
  * - Deduplicates by eventId
  */
 
-import { getReconnectDelay, DEFAULT_RECONNECT_CONFIG } from './reconnectPolicy'
+import { getReconnectDelay } from './reconnectPolicy'
 import { getAccessToken } from '../api/client'
 import { parseSseChunk, type SseEvent } from './sseParser'
 
@@ -25,10 +25,8 @@ export class RealtimeClient {
   private eventHandlers: Set<RealtimeEventHandler> = new Set()
   private seenEventIds: Set<string> = new Set()
   private isConnected = false
-  private maxRetries: number
 
   constructor(options?: { maxRetries?: number; dedupWindowMs?: number }) {
-    this.maxRetries = options?.maxRetries ?? DEFAULT_RECONNECT_CONFIG.maxRetries
     // dedupWindowMs accepted but not yet wired; noop to suppress TS6133
     void options?.dedupWindowMs
 
@@ -68,6 +66,15 @@ export class RealtimeClient {
     }
     this.isConnected = false
     console.log('[RealtimeClient] disconnected')
+  }
+
+  /** Reset per-user state for a new user session. */
+  resetForUser(userId: string): void {
+    this.disconnect()
+    this.lastEventId = null
+    this.seenEventIds.clear()
+    sessionStorage.removeItem(CURSOR_KEY)
+    console.log('[RealtimeClient] reset for user', userId)
   }
 
   private _connect(): void {
@@ -189,15 +196,10 @@ export class RealtimeClient {
   }
 
   private _scheduleReconnect(): void {
-    if (this.attempt >= this.maxRetries) {
-      console.log('[RealtimeClient] max retries reached')
-      return
-    }
-
+    // Infinite retry with exponential backoff capped at 30s
     const delay = getReconnectDelay(this.attempt)
     this.attempt++
     console.log('[RealtimeClient] reconnecting in', Math.round(delay), 'ms (attempt', this.attempt, ')')
-
     this.reconnectTimer = setTimeout(() => {
       this.abortController = null
       this._connect()
