@@ -96,11 +96,14 @@ class ProjectionService:
 
         if inserted_count > 0 or updated_count > 0 or author_count > 0:
             if self.outbox_service and settings.content_projection_events_enabled:
+                # Get the post key for monotonic revision tracking
+                post_key = next(iter(post_keys)) if post_keys else None
+                projection_revision = await self.repository.increment_projection_revision(post_key) if post_key else 1
                 projection_payload = {
                     "insertedCount": inserted_count,
                     "updatedCount": updated_count,
                     "totalCount": total_count_after,
-                    "projectionRevision": int(datetime.now(UTC).timestamp() * 1_000_000),
+                    "projectionRevision": projection_revision,
                     "taskId": task_id,
                     "runId": run_id,
                     "ownerId": owner_id,

@@ -86,6 +86,7 @@ class ContentPost(Base):
     date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     text: Mapped[str | None] = mapped_column(Text, nullable=True)
     comments_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    projection_revision: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     last_collected_task_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 

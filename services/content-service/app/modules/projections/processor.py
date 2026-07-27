@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -211,6 +211,27 @@ class ProjectionRepository:
             .where(ContentPost.external_key == post_external_key)
             .values(comments_count=count, updated_at=utcnow())
         )
+
+    async def increment_projection_revision(self, post_key: str) -> int:
+        """Atomically increment projection_revision for a post and return the new value."""
+        owner_id_str, post_id_str = post_key.split(":", 1)
+        owner_id = int(owner_id_str)
+        post_id = int(post_id_str)
+
+        result = await self.session.execute(
+            text("""
+                UPDATE content_posts
+                SET projection_revision = projection_revision + 1
+                WHERE vk_owner_id = :owner_id AND vk_post_id = :post_id
+                RETURNING projection_revision
+            """),
+            {"owner_id": owner_id, "post_id": post_id},
+        )
+        row = result.one_or_none()
+        if row:
+            return row[0]
+        # Post doesn't exist yet — return 1
+        return 1
 
     async def get_comment_ids_for_post(self, post_key: str) -> set[int]:
         """Return set of comment IDs for a post identified by external_key like 'owner_id:post_id'."""

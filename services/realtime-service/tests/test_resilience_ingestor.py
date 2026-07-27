@@ -201,17 +201,34 @@ async def test_ingest_event_stores_source_partition_and_offset(mock_session):
 @pytest.mark.anyio
 async def test_consume_topic_parse_error_sends_dlq_and_commits():
     bad_msg = SimpleNamespace(value=b"not-json", partition=0, offset=0)
-    consumer = _make_fake_consumer([bad_msg])
+    event_id = uuid4()
+    good_msg = SimpleNamespace(
+        value=json.dumps(
+            {
+                "event_id": str(event_id),
+                "event_type": "content.comments_projected",
+                "event_version": 1,
+                "aggregate_type": "vk_comment",
+                "aggregate_id": "-1:3",
+                "payload": {"insertedCount": 1, "totalCount": 1},
+                "created_at": "2026-07-27T00:00:00+00:00",
+            }
+        ).encode(),
+        partition=0,
+        offset=1,
+    )
+    consumer = _make_fake_consumer([bad_msg, good_msg])
     session_factory = _fake_session_factory()
 
     mock_producer = AsyncMock()
     mock_producer.start = AsyncMock()
     mock_producer.stop = AsyncMock()
-    mock_producer.send = AsyncMock()
+    mock_producer.send_and_wait = AsyncMock()
 
     with (
         patch("app.modules.ingestion.ingestor.AIOKafkaConsumer", return_value=consumer),
         patch("app.modules.ingestion.ingestor.AIOKafkaProducer", return_value=mock_producer),
+        patch("app.modules.ingestion.ingestor.ingest_event", new=AsyncMock(return_value=True)) as mock_ingest,
     ):
         await consume_topic_forever(
             session_factory,
@@ -220,8 +237,9 @@ async def test_consume_topic_parse_error_sends_dlq_and_commits():
             "realtime-test-group",
         )
 
-    mock_producer.send.assert_awaited_once_with(settings.kafka_dlq_topic, value=bad_msg.value)
-    consumer.commit.assert_awaited_once()
+    mock_producer.send_and_wait.assert_awaited_once_with(settings.kafka_dlq_topic, value=bad_msg.value)
+    assert consumer.commit.await_count == 2
+    mock_ingest.assert_awaited_once()
 
 
 @pytest.mark.anyio

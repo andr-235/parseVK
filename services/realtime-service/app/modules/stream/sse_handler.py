@@ -111,6 +111,11 @@ async def stream_events(
 
     if last_event_id is None:
         last_event_id = max_seq
+        # Send realtime.ready with the current cursor so the client can
+        # reconnect with Last-Event-ID after a disconnect.
+        ready_event = f"id: {max_seq}\nevent: realtime.ready\ndata: {json.dumps({'cursor': max_seq})}\n\n"
+        yield ready_event
+        logger.debug("Sent realtime.ready cursor=%d", max_seq)
 
     local_last_seen = last_event_id
 

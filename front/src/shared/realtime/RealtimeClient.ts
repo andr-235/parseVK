@@ -136,6 +136,13 @@ export class RealtimeClient {
                 sessionStorage.setItem(CURSOR_KEY, event.id)
               }
 
+              if (event.event === 'realtime.ready') {
+                console.log('[RealtimeClient] ready, cursor:', event.id)
+                // cursor is already stored as lastEventId above via event.id
+                this._dispatch(event)
+                continue
+              }
+
               if (event.event === 'resync_required') {
                 console.log('[RealtimeClient] resync required, invalidating')
                 this._dispatch({ id: null, event: 'resync_required', data: null })

@@ -26,8 +26,21 @@ export function CommentsPage() {
     ),
     useCallback(() => {
       if (selectedCommentId === null) return null
-      const data = queryClient.getQueryData<{ comments: Comment[] }>(['comments'])
-      return data?.comments.find((c) => c.id === selectedCommentId) ?? null
+
+      // Use getQueriesData with partial match — matches ['comments', params]
+      const queries = queryClient.getQueriesData<{ comments: Comment[] }>({
+        queryKey: ['comments'],
+      })
+
+      for (const [, data] of queries) {
+        if (!data?.comments) continue
+        const found = data.comments.find(
+          (item) => item.id === selectedCommentId,
+        )
+        if (found) return found
+      }
+
+      return null
     }, [queryClient, selectedCommentId]),
   )
   const { feedback, showFeedback, dismissFeedback } = useFeedback()

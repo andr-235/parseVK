@@ -130,7 +130,7 @@ async def _produce_dlq(dlq_topic: str, value: bytes, bootstrap_servers: str) -> 
     producer = AIOKafkaProducer(bootstrap_servers=bootstrap_servers)
     try:
         await producer.start()
-        await producer.send(dlq_topic, value=value)
+        await producer.send_and_wait(dlq_topic, value=value)
         dlq_total.labels(topic=dlq_topic).inc()
     finally:
         await producer.stop()
@@ -173,6 +173,7 @@ async def consume_topic_forever(
                 except Exception:
                     logger.exception("DLQ publish failed for malformed message, NOT committing offset")
                     continue
+                continue
 
             # Step 2: Ingest
             try:
