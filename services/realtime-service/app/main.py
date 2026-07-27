@@ -4,14 +4,19 @@ from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
 from app.db.session import SessionLocal as session_factory
+from app.modules.retention.cleaner import catchup_loop, retention_loop
 
 logger = logging.getLogger(__name__)
 
 _consumer_tasks: list[asyncio.Task] = []
 _consumer_healthy: list[bool] = [False]
+
+_retention_task: asyncio.Task | None = None
+_catchup_task: asyncio.Task | None = None
 
 
 async def supervise(name: str, coro_factory, health_flag: list[bool] | None = None):
@@ -38,6 +43,11 @@ async def supervise(name: str, coro_factory, health_flag: list[bool] | None = No
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Realtime service starting")
+
+    # Start background tasks
+    _retention_task = asyncio.create_task(retention_loop(session_factory))
+    _catchup_task = asyncio.create_task(catchup_loop(session_factory))
+    logger.info("Started retention and catch-up background tasks")
 
     if settings.kafka_consumer_enabled:
         from app.modules.ingestion.ingestor import consume_topic_forever
@@ -67,12 +77,24 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
+        # Stop consumer tasks
         for task in _consumer_tasks:
             task.cancel()
             with suppress(asyncio.CancelledError):
                 await task
         _consumer_tasks.clear()
-        logger.info("All consumers stopped")
+
+        # Stop background tasks
+        if _retention_task:
+            _retention_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await _retention_task
+        if _catchup_task:
+            _catchup_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await _catchup_task
+
+        logger.info("All background tasks stopped")
 
 
 def create_app() -> FastAPI:
@@ -116,6 +138,8 @@ def create_app() -> FastAPI:
                 "Connection": "keep-alive",
             },
         )
+
+    Instrumentator().instrument(app).expose(app)
 
     return app
 
