@@ -12,6 +12,7 @@ import { useFeedback } from '../../shared/hooks/useFeedback'
 import type { Comment } from '../../types/comments'
 
 export function CommentsPage() {
+  const [selectedCommentId, setSelectedCommentId] = useState<number | null>(null)
   const [selectedComment, setSelectedComment] = useState<Comment | null>(null)
   const [queryError, setQueryError] = useState<string | null>(null)
   const navigate = useNavigate()
@@ -52,18 +53,23 @@ export function CommentsPage() {
   }, [addToWatchlistMutation])
 
   const handleSelect = useCallback((c: Comment) => {
-    setSelectedComment((prev) => (prev?.id === c.id ? null : c))
-  }, [])
+    if (selectedCommentId === c.id) {
+      setSelectedCommentId(null)
+      setSelectedComment(null)
+    } else {
+      setSelectedCommentId(c.id)
+      setSelectedComment(c)
+    }
+  }, [selectedCommentId])
 
   const handleClose = useCallback(() => {
+    setSelectedCommentId(null)
     setSelectedComment(null)
   }, [])
 
   const handleRetry = useCallback(() => {
     setQueryError(null)
   }, [])
-
-  const selectedId = selectedComment?.id ?? null
 
   if (queryError) {
     return (
@@ -97,7 +103,7 @@ export function CommentsPage() {
     >
       <CommentsTable
         onSelect={handleSelect}
-        selectedId={selectedId}
+        selectedId={selectedCommentId}
         onError={setQueryError}
         onAddToWatchlist={handleAddToWatchlist}
         onUpdateStatus={(id, status) => updateStatusMutation.mutate({ id, status })}
