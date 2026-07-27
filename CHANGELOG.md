@@ -1,3 +1,10 @@
+## [0.74.3](https://github.com/andr-235/parseVK/compare/v0.74.2...v0.74.3) (2026-07-27)
+
+
+### Bug Fixes
+
+* **realtime,content,frontend:** hotfix wave 3 — hardening and cleanup ([ec6c986](https://github.com/andr-235/parseVK/commit/ec6c986bceb51bd467deb999fb1bd09ae7dd5bfe))
+
 ## [0.74.2](https://github.com/andr-235/parseVK/compare/v0.74.1...v0.74.2) (2026-07-27)
 
 
