@@ -1,3 +1,10 @@
+## [0.74.1](https://github.com/andr-235/parseVK/compare/v0.74.0...v0.74.1) (2026-07-27)
+
+
+### Bug Fixes
+
+* **realtime:** hotfix wave 1 — restore end-to-end event flow ([8c40f0b](https://github.com/andr-235/parseVK/commit/8c40f0bc9e4268c09bdbed5f30917d59349c82bb))
+
 # [0.74.0](https://github.com/andr-235/parseVK/compare/v0.73.0...v0.74.0) (2026-07-27)
 
 
