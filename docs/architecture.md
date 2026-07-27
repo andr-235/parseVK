@@ -115,6 +115,114 @@ Client (frontend) → Router → Service → Client (upstream)
 
 Этот паттерн используется в потоке запуска задач между vk-service и tasks-service: двухфазная транзакция гарантирует идемпотентность обработки события, а `FOR UPDATE` — сериализованный доступ к состоянию задачи.
 
+## Durable Paginated Comment Ingestion (PR-P2A)
+
+Сбор комментариев ВКонтакте — самая долгая операция в пайплайне ингested.
+Один пост может содержать десятки тысяч комментариев, а VK API возвращает их
+постранично (до 100 за запрос). PR-P2A заменяет хрупкий однопакетный сбор
+на устойчивый постраничный механизм с checkpoint'ами.
+
+**Проблема:** старый `CommentCollector.collect_for_post()` загружал все
+комментарии одним вызовом `get_comments` (100 шт. без пагинации). При запуске
+задачи с несколькими постами и тысячами комментариев:
+
+- Если worker падал после обработки 3 из 10 постов, при следующей попытке
+  все 10 постов обрабатывались заново (нет checkpoint'ов)
+- Комментарии обрабатывались одним пакетом, без промежуточных коммитов —
+  ошибка в середине откатывала всю задачу
+- Сессия БД удерживала открытую транзакцию на время всего сбора
+
+**Решение — checkpoint-ориентированный пайплайн:**
+
+1. **`VkIngestionCheckpoint`** — новая таблица для хранения состояния сбора
+   по каждому посту. Ключ: `(run_id, owner_id, post_id)`.
+2. **`iter_comment_pages()`** — асинхронный генератор, который итерирует
+   страницы комментариев через VK API `wall.getComments` с поддержкой offset.
+3. **Постраничные коммиты** — после каждой страницы сохраняется checkpoint
+   `in_progress` c `next_offset`, и сессия коммитится через `page_committer`.
+4. **Retry с exponential backoff** — каждый API-вызов обёрнут в retry-цикл:
+   - Rate limit (код 6, 9, 29): до 5 попыток с джиттером
+   - Инфраструктурные ошибки (код 10): до 3 попыток
+   - CancelledError: пробрасывается сразу
+   - Ошибка 212 (доступ запрещён): пустая страница, graceful skip
+5. **DataCollector (оркестратор):**
+   - Перед каждым постом: загружает checkpoint
+   - `completed` — пропуск поста
+   - `failed` — пропуск с ошибкой
+   - `in_progress` — resume с `next_offset`
+   - После успешного сбора: сохраняет `completed`
+   - При ошибке: сохраняет `failed` и продолжает со следующим постом
+
+**Поток выполнения:**
+
+```
+DataCollector.collect()
+  │
+  ├─ для каждого поста:
+  │    ├─ checkpoint_store.load(run_id, owner_id, post_id)
+  │    ├─ если completed/failed → skip
+  │    ├─ CommentCollector.collect_for_post(start_offset=next_offset)
+  │    │    └─ async for page in adapter.iter_comment_pages(start_offset)
+  │    │         ├─ upsert авторов + комментарии + outbox-события
+  │    │         ├─ checkpoint_store.save(in_progress, next_offset)
+  │    │         └─ page_committer() — session.commit()
+  │    ├─ checkpoint_store.complete()
+  │    └─ progress_reporter.report()
+  │
+  └─ результат: IngestionResult со статистикой
+```
+
+**Границы транзакций:**
+
+- Каждая страница коммитится отдельно (page_committer = session.commit)
+- Исключение откатывает только текущую страницу (предыдущие страницы + посты закоммичены)
+- Финальный `session.commit()` в `_run_ingestion` фиксирует только метаданные (checkpoint `failed`, outbox-события)
+- `CancelledError` в `_run_ingestion` → `session.rollback()`, предыдущие страницы сохранены
+
+**Модель данных:**
+
+```sql
+CREATE TABLE vk_ingestion_checkpoints (
+    id BIGSERIAL PRIMARY KEY,
+    task_id BIGINT NOT NULL,
+    run_id VARCHAR(128) NOT NULL,
+    group_id BIGINT NOT NULL,
+    owner_id BIGINT NOT NULL,
+    post_id BIGINT NOT NULL,
+    next_offset INTEGER NOT NULL DEFAULT 0,
+    last_comment_id BIGINT,
+    last_comment_date TIMESTAMPTZ,
+    processed_comments INTEGER NOT NULL DEFAULT 0,
+    status VARCHAR(32) NOT NULL DEFAULT 'in_progress',
+    last_error TEXT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (run_id, owner_id, post_id)
+);
+```
+
+Статусы: `in_progress` → `completed` | `failed`
+
+**Ключевые файлы:**
+
+| Путь | Назначение |
+|------|-----------|
+| `app/infrastructure/db/models/vk_ingestion.py` | Модель `VkIngestionCheckpoint` |
+| `app/domain/repositories/checkpoint.py` | Абстрактный port + `CheckpointData` |
+| `app/infrastructure/db/repositories/checkpoint.py` | SQLAlchemy реализация (upsert on conflict) |
+| `app/domain/ports/vk_api.py` | Протокол `VkApiPort.iter_comment_pages` |
+| `app/infrastructure/vk_client/posts.py` | `iter_comment_pages()` + per-page retry |
+| `app/services/ingestion/comment_collector.py` | Постраничный сбор с checkpoint |
+| `app/services/ingestion/collector.py` | Оркестрация с checkpoint-возобновлением |
+
+**Обработка ошибок:**
+
+- Ошибка 212 (доступ запрещён к комментариям) → пустая страница, пост считается успешным
+- Rate limit → до 5 повторных попыток с exponential backoff + jitter
+- Инфраструктурная ошибка → до 3 попыток, после исчерпания пост помечается `failed`
+- `CancelledError` → пробрасывается немедленно, текущая страница откатывается
+- Ошибка на уровне поста → checkpoint `failed`, сбор продолжается со следующим постом
+- Системная ошибка (потеря соединения с БД) → пробрасывается наверх, задача падает целиком
+
 ## Event Consumer Projections
 
 Для асинхронной обработки событий из Kafka каждый consumer следует паттерну: проверка `is_processed` (ProcessedEvent) → демаршаллинг payload → запись проекции → отметка обработанным → коммит. Идемпотентность обеспечивается на двух уровнях:
