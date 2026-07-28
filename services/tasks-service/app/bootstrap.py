@@ -6,7 +6,6 @@ Accepts an optional AIOKafkaProducer for outbox publishing.
 """
 
 import logging
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,7 +18,6 @@ if TYPE_CHECKING:
     from app.modules.automation.service import AutomationService
     from app.modules.outbox.publisher import OutboxPublisher
 from app.modules.tasks.crud_service import TasksCrudService
-from app.modules.tasks.execution_service import TaskExecutionService
 from app.modules.tasks.repository import TasksRepository
 from app.modules.tasks.service import TasksService
 from app.modules.tasks.state_service import TaskStateService
@@ -39,11 +37,9 @@ class ApplicationFactory:
         session: AsyncSession,
         *,
         producer: "AIOKafkaProducer | None" = None,
-        on_task_complete: Callable | None = None,
     ):
         self.session = session
         self.producer = producer
-        self._on_complete = on_task_complete
 
     def _create_repository(self) -> TasksRepository:
         return TasksRepository(self.session)
@@ -84,7 +80,6 @@ class ApplicationFactory:
         logger.debug("ApplicationFactory: created TasksService with sub-services")
         return TasksService(
             crud=TasksCrudService(self.session, repo, outbox),
-            execution=TaskExecutionService(self.session, repo, outbox, on_complete=self._on_complete),
             state=TaskStateService(self.session, repo, outbox),
         )
 
