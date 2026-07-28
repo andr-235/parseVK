@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 import httpx
 
 from app.domain.entities.tasks import VkTaskRun
-from app.tasks.completion_recorder import TaskCompletionRecorder
+from app.services.ingestion.pipeline import IngestionFailedError
 from app.tasks.task_finalizer import TaskFinalizer
 
 logger = logging.getLogger("vk-service.task-worker")
@@ -41,9 +41,6 @@ class TaskExecutor:
         self.finalizer = TaskFinalizer(
             worker_id=worker_id, lease_store=lease_store, tasks_client=tasks_client
         )
-        self.completion_recorder = TaskCompletionRecorder(
-            session_factory=session_factory, ingestion_factory=ingestion_factory
-        )
 
     async def execute(self, task_run: VkTaskRun) -> None:
         logger.info(
@@ -64,36 +61,40 @@ class TaskExecutor:
                 correlation_id=task_run.run_id,
             )
             if remote.get("status") == "done":
-                try:
-                    await self.completion_recorder.record(task_run, remote)
-                except Exception as exc:
-                    await self.finalizer.release(
-                        task_run, f"completion reconciliation failed: {exc}"
-                    )
-                    return
-                await self.lease_store.done(
-                    task_id=task_run.task_id,
-                    run_id=task_run.run_id,
-                    worker_id=self.worker_id,
+                await self._mark_done(
+                    task_run,
                     processed_items=remote.get("processedItems", 0),
                     total_items=remote.get("totalItems", 0),
+                    stats=remote.get("stats") or {},
                 )
                 return
             result = await self._run_guarded(task_run)
-            await self.lease_store.done(
-                task_id=task_run.task_id,
-                run_id=task_run.run_id,
-                worker_id=self.worker_id,
+            await self._mark_done(
+                task_run,
                 processed_items=result.processed_items,
                 total_items=result.processed_items,
+                stats=result.stats(),
             )
             logger.info("Completed VK task task_id=%s", task_run.task_id)
         except LeaseLostError:
             logger.warning(
                 "Lease lost for task_id=%s; execution cancelled", task_run.task_id
             )
+        except IngestionFailedError as exc:
+            await self.finalizer.fail(
+                task_run,
+                exc.error,
+                processed_items=exc.result.processed_items,
+                total_items=exc.result.processed_items,
+                stats=exc.result.stats(),
+            )
         except TimeoutError:
-            await self.finalizer.fail(task_run, f"Task timed out after {self.timeout_seconds}s")
+            await self.finalizer.fail(
+                task_run,
+                f"Task timed out after {self.timeout_seconds}s",
+                processed_items=task_run.processed_items,
+                total_items=task_run.total_items,
+            )
         except httpx.RequestError as exc:
             await self.finalizer.release(task_run, f"tasks-service unavailable: {exc}")
         except httpx.HTTPStatusError as exc:
@@ -102,6 +103,34 @@ class TaskExecutor:
             raise
         except Exception as exc:
             await self.finalizer.fail(task_run, str(exc) or type(exc).__name__)
+
+    async def _mark_done(
+        self,
+        task_run: VkTaskRun,
+        *,
+        processed_items: int,
+        total_items: int,
+        stats: dict,
+    ) -> None:
+        try:
+            await self.lease_store.done(
+                task_id=task_run.task_id,
+                run_id=task_run.run_id,
+                worker_id=self.worker_id,
+                processed_items=processed_items,
+                total_items=total_items,
+                stats=stats,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to mark task_id=%s as done: %s. Releasing lease for retry.",
+                task_run.task_id,
+                exc,
+            )
+            await self.finalizer.release(
+                task_run,
+                f"completion recording failed: {exc}",
+            )
 
     async def _run_guarded(self, task_run: VkTaskRun):
         ingestion_task = asyncio.create_task(self._run_ingestion(task_run))

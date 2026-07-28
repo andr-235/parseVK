@@ -46,6 +46,7 @@ class TaskStateService:
         task.status = "pending"
         task.error = None
         task.execution_run_id = str(uuid4())
+        task.last_execution_sequence = 0
         await self.repository.add_audit(
             TaskAuditLog(
                 owner_user_id=owner_user_id,

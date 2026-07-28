@@ -17,6 +17,15 @@ from app.services.ingestion.result import IngestionResult
 logger = logging.getLogger("vk-service.ingestion")
 
 
+class IngestionFailedError(Exception):
+    """Wraps an ingestion failure so the executor can record partial stats atomically."""
+
+    def __init__(self, error: str, result: IngestionResult):
+        super().__init__(error)
+        self.error = error
+        self.result = result
+
+
 class IngestionPipeline:
     def __init__(
         self,
@@ -47,27 +56,12 @@ class IngestionPipeline:
                 request_id=task_run.run_id,
                 correlation_id=correlation_id,
             )
-            if self.outbox:
-                await self.outbox.emit_task_completed(
-                    task_id=task_run.task_id,
-                    run_id=task_run.run_id,
-                    stats=result.stats(),
-                    correlation_id=correlation_id,
-                )
             return result
 
         except Exception as exc:
             logger.exception("Task execution failed for task_run.task_id=%s", task_run.task_id)
             sanitized_error = self._on_error(str(exc))
             result = self.collector.current_result
-
-            if self.outbox:
-                await self.outbox.emit_task_failed(
-                    task_id=task_run.task_id,
-                    run_id=task_run.run_id,
-                    error=sanitized_error,
-                    correlation_id=correlation_id,
-                )
 
             try:
                 await self.tasks_client.fail_execution(
@@ -90,7 +84,7 @@ class IngestionPipeline:
             ) as callback_exc:
                 raise callback_exc from exc
 
-            raise
+            raise IngestionFailedError(sanitized_error, result) from exc
 
     @staticmethod
     def _is_infrastructure_error(exc: Exception) -> bool:

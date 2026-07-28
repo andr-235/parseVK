@@ -29,6 +29,7 @@ def task_run(*, attempts: int = 1) -> VkTaskRun:
         heartbeat_at=now,
         created_at=now,
         updated_at=now,
+        execution_sequence=0,
     )
 
 

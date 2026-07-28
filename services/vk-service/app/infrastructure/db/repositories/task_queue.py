@@ -1,4 +1,5 @@
 import logging
+import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import and_, or_, select, update
@@ -6,10 +7,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.entities.tasks import VkTaskRun as VkTaskRunEntity
 from app.domain.repositories.task_queue import TaskQueueRepository
+from app.infrastructure.db.models.outbox import OutboxEvent
 from app.infrastructure.db.models.tasks import VkTaskRun
 from app.infrastructure.db.repositories.tasks import _to_task_run_entity
+from common.events.task_execution_completed import TaskExecutionCompletedPayload
+from common.events.task_execution_failed import TaskExecutionFailedPayload
+from common.events.task_execution_started import TaskExecutionStartedPayload
 
 logger = logging.getLogger("vk-service")
+
+EXECUTOR = "vk-service"
 
 
 def utcnow() -> datetime:
@@ -55,14 +62,43 @@ class SqlAlchemyTaskQueueRepository(TaskQueueRepository):
                 model.task_id,
                 model.lease_expires_at,
             )
+
         model.status = "running"
         model.attempts += 1
+        model.execution_sequence += 1
         model.lease_owner = worker_id
         model.lease_expires_at = lease_expires_at
         model.heartbeat_at = now
         model.started_at = model.started_at or now
         model.updated_at = now
         await self.session.flush()
+
+        payload = TaskExecutionStartedPayload(
+            taskId=model.task_id,
+            runId=model.run_id,
+            ownerUserId=model.owner_user_id,
+            executor=EXECUTOR,
+            workerId=worker_id,
+            attempt=model.attempts,
+            executionSequence=model.execution_sequence,
+            startedAt=now.isoformat(),
+        )
+        self.session.add(
+            OutboxEvent(
+                id=uuid.uuid4(),
+                event_type="task.execution_started",
+                aggregate_type="task",
+                aggregate_id=str(model.task_id),
+                dedupe_key=f"task.execution_started:{model.task_id}:{model.run_id}:{model.execution_sequence}",
+                payload=payload.model_dump(mode="json"),
+                status="pending",
+                attempts=0,
+                next_attempt_at=now,
+                created_at=now,
+            )
+        )
+        await self.session.flush()
+
         return _to_task_run_entity(model)
 
     async def renew_lease(
@@ -85,32 +121,129 @@ class SqlAlchemyTaskQueueRepository(TaskQueueRepository):
         worker_id: str,
         processed_items: int,
         total_items: int,
+        stats: dict | None = None,
     ) -> bool:
-        return await self._update_owned(
-            task_id,
-            run_id,
-            worker_id,
-            status="done",
-            finished_at=utcnow(),
-            processed_items=processed_items,
-            total_items=total_items,
-            lease_owner=None,
-            lease_expires_at=None,
-            updated_at=utcnow(),
+        now = utcnow()
+        result = await self.session.execute(
+            update(VkTaskRun)
+            .where(
+                VkTaskRun.task_id == task_id,
+                VkTaskRun.run_id == run_id,
+                VkTaskRun.status == "running",
+                VkTaskRun.lease_owner == worker_id,
+            )
+            .values(
+                status="done",
+                finished_at=now,
+                processed_items=processed_items,
+                total_items=total_items,
+                execution_sequence=VkTaskRun.execution_sequence + 1,
+                lease_owner=None,
+                lease_expires_at=None,
+                updated_at=now,
+            )
+            .returning(VkTaskRun.task_id, VkTaskRun.owner_user_id, VkTaskRun.execution_sequence)
         )
+        row = result.one_or_none()
+        if row is None:
+            return False
 
-    async def mark_failed(self, *, task_id: int, run_id: str, worker_id: str, error: str) -> bool:
-        return await self._update_owned(
-            task_id,
-            run_id,
-            worker_id,
-            status="failed",
-            finished_at=utcnow(),
-            last_error=error,
-            lease_owner=None,
-            lease_expires_at=None,
-            updated_at=utcnow(),
+        _, owner_user_id, execution_sequence = row
+        payload = TaskExecutionCompletedPayload(
+            taskId=task_id,
+            runId=run_id,
+            ownerUserId=owner_user_id,
+            executor=EXECUTOR,
+            workerId=worker_id,
+            executionSequence=execution_sequence,
+            processedItems=processed_items,
+            totalItems=total_items,
+            stats=stats or {},
+            completedAt=now.isoformat(),
         )
+        self.session.add(
+            OutboxEvent(
+                id=uuid.uuid4(),
+                event_type="task.execution_completed",
+                aggregate_type="task",
+                aggregate_id=str(task_id),
+                dedupe_key=f"task.execution_completed:{task_id}:{run_id}:{execution_sequence}",
+                payload=payload.model_dump(mode="json"),
+                status="pending",
+                attempts=0,
+                next_attempt_at=now,
+                created_at=now,
+            )
+        )
+        await self.session.flush()
+        return True
+
+    async def mark_failed(
+        self,
+        *,
+        task_id: int,
+        run_id: str,
+        worker_id: str,
+        error: str,
+        processed_items: int = 0,
+        total_items: int = 0,
+        stats: dict | None = None,
+    ) -> bool:
+        now = utcnow()
+        result = await self.session.execute(
+            update(VkTaskRun)
+            .where(
+                VkTaskRun.task_id == task_id,
+                VkTaskRun.run_id == run_id,
+                VkTaskRun.status == "running",
+                VkTaskRun.lease_owner == worker_id,
+            )
+            .values(
+                status="failed",
+                finished_at=now,
+                last_error=error,
+                execution_sequence=VkTaskRun.execution_sequence + 1,
+                lease_owner=None,
+                lease_expires_at=None,
+                updated_at=now,
+            )
+            .returning(VkTaskRun.task_id, VkTaskRun.owner_user_id, VkTaskRun.execution_sequence)
+        )
+        row = result.one_or_none()
+        if row is None:
+            return False
+
+        _, owner_user_id, execution_sequence = row
+        payload = TaskExecutionFailedPayload(
+            taskId=task_id,
+            runId=run_id,
+            ownerUserId=owner_user_id,
+            executor=EXECUTOR,
+            workerId=worker_id,
+            executionSequence=execution_sequence,
+            processedItems=processed_items,
+            totalItems=total_items,
+            stats=stats or {},
+            error=error,
+            failureKind="terminal",
+            failedAt=now.isoformat(),
+        )
+        self.session.add(
+            OutboxEvent(
+                id=uuid.uuid4(),
+                event_type="task.execution_failed",
+                aggregate_type="task",
+                aggregate_id=str(task_id),
+                dedupe_key=f"task.execution_failed:{task_id}:{run_id}:{execution_sequence}",
+                payload=payload.model_dump(mode="json"),
+                status="pending",
+                attempts=0,
+                next_attempt_at=now,
+                created_at=now,
+            )
+        )
+        await self.session.flush()
+        return True
 
     async def release(
         self,

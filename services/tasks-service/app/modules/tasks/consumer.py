@@ -99,7 +99,13 @@ async def handle_execution_progressed(
 
     Returns True if offset should be committed, False on transient error.
     """
-    event_id = f"{msg.topic}:{msg.partition}:{msg.offset}"
+    # Use envelope event_id for dedup, topic:partition:offset for diagnostics
+    event_data = json.loads(msg.value)
+    envelope_event_id = event_data.get("event_id")
+    if not envelope_event_id:
+        # Fallback for backward compatibility
+        envelope_event_id = f"{msg.topic}:{msg.partition}:{msg.offset}"
+    event_id = envelope_event_id
 
     # 1. Deduplicate by event_id
     if await _is_processed(session, event_id, consumer_name):

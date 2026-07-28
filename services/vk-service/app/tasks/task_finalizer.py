@@ -21,6 +21,9 @@ class TaskFinalizer:
                 run_id=task_run.run_id,
                 worker_id=self.worker_id,
                 error=f"tasks-service rejected execution: {exc.response.status_code}",
+                processed_items=task_run.processed_items,
+                total_items=task_run.total_items,
+                stats={},
             )
             return
         await self.release(task_run, f"tasks-service error: {exc.response.status_code}")
@@ -29,6 +32,10 @@ class TaskFinalizer:
         self,
         task_run: VkTaskRun,
         error: str,
+        *,
+        processed_items: int = 0,
+        total_items: int = 0,
+        stats: dict | None = None,
     ) -> None:
         safe_error = error[:2000]
         try:
@@ -36,9 +43,9 @@ class TaskFinalizer:
                 task_run.task_id,
                 task_run.run_id,
                 safe_error,
-                task_run.processed_items,
-                task_run.total_items,
-                {},
+                processed_items,
+                total_items,
+                stats or {},
                 request_id=task_run.run_id,
                 correlation_id=task_run.run_id,
             )
@@ -56,6 +63,9 @@ class TaskFinalizer:
             run_id=task_run.run_id,
             worker_id=self.worker_id,
             error=safe_error,
+            processed_items=processed_items,
+            total_items=total_items,
+            stats=stats or {},
         )
 
     async def release(self, task_run: VkTaskRun, error: str) -> None:

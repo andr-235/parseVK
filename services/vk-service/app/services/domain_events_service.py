@@ -1,11 +1,14 @@
 import logging
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Dict
 
 from sqlalchemy import text
 
 from app.domain.repositories.outbox import OutboxRepository
+from common.events.task_execution_completed import TaskExecutionCompletedPayload
+from common.events.task_execution_failed import TaskExecutionFailedPayload
 from common.events.task_execution_progressed import TaskExecutionProgressedPayload
+from common.events.task_execution_started import TaskExecutionStartedPayload
 
 logger = logging.getLogger(__name__)
 
@@ -84,28 +87,112 @@ class OutboxService:
             payload=payload,
         )
 
-    async def emit_task_completed(
-        self, *, task_id: int, run_id: str, stats: dict, correlation_id: str | None = None
+    async def emit_execution_started(
+        self,
+        task_id: int,
+        run_id: str,
+        owner_user_id: str,
+        executor: str,
+        worker_id: str,
+        attempt: int,
+        execution_sequence: int,
+        started_at: str | None = None,
+        correlation_id: str | None = None,
     ) -> None:
+        """Emit task.execution_started event via outbox."""
+        payload = TaskExecutionStartedPayload(
+            taskId=task_id,
+            runId=run_id,
+            ownerUserId=owner_user_id,
+            executor=executor,
+            workerId=worker_id,
+            attempt=attempt,
+            executionSequence=execution_sequence,
+            startedAt=started_at or datetime.now(UTC).isoformat(),
+        )
         await self.repository.add_event(
-            event_type="vk.task_completed",
-            aggregate_type="vk_task",
+            event_type="task.execution_started",
+            aggregate_type="task",
             aggregate_id=str(task_id),
             correlation_id=correlation_id,
-            dedupe_key=f"vk.task_completed:{task_id}:{run_id}",
-            payload={"taskId": task_id, "runId": run_id, "stats": stats},
+            dedupe_key=f"task.execution_started:{task_id}:{run_id}:{execution_sequence}",
+            payload=payload.model_dump(mode="json"),
         )
 
-    async def emit_task_failed(
-        self, *, task_id: int, run_id: str, error: str, correlation_id: str | None = None
+    async def emit_execution_completed(
+        self,
+        task_id: int,
+        run_id: str,
+        owner_user_id: str,
+        executor: str,
+        worker_id: str,
+        execution_sequence: int,
+        processed_items: int,
+        total_items: int,
+        stats: Dict[str, Any] | None = None,
+        completed_at: str | None = None,
+        correlation_id: str | None = None,
     ) -> None:
+        """Emit task.execution_completed event via outbox."""
+        payload = TaskExecutionCompletedPayload(
+            taskId=task_id,
+            runId=run_id,
+            ownerUserId=owner_user_id,
+            executor=executor,
+            workerId=worker_id,
+            executionSequence=execution_sequence,
+            processedItems=processed_items,
+            totalItems=total_items,
+            stats=stats or {},
+            completedAt=completed_at or datetime.now(UTC).isoformat(),
+        )
         await self.repository.add_event(
-            event_type="vk.task_failed",
-            aggregate_type="vk_task",
+            event_type="task.execution_completed",
+            aggregate_type="task",
             aggregate_id=str(task_id),
             correlation_id=correlation_id,
-            dedupe_key=f"vk.task_failed:{task_id}:{run_id}",
-            payload={"taskId": task_id, "runId": run_id, "error": error},
+            dedupe_key=f"task.execution_completed:{task_id}:{run_id}:{execution_sequence}",
+            payload=payload.model_dump(mode="json"),
+        )
+
+    async def emit_execution_failed(
+        self,
+        task_id: int,
+        run_id: str,
+        owner_user_id: str,
+        executor: str,
+        worker_id: str,
+        execution_sequence: int,
+        processed_items: int,
+        total_items: int,
+        stats: Dict[str, Any] | None = None,
+        error: str = "",
+        failure_kind: str = "terminal",
+        failed_at: str | None = None,
+        correlation_id: str | None = None,
+    ) -> None:
+        """Emit task.execution_failed event via outbox."""
+        payload = TaskExecutionFailedPayload(
+            taskId=task_id,
+            runId=run_id,
+            ownerUserId=owner_user_id,
+            executor=executor,
+            workerId=worker_id,
+            executionSequence=execution_sequence,
+            processedItems=processed_items,
+            totalItems=total_items,
+            stats=stats or {},
+            error=error,
+            failureKind=failure_kind,
+            failedAt=failed_at or datetime.now(UTC).isoformat(),
+        )
+        await self.repository.add_event(
+            event_type="task.execution_failed",
+            aggregate_type="task",
+            aggregate_id=str(task_id),
+            correlation_id=correlation_id,
+            dedupe_key=f"task.execution_failed:{task_id}:{run_id}:{execution_sequence}",
+            payload=payload.model_dump(mode="json"),
         )
 
     async def emit_execution_progressed(

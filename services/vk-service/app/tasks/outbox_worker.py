@@ -13,7 +13,12 @@ logger = logging.getLogger(__name__)
 
 VK_DLQ_TOPIC = "parsevk.vk.dlq"
 
-TASK_EVENT_TYPES = {"task.execution_progressed", "vk.task_completed", "vk.task_failed"}
+TASK_EVENT_TYPES = {
+    "task.execution_progressed",
+    "task.execution_started",
+    "task.execution_completed",
+    "task.execution_failed",
+}
 
 
 def kafka_key_for_event(event_type: str, payload: dict, aggregate_id: str) -> str:

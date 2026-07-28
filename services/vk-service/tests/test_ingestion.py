@@ -18,7 +18,7 @@ from app.domain.exceptions.vk_api import (
     VkApiRateLimitError,
 )
 from app.infrastructure.vk_client.client import VkApiClient, VkApiConfigurationError
-from app.services.ingestion.pipeline import IngestionPipeline
+from app.services.ingestion.pipeline import IngestionFailedError, IngestionPipeline
 from app.services.ingestion_service import IngestionService
 
 
@@ -234,7 +234,7 @@ async def test_scope_all_without_active_groups_fails_task():
     run.finished_at = None
     run.last_error = None
 
-    with pytest.raises(RuntimeError, match="No active groups configured"):
+    with pytest.raises(IngestionFailedError, match="No active groups configured"):
         await service.execute(run)
 
     assert run.status == "running"
@@ -332,6 +332,7 @@ async def test_ingestion_does_not_mutate_frozen_task_run_on_success():
         heartbeat_at=now,
         created_at=now,
         updated_at=now,
+        execution_sequence=0,
     )
 
     result = await service.execute(run)
@@ -356,7 +357,7 @@ async def test_ingestion_failure_is_reported_without_mutating_task_run():
     run.finished_at = None
     run.last_error = None
 
-    with pytest.raises(RuntimeError, match="No active groups configured"):
+    with pytest.raises(IngestionFailedError, match="No active groups configured"):
         await service.execute(run)
 
     assert run.status == "running"

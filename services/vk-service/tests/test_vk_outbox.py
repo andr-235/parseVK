@@ -141,17 +141,27 @@ async def test_outbox_service_uses_deterministic_dedupe_keys():
 
     await service.emit_group_collected({"id": 1})
     await service.emit_post_collected({"owner_id": -1, "id": 2}, task_id=10)
-    await service.emit_task_completed(task_id=10, run_id="run-10", stats={})
+    await service.emit_execution_completed(
+        task_id=10,
+        run_id="run-10",
+        owner_user_id="user-1",
+        executor="vk-service",
+        worker_id="worker-1",
+        execution_sequence=1,
+        processed_items=6,
+        total_items=6,
+    )
 
     assert [event.get("dedupe_key") for event in repository.events] == [
         None,
         "vk.post_collected:-1:2",
-        "vk.task_completed:10:run-10",
+        "task.execution_completed:10:run-10:1",
     ]
 
 
 def test_kafka_key_for_task_events_uses_task_id():
-    assert kafka_key_for_event("vk.task_completed", {"taskId": 10}, "ignored") == "10"
+    assert kafka_key_for_event("task.execution_completed", {"taskId": 10}, "ignored") == "10"
+    assert kafka_key_for_event("task.execution_started", {"taskId": 10}, "ignored") == "10"
     assert kafka_key_for_event("vk.post_collected", {"taskId": 10}, "-1:2") == "-1:2"
 
 
@@ -187,5 +197,4 @@ async def test_ingestion_emits_collected_events_through_outbox(db_session):
         "vk.post_collected",
         "vk.comments_collected",
         "task.execution_progressed",
-        "vk.task_completed",
     ]

@@ -15,6 +15,7 @@ use_service_path()
 from aiokafka import ConsumerRecord
 from common.events.task_execution_progressed import TaskExecutionProgressedPayload
 
+from app.db.models import ProcessedEvent
 from app.modules.tasks.consumer import (
     TERMINAL_STATUSES,
     _has_terminal_status,
@@ -64,6 +65,15 @@ def _make_payload(**overrides) -> TaskExecutionProgressedPayload:
     }
     defaults.update(overrides)
     return TaskExecutionProgressedPayload(**defaults)
+
+
+def _make_envelope_value(event_id: str = "evt-1") -> str:
+    return json.dumps(
+        {
+            "event_id": event_id,
+            "event_type": "task.execution_progressed",
+        }
+    )
 
 
 def test_parse_payload_from_string():
@@ -186,7 +196,7 @@ async def test_handle_execution_progressed_updates_task_and_emits_outbox():
         update_result,
     ]
 
-    msg = _make_record("dummy", offset=1)
+    msg = _make_record(_make_envelope_value(), offset=1)
     payload = _make_payload()
 
     ok = await handle_execution_progressed(session, msg, payload, "consumer-1")
@@ -215,7 +225,7 @@ async def test_handle_execution_progressed_skips_duplicate_event():
     session.execute.return_value = mock_result
     session.commit = AsyncMock()
 
-    msg = _make_record("dummy", offset=1)
+    msg = _make_record(_make_envelope_value(), offset=1)
     payload = _make_payload()
 
     ok = await handle_execution_progressed(session, msg, payload, "consumer-1")
@@ -243,7 +253,7 @@ async def test_handle_execution_progressed_skips_stale_sequence():
 
     session.execute.side_effect = [select_processed, select_status, select_for_update]
 
-    msg = _make_record("dummy", offset=1)
+    msg = _make_record(_make_envelope_value(), offset=1)
     payload = _make_payload(executionSequence=3)
 
     ok = await handle_execution_progressed(session, msg, payload, "consumer-1")
@@ -272,7 +282,7 @@ async def test_handle_execution_progressed_skips_run_id_mismatch():
 
     session.execute.side_effect = [select_processed, select_status, select_for_update]
 
-    msg = _make_record("dummy", offset=1)
+    msg = _make_record(_make_envelope_value(), offset=1)
     payload = _make_payload(runId="run-99")
 
     ok = await handle_execution_progressed(session, msg, payload, "consumer-1")
@@ -297,7 +307,7 @@ async def test_handle_execution_progressed_skips_terminal_status():
 
     session.execute.side_effect = [select_processed, select_status]
 
-    msg = _make_record("dummy", offset=1)
+    msg = _make_record(_make_envelope_value(), offset=1)
     payload = _make_payload()
 
     ok = await handle_execution_progressed(session, msg, payload, "consumer-1")
@@ -329,6 +339,42 @@ async def test_consume_progress_events_creates_consumer_with_expected_config():
         async def commit(self):
             pass
 
+
+
+@pytest.mark.anyio
+async def test_handle_execution_progressed_uses_envelope_event_id():
+    """Envelope event_id is used for dedup; topic/partition/offset are stored."""
+    session = AsyncMock()
+    session.execute = AsyncMock()
+    session.add = MagicMock()
+    session.commit = AsyncMock()
+
+    select_processed = MagicMock()
+    select_processed.scalar_one_or_none.return_value = None
+
+    select_status = MagicMock()
+    select_status.scalar_one_or_none.return_value = "done"
+
+    session.execute.side_effect = [select_processed, select_status]
+
+    msg = _make_record(
+        _make_envelope_value(event_id="envelope-id-42"),
+        partition=3,
+        offset=7,
+    )
+    payload = _make_payload()
+
+    ok = await handle_execution_progressed(session, msg, payload, "consumer-1")
+    assert ok is True
+
+    added_models = [call.args[0] for call in session.add.call_args_list]
+    processed_event = next(
+        m for m in added_models if isinstance(m, ProcessedEvent)
+    )
+    assert processed_event.event_id == "envelope-id-42"
+    assert processed_event.topic == "parsevk.vk.events"
+    assert processed_event.partition == 3
+    assert processed_event.offset == 7
 
 
 @pytest.mark.anyio

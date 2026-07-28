@@ -201,6 +201,8 @@ class TaskEventsService:
                     status="pending",
                     finished_at=None,
                     last_error=None,
+                    execution_sequence=0,
+                    attempts=0,
                 )
             task_run = await self.repository.update_task_run(task_id, **values)
         else:

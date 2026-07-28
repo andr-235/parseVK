@@ -15,6 +15,13 @@ TaskEventType = Literal[
     "task.checked",
 ]
 
+TaskExecutionEventType = Literal[
+    "task.execution_started",
+    "task.execution_progressed",
+    "task.execution_completed",
+    "task.execution_failed",
+]
+
 VkEventType = Literal[
     "vk.group_collected",
     "vk.group_deleted",

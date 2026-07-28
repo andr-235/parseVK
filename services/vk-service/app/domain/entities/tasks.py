@@ -26,6 +26,7 @@ class VkTaskRun:
     heartbeat_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    execution_sequence: int = 0
 
 
 @dataclass(frozen=True)

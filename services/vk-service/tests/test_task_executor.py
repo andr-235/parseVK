@@ -21,6 +21,7 @@ async def test_executor_completes_frozen_task_via_repository():
     assert run.status == "running"
     done = next(call for call in leases.calls if call[0] == "done")
     assert done[1]["processed_items"] == 6
+    assert done[1]["stats"] == {"groups": 1, "posts": 2, "comments": 3, "authors": 0, "errors": 0}
 
 
 @pytest.mark.anyio
@@ -86,54 +87,35 @@ async def test_exhausted_task_retries_when_callback_is_unavailable():
 
 
 @pytest.mark.anyio
-async def test_remote_done_recreates_completion_event_before_marking_local_done():
-    class Outbox:
-        def __init__(self):
-            self.calls = []
-
-        async def emit_task_completed(self, **kwargs):
-            self.calls.append(kwargs)
-
-    class Service:
-        outbox = Outbox()
-
+async def test_remote_done_emits_completion_event_before_marking_local_done():
     class DoneTasksClient(FakeTasksClient):
         async def start_execution(self, *args, **kwargs):
             self.calls.append(("start", args, kwargs))
             return {"status": "done", "processedItems": 6, "totalItems": 6, "stats": {"posts": 2}}
 
-    service = Service()
     leases = FakeLeaseStore()
 
-    await build_executor(service, leases, DoneTasksClient()).execute(task_run())
+    await build_executor(object(), leases, DoneTasksClient()).execute(task_run())
 
-    assert service.outbox.calls == [
-        {
-            "task_id": 10,
-            "run_id": "run-10",
-            "stats": {"posts": 2},
-            "correlation_id": "run-10",
-        }
-    ]
-    assert any(call[0] == "done" for call in leases.calls)
+    done = next(call for call in leases.calls if call[0] == "done")
+    assert done[1]["processed_items"] == 6
+    assert done[1]["total_items"] == 6
+    assert done[1]["stats"] == {"posts": 2}
 
 
 @pytest.mark.anyio
-async def test_remote_done_is_retried_when_completion_event_cannot_be_recorded():
-    class Outbox:
-        async def emit_task_completed(self, **_kwargs):
+async def test_remote_done_is_retried_when_completion_cannot_be_recorded():
+    class FailingLeaseStore(FakeLeaseStore):
+        async def done(self, **kwargs):
             raise RuntimeError("database unavailable")
-
-    class Service:
-        outbox = Outbox()
 
     class DoneTasksClient(FakeTasksClient):
         async def start_execution(self, *_args, **_kwargs):
             return {"status": "done"}
 
-    leases = FakeLeaseStore()
+    leases = FailingLeaseStore()
 
-    await build_executor(Service(), leases, DoneTasksClient()).execute(task_run())
+    await build_executor(object(), leases, DoneTasksClient()).execute(task_run())
 
     assert any(call[0] == "release" for call in leases.calls)
     assert not any(call[0] == "done" for call in leases.calls)
