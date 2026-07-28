@@ -1,3 +1,12 @@
+# [0.76.0](https://github.com/andr-235/parseVK/compare/v0.75.0...v0.76.0) (2026-07-28)
+
+
+### Features
+
+* **common,vk:** execution event contracts and atomic lifecycle outbox ([4a11aaa](https://github.com/andr-235/parseVK/commit/4a11aaaeb357dafc720f26438d656e1496d7903d))
+* **tasks:** unified execution consumer v2 — start/completed/failed handlers ([f0b6613](https://github.com/andr-235/parseVK/commit/f0b661323c87c63f65a97a1e6d4761df8298be45))
+* **tasks:** unified execution consumer v2 for all lifecycle events ([12f9caa](https://github.com/andr-235/parseVK/commit/12f9caa4a04cf7f6b503e2fdbf7ca9162870157a))
+
 # [0.75.0](https://github.com/andr-235/parseVK/compare/v0.74.7...v0.75.0) (2026-07-28)
 
 
