@@ -3,7 +3,7 @@
 Workers are long-running asyncio tasks that run in the background:
 - publish_outbox_forever: periodically publishes outbox events to Kafka
 - run_automation_scheduler_forever: periodically checks due automation settings
-- consume_progress_events: consumes task.execution_progressed events from vk-service
+- consume_execution_events: consumes task.execution_* events from vk-service
 - supervise: wraps a worker with exponential backoff restart on crash
 """
 
@@ -18,7 +18,7 @@ from app.background.automation_worker import run_automation_scheduler_forever
 from app.background.outbox_worker import publish_outbox_forever
 from app.core.config import settings
 from app.db.session import SessionLocal
-from app.modules.tasks.consumer import TOPIC, consume_progress_events
+from app.modules.execution_events.consumer import consume_execution_events
 
 __all__ = [
     "create_lifespan",
@@ -56,13 +56,12 @@ def create_lifespan(
         if settings.kafka_consumer_enabled:
             tasks.append(asyncio.create_task(
                 supervise(
-                    "Progress consumer",
-                    lambda: consume_progress_events(
+                    "Execution consumer",
+                    lambda: consume_execution_events(
                         bootstrap_servers=settings.kafka_bootstrap_servers,
-                        group_id="tasks-service-vk-execution-v1",
-                        topic=TOPIC,
+                        group_id="tasks-service-vk-execution-v2",
+                        topic="parsevk.vk.events",
                         session_factory=SessionLocal,
-                        health=progress_consumer_health,
                     ),
                     health=progress_consumer_health,
                 )
