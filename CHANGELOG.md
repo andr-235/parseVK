@@ -1,3 +1,10 @@
+# [0.75.0](https://github.com/andr-235/parseVK/compare/v0.74.7...v0.75.0) (2026-07-28)
+
+
+### Features
+
+* **tasks,vk,im:** replace HTTP progress with task.execution_progressed event ([cf9853e](https://github.com/andr-235/parseVK/commit/cf9853ed2048102b556598f7169b4caaba361c8e))
+
 ## [0.74.7](https://github.com/andr-235/parseVK/compare/v0.74.6...v0.74.7) (2026-07-27)
 
 
