@@ -251,6 +251,7 @@ services:
       TASKS_OUTBOX_PUBLISH_ENABLED: ${TASKS_OUTBOX_PUBLISH_ENABLED:-true}
       TASKS_AUTOMATION_SCHEDULER_ENABLED: ${TASKS_AUTOMATION_SCHEDULER_ENABLED:-true}
       TASKS_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      TASKS_KAFKA_CONSUMER_ENABLED: ${TASKS_KAFKA_CONSUMER_ENABLED:-true}
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
       interval: 10s

@@ -9,7 +9,6 @@ from app.modules.tasks.schemas import (
     CreateParseTaskRequest,
     ExecutionCompleteRequest,
     ExecutionFailRequest,
-    ExecutionProgressRequest,
     ExecutionStartRequest,
 )
 from app.modules.tasks.service import TasksService
@@ -55,19 +54,6 @@ async def start_execution(
     x_correlation_id: str | None = Header(default=None, alias="X-Correlation-ID"),
 ):
     return await service.start_execution(task_id, payload, request_id=x_request_id, correlation_id=x_correlation_id)
-
-
-@router.post("/{task_id}/execution/progress")
-async def update_execution_progress(
-    task_id: int,
-    payload: ExecutionProgressRequest,
-    service: TasksService = Depends(get_tasks_service),
-    x_request_id: str | None = Header(default=None, alias="X-Request-ID"),
-    x_correlation_id: str | None = Header(default=None, alias="X-Correlation-ID"),
-):
-    return await service.update_execution_progress(
-        task_id, payload, request_id=x_request_id, correlation_id=x_correlation_id
-    )
 
 
 @router.post("/{task_id}/execution/complete")

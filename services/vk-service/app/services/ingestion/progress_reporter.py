@@ -1,32 +1,34 @@
-from typing import Any
+from datetime import UTC, datetime
 
-from app.infrastructure.tasks_client.client import TasksClient
-from app.services.ingestion.result import IngestionResult
+from app.services.domain_events_service import OutboxService
 
 
 class ProgressReporter:
     def __init__(
         self,
         *,
-        tasks_client: TasksClient,
-        outbox=None,
+        outbox: OutboxService | None = None,
     ):
-        self.tasks_client = tasks_client
-        self.outbox = outbox
+        self._outbox = outbox
 
     async def report(
         self,
-        task_run: Any,
-        result: IngestionResult,
-        correlation_id: str | None,
+        task_id: int,
+        run_id: str,
+        owner_user_id: str,
+        processed: int,
+        total: int,
     ) -> None:
-        await self.tasks_client.update_progress(
-            task_run.task_id,
-            task_run.run_id,
-            result.processed_items,
-            result.processed_items,
-            1,
-            result.stats(),
-            request_id=task_run.run_id,
-            correlation_id=correlation_id,
+        if self._outbox is None:
+            return
+        progress = processed / total if total > 0 else 0.0
+        await self._outbox.emit_execution_progressed(
+            task_id=task_id,
+            run_id=run_id,
+            owner_user_id=owner_user_id,
+            executor="vk-service",
+            processed_items=processed,
+            total_items=total,
+            progress=progress,
+            occurred_at=datetime.now(UTC).isoformat(),
         )

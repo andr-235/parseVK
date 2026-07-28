@@ -3,6 +3,7 @@
 Workers are long-running asyncio tasks that run in the background:
 - publish_outbox_forever: periodically publishes outbox events to Kafka
 - run_automation_scheduler_forever: periodically checks due automation settings
+- consume_progress_events: consumes task.execution_progressed events from vk-service
 - supervise: wraps a worker with exponential backoff restart on crash
 """
 
@@ -16,6 +17,8 @@ from fastapi import FastAPI
 from app.background.automation_worker import run_automation_scheduler_forever
 from app.background.outbox_worker import publish_outbox_forever
 from app.core.config import settings
+from app.db.session import SessionLocal
+from app.modules.tasks.consumer import TOPIC, consume_progress_events
 
 __all__ = [
     "create_lifespan",
@@ -27,12 +30,14 @@ __all__ = [
 def create_lifespan(
     outbox_health: WorkerHealth,
     automation_health: WorkerHealth,
+    progress_consumer_health: WorkerHealth,
 ) -> Callable[[FastAPI], AsyncGenerator[None, None]]:
     """Build a FastAPI lifespan that starts supervised background workers.
 
     Args:
         outbox_health: WorkerHealth instance for the outbox publisher worker.
         automation_health: WorkerHealth instance for the automation scheduler worker.
+        progress_consumer_health: WorkerHealth instance for the progress consumer worker.
 
     Returns:
         An asynccontextmanager lifespan callable for FastAPI.
@@ -47,6 +52,20 @@ def create_lifespan(
         if settings.automation_scheduler_enabled:
             tasks.append(asyncio.create_task(
                 supervise("Automation scheduler", lambda: run_automation_scheduler_forever(automation_health), health=automation_health)
+            ))
+        if settings.kafka_consumer_enabled:
+            tasks.append(asyncio.create_task(
+                supervise(
+                    "Progress consumer",
+                    lambda: consume_progress_events(
+                        bootstrap_servers=settings.kafka_bootstrap_servers,
+                        group_id="tasks-service-vk-execution-v1",
+                        topic=TOPIC,
+                        session_factory=SessionLocal,
+                        health=progress_consumer_health,
+                    ),
+                    health=progress_consumer_health,
+                )
             ))
         try:
             yield

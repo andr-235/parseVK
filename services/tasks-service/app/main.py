@@ -12,8 +12,9 @@ from app.modules.tasks.router import router as tasks_router
 
 _outbox_publisher_health: WorkerHealth = WorkerHealth()
 _automation_scheduler_health: WorkerHealth = WorkerHealth()
+_progress_consumer_health: WorkerHealth = WorkerHealth()
 
-lifespan = create_lifespan(_outbox_publisher_health, _automation_scheduler_health)
+lifespan = create_lifespan(_outbox_publisher_health, _automation_scheduler_health, _progress_consumer_health)
 
 
 def create_app() -> FastAPI:
@@ -33,6 +34,7 @@ def create_app() -> FastAPI:
             "status": "UP",
             "outboxPublisher": "healthy" if _outbox_publisher_health.is_healthy else "unhealthy",
             "automationScheduler": "healthy" if _automation_scheduler_health.is_healthy else "unhealthy",
+            "progressConsumer": "healthy" if _progress_consumer_health.is_healthy else "unhealthy",
         }
 
     @app.get("/ready")

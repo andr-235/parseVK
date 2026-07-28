@@ -45,17 +45,6 @@ class TasksClient:
             request_id=request_id, correlation_id=correlation_id,
         )
 
-    async def update_progress(
-        self, task_id: int, run_id: str,
-        processed_items: int, total_items: int, progress: float, stats: dict,
-        *, request_id: str | None = None, correlation_id: str | None = None,
-    ) -> dict:
-        return await self._post(
-            f"/internal/tasks/{task_id}/execution/progress",
-            {"runId": run_id, "processedItems": processed_items, "totalItems": total_items, "progress": progress, "stats": stats},
-            request_id=request_id, correlation_id=correlation_id,
-        )
-
     async def complete_execution(
         self, task_id: int, run_id: str,
         processed_items: int, total_items: int, stats: dict,

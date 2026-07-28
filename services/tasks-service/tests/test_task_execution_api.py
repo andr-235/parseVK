@@ -26,17 +26,6 @@ class FakeTasksService:
         self.calls.append(("start", task_id, payload))
         return {"id": task_id, "status": "running", "completed": False}
 
-    async def update_execution_progress(self, task_id, payload, request_id=None, correlation_id=None):
-        self.calls.append(("progress", task_id, payload))
-        return {
-            "id": task_id,
-            "status": "running",
-            "completed": False,
-            "processedItems": payload.processed_items,
-            "totalItems": payload.total_items,
-            "progress": payload.progress,
-        }
-
     async def complete_execution(self, task_id, payload, request_id=None, correlation_id=None):
         self.calls.append(("complete", task_id, payload))
         return {"id": task_id, "status": "done", "completed": True}
@@ -87,18 +76,6 @@ async def test_start_execution_route(app):
 
     assert response.status_code == 200
     assert response.json()["status"] == "running"
-
-
-@pytest.mark.anyio
-async def test_progress_validation_rejects_processed_gt_total(app):
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.post(
-            "/internal/tasks/1/execution/progress",
-            headers=headers(),
-            json={"runId": "run-1", "processedItems": 11, "totalItems": 10, "progress": 1, "stats": {}},
-        )
-
-    assert response.status_code == 422
 
 
 @pytest.mark.anyio

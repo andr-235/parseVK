@@ -42,6 +42,7 @@ class VkTaskRun(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     processed_items: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     total_items: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    execution_sequence: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     available_at: Mapped[datetime] = mapped_column(

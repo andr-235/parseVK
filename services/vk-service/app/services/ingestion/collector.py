@@ -32,10 +32,7 @@ class DataCollector:
         self.checkpoint_store = checkpoint_store
         self.page_committer = page_committer
         self.current_result = IngestionResult()
-        self.progress = ProgressReporter(
-            tasks_client=tasks_client,
-            outbox=outbox,
-        )
+        self.progress = ProgressReporter(outbox=outbox)
 
         self.group_collector = GroupCollector(
             adapter=adapter,
@@ -201,7 +198,13 @@ class DataCollector:
                         await self.page_committer()
                     continue
 
-                await self.progress.report(task_run, result, correlation_id)
+                await self.progress.report(
+                    task_id=task_run.task_id,
+                    run_id=task_run.run_id,
+                    owner_user_id=getattr(task_run, "owner_user_id", None) or "",
+                    processed=result.processed_items,
+                    total=result.processed_items,
+                )
 
         logger.debug(
             "[collect] END task_id=%s run_id=%s stats=%s",

@@ -13,6 +13,19 @@ logger = logging.getLogger(__name__)
 
 VK_DLQ_TOPIC = "parsevk.vk.dlq"
 
+TASK_EVENT_TYPES = {"task.execution_progressed", "vk.task_completed", "vk.task_failed"}
+
+
+def kafka_key_for_event(event_type: str, payload: dict, aggregate_id: str) -> str:
+    """Return Kafka partition key for an outbox event.
+
+    Task-level progress/completion/failure events are keyed by taskId so that
+    all lifecycle events for a single task go to the same partition.
+    """
+    if event_type in TASK_EVENT_TYPES:
+        return str(payload.get("taskId", aggregate_id))
+    return aggregate_id
+
 
 class VkOutboxRepositoryAdapter:
     """Adapts vk-service SqlAlchemyOutboxRepository to common OutboxRepository protocol."""
@@ -62,11 +75,8 @@ async def publish_outbox_forever(session_factory: async_sessionmaker) -> None:
                             topic=settings.kafka_topic_vk,
                             dlq_topic=VK_DLQ_TOPIC,
                             namespace="vk",
-                            key_fn=lambda msg: (
-                                str(msg.payload.get("taskId", msg.aggregate_id))
-                                if msg.event_type
-                                in {"vk.task_progress_updated", "vk.task_completed", "vk.task_failed"}
-                                else msg.aggregate_id
+                            key_fn=lambda msg: kafka_key_for_event(
+                                msg.event_type, msg.payload, msg.aggregate_id
                             ),
                         )
                         await publisher.publish_batch()

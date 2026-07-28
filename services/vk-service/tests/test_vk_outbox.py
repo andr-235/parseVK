@@ -9,9 +9,13 @@ from _service_path import use_service_path
 
 use_service_path()
 
+from app.infrastructure.db.models.outbox import OutboxEvent
+from app.infrastructure.db.models.tasks import VkTaskRun
+from app.infrastructure.db.repositories.outbox import SqlAlchemyOutboxRepository
 from app.services.domain_events_service import OutboxService
 from app.services.ingestion_service import IngestionService
 from app.tasks.outbox_worker import kafka_key_for_event
+from sqlalchemy import select
 
 
 class StubVkApiClient:
@@ -109,9 +113,6 @@ class FakeIngestionRepository:
 
 
 class FakeTasksClient:
-    async def update_progress(self, *args, **kwargs):
-        return {"status": "running"}
-
     async def complete_execution(self, *args, **kwargs):
         return {"status": "done"}
 
@@ -123,6 +124,7 @@ def task_run():
     return SimpleNamespace(
         task_id=10,
         run_id="run-10",
+        owner_user_id="user-1",
         scope="selected",
         mode="recent_posts",
         group_ids=[1],
@@ -154,21 +156,36 @@ def test_kafka_key_for_task_events_uses_task_id():
 
 
 @pytest.mark.anyio
-async def test_ingestion_emits_collected_events_through_outbox():
-    outbox_repository = FakeOutboxRepository()
+async def test_ingestion_emits_collected_events_through_outbox(db_session):
+    db_session.add(
+        VkTaskRun(
+            task_id=10,
+            run_id="run-10",
+            owner_user_id="user-1",
+            scope="selected",
+            mode="recent_posts",
+            group_ids=[1],
+            post_limit=1,
+        )
+    )
+    await db_session.flush()
+
+    outbox_repository = SqlAlchemyOutboxRepository(db_session)
     service = IngestionService(
         adapter=StubVkApiClient(),
         repository=FakeIngestionRepository(),
         tasks_client=FakeTasksClient(),
-        outbox_service=OutboxService(outbox_repository),
+        outbox_service=OutboxService(outbox_repository, session=db_session),
     )
 
     await service.execute(task_run(), correlation_id="corr-1")
 
-    event_types = [event["event_type"] for event in outbox_repository.events]
+    result = await db_session.execute(select(OutboxEvent).order_by(OutboxEvent.created_at))
+    event_types = [event.event_type for event in result.scalars().all()]
     assert event_types == [
         "vk.group_collected",
         "vk.post_collected",
         "vk.comments_collected",
+        "task.execution_progressed",
         "vk.task_completed",
     ]

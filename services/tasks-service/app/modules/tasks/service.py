@@ -56,12 +56,6 @@ class TasksService:
         logger.debug("TasksService.start_execution called task_id=%s", task_id)
         return await self.execution.start_execution(task_id, payload, request_id=request_id, correlation_id=correlation_id)
 
-    async def update_execution_progress(
-        self, task_id: int, payload, request_id: str | None = None, correlation_id: str | None = None
-    ) -> dict:
-        logger.debug("TasksService.update_execution_progress called task_id=%s", task_id)
-        return await self.execution.update_execution_progress(task_id, payload, request_id=request_id, correlation_id=correlation_id)
-
     async def complete_execution(
         self, task_id: int, payload, request_id: str | None = None, correlation_id: str | None = None
     ) -> dict:

@@ -16,6 +16,10 @@ from common.events.payloads import (
     VkCommentsCollectedV1,
     validate_im_payload,
 )
+from common.events.task_execution_progressed import (
+    TaskExecutionProgressedPayload,
+    TaskExecutionProgressedV1,
+)
 from common.events.types import IdentityEventType, ImEventType, TaskEventType, VkEventType
 
 __all__ = [
@@ -41,5 +45,7 @@ __all__ = [
     "VkCommentsCollectedV1",
     "ContentCommentsProjectedV1",
     "TaskStateChangedV1",
+    "TaskExecutionProgressedPayload",
+    "TaskExecutionProgressedV1",
     "validate_im_payload",
 ]

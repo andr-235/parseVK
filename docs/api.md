@@ -78,6 +78,8 @@ API Gateway реализован по трехуровневой архитек�
 | PATCH | `/api/v1/tasks/{id}` | Обновить задачу |
 | GET | `/api/v1/tasks/automation-settings` | Настройки автоматизации |
 
+> Internal endpoint removed: ~~`POST /internal/tasks/{taskId}/execution/progress`~~ — replaced by `task.execution_progressed` event (P2C).
+
 ### VK (`/api/v1/vk`)
 
 | Метод | Путь | Описание |

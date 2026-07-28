@@ -33,6 +33,13 @@
 | `VITE_REALTIME_ENABLED` | `true` | Frontend SSE connection |
 | `VPN_SERVICE_TELEGRAM_URL` | SOCKS5-прокси для Telegram |
 
+### Tasks Service
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TASKS_KAFKA_CONSUMER_ENABLED` | `false` | Enable event-driven progress consumer (`task.execution_progressed` from vk-service) |
+| `KAFKA_BOOTSTRAP_SERVERS` | `kafka:9092` | Kafka bootstrap servers |
+
 ## Пример .env
 
 ```bash

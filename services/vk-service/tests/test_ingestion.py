@@ -122,13 +122,6 @@ class FakeTasksClient:
     def __init__(self):
         self.calls = []
 
-    async def update_progress(
-        self, task_id, run_id, processed_items, total_items, progress, stats, **kwargs
-    ):
-        self.calls.append(
-            ("progress", task_id, run_id, processed_items, total_items, progress, stats)
-        )
-
     async def complete_execution(
         self, task_id, run_id, processed_items, total_items, stats, **kwargs
     ):

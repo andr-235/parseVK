@@ -49,7 +49,7 @@ def get_ok_friends_service(session: AsyncSession) -> OkFriendsExportService:
 def get_ingestion_service(session: AsyncSession) -> IngestionService:
     repository = SqlAlchemyIngestionRepository(session)
     outbox_repo = SqlAlchemyOutboxRepository(session)
-    outbox_service = OutboxService(outbox_repo)
+    outbox_service = OutboxService(outbox_repo, session=session)
     checkpoint_store = SqlAlchemyIngestionCheckpointStore(session)
 
     def sanitize_error(error: str) -> str:

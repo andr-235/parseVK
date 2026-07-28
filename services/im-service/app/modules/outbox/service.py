@@ -104,23 +104,6 @@ class OutboxService:
             payload={"messenger": messenger, "chatId": chat_id},
         )
 
-    async def emit_task_progress_updated(
-        self, *, task_id: int, run_id: str,
-        processed_items: int, total_items: int, progress: float,
-        stats: dict, correlation_id: str | None = None,
-    ) -> None:
-        await self.repository.add_event(
-            event_type="im.task_progress_updated",
-            aggregate_type="im_task",
-            aggregate_id=str(task_id),
-            correlation_id=correlation_id,
-            payload={
-                "taskId": task_id, "runId": run_id,
-                "processedItems": processed_items, "totalItems": total_items,
-                "progress": progress, "stats": stats,
-            },
-        )
-
     async def emit_task_completed(
         self, *, task_id: int, run_id: str, stats: dict,
         correlation_id: str | None = None,
