@@ -34,7 +34,7 @@ def generate_manifest(
                 _contract_entry(c)
                 for c in catalog.contracts
             ],
-            key=lambda c: c["messageType"],
+            key=lambda c: str(c["messageType"]),
         ),
     }
 

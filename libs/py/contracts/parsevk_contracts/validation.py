@@ -30,13 +30,12 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Generic
 from uuid import UUID
 
 from pydantic import ValidationError
 
 from ._base import ContractModel
-from .catalog import _resolve_wire_path, ContractCatalog, MessageContract
+from .catalog import ContractCatalog, MessageContract, _resolve_wire_path
 from .envelope import MessageEnvelope
 from .errors import (
     CausationPolicyError,
@@ -46,7 +45,6 @@ from .errors import (
     InvalidEnvelopeError,
     ProducerNotAllowedError,
     TopicMismatchError,
-    UnknownContractError,
 )
 
 
@@ -103,7 +101,7 @@ def prepare_for_publish(
             f"Payload validation failed for '{message_type}': {exc}"
         ) from exc
 
-    envelope = MessageEnvelope(
+    envelope: MessageEnvelope[ContractModel] = MessageEnvelope(
         message_id=message_id,
         message_type=message_type,
         schema_version=schema_version,
@@ -165,7 +163,7 @@ def parse_for_consume(
         raise InvalidEnvelopeError("Envelope root must be a JSON object")
 
     try:
-        envelope_raw = MessageEnvelope[ContractModel].model_validate(  # type: ignore[valid-type]
+        envelope_raw = MessageEnvelope[ContractModel].model_validate(
             raw, extra="ignore"
         )
     except ValidationError as exc:
@@ -194,7 +192,7 @@ def parse_for_consume(
 
     payload_raw: dict[str, object] = {}
     if isinstance(raw.get("payload"), dict):
-        payload_raw = raw["payload"]  # type: ignore[assignment]
+        payload_raw = raw["payload"]
 
     try:
         typed_payload = contract.payload_model.model_validate(
@@ -205,7 +203,7 @@ def parse_for_consume(
             f"Payload validation failed for '{message_type}': {exc}"
         ) from exc
 
-    envelope = MessageEnvelope(
+    envelope: MessageEnvelope[ContractModel] = MessageEnvelope(
         message_id=envelope_raw.message_id,
         message_type=message_type,
         schema_version=schema_version,
@@ -229,7 +227,7 @@ def parse_for_consume(
 
 def _enforce_envelope_policy(
     contract: MessageContract,
-    envelope: MessageEnvelope,
+    envelope: MessageEnvelope[ContractModel],
 ) -> None:
     """Enforce correlation and causation policy for an envelope."""
     if contract.correlation_required and envelope.correlation_id is None:

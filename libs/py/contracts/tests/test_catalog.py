@@ -2,21 +2,10 @@
 
 from __future__ import annotations
 
-from uuid import uuid4
-
 import pytest
-
 from parsevk_contracts._base import ContractModel
 from parsevk_contracts.catalog import ContractCatalog, MessageContract, PartitionKeySpec
-from parsevk_contracts.errors import (
-    CausationPolicyError,
-    ConsumerNotAllowedError,
-    ContractValidationError,
-    CorrelationPolicyError,
-    PartitionKeyError,
-    ProducerNotAllowedError,
-    UnknownContractError,
-)
+from parsevk_contracts.errors import PartitionKeyError, UnknownContractError
 
 
 class SamplePayload(ContractModel):
@@ -155,152 +144,6 @@ class TestContractCatalog:
     def test_get_by_topic_empty(self, catalog: ContractCatalog) -> None:
         """Unknown topic returns empty tuple."""
         assert catalog.get_by_topic("nonexistent") == ()
-
-    def test_validate_publish_allowed(self, catalog: ContractCatalog) -> None:
-        """Valid publish passes without error."""
-        payload = SamplePayload(entity_id="abc", value=1)
-        catalog.validate_for_publish(
-            message_type="test.event",
-            schema_version=1,
-            producer="producer-a",
-            payload=payload.to_wire(),
-            correlation_id=str(uuid4()),
-        )
-
-    def test_validate_publish_producer_not_allowed(
-        self, catalog: ContractCatalog
-    ) -> None:
-        """Unknown producer raises ProducerNotAllowedError."""
-        payload = SamplePayload(entity_id="abc", value=1)
-        with pytest.raises(ProducerNotAllowedError):
-            catalog.validate_for_publish(
-                message_type="test.event",
-                schema_version=1,
-                producer="unauthorized",
-                payload=payload.to_wire(),
-            )
-
-    def test_validate_publish_correlation_required(
-        self, catalog: ContractCatalog
-    ) -> None:
-        """Missing correlation_id when required raises CorrelationPolicyError."""
-        payload = SamplePayload(entity_id="abc", value=1)
-        with pytest.raises(CorrelationPolicyError):
-            catalog.validate_for_publish(
-                message_type="test.event",
-                schema_version=1,
-                producer="producer-a",
-                payload=payload.to_wire(),
-                correlation_id=None,
-            )
-
-    def test_validate_publish_causation_forbidden(
-        self, catalog: ContractCatalog
-    ) -> None:
-        """Causation_id when forbidden raises CausationPolicyError."""
-        contract = MessageContract(
-            message_type="test.forbidden",
-            schema_version=1,
-            payload_model=SamplePayload,
-            topic="test.topic",
-            producers=frozenset({"producer-a"}),
-            consumers=frozenset({"consumer-b"}),
-            causation_policy="forbidden",
-        )
-        cat = ContractCatalog.from_contracts((contract,))
-        payload = SamplePayload(entity_id="abc", value=1)
-        with pytest.raises(CausationPolicyError):
-            cat.validate_for_publish(
-                message_type="test.forbidden",
-                schema_version=1,
-                producer="producer-a",
-                payload=payload.to_wire(),
-                causation_id=str(uuid4()),
-            )
-
-    def test_validate_publish_causation_required(
-        self, catalog: ContractCatalog
-    ) -> None:
-        """Missing causation_id when required raises CausationPolicyError."""
-        contract = MessageContract(
-            message_type="test.require-cause",
-            schema_version=1,
-            payload_model=SamplePayload,
-            topic="test.topic",
-            producers=frozenset({"producer-a"}),
-            consumers=frozenset({"consumer-b"}),
-            causation_policy="required",
-        )
-        cat = ContractCatalog.from_contracts((contract,))
-        payload = SamplePayload(entity_id="abc", value=1)
-        with pytest.raises(CausationPolicyError):
-            cat.validate_for_publish(
-                message_type="test.require-cause",
-                schema_version=1,
-                producer="producer-a",
-                payload=payload.to_wire(),
-                causation_id=None,
-            )
-
-    def test_validate_publish_rejects_extra_fields(
-        self, catalog: ContractCatalog
-    ) -> None:
-        """Publish validation rejects unknown fields (extra='forbid')."""
-        payload_with_extra = {
-            "entityId": "abc",
-            "value": 1,
-            "unknownField": "should be rejected",
-        }
-        with pytest.raises(ContractValidationError):
-            catalog.validate_for_publish(
-                message_type="test.event",
-                schema_version=1,
-                producer="producer-a",
-                payload=payload_with_extra,
-                correlation_id=str(uuid4()),
-            )
-
-    def test_validate_consume_allowed(self, catalog: ContractCatalog) -> None:
-        """Valid consume passes without error."""
-        payload = SamplePayload(entity_id="abc", value=1)
-        catalog.validate_for_consume(
-            message_type="test.event",
-            schema_version=1,
-            consumer="consumer-b",
-            payload=payload.to_wire(),
-            correlation_id=str(uuid4()),
-        )
-
-    def test_validate_consume_consumer_not_allowed(
-        self, catalog: ContractCatalog
-    ) -> None:
-        """Unknown consumer raises ConsumerNotAllowedError."""
-        payload = SamplePayload(entity_id="abc", value=1)
-        with pytest.raises(ConsumerNotAllowedError):
-            catalog.validate_for_consume(
-                message_type="test.event",
-                schema_version=1,
-                consumer="unauthorized",
-                payload=payload.to_wire(),
-            )
-
-    def test_validate_consume_ignores_extra_fields(
-        self, catalog: ContractCatalog
-    ) -> None:
-        """Consume validation ignores unknown fields (extra='ignore')."""
-        payload_with_extra = {
-            "entityId": "abc",
-            "value": 1,
-            "unknownField": "should be ignored",
-        }
-        # Should not raise
-        catalog.validate_for_consume(
-            message_type="test.event",
-            schema_version=1,
-            consumer="consumer-b",
-            payload=payload_with_extra,
-            correlation_id=str(uuid4()),
-        )
 
     def test_multiple_contracts(self) -> None:
         """Catalog can hold multiple contracts."""

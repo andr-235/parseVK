@@ -7,14 +7,13 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
-from parsevk_contracts.catalog import ContractCatalog
-
+from parsevk_contracts.catalog import ContractCatalog, MessageContract
 
 PACKAGE_NAME = "parsevk-contracts"
 PACKAGE_VERSION = "0.1.0"
 
 
-def _message_name(contract: ContractCatalog.contracts) -> str:  # type: ignore[arg-type]
+def _message_name(contract: MessageContract) -> str:
     """Generate a versioned message component name."""
     return f"{contract.message_type.replace('.', '_')}_v{contract.schema_version}"
 

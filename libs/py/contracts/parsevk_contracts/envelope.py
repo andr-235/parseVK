@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Generic, TypeVar
-
-from pydantic import AwareDatetime
 from uuid import UUID
+
+from pydantic import AwareDatetime, field_validator
 
 from ._base import ContractModel
 
@@ -25,3 +26,8 @@ class MessageEnvelope(ContractModel, Generic[PayloadT]):
     correlation_id: UUID | None = None
     causation_id: UUID | None = None
     payload: PayloadT
+
+    @field_validator("occurred_at", mode="after")
+    @classmethod
+    def normalize_occurred_at(cls, value: datetime) -> datetime:
+        return value.astimezone(UTC)

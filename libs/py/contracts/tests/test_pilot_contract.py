@@ -2,19 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
-from pydantic import ValidationError
-
-from parsevk_contracts.catalog import ContractCatalog, PartitionKeySpec
 from parsevk_contracts.envelope import MessageEnvelope
-from parsevk_contracts.errors import (
-    ContractValidationError,
-    ConsumerNotAllowedError,
-    ProducerNotAllowedError,
-)
 from parsevk_contracts.vk.commands import (
     CATALOG,
     VK_EXECUTION_REQUESTED,
@@ -24,6 +16,7 @@ from parsevk_contracts.vk.commands import (
     VkExecutionRequested,
     VkSourceDemandRequest,
 )
+from pydantic import ValidationError
 
 
 def make_valid_demand(
@@ -198,78 +191,6 @@ class TestPilotContractCatalog:
         assert "tasks-service" in contract.producers
         assert "vk-service" in contract.consumers
 
-    def test_producer_validation(self) -> None:
-        """tasks-service can publish valid payloads."""
-        payload = make_valid_payload()
-        CATALOG.validate_for_publish(
-            message_type="vk.execution.requested",
-            schema_version=1,
-            producer="tasks-service",
-            payload=payload.to_wire(),
-            correlation_id=str(uuid4()),
-        )
-
-    def test_consumer_validation(self) -> None:
-        """vk-service can consume valid payloads."""
-        payload = make_valid_payload()
-        CATALOG.validate_for_consume(
-            message_type="vk.execution.requested",
-            schema_version=1,
-            consumer="vk-service",
-            payload=payload.to_wire(),
-            correlation_id=str(uuid4()),
-        )
-
-    def test_producer_rejects_extra_fields(self) -> None:
-        """Publish validation rejects unknown fields."""
-        payload = make_valid_payload()
-        wire = payload.to_wire()
-        wire["unknownField"] = "should be rejected"
-        with pytest.raises(ContractValidationError):
-            CATALOG.validate_for_publish(
-                message_type="vk.execution.requested",
-                schema_version=1,
-                producer="tasks-service",
-                payload=wire,
-                correlation_id=str(uuid4()),
-            )
-
-    def test_consumer_ignores_extra_fields(self) -> None:
-        """Consume validation ignores unknown fields."""
-        payload = make_valid_payload()
-        wire = payload.to_wire()
-        wire["unknownField"] = "should be ignored"
-        CATALOG.validate_for_consume(
-            message_type="vk.execution.requested",
-            schema_version=1,
-            consumer="vk-service",
-            payload=wire,
-            correlation_id=str(uuid4()),
-        )
-
-    def test_producer_not_allowed(self) -> None:
-        """Unauthorized producer is rejected."""
-        payload = make_valid_payload()
-        with pytest.raises(ProducerNotAllowedError):
-            CATALOG.validate_for_publish(
-                message_type="vk.execution.requested",
-                schema_version=1,
-                producer="unauthorized-service",
-                payload=payload.to_wire(),
-                correlation_id=str(uuid4()),
-            )
-
-    def test_consumer_not_allowed(self) -> None:
-        """Unauthorized consumer is rejected."""
-        payload = make_valid_payload()
-        with pytest.raises(ConsumerNotAllowedError):
-            CATALOG.validate_for_consume(
-                message_type="vk.execution.requested",
-                schema_version=1,
-                consumer="unauthorized-service",
-                payload=payload.to_wire(),
-            )
-
     def test_partition_key(self) -> None:
         """Partition key is computed from executionId."""
         payload = make_valid_payload()
@@ -287,14 +208,14 @@ class TestPilotContractCatalog:
 
     def test_partition_key_from_envelope_wire(self) -> None:
         """Partition key can be computed from envelope wire format."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         payload = make_valid_payload()
         envelope = MessageEnvelope[VkExecutionRequested](
             message_id=uuid4(),
             message_type="vk.execution.requested",
             schema_version=1,
-            occurred_at=datetime.now(timezone.utc),
+            occurred_at=datetime.now(UTC),
             producer="tasks-service",
             correlation_id=uuid4(),
             payload=payload,
@@ -308,7 +229,7 @@ class TestPilotContractCatalog:
 class TestEnvelopeWithPilotContract:
     def test_envelope_round_trip(self) -> None:
         """Full envelope with pilot contract payload round-trips correctly."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         payload = make_valid_payload()
         envelope = MessageEnvelope[VkExecutionRequested](
             message_id=uuid4(),

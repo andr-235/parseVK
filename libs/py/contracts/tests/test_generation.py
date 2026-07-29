@@ -6,13 +6,11 @@ import json
 from pathlib import Path
 
 import jsonschema
-import pytest
-
 from parsevk_contracts._base import ContractModel
-from parsevk_contracts.catalog import ContractCatalog, MessageContract, PartitionKeySpec
+from parsevk_contracts.catalog import ContractCatalog, MessageContract
 from parsevk_contracts.generation import generate_all
 from parsevk_contracts.generation.json_schema import generate_json_schema
-from parsevk_contracts.generation.manifest import ManifestMetadata, generate_manifest
+from parsevk_contracts.generation.manifest import generate_manifest
 from parsevk_contracts.vk.commands import CATALOG as VK_CATALOG
 from parsevk_contracts.vk.commands import VK_EXECUTION_REQUESTED
 
@@ -117,7 +115,6 @@ class TestManifestGeneration:
 
     def test_manifest_multiple_contracts(self) -> None:
         """Manifest includes all contracts when catalog has multiple."""
-        payload_model: type[ContractModel]
         class ExtraPayload(ContractModel):
             id: str
 

@@ -42,13 +42,13 @@ def check(output_dir: str = "generated") -> int:
         changed = 0
 
         if stale:
-            print(f"STALE files (in committed but not in fresh generation):")
+            print("STALE files (in committed but not in fresh generation):")
             for p in sorted(stale):
                 print(f"  - {p}")
             changed += 1
 
         if missing:
-            print(f"MISSING files (in fresh generation but not in committed):")
+            print("MISSING files (in fresh generation but not in committed):")
             for p in sorted(missing):
                 print(f"  - {p}")
             changed += 1

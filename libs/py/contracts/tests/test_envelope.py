@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
-
 from parsevk_contracts._base import ContractModel
 from parsevk_contracts.envelope import MessageEnvelope
 
@@ -19,7 +18,7 @@ class SamplePayload(ContractModel):
 class TestMessageEnvelope:
     def test_create_envelope(self) -> None:
         """Can create an envelope with a typed payload."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         payload = SamplePayload(event="test", value=42)
         envelope = MessageEnvelope[SamplePayload](
             message_id=uuid4(),
@@ -35,7 +34,7 @@ class TestMessageEnvelope:
 
     def test_envelope_with_correlation(self) -> None:
         """Envelope supports optional correlation_id and causation_id."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         corr_id = uuid4()
         causa_id = uuid4()
         payload = SamplePayload(event="chain", value=1)
@@ -54,7 +53,7 @@ class TestMessageEnvelope:
 
     def test_envelope_round_trip(self) -> None:
         """Envelope serialization round-trip preserves all fields."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         payload = SamplePayload(event="roundtrip", value=99)
         envelope = MessageEnvelope[SamplePayload](
             message_id=uuid4(),
@@ -75,7 +74,7 @@ class TestMessageEnvelope:
 
     def test_envelope_frozen(self) -> None:
         """Envelope is immutable after construction."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         payload = SamplePayload(event="frozen", value=0)
         envelope = MessageEnvelope[SamplePayload](
             message_id=uuid4(),
@@ -90,7 +89,7 @@ class TestMessageEnvelope:
 
     def test_envelope_correlation_default_none(self) -> None:
         """correlation_id and causation_id default to None."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         payload = SamplePayload(event="defaults", value=0)
         envelope = MessageEnvelope[SamplePayload](
             message_id=uuid4(),

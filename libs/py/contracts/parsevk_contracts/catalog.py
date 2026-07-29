@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any, Literal
@@ -10,15 +11,13 @@ from pydantic import ValidationError
 
 from ._base import ContractModel
 from .errors import (
-    CausationPolicyError,
-    ConsumerNotAllowedError,
     ContractValidationError,
-    CorrelationPolicyError,
     DuplicateContractError,
     PartitionKeyError,
-    ProducerNotAllowedError,
     UnknownContractError,
 )
+
+ExtraPolicy = Literal["ignore", "forbid"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +37,8 @@ class PartitionKeySpec:
         for p in self.paths:
             if not p:
                 raise ValueError("Path must not be empty")
+        if not isinstance(self.separator, str) or not self.separator:
+            raise ValueError("Separator must be a non-empty string")
 
     def compute(self, payload: ContractModel) -> str:
         """Compute partition key from payload model.
@@ -135,8 +136,8 @@ class ContractCatalog:
     """
 
     contracts: tuple[MessageContract, ...]
-    _by_identity: MappingProxyType = field(init=False, repr=False)
-    _by_topic: MappingProxyType = field(init=False, repr=False)
+    _by_identity: Mapping[tuple[str, int], MessageContract] = field(init=False, repr=False)
+    _by_topic: Mapping[str, tuple[MessageContract, ...]] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         by_identity: dict[tuple[str, int], MessageContract] = {}
@@ -178,84 +179,8 @@ class ContractCatalog:
         """Get all contracts for a given topic."""
         return self._by_topic.get(topic, ())
 
-    def validate_for_publish(
-        self,
-        message_type: str,
-        schema_version: int,
-        producer: str,
-        payload: dict[str, object],
-        correlation_id: str | None = None,
-        causation_id: str | None = None,
-    ) -> None:
-        """Validate a message for publishing.
-
-        Low-level: checks producer, correlation, causation, and payload.
-        Raises ContractError subclass on any violation.
-        """
-        contract = self.get(message_type, schema_version)
-
-        if producer not in contract.producers:
-            raise ProducerNotAllowedError(
-                f"Service '{producer}' is not allowed to publish '{message_type}'"
-            )
-
-        if contract.correlation_required and correlation_id is None:
-            raise CorrelationPolicyError(
-                f"Correlation ID is required for '{message_type}'"
-            )
-
-        if contract.causation_policy == "required" and causation_id is None:
-            raise CausationPolicyError(
-                f"Causation ID is required for '{message_type}'"
-            )
-        if contract.causation_policy == "forbidden" and causation_id is not None:
-            raise CausationPolicyError(
-                f"Causation ID is forbidden for '{message_type}'"
-            )
-
-        self._validate_payload(contract, payload, extra="forbid")
-
-    def validate_for_consume(
-        self,
-        message_type: str,
-        schema_version: int,
-        consumer: str,
-        payload: dict[str, object],
-        correlation_id: str | None = None,
-        causation_id: str | None = None,
-    ) -> None:
-        """Validate a message for consumption.
-
-        Low-level: checks consumer, correlation, causation, and payload.
-        Raises ContractError subclass on any violation.
-        """
-        contract = self.get(message_type, schema_version)
-
-        if consumer not in contract.consumers:
-            raise ConsumerNotAllowedError(
-                f"Service '{consumer}' is not allowed to consume '{message_type}'"
-            )
-
-        if contract.correlation_required and correlation_id is None:
-            raise CorrelationPolicyError(
-                f"Correlation ID is required for '{message_type}'"
-            )
-
-        if contract.causation_policy == "required" and causation_id is None:
-            raise CausationPolicyError(
-                f"Causation ID is required for '{message_type}'"
-            )
-        if contract.causation_policy == "forbidden" and causation_id is not None:
-            raise CausationPolicyError(
-                f"Causation ID is forbidden for '{message_type}'"
-            )
-
-        self._validate_payload(contract, payload, extra="ignore")
-
-    ExtraPolicy = Literal["ignore", "forbid"]
-
+    @staticmethod
     def _validate_payload(
-        self,
         contract: MessageContract,
         payload: dict[str, object],
         extra: ExtraPolicy,

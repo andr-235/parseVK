@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
-
 from parsevk_contracts._base import ContractModel
 from parsevk_contracts.catalog import ContractCatalog, MessageContract, PartitionKeySpec
 from parsevk_contracts.errors import (
@@ -66,7 +65,7 @@ def make_prepare_kwargs(**overrides: object) -> dict[str, object]:
         "schema_version": 1,
         "producer": "producer-a",
         "message_id": uuid4(),
-        "occurred_at": datetime.now(timezone.utc),
+        "occurred_at": datetime.now(UTC),
         "correlation_id": uuid4(),
         "causation_id": None,
         "payload": {"entityId": "abc", "value": 1},
@@ -134,7 +133,7 @@ class TestPrepareForPublish:
             causation_policy="forbidden",
         )
         cat = ContractCatalog.from_contracts((c,))
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         kwargs = make_prepare_kwargs(
             message_type="root.cmd",
             producer="svc",
@@ -143,6 +142,30 @@ class TestPrepareForPublish:
         kwargs["correlation_id"] = uuid4()
         kwargs["occurred_at"] = now
         with pytest.raises(CausationPolicyError):
+            prepare_for_publish(cat, **kwargs)  # type: ignore[arg-type]
+
+    def test_prepare_correlation_mismatch(self) -> None:
+        c = MessageContract(
+            message_type="test.corr-path",
+            schema_version=1,
+            payload_model=SamplePayload,
+            topic="test.topic",
+            producers=frozenset({"svc"}),
+            consumers=frozenset({"svc"}),
+            correlation_required=True,
+            correlation_path="payload.entityId",
+        )
+        cat = ContractCatalog.from_contracts((c,))
+        corr_id = uuid4()
+        kwargs = make_prepare_kwargs(
+            message_type="test.corr-path",
+            producer="svc",
+            payload={"entityId": "abc", "value": 1},
+            correlation_id=corr_id,
+        )
+        kwargs["occurred_at"] = datetime.now(UTC)
+        kwargs["message_type"] = "test.corr-path"
+        with pytest.raises(CorrelationPolicyError, match="correlationId must match"):
             prepare_for_publish(cat, **kwargs)  # type: ignore[arg-type]
 
     def test_prepare_with_nested_payload(self) -> None:
@@ -157,7 +180,7 @@ class TestPrepareForPublish:
             correlation_required=False,
         )
         cat = ContractCatalog.from_contracts((c,))
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         result = prepare_for_publish(
             cat,
             message_type="nested.event",
@@ -251,6 +274,23 @@ class TestParseForConsume:
         with pytest.raises(CorrelationPolicyError):
             parse_for_consume(cat, consumer="consumer-b", topic="test.topic", value=_json_bytes(raw))
 
+    def test_consume_correlation_mismatch(self) -> None:
+        c = MessageContract(
+            message_type="test.corr-path",
+            schema_version=1,
+            payload_model=SamplePayload,
+            topic="test.topic",
+            producers=frozenset({"producer-a"}),
+            consumers=frozenset({"consumer-b"}),
+            correlation_required=True,
+            correlation_path="payload.entityId",
+        )
+        cat = ContractCatalog.from_contracts((c,))
+        raw = _make_valid_wire_dict(message_type="test.corr-path", producer="producer-a")
+        raw["correlationId"] = str(uuid4())
+        with pytest.raises(CorrelationPolicyError, match="correlationId must match"):
+            parse_for_consume(cat, consumer="consumer-b", topic="test.topic", value=_json_bytes(raw))
+
     def test_forbidden_causation(self) -> None:
         c = MessageContract(
             message_type="root.cmd",
@@ -280,7 +320,7 @@ def _make_valid_wire_dict(
         "messageId": str(uuid4()),
         "messageType": message_type,
         "schemaVersion": 1,
-        "occurredAt": datetime.now(timezone.utc).isoformat(),
+        "occurredAt": datetime.now(UTC).isoformat(),
         "producer": producer,
         "correlationId": str(uuid4()),
         "causationId": None,

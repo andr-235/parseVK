@@ -2,18 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from uuid import UUID, uuid4
+from datetime import UTC, datetime
+from uuid import UUID
 
 import pytest
-from hypothesis import assume, given, strategies as st
-
-from parsevk_contracts._base import ContractModel
-from parsevk_contracts.catalog import PartitionKeySpec
+from hypothesis import assume, given
+from hypothesis import strategies as st
 from parsevk_contracts.envelope import MessageEnvelope
-from parsevk_contracts.errors import ContractValidationError
 from parsevk_contracts.vk.commands import (
-    CATALOG,
     VK_EXECUTION_REQUESTED,
     CommentSelection,
     PostSelection,
@@ -21,7 +17,6 @@ from parsevk_contracts.vk.commands import (
     VkExecutionRequested,
     VkSourceDemandRequest,
 )
-
 
 # ── Hypothesis strategies ─────────────────────────────────────────────────────
 
@@ -112,7 +107,7 @@ def enveloped_requests(draw: st.DrawFn) -> MessageEnvelope[VkExecutionRequested]
         message_id=draw(st.uuids()),
         message_type="vk.execution.requested",
         schema_version=1,
-        occurred_at=datetime.now(timezone.utc),
+        occurred_at=datetime.now(UTC),
         producer="tasks-service",
         correlation_id=payload.execution_id,
         payload=payload,
@@ -147,65 +142,6 @@ class TestPartitionKeyDeterminism:
         key = VK_EXECUTION_REQUESTED.partition_key
         assert key is not None
         assert key.compute(payload) == key.compute(payload)
-
-
-class TestValidationBoundaries:
-    @given(enveloped_requests())
-    def test_producer_validation_passes(
-        self, envelope: MessageEnvelope[VkExecutionRequested]
-    ) -> None:
-        """Valid envelopes pass producer validation."""
-        CATALOG.validate_for_publish(
-            message_type="vk.execution.requested",
-            schema_version=1,
-            producer="tasks-service",
-            payload=envelope.payload.to_wire(),
-            correlation_id=str(envelope.correlation_id) if envelope.correlation_id else None,
-        )
-
-    @given(enveloped_requests())
-    def test_consumer_validation_passes(
-        self, envelope: MessageEnvelope[VkExecutionRequested]
-    ) -> None:
-        """Valid envelopes pass consumer validation."""
-        CATALOG.validate_for_consume(
-            message_type="vk.execution.requested",
-            schema_version=1,
-            consumer="vk-service",
-            payload=envelope.payload.to_wire(),
-            correlation_id=str(envelope.correlation_id) if envelope.correlation_id else None,
-        )
-
-    @given(enveloped_requests())
-    def test_producer_rejects_extra_fields(
-        self, envelope: MessageEnvelope[VkExecutionRequested]
-    ) -> None:
-        """Producer validation rejects payloads with extra fields."""
-        wire = envelope.payload.to_wire()
-        wire["extraField"] = "should be rejected"
-        with pytest.raises(ContractValidationError):
-            CATALOG.validate_for_publish(
-                message_type="vk.execution.requested",
-                schema_version=1,
-                producer="tasks-service",
-                payload=wire,
-                correlation_id=str(envelope.correlation_id) if envelope.correlation_id else None,
-            )
-
-    @given(enveloped_requests())
-    def test_consumer_ignores_extra_fields(
-        self, envelope: MessageEnvelope[VkExecutionRequested]
-    ) -> None:
-        """Consumer validation ignores payloads with extra fields."""
-        wire = envelope.payload.to_wire()
-        wire["extraField"] = "should be ignored"
-        CATALOG.validate_for_consume(
-            message_type="vk.execution.requested",
-            schema_version=1,
-            consumer="vk-service",
-            payload=wire,
-            correlation_id=str(envelope.correlation_id) if envelope.correlation_id else None,
-        )
 
 
 class TestNestedExtraFields:

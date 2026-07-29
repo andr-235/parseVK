@@ -16,7 +16,7 @@ def generate_json_schema(contract: MessageContract) -> dict[str, object]:
     so the schema uses camelCase property names matching the wire format.
     Post-processes the schema to add contract identity constraints.
     """
-    envelope_type = MessageEnvelope[contract.payload_model]  # type: ignore[valid-type]
+    envelope_type = MessageEnvelope[contract.payload_model]  # type: ignore[name-defined]
     schema = envelope_type.model_json_schema(by_alias=True, mode="validation")
 
     schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
