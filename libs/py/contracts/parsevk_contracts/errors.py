@@ -13,6 +13,10 @@ class UnknownContractError(ContractError):
     """message_type + schema_version not found in catalog."""
 
 
+class DuplicateContractError(ContractError):
+    """Duplicate contract identity in catalog."""
+
+
 class ProducerNotAllowedError(ContractError):
     """Service is not listed as a producer for this contract."""
 

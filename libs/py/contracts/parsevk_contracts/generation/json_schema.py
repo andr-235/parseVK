@@ -14,12 +14,29 @@ def generate_json_schema(contract: MessageContract) -> dict[str, object]:
 
     Uses Pydantic's native ``model_json_schema()`` with ``by_alias=True``
     so the schema uses camelCase property names matching the wire format.
+    Post-processes the schema to add contract identity constraints.
     """
-    envelope_type = MessageEnvelope[contract.payload_model]  # type: ignore[name-defined]
+    envelope_type = MessageEnvelope[contract.payload_model]  # type: ignore[valid-type]
     schema = envelope_type.model_json_schema(by_alias=True, mode="validation")
+
     schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
+    schema["$id"] = f"urn:parsevk:contract:{contract.message_type}:{contract.schema_version}"
     schema["title"] = contract.message_type
     schema["description"] = f"Schema for {contract.message_type} v{contract.schema_version}"
+
+    # Fix messageType to const
+    properties = schema.get("properties", {})
+    if "messageType" in properties:
+        properties["messageType"] = {"const": contract.message_type}
+
+    # Fix schemaVersion to const
+    if "schemaVersion" in properties:
+        properties["schemaVersion"] = {"const": contract.schema_version}
+
+    # Fix producer to enum
+    if "producer" in properties:
+        properties["producer"] = {"enum": sorted(contract.producers)}
+
     return schema
 
 
@@ -36,6 +53,6 @@ def write_json_schema(
     contract_dir.mkdir(parents=True, exist_ok=True)
     path = contract_dir / f"{contract.schema_version}.json"
     with open(path, "w") as f:
-        json.dump(schema, f, indent=2, ensure_ascii=False)
+        json.dump(schema, f, indent=2, ensure_ascii=False, sort_keys=True)
         f.write("\n")
     return path

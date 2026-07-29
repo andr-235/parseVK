@@ -3,7 +3,7 @@ name = "parsevk-contracts"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-    "pydantic>=2.8",
+    "pydantic>=2.12,<3",
 ]
 
 [build-system]
@@ -14,7 +14,7 @@ build-backend = "hatchling.build"
 packages = ["parsevk_contracts"]
 
 [dependency-groups]
-dev = ["pytest>=8", "pytest-asyncio>=0.23", "hypothesis>=6", "jsonschema>=4.20", "pyyaml>=6.0"]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "hypothesis>=6", "jsonschema>=4.20", "pyyaml>=6.0", "mypy>=1.15"]
 
 [tool.mypy]
 python_version = "3.12"

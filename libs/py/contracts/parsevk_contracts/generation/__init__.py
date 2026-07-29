@@ -17,8 +17,6 @@ def generate_all(
     """Run all generators and return paths of created files."""
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
-
-    json_schema_dir = output_path / "json-schema"
     generated: dict[str, list[str]] = {
         "json_schema": [],
         "manifest": [],
@@ -26,12 +24,12 @@ def generate_all(
     }
 
     # Generate JSON Schema for each contract
-    for contract in catalog._contracts:
-        path = write_json_schema(contract, json_schema_dir)
+    for contract in catalog.contracts:
+        path = write_json_schema(contract, output_path)
         generated["json_schema"].append(str(path))
 
     # Generate manifest
-    manifest_path = write_manifest(catalog, output_path)
+    manifest_path = write_manifest(output_path)
     generated["manifest"].append(str(manifest_path))
 
     # Generate AsyncAPI

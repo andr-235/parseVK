@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from pydantic import ValidationError
 
-from parsevk_contracts.catalog import ContractCatalog
+from parsevk_contracts.catalog import ContractCatalog, PartitionKeySpec
 from parsevk_contracts.envelope import MessageEnvelope
 from parsevk_contracts.errors import (
     ContractValidationError,
@@ -217,6 +217,7 @@ class TestPilotContractCatalog:
             schema_version=1,
             consumer="vk-service",
             payload=payload.to_wire(),
+            correlation_id=str(uuid4()),
         )
 
     def test_producer_rejects_extra_fields(self) -> None:
@@ -243,6 +244,7 @@ class TestPilotContractCatalog:
             schema_version=1,
             consumer="vk-service",
             payload=wire,
+            correlation_id=str(uuid4()),
         )
 
     def test_producer_not_allowed(self) -> None:
@@ -283,6 +285,25 @@ class TestPilotContractCatalog:
         assert key is not None
         assert key.compute(payload) == key.compute(payload)
 
+    def test_partition_key_from_envelope_wire(self) -> None:
+        """Partition key can be computed from envelope wire format."""
+        from datetime import datetime, timezone
+
+        payload = make_valid_payload()
+        envelope = MessageEnvelope[VkExecutionRequested](
+            message_id=uuid4(),
+            message_type="vk.execution.requested",
+            schema_version=1,
+            occurred_at=datetime.now(timezone.utc),
+            producer="tasks-service",
+            correlation_id=uuid4(),
+            payload=payload,
+        )
+        key = VK_EXECUTION_REQUESTED.partition_key
+        assert key is not None
+        result = key.compute_from_wire(envelope.to_wire())
+        assert result == str(payload.execution_id)
+
 
 class TestEnvelopeWithPilotContract:
     def test_envelope_round_trip(self) -> None:
@@ -302,4 +323,4 @@ class TestEnvelopeWithPilotContract:
         assert wire["messageType"] == "vk.execution.requested"
         assert wire["schemaVersion"] == 1
         assert "payload" in wire
-        assert wire["payload"]["executionId"] == payload.execution_id
+        assert wire["payload"]["executionId"] == str(payload.execution_id)

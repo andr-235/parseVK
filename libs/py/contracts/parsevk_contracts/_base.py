@@ -15,12 +15,15 @@ class ContractModel(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
+        extra="forbid",
         frozen=True,
+        validate_default=True,
+        str_strip_whitespace=True,
     )
 
     def to_wire(self) -> dict[str, object]:
         """Serialize to camelCase dict for Kafka wire format."""
-        return self.model_dump(by_alias=True)
+        return self.model_dump(mode="json", by_alias=True)
 
     def to_wire_json(self) -> str:
         """Serialize to camelCase JSON string for Kafka wire format."""

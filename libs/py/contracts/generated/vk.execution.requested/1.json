@@ -1,16 +1,18 @@
 {
   "$defs": {
     "CommentSelection": {
+      "additionalProperties": false,
       "description": "Comment collection strategy.",
       "properties": {
+        "includeThreadReplies": {
+          "const": true,
+          "title": "Includethreadreplies",
+          "type": "boolean"
+        },
         "mode": {
           "const": "all",
           "title": "Mode",
           "type": "string"
-        },
-        "includeThreadReplies": {
-          "title": "Includethreadreplies",
-          "type": "boolean"
         }
       },
       "required": [
@@ -21,16 +23,19 @@
       "type": "object"
     },
     "PostSelection": {
+      "additionalProperties": false,
       "description": "Post collection strategy.",
       "properties": {
+        "limitPerSource": {
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Limitpersource",
+          "type": "integer"
+        },
         "strategy": {
           "const": "latestByPublishedAt",
           "title": "Strategy",
           "type": "string"
-        },
-        "limitPerSource": {
-          "title": "Limitpersource",
-          "type": "integer"
         }
       },
       "required": [
@@ -41,23 +46,9 @@
       "type": "object"
     },
     "SourceReference": {
+      "additionalProperties": false,
       "description": "Reference to a VK community source.",
       "properties": {
-        "sourceId": {
-          "format": "uuid",
-          "title": "Sourceid",
-          "type": "string"
-        },
-        "provider": {
-          "const": "vk",
-          "title": "Provider",
-          "type": "string"
-        },
-        "sourceType": {
-          "const": "community",
-          "title": "Sourcetype",
-          "type": "string"
-        },
         "externalId": {
           "pattern": "^[1-9][0-9]*$",
           "title": "Externalid",
@@ -67,6 +58,21 @@
           "exclusiveMaximum": 0,
           "title": "Ownerid",
           "type": "integer"
+        },
+        "provider": {
+          "const": "vk",
+          "title": "Provider",
+          "type": "string"
+        },
+        "sourceId": {
+          "format": "uuid",
+          "title": "Sourceid",
+          "type": "string"
+        },
+        "sourceType": {
+          "const": "community",
+          "title": "Sourcetype",
+          "type": "string"
         }
       },
       "required": [
@@ -80,21 +86,11 @@
       "type": "object"
     },
     "VkExecutionRequested": {
+      "additionalProperties": false,
       "description": "Command payload: request VK execution for one or more sources.",
       "properties": {
-        "taskId": {
-          "title": "Taskid",
-          "type": "integer"
-        },
-        "taskRunId": {
-          "format": "uuid",
-          "title": "Taskrunid",
-          "type": "string"
-        },
-        "executionId": {
-          "format": "uuid",
-          "title": "Executionid",
-          "type": "string"
+        "commentSelection": {
+          "$ref": "#/$defs/CommentSelection"
         },
         "demands": {
           "items": {
@@ -104,23 +100,37 @@
           "title": "Demands",
           "type": "array"
         },
+        "executionId": {
+          "format": "uuid",
+          "title": "Executionid",
+          "type": "string"
+        },
         "postSelection": {
           "$ref": "#/$defs/PostSelection"
-        },
-        "commentSelection": {
-          "$ref": "#/$defs/CommentSelection"
-        },
-        "taskRevision": {
-          "title": "Taskrevision",
-          "type": "integer"
-        },
-        "sourceSetRevision": {
-          "title": "Sourcesetrevision",
-          "type": "integer"
         },
         "snapshotSha256": {
           "pattern": "^[0-9a-f]{64}$",
           "title": "Snapshotsha256",
+          "type": "string"
+        },
+        "sourceSetRevision": {
+          "minimum": 0,
+          "title": "Sourcesetrevision",
+          "type": "integer"
+        },
+        "taskId": {
+          "exclusiveMinimum": 0,
+          "title": "Taskid",
+          "type": "integer"
+        },
+        "taskRevision": {
+          "minimum": 0,
+          "title": "Taskrevision",
+          "type": "integer"
+        },
+        "taskRunId": {
+          "format": "uuid",
+          "title": "Taskrunid",
           "type": "string"
         }
       },
@@ -139,6 +149,7 @@
       "type": "object"
     },
     "VkSourceDemandRequest": {
+      "additionalProperties": false,
       "description": "A single source collection demand within an execution request.",
       "properties": {
         "demandId": {
@@ -158,28 +169,23 @@
       "type": "object"
     }
   },
+  "$id": "urn:parsevk:contract:vk.execution.requested:1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Schema for vk.execution.requested v1",
   "properties": {
-    "messageId": {
-      "format": "uuid",
-      "title": "Messageid",
-      "type": "string"
-    },
-    "messageType": {
-      "title": "Messagetype",
-      "type": "string"
-    },
-    "schemaVersion": {
-      "title": "Schemaversion",
-      "type": "integer"
-    },
-    "occurredAt": {
-      "format": "date-time",
-      "title": "Occurredat",
-      "type": "string"
-    },
-    "producer": {
-      "title": "Producer",
-      "type": "string"
+    "causationId": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Causationid"
     },
     "correlationId": {
       "anyOf": [
@@ -194,21 +200,29 @@
       "default": null,
       "title": "Correlationid"
     },
-    "causationId": {
-      "anyOf": [
-        {
-          "format": "uuid",
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Causationid"
+    "messageId": {
+      "format": "uuid",
+      "title": "Messageid",
+      "type": "string"
+    },
+    "messageType": {
+      "const": "vk.execution.requested"
+    },
+    "occurredAt": {
+      "format": "date-time",
+      "title": "Occurredat",
+      "type": "string"
     },
     "payload": {
       "$ref": "#/$defs/VkExecutionRequested"
+    },
+    "producer": {
+      "enum": [
+        "tasks-service"
+      ]
+    },
+    "schemaVersion": {
+      "const": 1
     }
   },
   "required": [
@@ -220,7 +234,5 @@
     "payload"
   ],
   "title": "vk.execution.requested",
-  "type": "object",
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "Schema for vk.execution.requested v1"
+  "type": "object"
 }

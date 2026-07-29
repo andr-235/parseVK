@@ -11,6 +11,7 @@ from hypothesis import assume, given, strategies as st
 from parsevk_contracts._base import ContractModel
 from parsevk_contracts.catalog import PartitionKeySpec
 from parsevk_contracts.envelope import MessageEnvelope
+from parsevk_contracts.errors import ContractValidationError
 from parsevk_contracts.vk.commands import (
     CATALOG,
     VK_EXECUTION_REQUESTED,
@@ -84,11 +85,11 @@ def vk_execution_requested_payloads(draw: st.DrawFn) -> VkExecutionRequested:
         demands=draw(demands()),
         post_selection=PostSelection(
             strategy="latestByPublishedAt",
-            limit_per_source=draw(st.integers(min_value=1, max_value=10000)),
+            limit_per_source=draw(st.integers(min_value=1, max_value=100)),
         ),
         comment_selection=CommentSelection(
             mode="all",
-            include_thread_replies=draw(st.booleans()),
+            include_thread_replies=True,
         ),
         task_revision=draw(st.integers(min_value=1, max_value=100)),
         source_set_revision=draw(st.integers(min_value=1, max_value=100)),
@@ -113,7 +114,7 @@ def enveloped_requests(draw: st.DrawFn) -> MessageEnvelope[VkExecutionRequested]
         schema_version=1,
         occurred_at=datetime.now(timezone.utc),
         producer="tasks-service",
-        correlation_id=draw(st.uuids()),
+        correlation_id=payload.execution_id,
         payload=payload,
     )
 
@@ -172,6 +173,7 @@ class TestValidationBoundaries:
             schema_version=1,
             consumer="vk-service",
             payload=envelope.payload.to_wire(),
+            correlation_id=str(envelope.correlation_id) if envelope.correlation_id else None,
         )
 
     @given(enveloped_requests())
@@ -181,7 +183,7 @@ class TestValidationBoundaries:
         """Producer validation rejects payloads with extra fields."""
         wire = envelope.payload.to_wire()
         wire["extraField"] = "should be rejected"
-        try:
+        with pytest.raises(ContractValidationError):
             CATALOG.validate_for_publish(
                 message_type="vk.execution.requested",
                 schema_version=1,
@@ -189,9 +191,6 @@ class TestValidationBoundaries:
                 payload=wire,
                 correlation_id=str(envelope.correlation_id) if envelope.correlation_id else None,
             )
-            assert False, "Expected validation error"
-        except Exception:
-            pass
 
     @given(enveloped_requests())
     def test_consumer_ignores_extra_fields(
@@ -205,6 +204,7 @@ class TestValidationBoundaries:
             schema_version=1,
             consumer="vk-service",
             payload=wire,
+            correlation_id=str(envelope.correlation_id) if envelope.correlation_id else None,
         )
 
 

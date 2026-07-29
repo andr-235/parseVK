@@ -47,7 +47,7 @@ class TestAsyncApiGeneration:
         doc = generate_asyncapi(VK_CATALOG)
         msg = doc["components"]["messages"]["vk_execution_requested"]
         payload_ref = msg["payload"]["$ref"]
-        assert "json-schema/vk.execution.requested/1.json" in payload_ref
+        assert "vk.execution.requested/1.json" in payload_ref
 
     def test_is_deterministic(self) -> None:
         """Same catalog produces identical AsyncAPI document."""

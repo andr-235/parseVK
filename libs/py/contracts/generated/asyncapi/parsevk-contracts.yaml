@@ -18,4 +18,4 @@ components:
       summary: vk.execution.requested v1
       contentType: application/json
       payload:
-        $ref: ../json-schema/vk.execution.requested/1.json
+        $ref: ../vk.execution.requested/1.json

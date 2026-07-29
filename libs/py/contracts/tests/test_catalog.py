@@ -31,20 +31,20 @@ class NestedPayload(ContractModel):
 
 class TestPartitionKeySpec:
     def test_simple_path(self) -> None:
-        """Extract a single field value."""
-        spec = PartitionKeySpec(paths=("entity_id",))
+        """Extract a single field value from wire-format dict."""
+        spec = PartitionKeySpec(paths=("entityId",))
         payload = SamplePayload(entity_id="abc", value=1)
         assert spec.compute(payload) == "abc"
 
     def test_composite_key(self) -> None:
         """Join multiple field values with separator."""
-        spec = PartitionKeySpec(paths=("entity_id", "value"), separator=":")
+        spec = PartitionKeySpec(paths=("entityId", "value"), separator=":")
         payload = SamplePayload(entity_id="abc", value=42)
         assert spec.compute(payload) == "abc:42"
 
     def test_nested_path(self) -> None:
         """Resolve dot-separated nested paths."""
-        spec = PartitionKeySpec(paths=("inner.entity_id",))
+        spec = PartitionKeySpec(paths=("inner.entityId",))
         payload = NestedPayload(
             outer_id="out", inner=SamplePayload(entity_id="nested", value=7)
         )
@@ -64,7 +64,7 @@ class TestPartitionKeySpec:
 
     def test_deterministic(self) -> None:
         """Same payload always produces same key."""
-        spec = PartitionKeySpec(paths=("entity_id", "value"))
+        spec = PartitionKeySpec(paths=("entityId", "value"))
         payload = SamplePayload(entity_id="det", value=100)
         result1 = spec.compute(payload)
         result2 = spec.compute(payload)
@@ -153,8 +153,8 @@ class TestContractCatalog:
         assert contracts[0].message_type == "test.event"
 
     def test_get_by_topic_empty(self, catalog: ContractCatalog) -> None:
-        """Unknown topic returns empty list."""
-        assert catalog.get_by_topic("nonexistent") == []
+        """Unknown topic returns empty tuple."""
+        assert catalog.get_by_topic("nonexistent") == ()
 
     def test_validate_publish_allowed(self, catalog: ContractCatalog) -> None:
         """Valid publish passes without error."""
@@ -268,6 +268,7 @@ class TestContractCatalog:
             schema_version=1,
             consumer="consumer-b",
             payload=payload.to_wire(),
+            correlation_id=str(uuid4()),
         )
 
     def test_validate_consume_consumer_not_allowed(
@@ -298,6 +299,7 @@ class TestContractCatalog:
             schema_version=1,
             consumer="consumer-b",
             payload=payload_with_extra,
+            correlation_id=str(uuid4()),
         )
 
     def test_multiple_contracts(self) -> None:
@@ -333,5 +335,5 @@ class TestContractCatalog:
             consumers=frozenset(),
         )
         cat = ContractCatalog.from_contracts((c1,))
-        # _by_type is a private dict but should not be exposed for mutation
-        assert hasattr(cat, "_by_type")
+        # _by_identity is a private mapping proxy and should not be mutable
+        assert hasattr(cat, "_by_identity")

@@ -50,27 +50,27 @@ class PostSelection(ContractModel):
     """Post collection strategy."""
 
     strategy: Literal["latestByPublishedAt"]
-    limit_per_source: int
+    limit_per_source: Annotated[int, Field(ge=1, le=100)]
 
 
 class CommentSelection(ContractModel):
     """Comment collection strategy."""
 
     mode: Literal["all"]
-    include_thread_replies: bool
+    include_thread_replies: Literal[True]
 
 
 class VkExecutionRequested(ContractModel):
     """Command payload: request VK execution for one or more sources."""
 
-    task_id: int
+    task_id: Annotated[int, Field(gt=0)]
     task_run_id: UUID
     execution_id: UUID
     demands: Annotated[tuple[VkSourceDemandRequest, ...], Field(min_length=1)]
     post_selection: PostSelection
     comment_selection: CommentSelection
-    task_revision: int
-    source_set_revision: int
+    task_revision: Annotated[int, Field(ge=0)]
+    source_set_revision: Annotated[int, Field(ge=0)]
     snapshot_sha256: Sha256Hex
 
     @model_validator(mode="after")
@@ -92,6 +92,7 @@ class VkExecutionRequested(ContractModel):
 
 # ── Contract definition ───────────────────────────────────────────────────────
 
+
 VK_EXECUTION_REQUESTED = MessageContract(
     message_type="vk.execution.requested",
     schema_version=1,
@@ -99,9 +100,9 @@ VK_EXECUTION_REQUESTED = MessageContract(
     topic="parsevk.vk.commands",
     producers=frozenset({"tasks-service"}),
     consumers=frozenset({"vk-service"}),
-    partition_key=PartitionKeySpec(paths=("payload.execution_id",)),
+    partition_key=PartitionKeySpec(paths=("payload.executionId",)),
     correlation_required=True,
-    causation_policy="optional",
+    causation_policy="forbidden",
     compatibility="backward",
 )
 

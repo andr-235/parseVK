@@ -37,7 +37,7 @@
     },
     "commentSelection": {
       "mode": "all",
-      "includeThreadReplies": false
+      "includeThreadReplies": true
     },
     "taskRevision": 1,
     "sourceSetRevision": 1,

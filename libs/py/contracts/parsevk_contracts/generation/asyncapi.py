@@ -16,7 +16,7 @@ def generate_asyncapi(catalog: ContractCatalog) -> dict[str, object]:
     messages: dict[str, dict[str, Any]] = {}
 
     for contract in sorted(
-        catalog._contracts,
+        catalog.contracts,
         key=lambda c: (c.message_type, c.schema_version),
     ):
         message_name = contract.message_type.replace(".", "_")
@@ -28,7 +28,7 @@ def generate_asyncapi(catalog: ContractCatalog) -> dict[str, object]:
             "summary": f"{contract.message_type} v{contract.schema_version}",
             "contentType": "application/json",
             "payload": {
-                "$ref": f"../json-schema/{contract.message_type}/{contract.schema_version}.json",
+                "$ref": f"../{contract.message_type}/{contract.schema_version}.json",
             },
         }
 

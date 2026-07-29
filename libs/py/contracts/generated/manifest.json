@@ -1,26 +1,28 @@
 {
-  "$schema": "parsevk-contracts-manifest",
+  "$id": "urn:parsevk:manifest:1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "contracts": [
     {
-      "causationPolicy": "optional",
-      "compatibility": "backward",
       "consumers": [
         "vk-service"
       ],
-      "correlationRequired": true,
-      "messageType": "vk.execution.requested",
-      "partitionKey": {
-        "paths": [
-          "payload.execution_id"
-        ],
-        "separator": ":"
-      },
+      "message_type": "vk.execution.requested",
+      "partition_key": [
+        "payload.executionId"
+      ],
       "producers": [
         "tasks-service"
       ],
-      "schemaVersion": 1,
+      "schema_version": 1,
       "topic": "parsevk.vk.commands"
     }
   ],
-  "version": 1
+  "description": "Registry of all message contracts in the parseVK platform",
+  "generated_at": "2026-07-29T03:39:32.002338+00:00",
+  "metadata": {
+    "package": "parsevk-contracts",
+    "package_version": "0.1.0",
+    "repository": "github.com/andr-235/parseVK"
+  },
+  "title": "parseVK Contract Manifest"
 }

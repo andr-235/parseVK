@@ -21,6 +21,7 @@ jobs:
     outputs:
       frontend_changed: ${{ steps.detect.outputs.frontend_changed }}
       python_changed: ${{ steps.detect.outputs.python_changed }}
+      contracts_changed: ${{ steps.detect.outputs.contracts_changed }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -42,6 +43,7 @@ jobs:
 
           FRONTEND_CHANGED=false
           PYTHON_CHANGED=false
+          CONTRACTS_CHANGED=false
 
           if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
             echo "Base commit not found; treating as full change set"
@@ -63,10 +65,16 @@ jobs:
             if echo "$CHANGED_FILES" | grep -qE '^(services/|libs/py/common/|pyproject\.toml)'; then
               PYTHON_CHANGED=true
             fi
+
+            if echo "$CHANGED_FILES" | grep -qE '^libs/py/contracts/'; then
+              CONTRACTS_CHANGED=true
+              PYTHON_CHANGED=true
+            fi
           fi
 
           echo "frontend_changed=$FRONTEND_CHANGED" >> $GITHUB_OUTPUT
           echo "python_changed=$PYTHON_CHANGED" >> $GITHUB_OUTPUT
+          echo "contracts_changed=$CONTRACTS_CHANGED" >> $GITHUB_OUTPUT
 
   lint:
     name: Lint Frontend
@@ -189,6 +197,8 @@ jobs:
   contracts-python:
     name: Contracts Python checks
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.contracts_changed == 'true'
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v5
@@ -226,6 +236,8 @@ jobs:
   contracts-asyncapi:
     name: Validate AsyncAPI
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.contracts_changed == 'true'
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v5
@@ -243,4 +255,4 @@ jobs:
 
       - name: Validate AsyncAPI
         run: |
-          npx --yes @asyncapi/cli@3.1.0 validate libs/py/contracts/generated/asyncapi/parsevk-contracts.yaml
+          npx --yes @asyncapi/cli@6.0.2 validate libs/py/contracts/generated/asyncapi/parsevk-contracts.yaml
