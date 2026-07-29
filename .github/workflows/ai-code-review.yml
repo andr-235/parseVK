@@ -25,12 +25,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      PR_NUMBER: ${{ github.event.pull_request.number }}
-      PR_TITLE_JSON: ${{ toJSON(github.event.pull_request.title) }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -41,6 +35,10 @@ jobs:
       - name: Prepare review Issue
         id: issue
         shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE_JSON: ${{ toJSON(github.event.pull_request.title) }}
         run: |
           set -euo pipefail
 
@@ -108,6 +106,8 @@ jobs:
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENCODE_DISABLE_PROJECT_CONFIG: "true"
+          OPENCODE_PERMISSION: '{"bash":"deny","edit":"deny","task":"deny","skill":"deny","lsp":"deny","webfetch":"deny","websearch":"deny","external_directory":"deny"}'
         with:
           model: opencode/big-pickle
           use_github_token: true
@@ -129,31 +129,35 @@ jobs:
             6. Не сообщай о форматировании, вкусовщине, документации, общих улучшениях,
                несуществующих сценариях и проблемах вне diff.
             7. Не изменяй файлы, не создавай commits и ветки.
-            8. Используй только существующий Issue #${{ steps.issue.outputs.issue_number }}.
+            8. Не запускай shell, команды `gh`, внешние процессы и не читай переменные окружения.
+               Эти возможности дополнительно заблокированы политикой выполнения.
+            9. Используй только существующий Issue #${{ steps.issue.outputs.issue_number }}.
                Не читай его текущее тело и не создавай другие Issue.
-            9. Отчёт должен быть коротким. Не перечисляй успешно проверенные категории и файлы.
-               Для каждого реального замечания укажи severity, файл, строку, сценарий ошибки,
-               последствия, конкретное исправление и уверенность.
-            10. Если есть хотя бы один подтверждённый blocker или major с уверенностью >= 0.8:
+            10. Отчёт должен быть коротким. Не перечисляй успешно проверенные категории и файлы.
+                Для каждого реального замечания укажи severity, файл, строку, сценарий ошибки,
+                последствия, конкретное исправление и уверенность.
+            11. Если есть хотя бы один подтверждённый blocker или major с уверенностью >= 0.8:
                 - одним финальным действием обнови Issue;
                 - оставь его открытым;
                 - замени labels на `ai-review` и `ai-review:changes-required`.
-            11. Если блокирующих замечаний нет:
+            12. Если блокирующих замечаний нет:
                 - одним финальным действием обнови Issue кратким вердиктом;
                 - замени labels на `ai-review` и `ai-review:approved`;
                 - закрой Issue как completed.
-            12. Если анализ невозможно закончить технически:
+            13. Если анализ невозможно закончить технически:
                 - оставь Issue открытым;
                 - замени labels на `ai-review` и `ai-review:manual-review`;
                 - запиши точную причину.
-            13. После записи результата не перечитывай Issue и не проверяй labels: это делает
+            14. После записи результата не перечитывай Issue и не проверяй labels: это делает
                 отдельный deterministic step workflow.
-            14. Оставь в PR один короткий комментарий со ссылкой на Issue и итогом.
+            15. Не создавай отдельный комментарий в PR. Верни короткий итог финальным ответом:
+                официальный Action сам опубликует его в PR.
 
       - name: Enforce review verdict
         if: always() && !cancelled()
         shell: bash
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ steps.issue.outputs.issue_number }}
         run: |
           set -euo pipefail
