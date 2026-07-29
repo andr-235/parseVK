@@ -22,8 +22,8 @@ class TestAsyncApiGeneration:
         """AsyncAPI includes the pilot contract."""
         doc = generate_asyncapi(VK_CATALOG)
         messages = doc["components"]["messages"]
-        assert "vk_execution_requested" in messages
-        msg = messages["vk_execution_requested"]
+        assert "vk_execution_requested_v1" in messages
+        msg = messages["vk_execution_requested_v1"]
         assert msg["name"] == "vk.execution.requested"
 
     def test_channel_for_pilot_topic(self) -> None:
@@ -38,14 +38,14 @@ class TestAsyncApiGeneration:
         """Channel references the correct message."""
         doc = generate_asyncapi(VK_CATALOG)
         channel = doc["channels"]["parsevk_vk_commands"]
-        assert "vk_execution_requested" in channel["messages"]
-        ref = channel["messages"]["vk_execution_requested"]["$ref"]
-        assert ref == "#/components/messages/vk_execution_requested"
+        assert "vk_execution_requested_v1" in channel["messages"]
+        ref = channel["messages"]["vk_execution_requested_v1"]["$ref"]
+        assert ref == "#/components/messages/vk_execution_requested_v1"
 
     def test_payload_refers_to_json_schema(self) -> None:
         """Message payload references the generated JSON Schema file."""
         doc = generate_asyncapi(VK_CATALOG)
-        msg = doc["components"]["messages"]["vk_execution_requested"]
+        msg = doc["components"]["messages"]["vk_execution_requested_v1"]
         payload_ref = msg["payload"]["$ref"]
         assert "vk.execution.requested/1.json" in payload_ref
 
@@ -54,6 +54,15 @@ class TestAsyncApiGeneration:
         doc1 = generate_asyncapi(VK_CATALOG)
         doc2 = generate_asyncapi(VK_CATALOG)
         assert doc1 == doc2
+
+    def test_has_operations(self) -> None:
+        """AsyncAPI includes send/receive operations."""
+        doc = generate_asyncapi(VK_CATALOG)
+        ops = doc.get("operations", {})
+        assert "tasks_service_send_vk_execution_requested_v1" in ops
+        assert ops["tasks_service_send_vk_execution_requested_v1"]["action"] == "send"
+        assert "vk_service_receive_vk_execution_requested_v1" in ops
+        assert ops["vk_service_receive_vk_execution_requested_v1"]["action"] == "receive"
 
     def test_writes_valid_yaml(self, tmp_path: Path) -> None:
         """Written AsyncAPI file is valid YAML."""

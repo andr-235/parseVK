@@ -65,6 +65,17 @@ class TestJsonSchemaGeneration:
         schema2 = generate_json_schema(VK_EXECUTION_REQUESTED)
         assert schema1 == schema2
 
+    def test_correlation_in_required(self) -> None:
+        """correlation_required adds correlationId to required array."""
+        schema = generate_json_schema(VK_EXECUTION_REQUESTED)
+        assert "correlationId" in schema.get("required", [])
+
+    def test_causation_forbidden_is_null(self) -> None:
+        """causation_policy=forbidden sets causationId to type null."""
+        schema = generate_json_schema(VK_EXECUTION_REQUESTED)
+        causation = schema.get("properties", {}).get("causationId", {})
+        assert causation == {"type": "null"}
+
 
 class TestManifestGeneration:
     def test_manifest_includes_pilot_contract(self) -> None:
@@ -90,6 +101,13 @@ class TestManifestGeneration:
         entry = manifest["contracts"][0]
         assert "partitionKey" in entry
         assert entry["partitionKey"]["paths"] == ["payload.executionId"]
+        assert entry["partitionKey"]["separator"] == ":"
+
+    def test_manifest_correlation_path(self) -> None:
+        """Manifest includes correlationPath."""
+        manifest = generate_manifest(VK_CATALOG)
+        entry = manifest["contracts"][0]
+        assert entry.get("correlationPath") == "payload.executionId"
 
     def test_manifest_is_deterministic(self) -> None:
         """Same catalog produces identical manifest."""

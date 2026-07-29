@@ -1,1 +1,0 @@
-# Social graph domain contracts

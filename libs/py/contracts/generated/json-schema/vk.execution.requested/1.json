@@ -175,17 +175,7 @@
   "description": "Schema for vk.execution.requested v1",
   "properties": {
     "causationId": {
-      "anyOf": [
-        {
-          "format": "uuid",
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Causationid"
+      "type": "null"
     },
     "correlationId": {
       "anyOf": [
@@ -231,7 +221,8 @@
     "schemaVersion",
     "occurredAt",
     "producer",
-    "payload"
+    "payload",
+    "correlationId"
   ],
   "title": "vk.execution.requested",
   "type": "object"

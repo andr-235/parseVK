@@ -24,8 +24,9 @@ def generate_json_schema(contract: MessageContract) -> dict[str, object]:
     schema["title"] = contract.message_type
     schema["description"] = f"Schema for {contract.message_type} v{contract.schema_version}"
 
-    # Fix messageType to const
     properties = schema.get("properties", {})
+
+    # Fix messageType to const
     if "messageType" in properties:
         properties["messageType"] = {"const": contract.message_type}
 
@@ -36,6 +37,29 @@ def generate_json_schema(contract: MessageContract) -> dict[str, object]:
     # Fix producer to enum
     if "producer" in properties:
         properties["producer"] = {"enum": sorted(contract.producers)}
+
+    # Envelope policy constraints
+    required: list[str] = list(schema.get("required", []))
+
+    if contract.correlation_required and "correlationId" not in required:
+        required.append("correlationId")
+
+    if contract.causation_policy == "forbidden" and "causationId" in properties:
+        properties["causationId"] = {"type": "null"}
+
+    if contract.causation_policy == "required":
+        if "causationId" not in required:
+            required.append("causationId")
+        if "causationId" in properties:
+            properties["causationId"] = {
+                "oneOf": [
+                    {"type": "null"},
+                    {"type": "string", "format": "uuid"},
+                ]
+            }
+
+    if required:
+        schema["required"] = required
 
     return schema
 

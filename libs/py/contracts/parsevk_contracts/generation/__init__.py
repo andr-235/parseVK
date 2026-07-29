@@ -24,7 +24,7 @@ def generate_all(
     }
 
     for contract in catalog.contracts:
-        path = write_json_schema(contract, output_path)
+        path = write_json_schema(contract, output_path / "json-schema")
         generated["json_schema"].append(str(path))
 
     manifest_path = write_manifest(catalog, output_path)
