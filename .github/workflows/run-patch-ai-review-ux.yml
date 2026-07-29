@@ -20,17 +20,15 @@ jobs:
           ref: test/ai-review-e2e
           fetch-depth: 0
 
-      - name: Extract and run patch
+      - name: Apply patch
         shell: bash
         run: |
           set -euo pipefail
-          awk '
-            /python - <<'\''PY'\''/ { capture=1; next }
-            capture && /^          PY$/ { exit }
-            capture { sub(/^          /, ""); print }
-          ' .github/workflows/patch-ai-review-ux.yml >"${RUNNER_TEMP}/patch_ai_review_ux.py"
-          python "${RUNNER_TEMP}/patch_ai_review_ux.py"
-          rm -f .github/workflows/run-patch-ai-review-ux.yml
+          python .github/scripts/patch_ai_review_ux.py
+          rm -f \
+            .github/scripts/patch_ai_review_ux.py \
+            .github/workflows/patch-ai-review-ux.yml \
+            .github/workflows/run-patch-ai-review-ux.yml
 
       - name: Commit patch
         shell: bash
@@ -38,8 +36,6 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .github/workflows/ai-code-review.yml \
-            .github/workflows/patch-ai-review-ux.yml \
-            .github/workflows/run-patch-ai-review-ux.yml
+          git add -A .github
           git commit -m "fix: finalize AI review comments and reactions"
           git push origin HEAD:test/ai-review-e2e
