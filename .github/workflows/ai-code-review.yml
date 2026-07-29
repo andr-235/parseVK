@@ -125,7 +125,9 @@ jobs:
           sparse-checkout-cone-mode: false
 
       - name: Install pinned OpenCode CLI
+        id: install
         if: steps.freshness.outputs.fresh == 'true'
+        continue-on-error: true
         env:
           VERSION: 1.17.7
         run: |
@@ -135,7 +137,9 @@ jobs:
 
       - name: Run OpenCode without GitHub publishing
         id: opencode
-        if: steps.freshness.outputs.fresh == 'true'
+        if: >-
+          steps.freshness.outputs.fresh == 'true' &&
+          steps.install.outcome == 'success'
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           OPENCODE_DISABLE_PROJECT_CONFIG: "true"
@@ -168,7 +172,9 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           TEST_OUTCOME: ${{ steps.self_test.outcome }}
           SCOPE_OUTCOME: ${{ steps.scope.outcome }}
+          SCOPE_STATUS: ${{ steps.scope.outputs.status }}
           FRESH: ${{ steps.freshness.outputs.fresh }}
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
           OPENCODE_EXIT: ${{ steps.opencode.outputs.exit_code }}
         run: |
           mkdir -p "$AI_REVIEW_DIR"
@@ -189,6 +195,12 @@ jobs:
               --head "$HEAD_SHA" \
               --reason obsolete-run \
               --summary 'Запуск устарел до обращения к модели.' \
+              --output "$AI_REVIEW_DIR/review-result.json"
+          elif [[ "$SCOPE_STATUS" == "review" && "$INSTALL_OUTCOME" != "success" ]]; then
+            python "$AI_REVIEW_SCRIPT" fallback \
+              --head "$HEAD_SHA" \
+              --reason opencode-install-failed \
+              --summary 'Не удалось установить закреплённую версию OpenCode CLI.' \
               --output "$AI_REVIEW_DIR/review-result.json"
           else
             python "$AI_REVIEW_SCRIPT" finalize \
