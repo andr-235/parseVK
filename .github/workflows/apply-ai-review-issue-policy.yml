@@ -1,4 +1,4 @@
-name: Apply AI review issue policy
+name: Export AI review issue policy
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ on:
       - .github/workflows/apply-ai-review-issue-policy.yml
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   apply:
@@ -18,7 +18,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: test/ai-review-e2e
-          fetch-depth: 0
 
       - name: Patch workflow
         shell: bash
@@ -43,70 +42,10 @@ jobs:
           PY
           python .github/scripts/apply_ai_review_issue_policy.py
 
-      - name: Create remote commit object
-        id: commit
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-
-          parent_sha="$(git rev-parse HEAD)"
-          base_tree_sha="$(gh api \
-            "repos/${GITHUB_REPOSITORY}/git/commits/${parent_sha}" \
-            --jq '.tree.sha')"
-
-          workflow_content="$(base64 -w0 .github/workflows/ai-code-review.yml)"
-          workflow_blob_sha="$(jq -n \
-            --arg content "$workflow_content" \
-            '{content: $content, encoding: "base64"}' \
-            | gh api \
-                --method POST \
-                "repos/${GITHUB_REPOSITORY}/git/blobs" \
-                --input - \
-                --jq '.sha')"
-
-          tree_sha="$(jq -n \
-            --arg base_tree "$base_tree_sha" \
-            --arg workflow_blob "$workflow_blob_sha" \
-            '{
-              base_tree: $base_tree,
-              tree: [
-                {
-                  path: ".github/workflows/ai-code-review.yml",
-                  mode: "100644",
-                  type: "blob",
-                  sha: $workflow_blob
-                },
-                {
-                  path: ".github/scripts/apply_ai_review_issue_policy.py",
-                  mode: "100644",
-                  type: "blob",
-                  sha: null
-                },
-                {
-                  path: ".github/workflows/apply-ai-review-issue-policy.yml",
-                  mode: "100644",
-                  type: "blob",
-                  sha: null
-                }
-              ]
-            }' \
-            | gh api \
-                --method POST \
-                "repos/${GITHUB_REPOSITORY}/git/trees" \
-                --input - \
-                --jq '.sha')"
-
-          commit_sha="$(jq -n \
-            --arg message "fix: create AI review Issue only for findings" \
-            --arg tree "$tree_sha" \
-            --arg parent "$parent_sha" \
-            '{message: $message, tree: $tree, parents: [$parent]}' \
-            | gh api \
-                --method POST \
-                "repos/${GITHUB_REPOSITORY}/git/commits" \
-                --input - \
-                --jq '.sha')"
-
-          echo "CREATED_COMMIT_SHA=${commit_sha}"
+      - name: Upload patched workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-review-issue-policy
+          path: .github/workflows/ai-code-review.yml
+          if-no-files-found: error
+          retention-days: 1
