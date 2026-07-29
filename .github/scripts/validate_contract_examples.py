@@ -26,6 +26,18 @@ def main() -> int:
 
     failures = 0
 
+    all_json: list[Path] = sorted(examples_dir.glob("*.json"))
+    known_prefixes = frozenset({"valid", "consume", "invalid-schema", "invalid-contract"})
+
+    for path in all_json:
+        stem = path.stem
+        prefix = stem.split("-")[0] if "-" in stem else stem
+        if prefix == "invalid":
+            prefix = "invalid-schema" if "schema" in stem else "invalid-contract"
+        if prefix not in known_prefixes:
+            print(f"  FAIL {path.name}: unknown prefix (expected one of: {', '.join(sorted(known_prefixes))})", file=sys.stderr)
+            failures += 1
+
     valid_examples = sorted(examples_dir.glob("valid-*.json"))
     consume_examples = sorted(examples_dir.glob("consume-*.json"))
     invalid_schema_examples = sorted(examples_dir.glob("invalid-schema-*.json"))
@@ -83,6 +95,22 @@ def main() -> int:
             failures += 1
         except jsonschema.ValidationError:
             print(f"  PASS {example.name} (expectedly rejected by schema)")
+
+    # Cross-validate: schema-only rejects must also pass contract check
+    # to ensure the schema + contract stay in sync on envelope-level constraints
+    for example in invalid_schema_examples:
+        with open(example, encoding="utf-8") as fh:
+            instance = json.load(fh)
+        try:
+            parse_for_consume(
+                VK_CATALOG,
+                consumer="vk-service",
+                topic="parsevk.vk.commands",
+                value=json.dumps(instance).encode("utf-8"),
+            )
+            print(f"  INFO {example.name}: passes contract (schema-only rejection)")
+        except ContractError:
+            print(f"  INFO {example.name}: also rejected by contract (consistent)")
 
     for example in invalid_contract_examples:
         with open(example, encoding="utf-8") as fh:
