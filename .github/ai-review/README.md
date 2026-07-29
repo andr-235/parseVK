@@ -7,7 +7,7 @@
 1. Workflow запускается при открытии PR и каждом новом commit.
 2. На PR ставится реакция `eyes`.
 3. Workflow создаёт или переиспользует одно Issue вида `[AI Review] PR #N: ...`.
-4. `anomalyco/opencode/github@latest` анализирует PR моделью `opencode/big-pickle`.
+4. `anomalyco/opencode/github@v1.17.7` анализирует PR моделью `opencode/big-pickle`.
 5. OpenCode читает `rules.md`, обновляет существующий Issue и выставляет один итоговый label.
 6. Отдельный детерминированный шаг проверяет label:
    - `ai-review:changes-required` завершает job ошибкой;
