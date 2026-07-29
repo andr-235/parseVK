@@ -1,9 +1,10 @@
 name: Run AI review UX patch
 
 on:
-  push:
+  pull_request:
     branches:
-      - test/ai-review-e2e
+      - main
+    types: [synchronize]
     paths:
       - .github/workflows/run-patch-ai-review-ux.yml
 
