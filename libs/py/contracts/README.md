@@ -8,14 +8,14 @@ Executable source of truth for ParseVK Kafka contracts.
 
 - **Typed message envelopes** with Pydantic validation
 - **Immutable contract catalog** — a registry of all message types, their schemas, producers, and consumers
-- **Validation boundaries** — strict validation for producers (reject unknown fields), tolerant validation for consumers (ignore unknown fields)
-- **Schema generation** — JSON Schema (Draft 2020-12), AsyncAPI 3.1, and a deterministic manifest
+- **Validation boundaries** — `prepare_for_publish` (strict, reject unknown) and `parse_for_consume` (tolerant, ignore unknown) with topic verification, correlation/causation policy enforcement, and typed results
+- **Schema generation** — JSON Schema (Draft 2020-12), AsyncAPI 3.1 with send/receive operations, and a deterministic manifest
 - **CI drift detection** — generated artifacts are checked into version control and verified in CI
 
 ## Dependency
 
 - Python 3.12+
-- Pydantic >= 2.8 (only runtime dependency)
+- Pydantic >= 2.12,<3 (only runtime dependency)
 - Standard library only beyond Pydantic
 
 ## How to define a new contract
@@ -44,12 +44,13 @@ MY_CONTRACT = MessageContract(
     consumers=frozenset({"consumer-service"}),
     partition_key=PartitionKeySpec(paths=("payload.field1",)),
     correlation_required=True,
+    correlation_path="payload.field1",
     causation_policy="optional",
     compatibility="backward",
 )
 ```
 
-3. Add the contract to the domain catalog tuple in `__init__.py`:
+3. Add the contract to the domain catalog:
 
 ```python
 from parsevk_contracts.catalog import ContractCatalog
@@ -58,15 +59,54 @@ from .commands import MY_CONTRACT
 CATALOG = ContractCatalog.from_contracts((MY_CONTRACT,))
 ```
 
-## How to add to the global catalog
+## How to use the boundary API
 
-Each domain sub-package exposes a `CATALOG` constant. The global catalog is assembled by combining all domain catalogs. This is done in the generation entry point.
+### Publishing a message
+
+```python
+from uuid import uuid4
+from datetime import datetime, timezone
+from parsevk_contracts.validation import prepare_for_publish
+
+prepared = prepare_for_publish(
+    catalog,
+    message_type="vk.execution.requested",
+    schema_version=1,
+    producer="tasks-service",
+    message_id=uuid4(),
+    occurred_at=datetime.now(timezone.utc),
+    correlation_id=execution_id,
+    causation_id=None,
+    payload={"executionId": str(execution_id), ...},
+)
+# prepared.topic      → "parsevk.vk.commands"
+# prepared.partition_key → str(execution_id)
+# prepared.value      → JSON bytes for Kafka
+# prepared.headers    → tuple of (key, bytes) pairs
+```
+
+### Consuming a message
+
+```python
+from parsevk_contracts.validation import parse_for_consume
+
+parsed = parse_for_consume(
+    catalog,
+    consumer="vk-service",
+    topic="parsevk.vk.commands",
+    value=b'{...}',
+)
+# parsed.envelope.payload is a typed VkExecutionRequested
+```
 
 ## How to run generation
 
 ```bash
 # Generate all artifacts (JSON Schema, manifest, AsyncAPI)
-uv run python -m parsevk_contracts.generation
+uv run python -m parsevk_contracts.generation.cli generate
+
+# Check for drift (fresh generation vs committed)
+uv run python -m parsevk_contracts.generation.cli check
 
 # Output directory: generated/
 #   generated/json-schema/<message_type>/<schema_version>.json
@@ -79,11 +119,10 @@ uv run python -m parsevk_contracts.generation
 Generated artifacts are committed to the repository. CI verifies that the committed artifacts match the current catalog:
 
 ```bash
-uv run python -m parsevk_contracts.generation
-git diff --exit-code generated/
+uv run python -m parsevk_contracts.generation.cli check
 ```
 
-If the diff is non-empty, the CI job fails — this ensures that any contract change is accompanied by regenerated artifacts.
+If the check fails (missing, stale, or changed files), the CI job fails — this ensures that any contract change is accompanied by regenerated artifacts.
 
 ## Package structure
 
@@ -93,15 +132,11 @@ parsevk_contracts/
     py.typed              # PEP 561 typed package marker
     _base.py              # ContractModel base class
     envelope.py           # MessageEnvelope generic DTO
-    errors.py             # ContractError hierarchy
+    errors.py             # ContractError hierarchy (with stable error codes)
     catalog.py            # MessageContract, PartitionKeySpec, ContractCatalog
-    validation.py         # produce/consume validation boundaries
+    validation.py         # prepare_for_publish / parse_for_consume
     vk/                   # VK domain contracts
-    content/              # Content domain contracts
-    access/               # Access domain contracts
-    media/                # Media domain contracts
-    social_graph/         # Social graph domain contracts
-    generation/           # JSON Schema, manifest, AsyncAPI generators
+    generation/           # JSON Schema, manifest, AsyncAPI generators + drift CLI
 ```
 
 ## License

@@ -49,6 +49,7 @@ jobs:
             echo "Base commit not found; treating as full change set"
             FRONTEND_CHANGED=true
             PYTHON_CHANGED=true
+            CONTRACTS_CHANGED=true
           else
             CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" || true)
             if [ -z "$CHANGED_FILES" ]; then
@@ -69,6 +70,10 @@ jobs:
             if echo "$CHANGED_FILES" | grep -qE '^libs/py/contracts/'; then
               CONTRACTS_CHANGED=true
               PYTHON_CHANGED=true
+            fi
+
+            if echo "$CHANGED_FILES" | grep -qE '^(\.github/workflows/ci\.yml|\.github/scripts/validate_contract_examples\.py)$'; then
+              CONTRACTS_CHANGED=true
             fi
           fi
 
@@ -220,8 +225,7 @@ jobs:
       - name: Check generated artifacts
         working-directory: libs/py/contracts
         run: |
-          uv run python -c "from parsevk_contracts.generation import generate_all; from parsevk_contracts.vk.commands import CATALOG; generate_all(CATALOG)"
-          git diff --exit-code generated/
+          uv run python -m parsevk_contracts.generation.cli check
 
       - name: Validate examples against schemas
         working-directory: libs/py/contracts
