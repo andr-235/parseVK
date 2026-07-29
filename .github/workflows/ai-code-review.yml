@@ -233,6 +233,9 @@ jobs:
 
           find_canonical_comment() {
             canonical_comment_id="$(jq -r --arg marker "$canonical_marker" '
+              [.[ ]
+            ' <<<"[]" 2>/dev/null || true)"
+            canonical_comment_id="$(jq -r --arg marker "$canonical_marker" '
               [.[]
                 | select(
                     .user.login == "github-actions[bot]" and
@@ -423,7 +426,6 @@ jobs:
             | sort -u \
             | jq -R -s 'split("\n") | map(select(length > 0))')"
 
-          original_finding_count="$(jq '.findings | length' <<<"$result_json")"
           result_json="$(jq -c --argjson changed "$changed_files_json" '
             def clean($limit):
               tostring
@@ -476,10 +478,15 @@ jobs:
               gh api \
                 --method PATCH \
                 "repos/${GITHUB_REPOSITORY}/issues/${issue_number}" \
+                -f body="<!-- ai-review:pr=${PR_NUMBER} -->
+# Исторический AI Review для PR #${PR_NUMBER}
+
+Это Issue было создано предыдущей версией reviewer. Текущая проверка завершилась без подтверждённых замечаний, поэтому Issue закрыто как неактуальное.
+
+Новая версия reviewer не создаёт Issue при пустом массиве findings." \
                 -f state=closed \
-                -f state_reason=completed \
-                -f 'labels[]=ai-review' \
-                -f 'labels[]=ai-review:approved' >/dev/null || true
+                -f state_reason=not_planned \
+                -f 'labels[]=ai-review' >/dev/null || true
             fi
 
             set_final_reaction "+1"
