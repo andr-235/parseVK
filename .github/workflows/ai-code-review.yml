@@ -53,5 +53,30 @@ jobs:
           python -m compileall -q .github/ai-review
           python -m unittest discover -s .github/ai-review/tests -v
 
+      - name: Check Zen API access
+        shell: bash
+        run: |
+          set -euo pipefail
+          response_file="$(mktemp)"
+          status="$(curl --silent --show-error \
+            --output "$response_file" \
+            --write-out '%{http_code}' \
+            --request POST \
+            'https://opencode.ai/zen/v1/chat/completions' \
+            --header "Authorization: Bearer ${OPENCODE_API_KEY}" \
+            --header 'Content-Type: application/json' \
+            --header 'Accept: application/json' \
+            --header 'User-Agent: parseVK-ai-reviewer/1.0' \
+            --data '{"model":"big-pickle","messages":[{"role":"user","content":"Reply with OK only."}],"max_tokens":8}')"
+
+          if [[ "$status" -lt 200 || "$status" -ge 300 ]]; then
+            body="$(head -c 3000 "$response_file")"
+            body="${body//${OPENCODE_API_KEY}/***}"
+            echo "::error::Zen API HTTP ${status}: ${body}"
+            exit 1
+          fi
+
+          echo "Zen API access confirmed (HTTP ${status})."
+
       - name: Review pull request
         run: python .github/ai-review/review.py
