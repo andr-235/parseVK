@@ -78,7 +78,6 @@ def write_json_schema(
     contract_dir = output_dir / contract.message_type
     contract_dir.mkdir(parents=True, exist_ok=True)
     path = contract_dir / f"{contract.schema_version}.json"
-    with open(path, "w") as f:
-        json.dump(schema, f, indent=2, ensure_ascii=False, sort_keys=True)
-        f.write("\n")
+    text = json.dumps(schema, indent=2, ensure_ascii=False, sort_keys=True) + "\n"
+    path.write_bytes(text.encode("utf-8"))
     return path

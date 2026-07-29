@@ -109,7 +109,6 @@ def write_asyncapi(
         ) from exc
 
     document = generate_asyncapi(catalog)
-    with open(path, "w") as f:
-        yaml.dump(document, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
-
+    text = yaml.dump(document, default_flow_style=False, sort_keys=False, allow_unicode=True)
+    path.write_bytes(text.encode("utf-8"))
     return path

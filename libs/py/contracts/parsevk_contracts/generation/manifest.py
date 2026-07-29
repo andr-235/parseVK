@@ -71,7 +71,6 @@ def write_manifest(
     """Generate and write the contract manifest."""
     manifest = generate_manifest(catalog, metadata)
     path = output_dir / "manifest.json"
-    with open(path, "w") as f:
-        json.dump(manifest, f, indent=2, ensure_ascii=False, sort_keys=True)
-        f.write("\n")
+    text = json.dumps(manifest, indent=2, ensure_ascii=False, sort_keys=True) + "\n"
+    path.write_bytes(text.encode("utf-8"))
     return path
