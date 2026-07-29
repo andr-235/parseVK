@@ -13,9 +13,11 @@ testpaths = [
   "services/listings-service/tests",
   "services/moderation-service/tests",
   "services/im-service/tests",
+  "libs/py/contracts/tests",
 ]
 pythonpath = [
   "libs/py/common",
+  "libs/py/contracts",
 ]
 
 [tool.ruff]

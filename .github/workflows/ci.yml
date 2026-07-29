@@ -185,3 +185,62 @@ jobs:
       - name: Run tests
         working-directory: services/${{ matrix.service }}
         run: uv run pytest -v
+
+  contracts-python:
+    name: Contracts Python checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        working-directory: libs/py/contracts
+        run: uv sync --group dev --frozen
+
+      - name: Test
+        working-directory: libs/py/contracts
+        run: uv run pytest -v
+
+      - name: Typecheck
+        working-directory: libs/py/contracts
+        run: uv run mypy parsevk_contracts
+
+      - name: Check generated artifacts
+        working-directory: libs/py/contracts
+        run: |
+          uv run python -c "from parsevk_contracts.generation import generate_all; from parsevk_contracts.vk.commands import CATALOG; generate_all(CATALOG)"
+          git diff --exit-code generated/
+
+      - name: Validate examples against schemas
+        working-directory: libs/py/contracts
+        run: uv run python ${{ github.workspace }}/.github/scripts/validate_contract_examples.py
+
+      - name: Verify py.typed in wheel
+        working-directory: libs/py/contracts
+        run: |
+          uv build
+          unzip -l dist/*.whl | grep parsevk_contracts/py.typed
+
+  contracts-asyncapi:
+    name: Validate AsyncAPI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Generate AsyncAPI
+        working-directory: libs/py/contracts
+        run: |
+          uv sync --group dev --frozen
+          uv run python -c "from parsevk_contracts.generation import generate_all; from parsevk_contracts.vk.commands import CATALOG; generate_all(CATALOG)"
+
+      - name: Validate AsyncAPI
+        run: |
+          npx --yes @asyncapi/cli@3.1.0 validate libs/py/contracts/generated/asyncapi/parsevk-contracts.yaml
