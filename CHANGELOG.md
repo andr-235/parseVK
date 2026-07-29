@@ -1,3 +1,10 @@
+# [0.77.0](https://github.com/andr-235/parseVK/compare/v0.76.0...v0.77.0) (2026-07-29)
+
+
+### Features
+
+* добавить AI-ревью Pull Request через OpenCode Zen ([#296](https://github.com/andr-235/parseVK/issues/296)) ([4ad20f6](https://github.com/andr-235/parseVK/commit/4ad20f6776e31a4e48aec4ec4e2f937dc214152f))
+
 # [0.76.0](https://github.com/andr-235/parseVK/compare/v0.75.0...v0.76.0) (2026-07-28)
 
 
