@@ -79,4 +79,4 @@ jobs:
           echo "Zen API access confirmed (HTTP ${status})."
 
       - name: Review pull request
-        run: python .github/ai-review/review.py
+        run: python .github/ai-review/run_review.py
