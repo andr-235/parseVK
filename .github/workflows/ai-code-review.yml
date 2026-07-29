@@ -366,6 +366,8 @@ jobs:
             fi
             echo
             echo "Подробный статус: #${ISSUE_NUMBER}"
+            echo
+            echo "Комментарий сформирован детерминированно только из массива \`findings\`."
           } >"$pr_comment_file"
 
           gh api \
