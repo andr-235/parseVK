@@ -34,6 +34,7 @@ jobs:
 
       - name: Prepare review Issue
         id: issue
+        continue-on-error: true
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -46,6 +47,12 @@ jobs:
             --method POST \
             "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/reactions" \
             -f content=eyes >/dev/null || true
+
+          gh label create ai-review:unavailable \
+            --repo "$GITHUB_REPOSITORY" \
+            --color 6e7781 \
+            --description "AI-ревью не завершилось; статус не блокирует PR" \
+            2>/dev/null || true
 
           search_query="repo:${GITHUB_REPOSITORY} is:issue in:title \"[AI Review] PR #${PR_NUMBER}:\""
           issue_number="$(
@@ -102,6 +109,7 @@ jobs:
       - name: Run OpenCode review
         id: opencode
         if: success() && steps.issue.outputs.issue_number != ''
+        continue-on-error: true
         uses: anomalyco/opencode/github@v1.17.7
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
@@ -169,7 +177,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          manual_review() {
+          review_unavailable() {
             local reason="$1"
 
             if [[ -n "${ISSUE_NUMBER:-}" ]]; then
@@ -178,7 +186,9 @@ jobs:
           <!-- ai-review:pr=${PR_NUMBER} -->
           # AI Code Review для PR #${PR_NUMBER}
 
-          **Вердикт:** \`manual-review\`
+          **Вердикт:** \`review-unavailable\`
+
+          ⚠️ AI-ревью не завершено. Этот статус не блокирует Pull Request.
 
           ${reason}
           EOF
@@ -190,16 +200,16 @@ jobs:
                 -f body="$body" \
                 -f state=open \
                 -f 'labels[]=ai-review' \
-                -f 'labels[]=ai-review:manual-review' >/dev/null || true
+                -f 'labels[]=ai-review:unavailable' >/dev/null || true
             fi
 
-            echo "::error::${reason}"
-            exit 2
+            echo "::warning::${reason} AI Review не блокирует Pull Request."
+            exit 0
           }
 
           if [[ -z "${ISSUE_NUMBER:-}" ]]; then
-            echo "::error::Не удалось определить AI Review Issue"
-            exit 2
+            echo "::warning::Не удалось определить AI Review Issue. Проверка не блокирует Pull Request."
+            exit 0
           fi
 
           current_head="$(gh api \
@@ -212,7 +222,7 @@ jobs:
           fi
 
           if [[ "$OPENCODE_OUTCOME" != "success" ]]; then
-            manual_review "Шаг OpenCode завершился со статусом ${OPENCODE_OUTCOME}."
+            review_unavailable "Шаг OpenCode завершился со статусом ${OPENCODE_OUTCOME}."
           fi
 
           marker="<!-- ai-review-result:${REVIEW_HEAD_SHA} -->"
@@ -233,7 +243,7 @@ jobs:
           ' <<<"$comments_json")"
 
           if [[ -z "$comment_body" ]]; then
-            manual_review "Не найден структурированный результат OpenCode для HEAD ${REVIEW_HEAD_SHA}."
+            review_unavailable "Не найден структурированный результат OpenCode для HEAD ${REVIEW_HEAD_SHA}."
           fi
 
           result_json="$(awk '
@@ -243,7 +253,7 @@ jobs:
           ' <<<"$comment_body")"
 
           if [[ -z "$result_json" ]]; then
-            manual_review "Комментарий OpenCode не содержит JSON-блок результата."
+            review_unavailable "Комментарий OpenCode не содержит JSON-блок результата."
           fi
 
           if ! jq -e '
@@ -263,14 +273,14 @@ jobs:
               (.confidence | type == "number")
             )
           ' <<<"$result_json" >/dev/null; then
-            manual_review "OpenCode вернул результат, не соответствующий ожидаемой JSON-схеме."
+            review_unavailable "OpenCode вернул результат, не соответствующий ожидаемой JSON-схеме."
           fi
 
           status="$(jq -r '.status' <<<"$result_json")"
           summary="$(jq -r '.summary' <<<"$result_json")"
 
           if [[ "$status" == "technical-error" ]]; then
-            manual_review "OpenCode не смог закончить анализ: ${summary}"
+            review_unavailable "OpenCode не смог закончить анализ: ${summary}"
           fi
 
           blocking_count="$(jq '
