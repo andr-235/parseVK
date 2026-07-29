@@ -20,7 +20,8 @@ jobs:
     name: AI Code Review
     if: >-
       github.event.pull_request.draft == false &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -59,7 +60,12 @@ jobs:
           )"
 
           pr_title="$(jq -r '.' <<<"$PR_TITLE_JSON")"
-          title="[AI Review] PR #${PR_NUMBER}: ${pr_title:0:180}"
+          if (( ${#pr_title} > 180 )); then
+            issue_title="${pr_title:0:177}..."
+          else
+            issue_title="$pr_title"
+          fi
+          title="[AI Review] PR #${PR_NUMBER}: ${issue_title}"
           body="$(cat <<EOF
           <!-- ai-review:pr=${PR_NUMBER} -->
           # AI Code Review для PR #${PR_NUMBER}
@@ -89,10 +95,16 @@ jobs:
               -f 'labels[]=ai-review:processing' >/dev/null
           fi
 
+          if [[ -z "$issue_number" ]]; then
+            echo "::error::Не удалось создать или найти AI Review Issue"
+            exit 1
+          fi
+
           echo "issue_number=$issue_number" >> "$GITHUB_OUTPUT"
 
       - name: Run OpenCode review
         id: opencode
+        if: success() && steps.issue.outputs.issue_number != ''
         uses: anomalyco/opencode/github@v1.17.7
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
