@@ -335,3 +335,122 @@ def _make_valid_wire_bytes() -> bytes:
 def _json_bytes(data: dict[str, object]) -> bytes:
     import json
     return json.dumps(data).encode("utf-8")
+
+
+# ── Snake_case and strict mode tests ─────────────────────────────────────────
+
+
+class TestSnakeCaseRejection:
+    """Known Python field names are rejected even with extra='ignore'."""
+
+    @pytest.fixture
+    def catalog(self) -> ContractCatalog:
+        c = MessageContract(
+            message_type="test.event",
+            schema_version=1,
+            payload_model=SamplePayload,
+            topic="test.topic",
+            producers=frozenset({"producer-a"}),
+            consumers=frozenset({"consumer-b"}),
+        )
+        return ContractCatalog.from_contracts((c,))
+
+    def test_envelope_snake_message_type(self, catalog: ContractCatalog) -> None:
+        raw = _make_valid_wire_dict()
+        raw["message_type"] = "test.event"
+        with pytest.raises(InvalidEnvelopeError):
+            parse_for_consume(catalog, consumer="consumer-b", topic="test.topic", value=_json_bytes(raw))
+
+    def test_envelope_snake_occurred_at(self, catalog: ContractCatalog) -> None:
+        raw = _make_valid_wire_dict()
+        raw["occurred_at"] = raw["occurredAt"]
+        with pytest.raises(InvalidEnvelopeError):
+            parse_for_consume(catalog, consumer="consumer-b", topic="test.topic", value=_json_bytes(raw))
+
+    def test_envelope_snake_schema_version(self, catalog: ContractCatalog) -> None:
+        raw = _make_valid_wire_dict()
+        raw["schema_version"] = raw["schemaVersion"]
+        with pytest.raises(InvalidEnvelopeError):
+            parse_for_consume(catalog, consumer="consumer-b", topic="test.topic", value=_json_bytes(raw))
+
+    def test_payload_snake_field(self, catalog: ContractCatalog) -> None:
+        raw = _make_valid_wire_dict()
+        raw["payload"]["entity_id"] = "abc"
+        with pytest.raises(ContractValidationError):
+            parse_for_consume(catalog, consumer="consumer-b", topic="test.topic", value=_json_bytes(raw))
+
+    def test_duplicate_snake_and_camel(self, catalog: ContractCatalog) -> None:
+        raw = _make_valid_wire_dict()
+        raw["message_type"] = "other.event"
+        with pytest.raises(InvalidEnvelopeError):
+            parse_for_consume(catalog, consumer="consumer-b", topic="test.topic", value=_json_bytes(raw))
+
+
+class TestStrictMode:
+    """Strict mode rejects type coercion in JSON wire format."""
+
+    @pytest.fixture
+    def catalog(self) -> ContractCatalog:
+        c = MessageContract(
+            message_type="test.event",
+            schema_version=1,
+            payload_model=SamplePayload,
+            topic="test.topic",
+            producers=frozenset({"producer-a"}),
+            consumers=frozenset({"consumer-b"}),
+        )
+        return ContractCatalog.from_contracts((c,))
+
+    def test_consumer_rejects_string_schema_version(self, catalog: ContractCatalog) -> None:
+        raw = _make_valid_wire_dict()
+        raw["schemaVersion"] = "1"
+        with pytest.raises(InvalidEnvelopeError):
+            parse_for_consume(catalog, consumer="consumer-b", topic="test.topic", value=_json_bytes(raw))
+
+    def test_consumer_rejects_string_payload_int(self, catalog: ContractCatalog) -> None:
+        raw = _make_valid_wire_dict()
+        raw["payload"]["value"] = "1"
+        with pytest.raises((InvalidEnvelopeError, ContractValidationError)):
+            parse_for_consume(catalog, consumer="consumer-b", topic="test.topic", value=_json_bytes(raw))
+
+    def test_producer_rejects_string_value(self) -> None:
+        c = MessageContract(
+            message_type="strict.test",
+            schema_version=1,
+            payload_model=SamplePayload,
+            topic="test.topic",
+            producers=frozenset({"svc"}),
+            consumers=frozenset({"svc"}),
+        )
+        cat = ContractCatalog.from_contracts((c,))
+        with pytest.raises(ContractValidationError):
+            prepare_for_publish(
+                cat,
+                message_type="strict.test",
+                schema_version=1,
+                producer="svc",
+                message_id=uuid4(),
+                occurred_at=datetime.now(UTC),
+                payload={"entityId": "abc", "value": "1"},
+            )
+
+    def test_producer_accepts_correct_types(self) -> None:
+        c = MessageContract(
+            message_type="strict.test",
+            schema_version=1,
+            payload_model=SamplePayload,
+            topic="test.topic",
+            producers=frozenset({"svc"}),
+            consumers=frozenset({"svc"}),
+        )
+        cat = ContractCatalog.from_contracts((c,))
+        result = prepare_for_publish(
+            cat,
+            message_type="strict.test",
+            schema_version=1,
+            producer="svc",
+            message_id=uuid4(),
+            occurred_at=datetime.now(UTC),
+            payload={"entityId": "abc", "value": 1},
+        )
+        assert isinstance(result, PreparedMessage)

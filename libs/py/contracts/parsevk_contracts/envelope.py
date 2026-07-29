@@ -11,6 +11,17 @@ from ._base import ContractModel
 PayloadT = TypeVar("PayloadT", bound=ContractModel)
 
 
+class EnvelopeHeader(ContractModel):
+    """Lightweight model for pre-parsing envelope header fields.
+
+    Used solely to extract message_type and schema_version
+    before looking up the contract in parse_for_consume.
+    """
+
+    message_type: str
+    schema_version: int
+
+
 class MessageEnvelope(ContractModel, Generic[PayloadT]):
     """Typed message envelope for Kafka events.
 

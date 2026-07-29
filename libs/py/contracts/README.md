@@ -63,6 +63,9 @@ CATALOG = ContractCatalog.from_contracts((MY_CONTRACT,))
 
 ### Publishing a message
 
+The producer API expects **Python-native types** — pass ``UUID`` objects,
+``int``, ``bool``, etc. directly, not their string representations.
+
 ```python
 from uuid import uuid4
 from datetime import datetime, timezone
@@ -77,7 +80,7 @@ prepared = prepare_for_publish(
     occurred_at=datetime.now(timezone.utc),
     correlation_id=execution_id,
     causation_id=None,
-    payload={"executionId": str(execution_id), ...},
+    payload={"executionId": execution_id, "taskRunId": task_run_id, ...},
 )
 # prepared.topic      → "parsevk.vk.commands"
 # prepared.partition_key → str(execution_id)
