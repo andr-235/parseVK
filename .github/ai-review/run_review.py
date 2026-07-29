@@ -11,13 +11,14 @@ from typing import Any
 
 HERE = Path(__file__).resolve().parent
 USER_AGENT = "parseVK-ai-reviewer/1.0"
+_DEFAULT_TIMEOUT = object()
 
 _original_request = urllib.request.Request
 _original_urlopen = urllib.request.urlopen
 
 
 class RequestWithUserAgent(_original_request):
-    """Add a browser-independent User-Agent unless the caller already set one."""
+    """Add a stable User-Agent unless the caller already set one."""
 
     def __init__(
         self,
@@ -43,16 +44,18 @@ class RequestWithUserAgent(_original_request):
 def urlopen_with_zen_details(
     url: str | urllib.request.Request,
     data: bytes | None = None,
-    timeout: float | object = urllib.request._GLOBAL_DEFAULT_TIMEOUT,
+    timeout: Any = _DEFAULT_TIMEOUT,
     *args: Any,
     **kwargs: Any,
 ):
     """Preserve Zen's response body in the exception without exposing secrets."""
 
     try:
+        if timeout is _DEFAULT_TIMEOUT:
+            return _original_urlopen(url, data=data, *args, **kwargs)
         return _original_urlopen(url, data=data, timeout=timeout, *args, **kwargs)
     except urllib.error.HTTPError as exc:
-        request_url = url.full_url if isinstance(url, urllib.request.Request) else str(url)
+        request_url = url.full_url if isinstance(url, _original_request) else str(url)
         if "opencode.ai/zen/" not in request_url:
             raise
         body = exc.read().decode(errors="replace")[:3000]
