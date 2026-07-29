@@ -49,7 +49,9 @@ class ResultTests(unittest.TestCase):
         event = {"type": "text", "part": {"text": json.dumps(payload, ensure_ascii=False)}}
         handle.write(json.dumps(event, ensure_ascii=False) + "\n")
         handle.close()
-        return Path(handle.name)
+        path = Path(handle.name)
+        self.addCleanup(path.unlink, missing_ok=True)
+        return path
 
     def test_empty_result_is_approved(self) -> None:
         events = self.write_events(
@@ -187,7 +189,9 @@ class ResultTests(unittest.TestCase):
         handle = tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False)
         handle.write("not-json\n")
         handle.close()
-        result = ai_review.finalize_result(self.scope(), Path(handle.name), 0)
+        path = Path(handle.name)
+        self.addCleanup(path.unlink, missing_ok=True)
+        result = ai_review.finalize_result(self.scope(), path, 0)
         self.assertEqual(result.verdict, "unavailable")
 
 
