@@ -11,7 +11,6 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  id-token: write
   contents: read
   pull-requests: write
   issues: write
@@ -30,7 +29,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
-      PR_TITLE: ${{ github.event.pull_request.title }}
+      PR_TITLE_JSON: ${{ toJSON(github.event.pull_request.title) }}
 
     steps:
       - name: Checkout repository
@@ -45,43 +44,22 @@ jobs:
         run: |
           set -euo pipefail
 
-          gh label create ai-review \
-            --color 5319e7 \
-            --description "Автоматическое ревью кода" \
-            --force
-          gh label create ai-review:processing \
-            --color d4c5f9 \
-            --description "AI-ревью выполняется" \
-            --force
-          gh label create ai-review:changes-required \
-            --color d73a4a \
-            --description "Найдены блокирующие замечания" \
-            --force
-          gh label create ai-review:approved \
-            --color 2da44e \
-            --description "Блокирующих замечаний нет" \
-            --force
-          gh label create ai-review:manual-review \
-            --color d876e3 \
-            --description "Нужна ручная проверка" \
-            --force
-
           gh api \
             --method POST \
             "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/reactions" \
             -f content=eyes >/dev/null || true
 
+          search_query="repo:${GITHUB_REPOSITORY} is:issue in:title \"[AI Review] PR #${PR_NUMBER}:\""
           issue_number="$(
-            gh issue list \
-              --repo "$GITHUB_REPOSITORY" \
-              --state all \
-              --limit 100 \
-              --json number,title \
-              --jq ".[] | select(.title | startswith(\"[AI Review] PR #${PR_NUMBER}:\")) | .number" \
-              | head -n 1
+            gh api \
+              --method GET \
+              search/issues \
+              -f q="$search_query" \
+              --jq '.items[0].number // empty'
           )"
 
-          title="[AI Review] PR #${PR_NUMBER}: ${PR_TITLE}"
+          pr_title="$(jq -r '.' <<<"$PR_TITLE_JSON")"
+          title="[AI Review] PR #${PR_NUMBER}: ${pr_title:0:180}"
           body="$(cat <<EOF
           <!-- ai-review:pr=${PR_NUMBER} -->
           # AI Code Review для PR #${PR_NUMBER}
@@ -115,7 +93,7 @@ jobs:
 
       - name: Run OpenCode review
         id: opencode
-        uses: anomalyco/opencode/github@latest
+        uses: anomalyco/opencode/github@v1.17.7
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -152,7 +130,7 @@ jobs:
             11. Оставь в PR один краткий комментарий со ссылкой на Issue и итогом.
 
       - name: Enforce review verdict
-        if: always()
+        if: always() && !cancelled()
         shell: bash
         env:
           ISSUE_NUMBER: ${{ steps.issue.outputs.issue_number }}
