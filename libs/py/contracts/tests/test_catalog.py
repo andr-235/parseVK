@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from dataclasses import FrozenInstanceError
+from typing import Any, cast
+
 import pytest
 from parsevk_contracts._base import ContractModel
 from parsevk_contracts.catalog import ContractCatalog, MessageContract, PartitionKeySpec
-from parsevk_contracts.errors import PartitionKeyError, UnknownContractError
+from parsevk_contracts.errors import DuplicateContractError, PartitionKeyError, UnknownContractError
 
 
 class SamplePayload(ContractModel):
@@ -58,6 +61,22 @@ class TestPartitionKeySpec:
         result1 = spec.compute(payload)
         result2 = spec.compute(payload)
         assert result1 == result2
+
+    def test_separator_empty_raises(self) -> None:
+        """Empty separator raises ValueError."""
+        with pytest.raises(ValueError):
+            PartitionKeySpec(paths=("entityId",), separator="")
+
+    def test_separator_none_raises(self) -> None:
+        """None separator raises ValueError."""
+        with pytest.raises(ValueError):
+            PartitionKeySpec(paths=("entityId",), separator=None)  # type: ignore[arg-type]
+
+    def test_separator_pipe(self) -> None:
+        """Pipe separator joins values correctly."""
+        spec = PartitionKeySpec(paths=("entityId", "value"), separator="|")
+        payload = SamplePayload(entity_id="abc", value=42)
+        assert spec.compute(payload) == "abc|42"
 
 
 class TestMessageContract:
@@ -167,8 +186,8 @@ class TestContractCatalog:
         assert cat.get("event.a", 1).message_type == "event.a"
         assert cat.get("event.b", 1).message_type == "event.b"
 
-    def test_catalog_immutable(self) -> None:
-        """Cannot modify catalog after construction."""
+    def test_catalog_immutable_contracts(self) -> None:
+        """Cannot assign to contracts tuple (frozen dataclass)."""
         c1 = MessageContract(
             message_type="event.a",
             schema_version=1,
@@ -178,5 +197,33 @@ class TestContractCatalog:
             consumers=frozenset(),
         )
         cat = ContractCatalog.from_contracts((c1,))
-        # _by_identity is a private mapping proxy and should not be mutable
-        assert hasattr(cat, "_by_identity")
+        with pytest.raises(FrozenInstanceError):
+            cat.contracts = ()  # type: ignore[misc]
+
+    def test_catalog_immutable_by_identity(self) -> None:
+        """Cannot modify _by_identity mapping proxy."""
+        c1 = MessageContract(
+            message_type="event.a",
+            schema_version=1,
+            payload_model=SamplePayload,
+            topic="topic.a",
+            producers=frozenset(),
+            consumers=frozenset(),
+        )
+        cat = ContractCatalog.from_contracts((c1,))
+        mutable_view = cast(Any, cat._by_identity)
+        with pytest.raises(TypeError):
+            mutable_view[("other.event", 1)] = c1
+
+    def test_catalog_duplicate_contract(self) -> None:
+        """Duplicate contract identity raises DuplicateContractError."""
+        c1 = MessageContract(
+            message_type="event.a",
+            schema_version=1,
+            payload_model=SamplePayload,
+            topic="topic.a",
+            producers=frozenset(),
+            consumers=frozenset(),
+        )
+        with pytest.raises(DuplicateContractError):
+            ContractCatalog.from_contracts((c1, c1))

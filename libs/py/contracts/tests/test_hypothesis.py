@@ -17,6 +17,7 @@ from parsevk_contracts.vk.commands import (
     VkExecutionRequested,
     VkSourceDemandRequest,
 )
+from pydantic import ValidationError
 
 # ── Hypothesis strategies ─────────────────────────────────────────────────────
 
@@ -154,7 +155,7 @@ class TestNestedExtraFields:
         """Extra field at envelope level is rejected on publish."""
         wire = envelope.to_wire()
         wire["futureField"] = "reject"
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             MessageEnvelope[VkExecutionRequested].model_validate(wire, extra="forbid")
 
     @given(enveloped_requests())
@@ -176,7 +177,7 @@ class TestNestedExtraFields:
         """Extra field at payload level is rejected on publish."""
         wire = envelope.to_wire()
         wire["payload"]["futureField"] = "reject"
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             MessageEnvelope[VkExecutionRequested].model_validate(wire, extra="forbid")
 
     @given(enveloped_requests())
@@ -198,7 +199,7 @@ class TestNestedExtraFields:
         """Extra field in postSelection is rejected on publish."""
         wire = envelope.to_wire()
         wire["payload"]["postSelection"]["futureField"] = "reject"
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             MessageEnvelope[VkExecutionRequested].model_validate(wire, extra="forbid")
 
     @given(enveloped_requests())
@@ -220,7 +221,7 @@ class TestNestedExtraFields:
         """Extra field in demands[0] is rejected on publish."""
         wire = envelope.to_wire()
         wire["payload"]["demands"][0]["futureField"] = "reject"
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             MessageEnvelope[VkExecutionRequested].model_validate(wire, extra="forbid")
 
     @given(enveloped_requests())
@@ -242,7 +243,7 @@ class TestNestedExtraFields:
         """Extra field in demands[0].source is rejected on publish."""
         wire = envelope.to_wire()
         wire["payload"]["demands"][0]["source"]["futureField"] = "reject"
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             MessageEnvelope[VkExecutionRequested].model_validate(wire, extra="forbid")
 
     @given(enveloped_requests())

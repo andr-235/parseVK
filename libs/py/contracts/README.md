@@ -12,11 +12,11 @@ Executable source of truth for ParseVK Kafka contracts.
 - **Schema generation** — JSON Schema (Draft 2020-12), AsyncAPI 3.1 with send/receive operations, and a deterministic manifest
 - **CI drift detection** — generated artifacts are checked into version control and verified in CI
 
-## Dependency
+## Dependencies
 
 - Python 3.12+
-- Pydantic >= 2.12,<3 (only runtime dependency)
-- Standard library only beyond Pydantic
+- **Core runtime:** Pydantic >= 2.12,<3
+- **Generation extra (`pip install "parsevk-contracts[generation]"`):** PyYAML >= 6,<7
 
 ## How to define a new contract
 
@@ -101,7 +101,14 @@ parsed = parse_for_consume(
 
 ## How to run generation
 
+Requires the `generation` extra:
+
 ```bash
+# Install with generation dependencies
+pip install "parsevk-contracts[generation]"
+# or with uv:
+uv sync --extra generation
+
 # Generate all artifacts (JSON Schema, manifest, AsyncAPI)
 uv run python -m parsevk_contracts.generation.cli generate
 

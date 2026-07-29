@@ -19,7 +19,7 @@ class TestContractModel:
         """Serializing and deserializing produces identical data."""
         original = SampleModel(name="test", count=42, is_active=True)
         wire = original.to_wire()
-        restored = SampleModel.from_wire(wire)
+        restored = SampleModel.model_validate(wire)
         assert restored == original
 
     def test_camel_case_wire(self) -> None:
@@ -57,13 +57,6 @@ class TestContractModel:
         assert '"isActive"' in json_str
         assert '"is_active"' not in json_str
 
-    def test_from_wire_accepts_snake_case(self) -> None:
-        """from_wire accepts snake_case keys too (populate_by_name)."""
-        data = {"name": "snake", "count": 10, "is_active": False}
-        model = SampleModel.from_wire(data)
-        assert model.name == "snake"
-        assert model.is_active is False
-
     def test_uuid_field_round_trip(self) -> None:
         """UUID fields survive JSON serialization round-trip."""
 
@@ -74,5 +67,5 @@ class TestContractModel:
         uid = str(uuid4())
         model = ModelWithUuid(id=uid, token="abc")
         wire = model.to_wire()
-        restored = ModelWithUuid.from_wire(wire)
+        restored = ModelWithUuid.model_validate(wire)
         assert restored.id == uid

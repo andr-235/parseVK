@@ -164,7 +164,7 @@ def parse_for_consume(
 
     try:
         envelope_raw = MessageEnvelope[ContractModel].model_validate(
-            raw, extra="ignore"
+            raw, extra="ignore", by_alias=True, by_name=False
         )
     except ValidationError as exc:
         raise InvalidEnvelopeError(f"Invalid envelope: {exc}") from exc
@@ -196,7 +196,7 @@ def parse_for_consume(
 
     try:
         typed_payload = contract.payload_model.model_validate(
-            payload_raw, extra="ignore"
+            payload_raw, extra="ignore", by_alias=True, by_name=False
         )
     except ValidationError as exc:
         raise ContractValidationError(

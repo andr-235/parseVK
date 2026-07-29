@@ -7,17 +7,12 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any, Literal
 
-from pydantic import ValidationError
-
 from ._base import ContractModel
 from .errors import (
-    ContractValidationError,
     DuplicateContractError,
     PartitionKeyError,
     UnknownContractError,
 )
-
-ExtraPolicy = Literal["ignore", "forbid"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -178,16 +173,3 @@ class ContractCatalog:
     def get_by_topic(self, topic: str) -> tuple[MessageContract, ...]:
         """Get all contracts for a given topic."""
         return self._by_topic.get(topic, ())
-
-    @staticmethod
-    def _validate_payload(
-        contract: MessageContract,
-        payload: dict[str, object],
-        extra: ExtraPolicy,
-    ) -> None:
-        try:
-            contract.payload_model.model_validate(payload, extra=extra)
-        except ValidationError as exc:
-            raise ContractValidationError(
-                f"Payload validation failed for '{contract.message_type}': {exc}"
-            ) from exc

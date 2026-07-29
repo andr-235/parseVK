@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
 from parsevk_contracts._base import ContractModel
 from parsevk_contracts.envelope import MessageEnvelope
+from pydantic import ValidationError
 
 
 class SamplePayload(ContractModel):
@@ -101,3 +102,46 @@ class TestMessageEnvelope:
         )
         assert envelope.correlation_id is None
         assert envelope.causation_id is None
+
+    def test_naive_datetime_rejected(self) -> None:
+        """Naive datetime (no timezone) raises ValidationError."""
+        payload = SamplePayload(event="naive", value=0)
+        with pytest.raises(ValidationError):
+            MessageEnvelope[SamplePayload](
+                message_id=uuid4(),
+                message_type="test.naive",
+                schema_version=1,
+                occurred_at=datetime(2026, 1, 1, 12, 0, 0),
+                producer="svc",
+                payload=payload,
+            )
+
+    def test_non_utc_normalized(self) -> None:
+        """Datetime with +10:00 offset is normalized to UTC."""
+        payload = SamplePayload(event="tz", value=0)
+        tz_plus_10 = timezone(timedelta(hours=10))
+        occurred = datetime(2026, 1, 1, 12, 0, 0, tzinfo=tz_plus_10)
+        envelope = MessageEnvelope[SamplePayload](
+            message_id=uuid4(),
+            message_type="test.tz",
+            schema_version=1,
+            occurred_at=occurred,
+            producer="svc",
+            payload=payload,
+        )
+        assert envelope.occurred_at.tzinfo is UTC
+        assert envelope.occurred_at.hour == 2  # 12:00 +10:00 → 02:00 UTC
+
+    def test_wire_json_z_utc(self) -> None:
+        """Wire JSON with Z offset is parsed and normalized to UTC."""
+        payload = SamplePayload(event="wire", value=0)
+        envelope = MessageEnvelope[SamplePayload](
+            message_id=uuid4(),
+            message_type="test.wire",
+            schema_version=1,
+            occurred_at=datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC),
+            producer="svc",
+            payload=payload,
+        )
+        wire = envelope.to_wire_json()
+        assert "2026-01-01T12:00:00Z" in wire or "+00:00" in wire

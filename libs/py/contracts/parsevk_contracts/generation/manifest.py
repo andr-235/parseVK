@@ -23,6 +23,13 @@ def generate_manifest(
 ) -> dict[str, object]:
     """Generate a contract manifest listing all registered contracts."""
     metadata = metadata or ManifestMetadata()
+    contracts = [
+        _contract_entry(c)
+        for c in sorted(
+            catalog.contracts,
+            key=lambda c: (c.message_type, c.schema_version),
+        )
+    ]
     return {
         "manifestVersion": 1,
         "package": {
@@ -30,13 +37,7 @@ def generate_manifest(
             "version": metadata.package_version,
             "repository": metadata.repository,
         },
-        "contracts": sorted(
-            [
-                _contract_entry(c)
-                for c in catalog.contracts
-            ],
-            key=lambda c: str(c["messageType"]),
-        ),
+        "contracts": contracts,
     }
 
 

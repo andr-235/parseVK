@@ -29,7 +29,4 @@ class ContractModel(BaseModel):
         """Serialize to camelCase JSON string for Kafka wire format."""
         return self.model_dump_json(by_alias=True)
 
-    @classmethod
-    def from_wire(cls, data: dict[str, object]) -> ContractModel:
-        """Deserialize from camelCase dict (snake_case fields accepted too)."""
-        return cls.model_validate(data)
+
