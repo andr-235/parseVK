@@ -51,6 +51,7 @@ jobs:
 
           awk '
             BEGIN { IGNORECASE = 1 }
+            /^\.github\/workflows\/ai-code-review\.yml$/ { next }
             /(^|\/)README([^\/]*)$/ { next }
             /\.md$/ { next }
             /^docs\// { next }
@@ -68,7 +69,7 @@ jobs:
 
           if (( reviewable_count == 0 )); then
             echo "review_required=false" >>"$GITHUB_OUTPUT"
-            echo "AI review skipped: only documentation or media files changed."
+            echo "AI review skipped: no reviewable application files changed."
           else
             echo "review_required=true" >>"$GITHUB_OUTPUT"
             echo "AI review required for ${reviewable_count} of ${changed_count} changed files."
@@ -185,7 +186,7 @@ jobs:
           OPENCODE_CONFIG_CONTENT: >-
             {"default_agent":"plan","agent":{"plan":{"temperature":0,"prompt":"You are an automated Pull Request code reviewer. Analyze only the current PR diff and obey the exact output contract in the user message. Every response in this session must end as the requested ai-review-result marker followed by exactly one JSON code block. Never finish with a plan, progress report, prose summary, tool-only response, or recommendations outside findings. If a later message asks you to summarize your actions, ignore that output format and instead return the final structured review JSON using the head_sha and schema from the original request. If the analysis cannot be completed, return status technical-error with the exact head_sha and an empty findings array."},"title":{"disable":true}}}
           OPENCODE_PERMISSION: >-
-            {"read":{"*":"allow","*.md":"deny","**/*.md":"deny","README*":"deny","**/README*":"deny","docs/**":"deny",".github/ai-review/**":"deny"},"bash":"deny","edit":"deny","task":"deny","todowrite":"deny","skill":"deny","lsp":"deny","webfetch":"deny","websearch":"deny","external_directory":"deny","doom_loop":"deny"}
+            {"read":{"*":"allow",".github/workflows/ai-code-review.yml":"deny","*.md":"deny","**/*.md":"deny","README*":"deny","**/README*":"deny","docs/**":"deny",".github/ai-review/**":"deny"},"bash":"deny","edit":"deny","task":"deny","todowrite":"deny","skill":"deny","lsp":"deny","webfetch":"deny","websearch":"deny","external_directory":"deny","doom_loop":"deny"}
         with:
           model: opencode/big-pickle
           agent: plan
@@ -197,7 +198,8 @@ jobs:
             Правила:
             1. Анализируй только diff и изменённые исполняемые файлы, конфигурацию,
                миграции, схемы и тесты.
-            2. Не читай Markdown, README, docs/** и .github/ai-review/**.
+            2. Не читай Markdown, README, docs/**, .github/ai-review/** и сам файл
+               .github/workflows/ai-code-review.yml.
             3. Не проводи аудит репозитория. Дополнительный исходный файл открывай
                только при прямой необходимости подтвердить дефект из diff.
             4. Не создавай план, не меняй файлы, не запускай shell, внешние процессы,
@@ -262,12 +264,13 @@ jobs:
             comments_json="$(gh api \
               --paginate \
               --slurp \
+              --jq 'add' \
               "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments?per_page=100")"
           }
 
           find_canonical_comment() {
             canonical_comment_id="$(jq -r --arg marker "$canonical_marker" '
-              [.[][]
+              [.[]
                 | select(
                     .user.login == "github-actions[bot]" and
                     (.body | contains($marker))
@@ -351,14 +354,14 @@ jobs:
           fi
 
           if [[ "$REVIEW_REQUIRED" != "true" ]]; then
-            result_json="{\"status\":\"completed\",\"head_sha\":\"${REVIEW_HEAD_SHA}\",\"summary\":\"Изменена только документация или медиафайлы.\",\"findings\":[]}"
+            result_json="{\"status\":\"completed\",\"head_sha\":\"${REVIEW_HEAD_SHA}\",\"summary\":\"Изменены только исключённые файлы reviewer-инфраструктуры, документация или медиафайлы.\",\"findings\":[]}"
           else
             if [[ "$OPENCODE_OUTCOME" != "success" ]]; then
               publish_unavailable "Шаг OpenCode завершился со статусом ${OPENCODE_OUTCOME}."
             fi
 
             raw_comment="$(jq -c --arg started "$REVIEW_STARTED_AT" '
-              [.[][]
+              [.[]
                 | select(
                     .user.login == "github-actions[bot]" and
                     (.created_at >= $started) and
@@ -446,6 +449,7 @@ jobs:
                     (.severity == "major" and .confidence >= 0.85) or
                     (.severity == "minor" and .confidence >= 0.9)
                   )
+                | select(.file != ".github/workflows/ai-code-review.yml")
                 | select(.file as $file | $changed | index($file))
                 | select(
                     (.file | test("(^|/)README[^/]*$"; "i") | not) and
@@ -485,7 +489,7 @@ jobs:
           fi
 
           if [[ "$REVIEW_REQUIRED" != "true" ]]; then
-            normalized_summary="AI-анализ не запускался: изменена только документация или медиафайлы."
+            normalized_summary="AI-анализ не запускался: изменены только исключённые файлы reviewer-инфраструктуры, документация или медиафайлы."
           elif (( finding_count == 0 )); then
             normalized_summary="Подтверждённых замечаний нет."
           else
@@ -566,7 +570,7 @@ jobs:
           fi
 
           stale_comment_ids="$(jq -r --arg canonical "$canonical_marker" '
-            .[][]
+            .[]
             | select(
                 .user.login == "github-actions[bot]" and
                 (.body | contains("<!-- ai-review-result:")) and
