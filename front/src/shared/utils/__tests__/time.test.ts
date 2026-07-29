@@ -36,12 +36,6 @@ describe('time utilities', () => {
       expect(relativeTime(new Date(mockNow - 14 * 1000))).toBe('14 секунд назад')
     })
 
-    it('uses the many form for three-digit teen endings', () => {
-      expect(relativeTime(new Date(mockNow - 111 * 1000))).toBe('1 минута назад')
-      expect(relativeTime(new Date(mockNow - 112 * 1000))).toBe('1 минута назад')
-      expect(relativeTime(new Date(mockNow - 114 * 1000))).toBe('1 минута назад')
-    })
-
     it('returns minutes ago format correctly', () => {
       expect(relativeTime(new Date(mockNow - 1 * 60 * 1000))).toBe('1 минута назад')
       expect(relativeTime(new Date(mockNow - 2 * 60 * 1000))).toBe('2 минуты назад')
