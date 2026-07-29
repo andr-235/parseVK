@@ -1,0 +1,37 @@
+{
+  "messageId": "a3b4c5d6-e7f8-9012-3456-789012345678",
+  "messageType": "vk.execution.requested",
+  "schemaVersion": 1,
+  "occurredAt": "2026-07-29T12:00:00Z",
+  "producer": "tasks-service",
+  "correlationId": "00000000-0000-0000-0000-000000000003",
+  "payload": {
+    "taskId": 44,
+    "taskRunId": "b4c5d6e7-f8a9-0123-4567-890123456789",
+    "executionId": "c5d6e7f8-a9b0-1234-5678-901234567890",
+    "demands": [
+      {
+        "demandId": "d6e7f8a9-b0c1-2345-6789-012345678901",
+        "source": {
+          "sourceId": "e7f8a9b0-c1d2-3456-7890-123456789012",
+          "provider": "vk",
+          "sourceType": "community",
+          "externalId": "111",
+          "ownerId": -111
+        }
+      }
+    ],
+    "postSelection": {
+      "strategy": "latestByPublishedAt",
+      "limitPerSource": 100
+    },
+    "commentSelection": {
+      "mode": "all",
+      "includeThreadReplies": true
+    },
+    "taskRevision": 1,
+    "sourceSetRevision": 1,
+    "snapshotSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "futureField": "this should be ignored by consumer"
+  }
+}
