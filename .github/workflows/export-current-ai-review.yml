@@ -1,0 +1,25 @@
+name: Export current AI review workflow
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [synchronize]
+    paths:
+      - .github/workflows/export-current-ai-review.yml
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: test/ai-review-e2e
+      - uses: actions/upload-artifact@v4
+        with:
+          name: current-ai-review-workflow
+          path: .github/workflows/ai-code-review.yml
+          retention-days: 1
