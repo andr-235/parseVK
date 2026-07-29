@@ -1,0 +1,226 @@
+{
+  "$defs": {
+    "CommentSelection": {
+      "description": "Comment collection strategy.",
+      "properties": {
+        "mode": {
+          "const": "all",
+          "title": "Mode",
+          "type": "string"
+        },
+        "includeThreadReplies": {
+          "title": "Includethreadreplies",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "mode",
+        "includeThreadReplies"
+      ],
+      "title": "CommentSelection",
+      "type": "object"
+    },
+    "PostSelection": {
+      "description": "Post collection strategy.",
+      "properties": {
+        "strategy": {
+          "const": "latestByPublishedAt",
+          "title": "Strategy",
+          "type": "string"
+        },
+        "limitPerSource": {
+          "title": "Limitpersource",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "strategy",
+        "limitPerSource"
+      ],
+      "title": "PostSelection",
+      "type": "object"
+    },
+    "SourceReference": {
+      "description": "Reference to a VK community source.",
+      "properties": {
+        "sourceId": {
+          "format": "uuid",
+          "title": "Sourceid",
+          "type": "string"
+        },
+        "provider": {
+          "const": "vk",
+          "title": "Provider",
+          "type": "string"
+        },
+        "sourceType": {
+          "const": "community",
+          "title": "Sourcetype",
+          "type": "string"
+        },
+        "externalId": {
+          "pattern": "^[1-9][0-9]*$",
+          "title": "Externalid",
+          "type": "string"
+        },
+        "ownerId": {
+          "exclusiveMaximum": 0,
+          "title": "Ownerid",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "sourceId",
+        "provider",
+        "sourceType",
+        "externalId",
+        "ownerId"
+      ],
+      "title": "SourceReference",
+      "type": "object"
+    },
+    "VkExecutionRequested": {
+      "description": "Command payload: request VK execution for one or more sources.",
+      "properties": {
+        "taskId": {
+          "title": "Taskid",
+          "type": "integer"
+        },
+        "taskRunId": {
+          "format": "uuid",
+          "title": "Taskrunid",
+          "type": "string"
+        },
+        "executionId": {
+          "format": "uuid",
+          "title": "Executionid",
+          "type": "string"
+        },
+        "demands": {
+          "items": {
+            "$ref": "#/$defs/VkSourceDemandRequest"
+          },
+          "minItems": 1,
+          "title": "Demands",
+          "type": "array"
+        },
+        "postSelection": {
+          "$ref": "#/$defs/PostSelection"
+        },
+        "commentSelection": {
+          "$ref": "#/$defs/CommentSelection"
+        },
+        "taskRevision": {
+          "title": "Taskrevision",
+          "type": "integer"
+        },
+        "sourceSetRevision": {
+          "title": "Sourcesetrevision",
+          "type": "integer"
+        },
+        "snapshotSha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Snapshotsha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taskId",
+        "taskRunId",
+        "executionId",
+        "demands",
+        "postSelection",
+        "commentSelection",
+        "taskRevision",
+        "sourceSetRevision",
+        "snapshotSha256"
+      ],
+      "title": "VkExecutionRequested",
+      "type": "object"
+    },
+    "VkSourceDemandRequest": {
+      "description": "A single source collection demand within an execution request.",
+      "properties": {
+        "demandId": {
+          "format": "uuid",
+          "title": "Demandid",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/SourceReference"
+        }
+      },
+      "required": [
+        "demandId",
+        "source"
+      ],
+      "title": "VkSourceDemandRequest",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "messageId": {
+      "format": "uuid",
+      "title": "Messageid",
+      "type": "string"
+    },
+    "messageType": {
+      "title": "Messagetype",
+      "type": "string"
+    },
+    "schemaVersion": {
+      "title": "Schemaversion",
+      "type": "integer"
+    },
+    "occurredAt": {
+      "format": "date-time",
+      "title": "Occurredat",
+      "type": "string"
+    },
+    "producer": {
+      "title": "Producer",
+      "type": "string"
+    },
+    "correlationId": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Correlationid"
+    },
+    "causationId": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Causationid"
+    },
+    "payload": {
+      "$ref": "#/$defs/VkExecutionRequested"
+    }
+  },
+  "required": [
+    "messageId",
+    "messageType",
+    "schemaVersion",
+    "occurredAt",
+    "producer",
+    "payload"
+  ],
+  "title": "vk.execution.requested",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Schema for vk.execution.requested v1"
+}

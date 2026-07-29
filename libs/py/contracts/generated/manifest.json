@@ -1,0 +1,26 @@
+{
+  "$schema": "parsevk-contracts-manifest",
+  "contracts": [
+    {
+      "causationPolicy": "optional",
+      "compatibility": "backward",
+      "consumers": [
+        "vk-service"
+      ],
+      "correlationRequired": true,
+      "messageType": "vk.execution.requested",
+      "partitionKey": {
+        "paths": [
+          "payload.execution_id"
+        ],
+        "separator": ":"
+      },
+      "producers": [
+        "tasks-service"
+      ],
+      "schemaVersion": 1,
+      "topic": "parsevk.vk.commands"
+    }
+  ],
+  "version": 1
+}
