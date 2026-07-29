@@ -29,6 +29,7 @@ def test_json_schema_no_drift() -> None:
 
 def test_manifest_no_drift() -> None:
     """Generated manifest matches current contracts."""
+    from parsevk_contracts.vk.commands import CATALOG
     from parsevk_contracts.generation.manifest import generate_manifest
 
     generated_path = GENERATED_DIR / "manifest.json"
@@ -37,7 +38,5 @@ def test_manifest_no_drift() -> None:
     with open(generated_path) as f:
         generated = json.load(f)
 
-    expected = generate_manifest()
-    # generated_at differs every call; compare the rest
-    for key in ("$schema", "$id", "title", "description", "metadata", "contracts"):
-        assert generated.get(key) == expected.get(key), f"Drift in manifest.{key}"
+    expected = generate_manifest(CATALOG)
+    assert generated == expected, "Drift detected in manifest"

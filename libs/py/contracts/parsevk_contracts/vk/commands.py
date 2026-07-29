@@ -102,6 +102,7 @@ VK_EXECUTION_REQUESTED = MessageContract(
     consumers=frozenset({"vk-service"}),
     partition_key=PartitionKeySpec(paths=("payload.executionId",)),
     correlation_required=True,
+    correlation_path="payload.executionId",
     causation_policy="forbidden",
     compatibility="backward",
 )

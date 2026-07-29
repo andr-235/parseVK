@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any, Literal
+
+from pydantic import ValidationError
 
 from ._base import ContractModel
 from .errors import (
@@ -19,7 +21,7 @@ from .errors import (
 )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class PartitionKeySpec:
     """Deterministic partition key specification.
 
@@ -33,6 +35,9 @@ class PartitionKeySpec:
     def __post_init__(self) -> None:
         if not self.paths:
             raise ValueError("At least one path is required")
+        for p in self.paths:
+            if not p:
+                raise ValueError("Path must not be empty")
 
     def compute(self, payload: ContractModel) -> str:
         """Compute partition key from payload model.
@@ -53,27 +58,41 @@ class PartitionKeySpec:
 
     @staticmethod
     def _strip_payload_prefix(path: str) -> str:
-        """Strip ``'payload.'`` prefix if present for payload-level resolution."""
         if path.startswith("payload."):
             return path[len("payload."):]
         return path
 
-    @staticmethod
     def _compute_from_wire(
-        wire_data: dict[str, object], paths: tuple[str, ...]
+        self, wire_data: dict[str, object], paths: tuple[str, ...]
     ) -> str:
         """Internal: resolve paths against wire dict and join with separator."""
         parts: list[str] = []
         for path in paths:
             value = _resolve_wire_path(wire_data, path)
-            parts.append(str(value))
-        return ":".join(parts)
+            if value is None:
+                raise PartitionKeyError(
+                    f"Path '{path}' resolved to None"
+                )
+            if isinstance(value, (dict, list)):
+                raise PartitionKeyError(
+                    f"Path '{path}' resolved to {type(value).__name__}, "
+                    f"expected scalar"
+                )
+            part = str(value)
+            if not part:
+                raise PartitionKeyError(
+                    f"Path '{path}' resolved to empty value"
+                )
+            parts.append(part)
+        return self.separator.join(parts)
 
 
 def _resolve_wire_path(data: dict[str, object], path: str) -> object:
     """Traverse a wire-format dict by dot-separated path."""
     current: Any = data
     for segment in path.split("."):
+        if not segment:
+            raise PartitionKeyError(f"Empty segment in path '{path}'")
         if isinstance(current, dict):
             current = current.get(segment)
         else:
@@ -87,7 +106,7 @@ def _resolve_wire_path(data: dict[str, object], path: str) -> object:
     return current
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class MessageContract:
     """Definition of a single message contract.
 
@@ -102,10 +121,12 @@ class MessageContract:
     consumers: frozenset[str]
     partition_key: PartitionKeySpec | None = None
     correlation_required: bool = False
+    correlation_path: str | None = None
     causation_policy: Literal["optional", "required", "forbidden"] = "optional"
     compatibility: Literal["backward"] = "backward"
 
 
+@dataclass(frozen=True, slots=True)
 class ContractCatalog:
     """Immutable registry of message contracts.
 
@@ -113,44 +134,39 @@ class ContractCatalog:
     Once built, the catalog and its contents cannot be modified.
     """
 
-    def __init__(self, contracts: tuple[MessageContract, ...]) -> None:
-        self._contracts = contracts
-        by_type: dict[str, MessageContract] = {}
-        by_topic: dict[str, list[MessageContract]] = {}
+    contracts: tuple[MessageContract, ...]
+    _by_identity: MappingProxyType = field(init=False, repr=False)
+    _by_topic: MappingProxyType = field(init=False, repr=False)
 
-        for contract in contracts:
-            key = f"{contract.message_type}:{contract.schema_version}"
-            if key in by_type:
+    def __post_init__(self) -> None:
+        by_identity: dict[tuple[str, int], MessageContract] = {}
+        by_topic: dict[str, tuple[MessageContract, ...]] = {}
+
+        for contract in self.contracts:
+            key = (contract.message_type, contract.schema_version)
+            if key in by_identity:
                 raise DuplicateContractError(
                     f"Duplicate contract '{contract.message_type}' "
                     f"v{contract.schema_version}"
                 )
-            by_type[key] = contract
-            if contract.topic not in by_topic:
-                by_topic[contract.topic] = []
-            by_topic[contract.topic].append(contract)
+            by_identity[key] = contract
+            topic_list = by_topic.setdefault(contract.topic, ())
+            by_topic[contract.topic] = topic_list + (contract,)
 
-        self._by_identity = MappingProxyType(by_type)
-        self._by_topic = MappingProxyType(
-            {topic: tuple(c) for topic, c in by_topic.items()}
-        )
+        object.__setattr__(self, "_by_identity", MappingProxyType(by_identity))
+        object.__setattr__(self, "_by_topic", MappingProxyType(by_topic))
 
     @classmethod
     def from_contracts(cls, contracts: tuple[MessageContract, ...]) -> ContractCatalog:
         """Build an immutable catalog from a tuple of contracts."""
-        return cls(contracts)
-
-    @property
-    def contracts(self) -> tuple[MessageContract, ...]:
-        """Immutable tuple of all registered contracts."""
-        return self._contracts
+        return cls(contracts=contracts)
 
     def get(self, message_type: str, schema_version: int) -> MessageContract:
         """Look up a contract by message_type and schema_version.
 
         Raises UnknownContractError if not found.
         """
-        key = f"{message_type}:{schema_version}"
+        key = (message_type, schema_version)
         contract = self._by_identity.get(key)
         if contract is None:
             raise UnknownContractError(
@@ -173,6 +189,7 @@ class ContractCatalog:
     ) -> None:
         """Validate a message for publishing.
 
+        Low-level: checks producer, correlation, causation, and payload.
         Raises ContractError subclass on any violation.
         """
         contract = self.get(message_type, schema_version)
@@ -209,6 +226,7 @@ class ContractCatalog:
     ) -> None:
         """Validate a message for consumption.
 
+        Low-level: checks consumer, correlation, causation, and payload.
         Raises ContractError subclass on any violation.
         """
         contract = self.get(message_type, schema_version)
@@ -234,15 +252,17 @@ class ContractCatalog:
 
         self._validate_payload(contract, payload, extra="ignore")
 
+    ExtraPolicy = Literal["ignore", "forbid"]
+
     def _validate_payload(
         self,
         contract: MessageContract,
         payload: dict[str, object],
-        extra: str,
+        extra: ExtraPolicy,
     ) -> None:
         try:
             contract.payload_model.model_validate(payload, extra=extra)
-        except Exception as exc:
+        except ValidationError as exc:
             raise ContractValidationError(
                 f"Payload validation failed for '{contract.message_type}': {exc}"
             ) from exc

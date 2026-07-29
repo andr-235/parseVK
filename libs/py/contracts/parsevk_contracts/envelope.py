@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Generic, TypeVar
+
+from pydantic import AwareDatetime
 from uuid import UUID
 
 from ._base import ContractModel
@@ -19,7 +20,7 @@ class MessageEnvelope(ContractModel, Generic[PayloadT]):
     message_id: UUID
     message_type: str
     schema_version: int
-    occurred_at: datetime
+    occurred_at: AwareDatetime
     producer: str
     correlation_id: UUID | None = None
     causation_id: UUID | None = None

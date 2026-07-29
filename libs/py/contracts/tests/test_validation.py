@@ -1,28 +1,43 @@
-"""Tests for validation convenience functions."""
+"""Tests for the new boundary API (prepare_for_publish / parse_for_consume)."""
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
 from parsevk_contracts._base import ContractModel
 from parsevk_contracts.catalog import ContractCatalog, MessageContract, PartitionKeySpec
-from parsevk_contracts.envelope import MessageEnvelope
 from parsevk_contracts.errors import (
+    CausationPolicyError,
     ConsumerNotAllowedError,
     ContractValidationError,
     CorrelationPolicyError,
+    InvalidEnvelopeError,
     ProducerNotAllowedError,
+    TopicMismatchError,
     UnknownContractError,
 )
-from parsevk_contracts.validation import validate_for_consume, validate_for_publish
+from parsevk_contracts.validation import (
+    ParsedMessage,
+    PreparedMessage,
+    parse_for_consume,
+    prepare_for_publish,
+)
 
 
 class SamplePayload(ContractModel):
     entity_id: str
     value: int
+
+
+class NestedPayload(ContractModel):
+    label: str
+
+
+class OuterPayload(ContractModel):
+    inner: NestedPayload
 
 
 @pytest.fixture
@@ -34,7 +49,7 @@ def contract() -> MessageContract:
         topic="test.topic",
         producers=frozenset({"producer-a"}),
         consumers=frozenset({"consumer-b"}),
-        partition_key=PartitionKeySpec(paths=("entity_id",)),
+        partition_key=PartitionKeySpec(paths=("entityId",)),
         correlation_required=True,
         causation_policy="optional",
     )
@@ -45,72 +60,238 @@ def catalog(contract: MessageContract) -> ContractCatalog:
     return ContractCatalog.from_contracts((contract,))
 
 
-_SENTINEL = object()
+def make_prepare_kwargs(**overrides: object) -> dict[str, object]:
+    base: dict[str, object] = {
+        "message_type": "test.event",
+        "schema_version": 1,
+        "producer": "producer-a",
+        "message_id": uuid4(),
+        "occurred_at": datetime.now(timezone.utc),
+        "correlation_id": uuid4(),
+        "causation_id": None,
+        "payload": {"entityId": "abc", "value": 1},
+    }
+    base.update(overrides)
+    return base
 
 
-def make_envelope(
-    payload: SamplePayload | None = None,
-    correlation_id: UUID | None | object = _SENTINEL,
-    message_type: str = "test.event",
-) -> MessageEnvelope[SamplePayload]:
-    if payload is None:
-        payload = SamplePayload(entity_id="abc", value=1)
-
-    if correlation_id is _SENTINEL:
-        corr_uuid: UUID | None = uuid4()
-    else:
-        corr_uuid = correlation_id  # type: ignore[assignment]
-
-    return MessageEnvelope[SamplePayload](
-        message_id=uuid4(),
-        message_type=message_type,
-        schema_version=1,
-        occurred_at=datetime.now(timezone.utc),
-        producer="producer-a",
-        correlation_id=corr_uuid,
-        payload=payload,
-    )
+# ── prepare_for_publish tests ─────────────────────────────────────────────
 
 
-class TestValidateForPublish:
-    def test_valid_publish(self, catalog: ContractCatalog) -> None:
-        """Valid envelope passes publish validation."""
-        envelope = make_envelope()
-        validate_for_publish(catalog, envelope, producer="producer-a")
+class TestPrepareForPublish:
+    def test_returns_typed_envelope(self, catalog: ContractCatalog) -> None:
+        result = prepare_for_publish(catalog, **make_prepare_kwargs())  # type: ignore[arg-type]
+        assert isinstance(result, PreparedMessage)
+        assert result.envelope.message_type == "test.event"
+
+    def test_returns_topic(self, catalog: ContractCatalog) -> None:
+        result = prepare_for_publish(catalog, **make_prepare_kwargs())  # type: ignore[arg-type]
+        assert result.topic == "test.topic"
+
+    def test_returns_partition_key(self, catalog: ContractCatalog) -> None:
+        result = prepare_for_publish(catalog, **make_prepare_kwargs())  # type: ignore[arg-type]
+        assert result.partition_key == "abc"
+
+    def test_value_is_json_bytes(self, catalog: ContractCatalog) -> None:
+        result = prepare_for_publish(catalog, **make_prepare_kwargs())  # type: ignore[arg-type]
+        assert isinstance(result.value, bytes)
+
+    def test_headers_include_content_type(self, catalog: ContractCatalog) -> None:
+        result = prepare_for_publish(catalog, **make_prepare_kwargs())  # type: ignore[arg-type]
+        header_keys = {k for k, _ in result.headers}
+        assert "content_type" in header_keys
+        assert "message_type" in header_keys
 
     def test_unknown_contract(self, catalog: ContractCatalog) -> None:
-        """Unknown message_type raises UnknownContractError."""
-        envelope = make_envelope(message_type="unknown.event")
+        kwargs = make_prepare_kwargs(message_type="unknown.event")
         with pytest.raises(UnknownContractError):
-            validate_for_publish(catalog, envelope, producer="producer-a")
+            prepare_for_publish(catalog, **kwargs)  # type: ignore[arg-type]
 
-    def test_producer_not_allowed(self, catalog: ContractCatalog) -> None:
-        """Unauthorized producer raises ProducerNotAllowedError."""
-        envelope = make_envelope()
+    def test_unauthorized_producer(self, catalog: ContractCatalog) -> None:
+        kwargs = make_prepare_kwargs(producer="hacker")
         with pytest.raises(ProducerNotAllowedError):
-            validate_for_publish(catalog, envelope, producer="unauthorized")
+            prepare_for_publish(catalog, **kwargs)  # type: ignore[arg-type]
+
+    def test_rejects_extra_nested_field(self, catalog: ContractCatalog) -> None:
+        payload: dict[str, object] = {"entityId": "abc", "value": 1, "extraField": "x"}
+        kwargs = make_prepare_kwargs(payload=payload)
+        with pytest.raises(ContractValidationError):
+            prepare_for_publish(catalog, **kwargs)  # type: ignore[arg-type]
 
     def test_missing_correlation(self, catalog: ContractCatalog) -> None:
-        """Missing correlation_id raises CorrelationPolicyError."""
-        envelope = make_envelope(correlation_id=None)
+        kwargs = make_prepare_kwargs(correlation_id=None)
         with pytest.raises(CorrelationPolicyError):
-            validate_for_publish(catalog, envelope, producer="producer-a")
+            prepare_for_publish(catalog, **kwargs)  # type: ignore[arg-type]
+
+    def test_causation_forbidden(self) -> None:
+        c = MessageContract(
+            message_type="root.cmd",
+            schema_version=1,
+            payload_model=SamplePayload,
+            topic="cmds",
+            producers=frozenset({"svc"}),
+            consumers=frozenset({"svc"}),
+            causation_policy="forbidden",
+        )
+        cat = ContractCatalog.from_contracts((c,))
+        now = datetime.now(timezone.utc)
+        kwargs = make_prepare_kwargs(
+            message_type="root.cmd",
+            producer="svc",
+            causation_id=uuid4(),
+        )
+        kwargs["correlation_id"] = uuid4()
+        kwargs["occurred_at"] = now
+        with pytest.raises(CausationPolicyError):
+            prepare_for_publish(cat, **kwargs)  # type: ignore[arg-type]
+
+    def test_prepare_with_nested_payload(self) -> None:
+        c = MessageContract(
+            message_type="nested.event",
+            schema_version=1,
+            payload_model=OuterPayload,
+            topic="nested.topic",
+            producers=frozenset({"svc"}),
+            consumers=frozenset({"svc"}),
+            partition_key=PartitionKeySpec(paths=("inner.label",)),
+            correlation_required=False,
+        )
+        cat = ContractCatalog.from_contracts((c,))
+        now = datetime.now(timezone.utc)
+        result = prepare_for_publish(
+            cat,
+            message_type="nested.event",
+            schema_version=1,
+            producer="svc",
+            message_id=uuid4(),
+            occurred_at=now,
+            payload={"inner": {"label": "deep"}},
+        )
+        assert result.partition_key == "deep"
 
 
-class TestValidateForConsume:
-    def test_valid_consume(self, catalog: ContractCatalog) -> None:
-        """Valid envelope passes consume validation."""
-        envelope = make_envelope()
-        validate_for_consume(catalog, envelope, consumer="consumer-b")
+# ── parse_for_consume tests ────────────────────────────────────────────────
 
-    def test_consumer_not_allowed(self, catalog: ContractCatalog) -> None:
-        """Unauthorized consumer raises ConsumerNotAllowedError."""
-        envelope = make_envelope()
-        with pytest.raises(ConsumerNotAllowedError):
-            validate_for_consume(catalog, envelope, consumer="unauthorized")
 
-    def test_unknown_contract(self, catalog: ContractCatalog) -> None:
-        """Unknown message_type raises UnknownContractError."""
-        envelope = make_envelope(message_type="unknown.event")
+class TestParseForConsume:
+    def test_returns_typed_envelope(self, catalog: ContractCatalog) -> None:
+        value = _make_valid_wire_bytes()
+        result = parse_for_consume(catalog, consumer="consumer-b", topic="test.topic", value=value)
+        assert isinstance(result, ParsedMessage)
+        assert result.envelope.message_type == "test.event"
+
+    def test_ignores_additive_fields(self, catalog: ContractCatalog) -> None:
+        raw = _make_valid_wire_dict()
+        raw["payload"]["extraField"] = "should be ignored"
+        value = _json_bytes(raw)
+        result = parse_for_consume(catalog, consumer="consumer-b", topic="test.topic", value=value)
+        assert isinstance(result, ParsedMessage)
+
+    def test_rejects_invalid_json(self, catalog: ContractCatalog) -> None:
+        with pytest.raises(InvalidEnvelopeError):
+            parse_for_consume(catalog, consumer="consumer-b", topic="test.topic", value=b"not json")
+
+    def test_rejects_invalid_utf8(self, catalog: ContractCatalog) -> None:
+        with pytest.raises(InvalidEnvelopeError):
+            parse_for_consume(catalog, consumer="consumer-b", topic="test.topic", value=b"\xff\xfe")
+
+    def test_rejects_json_array(self, catalog: ContractCatalog) -> None:
+        with pytest.raises(InvalidEnvelopeError, match="JSON object"):
+            parse_for_consume(catalog, consumer="consumer-b", topic="test.topic", value=b"[]")
+
+    def test_rejects_json_null(self, catalog: ContractCatalog) -> None:
+        with pytest.raises(InvalidEnvelopeError, match="JSON object"):
+            parse_for_consume(catalog, consumer="consumer-b", topic="test.topic", value=b"null")
+
+    def test_rejects_json_string(self, catalog: ContractCatalog) -> None:
+        with pytest.raises(InvalidEnvelopeError, match="JSON object"):
+            parse_for_consume(catalog, consumer="consumer-b", topic="test.topic", value=b'"hello"')
+
+    def test_unknown_message_type(self, catalog: ContractCatalog) -> None:
+        raw = _make_valid_wire_dict()
+        raw["messageType"] = "unknown.event"
         with pytest.raises(UnknownContractError):
-            validate_for_consume(catalog, envelope, consumer="consumer-b")
+            parse_for_consume(catalog, consumer="consumer-b", topic="test.topic", value=_json_bytes(raw))
+
+    def test_unknown_schema_version(self, catalog: ContractCatalog) -> None:
+        raw = _make_valid_wire_dict()
+        raw["schemaVersion"] = 99
+        with pytest.raises(UnknownContractError):
+            parse_for_consume(catalog, consumer="consumer-b", topic="test.topic", value=_json_bytes(raw))
+
+    def test_unauthorized_consumer(self, catalog: ContractCatalog) -> None:
+        value = _make_valid_wire_bytes()
+        with pytest.raises(ConsumerNotAllowedError):
+            parse_for_consume(catalog, consumer="hacker", topic="test.topic", value=value)
+
+    def test_rejects_invalid_producer(self, catalog: ContractCatalog) -> None:
+        raw = _make_valid_wire_dict()
+        raw["producer"] = "hacker"
+        with pytest.raises(ProducerNotAllowedError):
+            parse_for_consume(catalog, consumer="consumer-b", topic="test.topic", value=_json_bytes(raw))
+
+    def test_wrong_topic(self, catalog: ContractCatalog) -> None:
+        value = _make_valid_wire_bytes()
+        with pytest.raises(TopicMismatchError):
+            parse_for_consume(catalog, consumer="consumer-b", topic="wrong.topic", value=value)
+
+    def test_missing_correlation(self) -> None:
+        c = MessageContract(
+            message_type="test.event",
+            schema_version=1,
+            payload_model=SamplePayload,
+            topic="test.topic",
+            producers=frozenset({"producer-a"}),
+            consumers=frozenset({"consumer-b"}),
+            correlation_required=True,
+        )
+        cat = ContractCatalog.from_contracts((c,))
+        raw = _make_valid_wire_dict()
+        raw["correlationId"] = None
+        with pytest.raises(CorrelationPolicyError):
+            parse_for_consume(cat, consumer="consumer-b", topic="test.topic", value=_json_bytes(raw))
+
+    def test_forbidden_causation(self) -> None:
+        c = MessageContract(
+            message_type="root.cmd",
+            schema_version=1,
+            payload_model=SamplePayload,
+            topic="cmds",
+            producers=frozenset({"svc"}),
+            consumers=frozenset({"svc"}),
+            correlation_required=False,
+            causation_policy="forbidden",
+        )
+        cat = ContractCatalog.from_contracts((c,))
+        raw = _make_valid_wire_dict(message_type="root.cmd", producer="svc")
+        raw["causationId"] = str(uuid4())
+        with pytest.raises(CausationPolicyError):
+            parse_for_consume(cat, consumer="svc", topic="cmds", value=_json_bytes(raw))
+
+
+# ── Helpers ─────────────────────────────────────────────────────────────────
+
+
+def _make_valid_wire_dict(
+    message_type: str = "test.event",
+    producer: str = "producer-a",
+) -> dict[str, object]:
+    return {
+        "messageId": str(uuid4()),
+        "messageType": message_type,
+        "schemaVersion": 1,
+        "occurredAt": datetime.now(timezone.utc).isoformat(),
+        "producer": producer,
+        "correlationId": str(uuid4()),
+        "causationId": None,
+        "payload": {"entityId": "abc", "value": 1},
+    }
+
+
+def _make_valid_wire_bytes() -> bytes:
+    return _json_bytes(_make_valid_wire_dict())
+
+
+def _json_bytes(data: dict[str, object]) -> bytes:
+    import json
+    return json.dumps(data).encode("utf-8")

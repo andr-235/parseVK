@@ -13,8 +13,7 @@ Usage:
         causation_id=None,
         payload=raw_payload_dict,
     )
-    # prepared.envelope is a typed MessageEnvelope[VkExecutionRequested]
-    # prepared.bytes is the JSON bytes ready for Kafka
+    # prepared contains envelope, topic, partition_key, value (bytes), headers
 
     # Consume: caller provides raw bytes from Kafka
     parsed = parse_for_consume(
@@ -23,19 +22,21 @@ Usage:
         topic="parsevk.vk.commands",
         value=b'{...}',
     )
-    # parsed.envelope is a typed MessageEnvelope[VkExecutionRequested]
-    # parsed.envelope.payload is a VkExecutionRequested instance
+    # parsed contains typed envelope and headers
 """
 
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Generic, NamedTuple
+from typing import Generic
 from uuid import UUID
 
+from pydantic import ValidationError
+
 from ._base import ContractModel
-from .catalog import ContractCatalog, MessageContract
+from .catalog import _resolve_wire_path, ContractCatalog, MessageContract
 from .envelope import MessageEnvelope
 from .errors import (
     CausationPolicyError,
@@ -44,23 +45,28 @@ from .errors import (
     CorrelationPolicyError,
     InvalidEnvelopeError,
     ProducerNotAllowedError,
+    TopicMismatchError,
     UnknownContractError,
 )
 
 
-class PreparedMessage(NamedTuple):
-    """Result of prepare_for_publish."""
+@dataclass(frozen=True, slots=True)
+class PreparedMessage:
+    """Result of prepare_for_publish — ready for Kafka producer."""
 
     envelope: MessageEnvelope[ContractModel]
-    headers: dict[str, str]
-    bytes: bytes
+    topic: str
+    partition_key: str | None
+    value: bytes
+    headers: tuple[tuple[str, bytes], ...]
 
 
-class ParsedMessage(NamedTuple):
-    """Result of parse_for_consume."""
+@dataclass(frozen=True, slots=True)
+class ParsedMessage:
+    """Result of parse_for_consume — validated message from Kafka."""
 
     envelope: MessageEnvelope[ContractModel]
-    headers: dict[str, str]
+    headers: tuple[tuple[str, bytes], ...]
 
 
 def prepare_for_publish(
@@ -81,7 +87,7 @@ def prepare_for_publish(
     2. Validates producer is allowed
     3. Validates payload with extra="forbid"
     4. Builds the typed envelope
-    5. Returns PreparedMessage with envelope, headers, and bytes
+    5. Returns PreparedMessage with envelope, topic, partition_key, value, headers
     """
     contract = catalog.get(message_type, schema_version)
 
@@ -90,10 +96,9 @@ def prepare_for_publish(
             f"Service '{producer}' is not allowed to publish '{message_type}'"
         )
 
-    # Validate payload with strict mode (extra="forbid")
     try:
         payload_model = contract.payload_model.model_validate(payload, extra="forbid")
-    except Exception as exc:
+    except ValidationError as exc:
         raise ContractValidationError(
             f"Payload validation failed for '{message_type}': {exc}"
         ) from exc
@@ -109,17 +114,28 @@ def prepare_for_publish(
         payload=payload_model,
     )
 
-    # Validate envelope-level policy
     _enforce_envelope_policy(contract, envelope)
 
-    headers = {
-        "message_type": message_type,
-        "schema_version": str(schema_version),
-        "content_type": "application/json",
-    }
-    bytes_data = envelope.to_wire_json().encode("utf-8")
+    partition_key = (
+        contract.partition_key.compute(payload_model)
+        if contract.partition_key
+        else None
+    )
 
-    return PreparedMessage(envelope=envelope, headers=headers, bytes=bytes_data)
+    value = envelope.to_wire_json().encode("utf-8")
+    headers: tuple[tuple[str, bytes], ...] = (
+        ("message_type", message_type.encode("utf-8")),
+        ("schema_version", str(schema_version).encode("utf-8")),
+        ("content_type", b"application/json"),
+    )
+
+    return PreparedMessage(
+        envelope=envelope,
+        topic=contract.topic,
+        partition_key=partition_key,
+        value=value,
+        headers=headers,
+    )
 
 
 def parse_for_consume(
@@ -132,46 +148,50 @@ def parse_for_consume(
     """Parse and validate a received Kafka message.
 
     1. JSON-decodes the bytes
-    2. Extracts header fields (message_type, schema_version)
+    2. Extracts header fields (message_type, schema_version, producer)
     3. Looks up contract
-    4. Validates consumer is allowed
-    5. Builds typed envelope with extra="ignore" (tolerant consumer)
-    6. Enforces envelope policy (correlation, causation)
-    7. Returns ParsedMessage with typed envelope
+    4. Verifies topic matches
+    5. Validates consumer is allowed
+    6. Builds typed envelope with extra="ignore" (tolerant consumer)
+    7. Enforces envelope policy (correlation, causation)
+    8. Returns ParsedMessage with typed envelope
     """
     try:
-        raw: dict[str, object] = json.loads(value)
-    except json.JSONDecodeError as exc:
+        raw = json.loads(value)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         raise InvalidEnvelopeError(f"Invalid JSON: {exc}") from exc
 
-    message_type = raw.get("message_type")
-    if not isinstance(message_type, str):
-        message_type = raw.get("messageType")
-    if not isinstance(message_type, str):
-        raise InvalidEnvelopeError("Missing message_type in envelope")
+    if not isinstance(raw, dict):
+        raise InvalidEnvelopeError("Envelope root must be a JSON object")
 
-    schema_version = raw.get("schema_version")
-    if not isinstance(schema_version, int):
-        schema_version = raw.get("schemaVersion")
-    if not isinstance(schema_version, int):
-        raise InvalidEnvelopeError("Missing schema_version in envelope")
+    try:
+        envelope_raw = MessageEnvelope[ContractModel].model_validate(  # type: ignore[valid-type]
+            raw, extra="ignore"
+        )
+    except ValidationError as exc:
+        raise InvalidEnvelopeError(f"Invalid envelope: {exc}") from exc
 
+    message_type = envelope_raw.message_type
+    schema_version = envelope_raw.schema_version
     contract = catalog.get(message_type, schema_version)
+
+    if topic != contract.topic:
+        raise TopicMismatchError(
+            f"Expected topic '{contract.topic}' for '{message_type}', "
+            f"got '{topic}'"
+        )
 
     if consumer not in contract.consumers:
         raise ConsumerNotAllowedError(
             f"Service '{consumer}' is not allowed to consume '{message_type}'"
         )
 
-    # Validate with extra="ignore" (tolerant consumer)
-    try:
-        envelope_raw = MessageEnvelope[ContractModel].model_validate(
-            raw, extra="ignore"
+    if envelope_raw.producer not in contract.producers:
+        raise ProducerNotAllowedError(
+            f"Envelope producer '{envelope_raw.producer}' is not allowed "
+            f"to publish '{message_type}'"
         )
-    except Exception as exc:
-        raise InvalidEnvelopeError(f"Invalid envelope: {exc}") from exc
 
-    # Now re-validate with the correct payload model
     payload_raw: dict[str, object] = {}
     if isinstance(raw.get("payload"), dict):
         payload_raw = raw["payload"]  # type: ignore[assignment]
@@ -180,7 +200,7 @@ def parse_for_consume(
         typed_payload = contract.payload_model.model_validate(
             payload_raw, extra="ignore"
         )
-    except Exception as exc:
+    except ValidationError as exc:
         raise ContractValidationError(
             f"Payload validation failed for '{message_type}': {exc}"
         ) from exc
@@ -196,21 +216,13 @@ def parse_for_consume(
         payload=typed_payload,
     )
 
-    # Enforce envelope policy on consume too
     _enforce_envelope_policy(contract, envelope)
 
-    # Consumer must also verify producer is legit
-    if envelope.producer not in contract.producers:
-        raise ProducerNotAllowedError(
-            f"Envelope producer '{envelope.producer}' is not allowed "
-            f"to publish '{message_type}'"
-        )
-
-    headers = {
-        "message_type": message_type,
-        "schema_version": str(schema_version),
-        "content_type": "application/json",
-    }
+    headers: tuple[tuple[str, bytes], ...] = (
+        ("message_type", message_type.encode("utf-8")),
+        ("schema_version", str(schema_version).encode("utf-8")),
+        ("content_type", b"application/json"),
+    )
 
     return ParsedMessage(envelope=envelope, headers=headers)
 
@@ -224,6 +236,17 @@ def _enforce_envelope_policy(
         raise CorrelationPolicyError(
             f"correlationId is required for '{contract.message_type}'"
         )
+
+    if contract.correlation_path is not None and envelope.correlation_id is not None:
+        wire = envelope.to_wire()
+        expected_raw = _resolve_wire_path(wire, contract.correlation_path)
+        expected_str = str(expected_raw) if expected_raw is not None else ""
+        if str(envelope.correlation_id) != expected_str:
+            raise CorrelationPolicyError(
+                f"correlationId must match '{contract.correlation_path}': "
+                f"got {envelope.correlation_id}, expected {expected_raw}"
+            )
+
     if contract.causation_policy == "required" and envelope.causation_id is None:
         raise CausationPolicyError(
             f"causationId is required for '{contract.message_type}'"
@@ -232,65 +255,3 @@ def _enforce_envelope_policy(
         raise CausationPolicyError(
             f"causationId is forbidden for '{contract.message_type}'"
         )
-
-
-# Legacy helpers - kept for backward compatibility but deprecated
-def validate_for_publish(
-    catalog: ContractCatalog,
-    envelope: MessageEnvelope,
-    producer: str,
-) -> None:
-    """Legacy: validate a fully constructed envelope for publishing.
-
-    Deprecated: use prepare_for_publish instead.
-    """
-    try:
-        catalog.validate_for_publish(
-            message_type=envelope.message_type,
-            schema_version=envelope.schema_version,
-            producer=producer,
-            payload=envelope.payload.to_wire(),
-            correlation_id=str(envelope.correlation_id) if envelope.correlation_id else None,
-            causation_id=str(envelope.causation_id) if envelope.causation_id else None,
-        )
-        # Verify envelope producer matches
-        if envelope.producer != producer:
-            raise ProducerNotAllowedError(
-                f"Envelope producer '{envelope.producer}' does not match "
-                f"expected producer '{producer}'"
-            )
-    except (UnknownContractError, ProducerNotAllowedError,
-            CorrelationPolicyError, CausationPolicyError,
-            ContractValidationError):
-        raise
-
-
-def validate_for_consume(
-    catalog: ContractCatalog,
-    envelope: MessageEnvelope,
-    consumer: str,
-) -> None:
-    """Legacy: validate a received envelope for consumption.
-
-    Deprecated: use parse_for_consume instead.
-    """
-    try:
-        catalog.validate_for_consume(
-            message_type=envelope.message_type,
-            schema_version=envelope.schema_version,
-            consumer=consumer,
-            payload=envelope.payload.to_wire(),
-            correlation_id=str(envelope.correlation_id) if envelope.correlation_id else None,
-            causation_id=str(envelope.causation_id) if envelope.causation_id else None,
-        )
-        # Verify envelope producer is in contract producers
-        contract = catalog.get(envelope.message_type, envelope.schema_version)
-        if envelope.producer not in contract.producers:
-            raise ProducerNotAllowedError(
-                f"Envelope producer '{envelope.producer}' is not a valid "
-                f"producer for '{envelope.message_type}'"
-            )
-    except (UnknownContractError, ConsumerNotAllowedError,
-            CorrelationPolicyError, CausationPolicyError,
-            ContractValidationError):
-        raise

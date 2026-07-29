@@ -23,16 +23,13 @@ def generate_all(
         "asyncapi": [],
     }
 
-    # Generate JSON Schema for each contract
     for contract in catalog.contracts:
         path = write_json_schema(contract, output_path)
         generated["json_schema"].append(str(path))
 
-    # Generate manifest
-    manifest_path = write_manifest(output_path)
+    manifest_path = write_manifest(catalog, output_path)
     generated["manifest"].append(str(manifest_path))
 
-    # Generate AsyncAPI
     asyncapi_path = write_asyncapi(catalog, output_path)
     generated["asyncapi"].append(str(asyncapi_path))
 

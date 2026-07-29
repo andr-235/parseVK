@@ -12,7 +12,7 @@ from parsevk_contracts._base import ContractModel
 from parsevk_contracts.catalog import ContractCatalog, MessageContract, PartitionKeySpec
 from parsevk_contracts.generation import generate_all
 from parsevk_contracts.generation.json_schema import generate_json_schema
-from parsevk_contracts.generation.manifest import generate_manifest
+from parsevk_contracts.generation.manifest import ManifestMetadata, generate_manifest
 from parsevk_contracts.vk.commands import CATALOG as VK_CATALOG
 from parsevk_contracts.vk.commands import VK_EXECUTION_REQUESTED
 
@@ -69,36 +69,33 @@ class TestJsonSchemaGeneration:
 class TestManifestGeneration:
     def test_manifest_includes_pilot_contract(self) -> None:
         """Manifest includes the pilot contract entry."""
-        manifest = generate_manifest()
+        manifest = generate_manifest(VK_CATALOG)
         contracts = manifest["contracts"]
         assert len(contracts) == 1
         entry = contracts[0]
-        assert entry["message_type"] == "vk.execution.requested"
-        assert entry["schema_version"] == 1
+        assert entry["messageType"] == "vk.execution.requested"
+        assert entry["schemaVersion"] == 1
         assert entry["topic"] == "parsevk.vk.commands"
 
     def test_manifest_producers_consumers(self) -> None:
         """Manifest includes correct producers and consumers."""
-        manifest = generate_manifest()
+        manifest = generate_manifest(VK_CATALOG)
         entry = manifest["contracts"][0]
         assert "tasks-service" in entry["producers"]
         assert "vk-service" in entry["consumers"]
 
     def test_manifest_partition_key(self) -> None:
         """Manifest includes partition key spec."""
-        manifest = generate_manifest()
+        manifest = generate_manifest(VK_CATALOG)
         entry = manifest["contracts"][0]
-        assert "partition_key" in entry
-        assert entry["partition_key"] == ["payload.executionId"]
+        assert "partitionKey" in entry
+        assert entry["partitionKey"]["paths"] == ["payload.executionId"]
 
     def test_manifest_is_deterministic(self) -> None:
         """Same catalog produces identical manifest."""
-        manifest1 = generate_manifest()
-        manifest2 = generate_manifest()
-        # Compare without generated_at which differs every call
-        m1 = {k: v for k, v in manifest1.items() if k != "generated_at"}
-        m2 = {k: v for k, v in manifest2.items() if k != "generated_at"}
-        assert m1 == m2
+        manifest1 = generate_manifest(VK_CATALOG)
+        manifest2 = generate_manifest(VK_CATALOG)
+        assert manifest1 == manifest2
 
     def test_manifest_multiple_contracts(self) -> None:
         """Manifest includes all contracts when catalog has multiple."""
@@ -114,13 +111,11 @@ class TestManifestGeneration:
             producers=frozenset({"svc"}),
             consumers=frozenset({"svc"}),
         )
-        original = VK_CATALOG._contracts
-        VK_CATALOG._contracts = original + (extra,)
-        try:
-            manifest = generate_manifest()
-            assert len(manifest["contracts"]) >= 2
-        finally:
-            VK_CATALOG._contracts = original
+        combined = ContractCatalog.from_contracts(
+            VK_CATALOG.contracts + (extra,)
+        )
+        manifest = generate_manifest(combined)
+        assert len(manifest["contracts"]) == 2
 
 
 class TestGenerateAll:
