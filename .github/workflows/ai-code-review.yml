@@ -4,480 +4,310 @@ on:
   pull_request:
     branches:
       - main
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, closed]
 
 concurrency:
   group: ai-code-review-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-  pull-requests: write
-  issues: write
+permissions: {}
+
+env:
+  PYTHONUNBUFFERED: "1"
+  AI_REVIEW_SCRIPT: .github/scripts/ai_review.py
 
 jobs:
-  review:
-    name: AI Code Review
+  prepare:
+    name: Mark review in progress
     if: >-
+      github.event.action != 'closed' &&
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == github.repository_owner &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout reviewer code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/ai_review.py
+          sparse-checkout-cone-mode: false
+
+      - name: Add processing reaction
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: python "$AI_REVIEW_SCRIPT" mark --pr "$PR_NUMBER"
+
+  review:
+    name: Analyze Pull Request
+    env:
+      AI_REVIEW_DIR: ${{ github.workspace }}/.ai-review-runtime
+    if: >-
+      github.event.action != 'closed' &&
       github.event.pull_request.draft == false &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.user.login == github.repository_owner &&
       github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
+    permissions:
+      contents: read
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
+      - name: Checkout Pull Request
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Determine review scope
+      - name: Test reviewer logic
+        id: self_test
+        continue-on-error: true
+        env:
+          PYTHONPATH: .github/scripts
+        run: python -m unittest discover -s .github/scripts -p 'test_ai_review.py' -v
+
+      - name: Build review scope
         id: scope
-        shell: bash
+        continue-on-error: true
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          set -euo pipefail
-
-          changed_files="${RUNNER_TEMP}/ai-review-changed-files.txt"
-          reviewable_files="${RUNNER_TEMP}/ai-review-reviewable-files.txt"
-
-          git diff --name-only --diff-filter=ACMRT "$BASE_SHA" "$HEAD_SHA" \
-            | sed '/^[[:space:]]*$/d' \
-            | sort -u >"$changed_files"
-
-          awk '
-            BEGIN { IGNORECASE = 1 }
-            /^\.github\/workflows\/ai-code-review\.yml$/ { next }
-            /(^|\/)README([^\/]*)$/ { next }
-            /\.md$/ { next }
-            /^docs\// { next }
-            /\.(png|jpe?g|gif|webp|svg|ico|pdf)$/ { next }
-            { print }
-          ' "$changed_files" >"$reviewable_files"
-
-          reviewable_count="$(wc -l <"$reviewable_files" | tr -d ' ')"
-          echo "reviewable_count=$reviewable_count" >>"$GITHUB_OUTPUT"
-
-          if (( reviewable_count == 0 )); then
-            echo "review_required=false" >>"$GITHUB_OUTPUT"
-            echo "AI review skipped: no reviewable application files changed."
-          else
-            echo "review_required=true" >>"$GITHUB_OUTPUT"
-            echo "AI review required for ${reviewable_count} changed files."
-          fi
-
-      - name: Mark review in progress
-        id: state
-        continue-on-error: true
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          set -euo pipefail
-
-          reaction_ids="$(
-            gh api --paginate \
-              "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/reactions?per_page=100" \
-              --jq '.[] | select(.user.login == "github-actions[bot]") | .id' \
-              2>/dev/null || true
-          )"
-          while IFS= read -r reaction_id; do
-            [[ -z "$reaction_id" ]] && continue
-            gh api --method DELETE \
-              "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/reactions/${reaction_id}" \
-              >/dev/null || true
-          done <<<"$reaction_ids"
-
-          reaction_id="$(
-            gh api --method POST \
-              "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/reactions" \
-              -f content=eyes \
-              --jq '.id' \
-              2>/dev/null || true
-          )"
-          echo "reaction_id=$reaction_id" >>"$GITHUB_OUTPUT"
+          mkdir -p "$AI_REVIEW_DIR"
+          python "$AI_REVIEW_SCRIPT" scope \
+            --base "$BASE_SHA" \
+            --head "$HEAD_SHA" \
+            --output-dir "$AI_REVIEW_DIR"
+          echo "status=$(python -c 'import json,os; print(json.load(open(os.path.join(os.environ["AI_REVIEW_DIR"], "scope.json"), encoding="utf-8"))["status"])')" >> "$GITHUB_OUTPUT"
 
       - name: Debounce rapid commits
         id: freshness
-        if: steps.scope.outputs.review_required == 'true'
-        shell: bash
+        if: >-
+          steps.self_test.outcome == 'success' &&
+          steps.scope.outcome == 'success' &&
+          steps.scope.outputs.status == 'review'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          CURRENT_HEAD_URL: ${{ github.event.pull_request.url }}
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
           sleep 45
-          current_head="$(gh api \
-            "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" \
-            --jq '.head.sha')"
-
-          if [[ "$current_head" != "$REVIEW_HEAD_SHA" ]]; then
-            echo "fresh=false" >>"$GITHUB_OUTPUT"
-            echo "Newer commit detected; this run is obsolete."
+          current_head="$(curl --fail --silent --show-error \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "$CURRENT_HEAD_URL" | python -c 'import json,sys; print(json.load(sys.stdin)["head"]["sha"])')"
+          if [[ "$current_head" == "$EXPECTED_HEAD" ]]; then
+            echo "fresh=true" >> "$GITHUB_OUTPUT"
           else
-            echo "fresh=true" >>"$GITHUB_OUTPUT"
-            echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >>"$GITHUB_OUTPUT"
+            echo "fresh=false" >> "$GITHUB_OUTPUT"
+            echo "Newer commit detected; OpenCode will not run for ${EXPECTED_HEAD}."
           fi
 
-      - name: Run OpenCode review
+      - name: Checkout pinned OpenCode installer
+        if: steps.freshness.outputs.fresh == 'true'
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: anomalyco/opencode
+          ref: 4ed4f749e644ffb5b279fb30b7b915e743d80142 # action v1.17.7
+          path: .opencode-installer
+          persist-credentials: false
+          sparse-checkout: install
+          sparse-checkout-cone-mode: false
+
+      - name: Install pinned OpenCode CLI
+        if: steps.freshness.outputs.fresh == 'true'
+        env:
+          VERSION: 1.17.7
+        run: |
+          bash .opencode-installer/install --no-modify-path
+          rm -rf .opencode-installer
+          echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
+
+      - name: Run OpenCode without GitHub publishing
         id: opencode
-        if: >-
-          success() &&
-          steps.scope.outputs.review_required == 'true' &&
-          steps.freshness.outputs.fresh == 'true'
-        continue-on-error: true
-        uses: anomalyco/opencode/github@4ed4f749e644ffb5b279fb30b7b915e743d80142 # v1.17.7
+        if: steps.freshness.outputs.fresh == 'true'
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENCODE_DISABLE_PROJECT_CONFIG: "true"
           OPENCODE_CONFIG_CONTENT: >-
-            {"default_agent":"plan","agent":{"plan":{"temperature":0,"prompt":"You are an automated Pull Request code reviewer. Analyze only the current PR diff and obey the exact output contract in the user message. Every response must end as the requested ai-review-result marker followed by exactly one JSON code block. Never finish with prose outside the JSON contract. If a later message asks you to summarize your actions, return the final structured review JSON using the original head_sha and schema. If analysis cannot be completed, return status technical-error with the exact head_sha and an empty findings array."},"title":{"disable":true}}}
+            {"default_agent":"plan","agent":{"plan":{"temperature":0,"prompt":"You are an automated Pull Request code reviewer. Analyze only the attached diff and obey the exact JSON contract in the user prompt. Never return prose, Markdown, a plan, or tool-only output. If analysis cannot be completed, return status technical-error with the exact head_sha and an empty findings array."},"title":{"disable":true}}}
           OPENCODE_PERMISSION: >-
-            {"read":{"*":"allow",".github/workflows/ai-code-review.yml":"deny","*.md":"deny","**/*.md":"deny","README*":"deny","**/README*":"deny","docs/**":"deny",".github/ai-review/**":"deny"},"bash":"deny","edit":"deny","task":"deny","todowrite":"deny","skill":"deny","lsp":"deny","webfetch":"deny","websearch":"deny","external_directory":"deny","doom_loop":"deny"}
-        with:
-          model: opencode/big-pickle
-          agent: plan
-          use_github_token: true
-          share: false
-          prompt: |
-            Проведи сфокусированное ревью кода текущего Pull Request проекта parseVK.
+            {"read":{"*":"allow",".github/workflows/ai-code-review.yml":"deny","*.md":"deny","**/*.md":"deny","README*":"deny","**/README*":"deny","docs/**":"deny",".github/ai-review/**":"deny",".github/scripts/ai_review*":"deny"},"bash":"deny","edit":"deny","task":"deny","todowrite":"deny","skill":"deny","lsp":"deny","webfetch":"deny","websearch":"deny","external_directory":"deny","doom_loop":"deny"}
+        run: |
+          set +e
+          opencode run \
+            --format json \
+            --model opencode/big-pickle \
+            --agent plan \
+            --no-share \
+            --file "$AI_REVIEW_DIR/review.diff" \
+            < "$AI_REVIEW_DIR/prompt.txt" \
+            > "$AI_REVIEW_DIR/opencode-events.jsonl" \
+            2> "$AI_REVIEW_DIR/opencode.stderr"
+          exit_code=$?
+          set -e
+          echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+          if (( exit_code != 0 )); then
+            echo "::warning::OpenCode exited with code ${exit_code}."
+          fi
 
-            Правила:
-            1. Анализируй только diff и изменённые исполняемые файлы, конфигурацию,
-               миграции, схемы и тесты.
-            2. Не читай Markdown, README, docs/**, .github/ai-review/** и сам файл
-               .github/workflows/ai-code-review.yml.
-            3. Не проводи аудит репозитория. Дополнительный исходный файл открывай
-               только для подтверждения дефекта из diff.
-            4. Не создавай план, не меняй файлы, не запускай shell, внешние процессы,
-               subagents и не читай переменные окружения.
-            5. Ищи только достижимые дефекты: correctness, security, reliability,
-               data integrity, compatibility, performance и отсутствие обязательного теста.
-            6. Не сообщай о форматировании, вкусовщине, документации, общих улучшениях,
-               несуществующих сценариях и проблемах вне diff.
-            7. Каждое замечание обязательно внеси в findings. При пустом findings
-               подтверждённых замечаний нет.
-            8. Summary содержит только общий итог без рекомендаций.
-            9. Не создавай findings о поведении внешнего CLI или Action, если оно
-               не доказано непосредственно diff или тестом.
-            10. Используй только severity blocker, major или minor.
-
-            Верни строго только маркер и JSON-блок:
-
-            <!-- ai-review-result:${{ github.event.pull_request.head.sha }} -->
-            ```json
-            {
-              "status": "completed",
-              "head_sha": "${{ github.event.pull_request.head.sha }}",
-              "summary": "Общий итог без отдельных замечаний",
-              "findings": [
-                {
-                  "severity": "blocker|major|minor",
-                  "file": "path/to/file",
-                  "line": 123,
-                  "scenario": "Как воспроизводится дефект",
-                  "impact": "Последствия",
-                  "fix": "Конкретное исправление",
-                  "confidence": 0.95
-                }
-              ]
-            }
-            ```
-
-            При технической ошибке используй status "technical-error", укажи причину
-            в summary и оставь findings пустым.
-
-      - name: Publish review result
-        if: always() && !cancelled()
-        shell: bash
+      - name: Build validated review result
+        id: finalize
+        continue-on-error: true
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          TEST_OUTCOME: ${{ steps.self_test.outcome }}
+          SCOPE_OUTCOME: ${{ steps.scope.outcome }}
+          FRESH: ${{ steps.freshness.outputs.fresh }}
+          OPENCODE_EXIT: ${{ steps.opencode.outputs.exit_code }}
+        run: |
+          mkdir -p "$AI_REVIEW_DIR"
+          if [[ "$TEST_OUTCOME" != "success" ]]; then
+            python "$AI_REVIEW_SCRIPT" fallback \
+              --head "$HEAD_SHA" \
+              --reason reviewer-self-test-failed \
+              --summary 'Внутренние тесты reviewer завершились ошибкой.' \
+              --output "$AI_REVIEW_DIR/review-result.json"
+          elif [[ "$SCOPE_OUTCOME" != "success" ]]; then
+            python "$AI_REVIEW_SCRIPT" fallback \
+              --head "$HEAD_SHA" \
+              --reason scope-failed \
+              --summary 'Не удалось определить область AI-ревью.' \
+              --output "$AI_REVIEW_DIR/review-result.json"
+          elif [[ "${FRESH:-true}" == "false" ]]; then
+            python "$AI_REVIEW_SCRIPT" fallback \
+              --head "$HEAD_SHA" \
+              --reason obsolete-run \
+              --summary 'Запуск устарел до обращения к модели.' \
+              --output "$AI_REVIEW_DIR/review-result.json"
+          else
+            python "$AI_REVIEW_SCRIPT" finalize \
+              --scope "$AI_REVIEW_DIR/scope.json" \
+              --events "$AI_REVIEW_DIR/opencode-events.jsonl" \
+              --exit-code "${OPENCODE_EXIT:-0}" \
+              --output "$AI_REVIEW_DIR/review-result.json"
+          fi
+
+      - name: Ensure a publishable result exists
+        if: always()
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          mkdir -p "$AI_REVIEW_DIR"
+          if [[ ! -s "$AI_REVIEW_DIR/review-result.json" ]]; then
+            python "$AI_REVIEW_SCRIPT" fallback \
+              --head "$HEAD_SHA" \
+              --reason result-generation-failed \
+              --summary 'Reviewer не смог сформировать итоговый результат.' \
+              --output "$AI_REVIEW_DIR/review-result.json"
+          fi
+
+      - name: Upload validated result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-review-result-${{ github.run_id }}
+          path: ${{ github.workspace }}/.ai-review-runtime/review-result.json
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish review verdict
+    env:
+      AI_REVIEW_DIR: ${{ github.workspace }}/.ai-review-runtime
+    needs: [prepare, review]
+    if: >-
+      always() &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == github.repository_owner &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout publisher code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/ai_review.py
+          sparse-checkout-cone-mode: false
+
+      - name: Download validated result
+        id: download
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: ai-review-result-${{ github.run_id }}
+          path: ${{ github.workspace }}/.ai-review-runtime
+
+      - name: Create fallback when the review artifact is unavailable
+        if: steps.download.outcome != 'success'
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          mkdir -p "$AI_REVIEW_DIR"
+          python "$AI_REVIEW_SCRIPT" fallback \
+            --head "$HEAD_SHA" \
+            --reason missing-review-artifact \
+            --summary 'Артефакт AI-ревью отсутствует.' \
+            --output "$AI_REVIEW_DIR/review-result.json"
+
+      - name: Publish reactions and findings
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          REVIEW_REQUIRED: ${{ steps.scope.outputs.review_required }}
-          REVIEW_STARTED_AT: ${{ steps.freshness.outputs.started_at }}
-          OPENCODE_OUTCOME: ${{ steps.opencode.outcome }}
         run: |
-          set -euo pipefail
+          python "$AI_REVIEW_SCRIPT" publish \
+            --pr "$PR_NUMBER" \
+            --title "$PR_TITLE" \
+            --result "$AI_REVIEW_DIR/review-result.json"
 
-          refresh_comments() {
-            comments_json="$(
-              gh api --paginate --slurp \
-                "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments?per_page=100" \
-                | jq 'add'
-            )"
-          }
+  cleanup:
+    name: Clean up closed Pull Request
+    if: >-
+      github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == github.repository_owner
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout cleanup code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/ai_review.py
+          sparse-checkout-cone-mode: false
 
-          remove_review_comments() {
-            local ids
-            ids="$(jq -r '
-              .[]
-              | select(
-                  .user.login == "github-actions[bot]" and
-                  ((.body | contains("<!-- ai-review:canonical -->")) or
-                   (.body | contains("<!-- ai-review-result:")) or
-                   (.body | contains("[github run](")))
-                )
-              | .id
-            ' <<<"$comments_json")"
-            while IFS= read -r id; do
-              [[ -z "$id" ]] && continue
-              gh api --method DELETE \
-                "repos/${GITHUB_REPOSITORY}/issues/comments/${id}" \
-                >/dev/null || true
-            done <<<"$ids"
-          }
-
-          set_reaction() {
-            local content="$1"
-            local ids
-            ids="$(
-              gh api --paginate \
-                "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/reactions?per_page=100" \
-                --jq '.[] | select(.user.login == "github-actions[bot]") | .id' \
-                2>/dev/null || true
-            )"
-            while IFS= read -r id; do
-              [[ -z "$id" ]] && continue
-              gh api --method DELETE \
-                "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/reactions/${id}" \
-                >/dev/null || true
-            done <<<"$ids"
-            gh api --method POST \
-              "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/reactions" \
-              -f content="$content" >/dev/null || true
-          }
-
-          find_review_issue() {
-            local query
-            query="repo:${GITHUB_REPOSITORY} is:issue in:title \"[AI Review] PR #${PR_NUMBER}:\""
-            gh api --method GET search/issues \
-              -f q="$query" \
-              --jq '.items[0].number // empty'
-          }
-
-          close_existing_issue() {
-            local issue_number="$1"
-            [[ -z "$issue_number" ]] && return 0
-            gh api --method PATCH \
-              "repos/${GITHUB_REPOSITORY}/issues/${issue_number}" \
-              -f state=closed \
-              -f state_reason=completed \
-              -f 'labels[]=ai-review' >/dev/null || true
-          }
-
-          unavailable() {
-            local reason="$1"
-            refresh_comments
-            remove_review_comments
-            set_reaction confused
-            echo "::warning::${reason} AI Review does not block this Pull Request."
-            exit 0
-          }
-
-          comments_json="[]"
-          refresh_comments
-
-          current_head="$(gh api \
-            "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" \
-            --jq '.head.sha')"
-          if [[ "$current_head" != "$REVIEW_HEAD_SHA" ]]; then
-            set_reaction eyes
-            echo "Obsolete review result ignored."
-            exit 0
+      - name: Remove reactions, comments and close linked Issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MERGED: ${{ github.event.pull_request.merged }}
+        run: |
+          args=()
+          if [[ "$MERGED" == "true" ]]; then
+            args+=(--merged)
           fi
-
-          if [[ "$REVIEW_REQUIRED" != "true" ]]; then
-            remove_review_comments
-            close_existing_issue "$(find_review_issue)"
-            set_reaction +1
-            echo "AI review skipped: no reviewable files."
-            exit 0
-          fi
-
-          if [[ "$OPENCODE_OUTCOME" != "success" ]]; then
-            unavailable "OpenCode step finished with ${OPENCODE_OUTCOME}."
-          fi
-
-          raw_comment="$(jq -c --arg started "$REVIEW_STARTED_AT" '
-            [.[]
-              | select(
-                  .user.login == "github-actions[bot]" and
-                  (.created_at >= $started) and
-                  (.body | contains("<!-- ai-review-result:"))
-                )]
-            | sort_by(.id)
-            | last // {}
-          ' <<<"$comments_json")"
-          raw_body="$(jq -r '.body // empty' <<<"$raw_comment")"
-          if [[ -z "$raw_body" ]]; then
-            unavailable "Structured OpenCode result was not found."
-          fi
-
-          result_json="$(awk '
-            /^<!-- ai-review-result:[0-9a-f]+ -->$/ { marker_seen=1; next }
-            marker_seen && $0 == "```json" { capture=1; next }
-            capture && $0 == "```" { exit }
-            capture { print }
-          ' <<<"$raw_body")"
-          if [[ -z "$result_json" ]]; then
-            unavailable "OpenCode result does not contain JSON after the marker."
-          fi
-
-          if ! jq -e --arg head "$REVIEW_HEAD_SHA" '
-            (.status == "completed" or .status == "technical-error") and
-            (.head_sha == $head) and
-            (.summary | type == "string") and
-            (.findings | type == "array") and
-            (.findings | length <= 20) and
-            all(.findings[];
-              (.severity == "blocker" or .severity == "major" or .severity == "minor") and
-              (.file | type == "string") and
-              ((.line == null) or ((.line | type == "number") and (.line >= 1))) and
-              (.scenario | type == "string") and
-              (.impact | type == "string") and
-              (.fix | type == "string") and
-              (.confidence | type == "number") and
-              (.confidence >= 0) and
-              (.confidence <= 1)
-            )
-          ' <<<"$result_json" >/dev/null; then
-            unavailable "OpenCode result failed schema validation."
-          fi
-
-          if [[ "$(jq -r '.status' <<<"$result_json")" == "technical-error" ]]; then
-            unavailable "OpenCode reported a technical error."
-          fi
-
-          changed_files_json="$(
-            git diff --name-only --diff-filter=ACMRT "$BASE_SHA" "$REVIEW_HEAD_SHA" \
-              | sed '/^[[:space:]]*$/d' \
-              | sort -u \
-              | jq -R -s 'split("\n") | map(select(length > 0))'
-          )"
-
-          result_json="$(jq -c --argjson changed "$changed_files_json" '
-            def clean($limit):
-              tostring
-              | gsub("[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]"; "")
-              | gsub("[\\r\\n\\t]+"; " ")
-              | gsub("  +"; " ")
-              | gsub("@"; "@\u200b")
-              | gsub("`"; "")
-              | gsub("<"; "&lt;")
-              | gsub(">"; "&gt;")
-              | if length > $limit then .[0:$limit] + "…" else . end;
-
-            .findings = [
-              .findings[]
-              | select(
-                  (.severity == "blocker" and .confidence >= 0.90) or
-                  (.severity == "major" and .confidence >= 0.85) or
-                  (.severity == "minor" and .confidence >= 0.90)
-                )
-              | select(.file != ".github/workflows/ai-code-review.yml")
-              | select(.file as $file | $changed | index($file))
-              | select(
-                  (.file | test("(^|/)README[^/]*$"; "i") | not) and
-                  (.file | test("\\.md$"; "i") | not) and
-                  (.file | startswith("docs/") | not)
-                )
-              | .scenario = (.scenario | clean(1000))
-              | .impact = (.impact | clean(1000))
-              | .fix = (.fix | clean(1000))
-            ]
-          ' <<<"$result_json")"
-
-          finding_count="$(jq '.findings | length' <<<"$result_json")"
-          issue_number="$(find_review_issue)"
-
-          if (( finding_count == 0 )); then
-            remove_review_comments
-            close_existing_issue "$issue_number"
-            set_reaction +1
-            echo "AI Review passed: no confirmed findings."
-            exit 0
-          fi
-
-          blocking_count="$(jq '[.findings[] | select(.severity == "blocker" or .severity == "major")] | length' <<<"$result_json")"
-          issue_label="ai-review:findings"
-          verdict="findings"
-          exit_code=0
-          if (( blocking_count > 0 )); then
-            issue_label="ai-review:changes-required"
-            verdict="changes-required"
-            exit_code=1
-          fi
-
-          gh label create ai-review --repo "$GITHUB_REPOSITORY" \
-            --color 5319e7 --description "Автоматическое ревью кода" 2>/dev/null || true
-          gh label create ai-review:findings --repo "$GITHUB_REPOSITORY" \
-            --color d29922 --description "AI-ревью нашло замечания" 2>/dev/null || true
-          gh label create ai-review:changes-required --repo "$GITHUB_REPOSITORY" \
-            --color d1242f --description "AI-ревью требует исправлений" 2>/dev/null || true
-
-          findings_file="${RUNNER_TEMP}/ai-review-findings.md"
-          jq -r '
-            .findings | to_entries[] |
-            "### \(.key + 1). \(.value.severity | ascii_upcase)\n\n" +
-            "- **Файл:** `\(.value.file)`\n" +
-            "- **Строка:** \(.value.line // "не указана")\n" +
-            "- **Уверенность:** \(.value.confidence)\n" +
-            "- **Сценарий:** \(.value.scenario)\n" +
-            "- **Последствия:** \(.value.impact)\n" +
-            "- **Исправление:** \(.value.fix)\n"
-          ' <<<"$result_json" >"$findings_file"
-
-          issue_file="${RUNNER_TEMP}/ai-review-issue.md"
-          {
-            echo "<!-- ai-review:pr=${PR_NUMBER} -->"
-            echo "# AI Code Review для PR #${PR_NUMBER}"
-            echo
-            echo "Связанный PR: #${PR_NUMBER}"
-            echo
-            echo "**Проверен commit:** \`${REVIEW_HEAD_SHA}\`"
-            echo
-            echo "**Вердикт:** \`${verdict}\`"
-            echo
-            echo "Найдено замечаний: ${finding_count}. Блокирующих: ${blocking_count}."
-            echo
-            cat "$findings_file"
-          } >"$issue_file"
-
-          issue_title="[AI Review] PR #${PR_NUMBER}: ${PR_TITLE:0:180}"
-          if [[ -z "$issue_number" ]]; then
-            issue_url="$(gh issue create \
-              --repo "$GITHUB_REPOSITORY" \
-              --title "$issue_title" \
-              --body-file "$issue_file" \
-              --label ai-review \
-              --label "$issue_label")"
-            issue_number="${issue_url##*/}"
-          else
-            gh api --method PATCH \
-              "repos/${GITHUB_REPOSITORY}/issues/${issue_number}" \
-              -f title="$issue_title" \
-              -f body="$(cat "$issue_file")" \
-              -f state=open \
-              -f 'labels[]=ai-review' \
-              -f "labels[]=${issue_label}" >/dev/null
-          fi
-
-          remove_review_comments
-          set_reaction -1
-
-          if (( exit_code == 1 )); then
-            echo "::error::AI Review requires changes. Issue #${issue_number}"
-            exit 1
-          fi
-
-          echo "AI Review found non-blocking findings. Issue #${issue_number}"
+          python "$AI_REVIEW_SCRIPT" cleanup --pr "$PR_NUMBER" "${args[@]}"
