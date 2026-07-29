@@ -166,6 +166,7 @@ jobs:
             echo "Найден более новый commit ${current_head}; запуск для ${REVIEW_HEAD_SHA} прекращён."
           else
             echo "fresh=true" >>"$GITHUB_OUTPUT"
+            echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >>"$GITHUB_OUTPUT"
           fi
 
       - name: Run OpenCode review
@@ -205,6 +206,9 @@ jobs:
             7. Каждое замечание обязательно внеси в findings. Не упоминай замечания
                вне findings. При пустом findings замечаний нет.
             8. Summary содержит только общий итог без рекомендаций.
+            9. Не создавай findings о поведении внешнего CLI или Action, если оно
+               не доказано непосредственно diff или тестом. Предположение не является дефектом.
+            10. Используй только severity blocker, major или minor. Nit и стиль не публикуй.
 
             Верни строго только маркер и JSON-блок:
 
@@ -212,10 +216,11 @@ jobs:
             ```json
             {
               "status": "completed",
+              "head_sha": "${{ github.event.pull_request.head.sha }}",
               "summary": "Общий итог без отдельных замечаний",
               "findings": [
                 {
-                  "severity": "blocker|major|minor|nit",
+                  "severity": "blocker|major|minor",
                   "file": "path/to/file",
                   "line": 123,
                   "scenario": "Как воспроизводится дефект",
@@ -240,12 +245,12 @@ jobs:
           REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           REVIEW_REQUIRED: ${{ steps.scope.outputs.review_required }}
+          REVIEW_STARTED_AT: ${{ steps.freshness.outputs.started_at }}
           OPENCODE_OUTCOME: ${{ steps.opencode.outcome }}
         run: |
           set -euo pipefail
 
           canonical_marker="<!-- ai-review:canonical -->"
-          result_marker="<!-- ai-review-result:${REVIEW_HEAD_SHA} -->"
           canonical_comment_id=""
           raw_comment_id=""
           comments_json="[]"
@@ -343,17 +348,18 @@ jobs:
           fi
 
           if [[ "$REVIEW_REQUIRED" != "true" ]]; then
-            result_json='{"status":"completed","summary":"Изменена только документация или медиафайлы.","findings":[]}'
+            result_json="{\"status\":\"completed\",\"head_sha\":\"${REVIEW_HEAD_SHA}\",\"summary\":\"Изменена только документация или медиафайлы.\",\"findings\":[]}"
           else
             if [[ "$OPENCODE_OUTCOME" != "success" ]]; then
               publish_unavailable "Шаг OpenCode завершился со статусом ${OPENCODE_OUTCOME}."
             fi
 
-            raw_comment="$(jq -c --arg marker "$result_marker" '
+            raw_comment="$(jq -c --arg started "$REVIEW_STARTED_AT" '
               [.[][]
                 | select(
                     .user.login == "github-actions[bot]" and
-                    (.body | contains($marker))
+                    (.created_at >= $started) and
+                    (.body | contains("<!-- ai-review-result:"))
                   )]
               | sort_by(.id)
               | last // {}
@@ -362,23 +368,24 @@ jobs:
             raw_comment_id="$(jq -r '.id // empty' <<<"$raw_comment")"
             raw_body="$(jq -r '.body // empty' <<<"$raw_comment")"
             if [[ -z "$raw_comment_id" || -z "$raw_body" ]]; then
-              publish_unavailable "Не найден структурированный результат OpenCode для HEAD ${REVIEW_HEAD_SHA}."
+              publish_unavailable "Не найден результат OpenCode, созданный текущим запуском."
             fi
 
-            result_json="$(awk -v marker="$result_marker" '
-              $0 == marker { marker_seen=1; next }
+            result_json="$(awk '
+              /^<!-- ai-review-result:[0-9a-f]+ -->$/ { marker_seen=1; next }
               marker_seen && $0 == "```json" { capture=1; next }
               capture && $0 == "```" { exit }
               capture { print }
             ' <<<"$raw_body")"
 
             if [[ -z "$result_json" ]]; then
-              publish_unavailable "Комментарий OpenCode не содержит JSON после ожидаемого маркера."
+              publish_unavailable "Комментарий OpenCode не содержит JSON после result marker."
             fi
           fi
 
-          if ! jq -e '
+          if ! jq -e --arg expected_head "$REVIEW_HEAD_SHA" '
             (.status == "completed" or .status == "technical-error") and
+            (.head_sha == $expected_head) and
             (.summary | type == "string") and
             (.summary | length <= 2000) and
             (.findings | type == "array") and
@@ -386,8 +393,7 @@ jobs:
             all(.findings[];
               ((.severity == "blocker") or
                (.severity == "major") or
-               (.severity == "minor") or
-               (.severity == "nit")) and
+               (.severity == "minor")) and
               (.file | type == "string") and
               ((.file | length) > 0) and
               ((.file | length) <= 500) and
@@ -432,6 +438,11 @@ jobs:
             .summary = (.summary | clean(600))
             | .findings = [
                 .findings[]
+                | select(
+                    (.severity == "blocker" and .confidence >= 0.9) or
+                    (.severity == "major" and .confidence >= 0.85) or
+                    (.severity == "minor" and .confidence >= 0.9)
+                  )
                 | select(.file as $file | $changed | index($file))
                 | select(
                     (.file | test("(^|/)README[^/]*$"; "i") | not) and
@@ -447,7 +458,7 @@ jobs:
           finding_count="$(jq '.findings | length' <<<"$result_json")"
           dropped_count="$((original_finding_count - finding_count))"
           if (( dropped_count > 0 )); then
-            echo "::warning::Отброшено замечаний вне изменённых исполняемых файлов: ${dropped_count}."
+            echo "::warning::Отброшено непроверяемых или низкоуверенных замечаний: ${dropped_count}."
           fi
 
           blocking_count="$(jq '
@@ -476,9 +487,6 @@ jobs:
             normalized_summary="Подтверждённых замечаний нет."
           else
             normalized_summary="Найдено замечаний: ${finding_count}. Блокирующих: ${blocking_count}."
-          fi
-          if (( dropped_count > 0 )); then
-            normalized_summary+=" Отфильтровано непроверяемых замечаний: ${dropped_count}."
           fi
 
           findings_file="${RUNNER_TEMP}/ai-review-findings.md"
