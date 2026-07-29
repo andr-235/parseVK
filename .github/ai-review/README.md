@@ -1,16 +1,18 @@
 # AI Code Review
 
-Автоматическое ревью Pull Request через GitHub Actions и OpenCode Zen.
+Автоматическое ревью Pull Request через официальный OpenCode GitHub Action.
 
 ## Как работает
 
 1. Workflow запускается при открытии PR и каждом новом commit.
 2. На PR ставится реакция `eyes`.
-3. Создаётся или обновляется одно Issue с маркером `<!-- ai-review:pr=N -->`.
-4. Diff отправляется модели `deepseek-v4-flash-free`.
-5. Python-код проверяет ответ, отбрасывает замечания по неизменённым файлам и самостоятельно определяет блокирующий результат.
-6. `blocker` и `major` с уверенностью от `0.8` завершают job ошибкой.
-7. После успешного повторного ревью Issue закрывается.
+3. Workflow создаёт или переиспользует одно Issue вида `[AI Review] PR #N: ...`.
+4. `anomalyco/opencode/github@latest` анализирует PR моделью `opencode/big-pickle`.
+5. OpenCode читает `rules.md`, обновляет существующий Issue и выставляет один итоговый label.
+6. Отдельный детерминированный шаг проверяет label:
+   - `ai-review:changes-required` завершает job ошибкой;
+   - `ai-review:approved` завершает job успешно и закрывает Issue;
+   - отсутствие однозначного результата переводит Issue в `ai-review:manual-review` и завершает job ошибкой.
 
 ## Секрет
 
@@ -20,16 +22,23 @@
 OPENCODE_API_KEY
 ```
 
-## Настройка
+## Модель
 
-- `config.json` содержит модель, лимиты и уровни блокировки.
-- `rules.md` содержит правила проекта.
-- `response.schema.json` документирует контракт ответа модели.
+Для OpenCode Zen модель задаётся в формате `provider/model`:
 
-## Ограничения первой версии
+```text
+opencode/big-pickle
+```
 
-- PR из внешних fork не анализируются, потому что им нельзя безопасно передавать secret.
-- Слишком крупный diff требует ручного ревью и завершает job ошибкой.
-- Перед публикацией проверяется, что HEAD commit PR не изменился.
+## Правила ревью
 
-После проверки workflow `AI Code Review` можно добавить в обязательные status checks ветки `main`.
+Проектные требования находятся в `rules.md`. Дополнительно агент читает `docs/architecture.md`.
+
+## Ограничения
+
+- Draft PR не анализируются.
+- PR из внешних fork не анализируются, потому что repository secrets им не передаются.
+- OpenCode имеет `contents: read`, поэтому reviewer не может менять код или создавать commits.
+- Сессия OpenCode не публикуется (`share: false`).
+
+После стабилизации workflow `AI Code Review` следует добавить в обязательные status checks ветки `main`.
