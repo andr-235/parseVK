@@ -115,83 +115,235 @@ jobs:
           prompt: |
             Проведи сфокусированное ревью кода текущего Pull Request проекта parseVK.
 
-            Обязательные правила:
-            1. Анализируй только diff текущего PR и только изменённые файлы с кодом,
+            Правила анализа:
+            1. Анализируй только diff текущего PR и изменённые файлы с кодом,
                конфигурацией, миграциями, схемами и тестами.
             2. Полностью пропускай Markdown и документацию: `*.md`, `README*`, `docs/**`.
-               Не читай `docs/architecture.md`, README и другие справочные документы.
-            3. Не проводи аудит всего репозитория. Не просматривай посторонние сервисы,
-               workflows и каталоги. Дополнительный исходный файл можно открыть только если
-               изменённый код прямо на него ссылается и без него нельзя подтвердить дефект.
-            4. Не создавай todo-list и отдельный план. Сразу проверь код и сформируй вердикт.
+            3. Не проводи аудит всего репозитория. Дополнительный исходный файл можно открыть
+               только если изменённый код прямо на него ссылается и без него нельзя подтвердить дефект.
+            4. Не создавай todo-list и план. Не изменяй файлы, не запускай shell, команды `gh`,
+               внешние процессы, subagents и не читай переменные окружения.
             5. Ищи только достижимые дефекты: correctness, security, reliability, data integrity,
                compatibility, performance и отсутствие теста для реально изменённого поведения.
             6. Не сообщай о форматировании, вкусовщине, документации, общих улучшениях,
                несуществующих сценариях и проблемах вне diff.
-            7. Не изменяй файлы, не создавай commits и ветки.
-            8. Не запускай shell, команды `gh`, внешние процессы и не читай переменные окружения.
-               Эти возможности дополнительно заблокированы политикой выполнения.
-            9. Используй только существующий Issue #${{ steps.issue.outputs.issue_number }}.
-               Не читай его текущее тело и не создавай другие Issue.
-            10. Отчёт должен быть коротким. Не перечисляй успешно проверенные категории и файлы.
-                Для каждого реального замечания укажи severity, файл, строку, сценарий ошибки,
-                последствия, конкретное исправление и уверенность.
-            11. Если есть хотя бы один подтверждённый blocker или major с уверенностью >= 0.8:
-                - одним финальным действием обнови Issue;
-                - оставь его открытым;
-                - замени labels на `ai-review` и `ai-review:changes-required`.
-            12. Если блокирующих замечаний нет:
-                - одним финальным действием обнови Issue кратким вердиктом;
-                - замени labels на `ai-review` и `ai-review:approved`;
-                - закрой Issue как completed.
-            13. Если анализ невозможно закончить технически:
-                - оставь Issue открытым;
-                - замени labels на `ai-review` и `ai-review:manual-review`;
-                - запиши точную причину.
-            14. После записи результата не перечитывай Issue и не проверяй labels: это делает
-                отдельный deterministic step workflow.
-            15. Не создавай отдельный комментарий в PR. Верни короткий итог финальным ответом:
-                официальный Action сам опубликует его в PR.
+            7. Для каждого замечания укажи severity, файл, строку, сценарий ошибки,
+               последствия, конкретное исправление и уверенность от 0 до 1.
 
-      - name: Enforce review verdict
+            Формат финального ответа обязателен:
+            - первая строка: короткий человеческий итог;
+            - затем маркер `<!-- ai-review-result:${{ github.event.pull_request.head.sha }} -->`;
+            - затем один JSON-блок без текста после него:
+
+            ```json
+            {
+              "status": "completed",
+              "summary": "Краткий итог ревью",
+              "findings": [
+                {
+                  "severity": "blocker|major|minor|nit",
+                  "file": "path/to/file",
+                  "line": 123,
+                  "scenario": "Как воспроизводится дефект",
+                  "impact": "Последствия",
+                  "fix": "Конкретное исправление",
+                  "confidence": 0.95
+                }
+              ]
+            }
+            ```
+
+            При невозможности закончить анализ используй `status: "technical-error"`,
+            запиши причину в `summary` и оставь `findings` пустым. При отсутствии замечаний
+            используй `status: "completed"` и пустой массив `findings`.
+
+      - name: Publish and enforce review verdict
         if: always() && !cancelled()
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           ISSUE_NUMBER: ${{ steps.issue.outputs.issue_number }}
+          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          OPENCODE_OUTCOME: ${{ steps.opencode.outcome }}
         run: |
           set -euo pipefail
+
+          manual_review() {
+            local reason="$1"
+
+            if [[ -n "${ISSUE_NUMBER:-}" ]]; then
+              local body
+              body="$(cat <<EOF
+          <!-- ai-review:pr=${PR_NUMBER} -->
+          # AI Code Review для PR #${PR_NUMBER}
+
+          **Вердикт:** \`manual-review\`
+
+          ${reason}
+          EOF
+              )"
+
+              gh api \
+                --method PATCH \
+                "repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}" \
+                -f body="$body" \
+                -f state=open \
+                -f 'labels[]=ai-review' \
+                -f 'labels[]=ai-review:manual-review' >/dev/null || true
+            fi
+
+            echo "::error::${reason}"
+            exit 2
+          }
 
           if [[ -z "${ISSUE_NUMBER:-}" ]]; then
             echo "::error::Не удалось определить AI Review Issue"
             exit 2
           fi
 
-          issue_json="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}")"
-          labels="$(jq -r '.labels[].name' <<<"$issue_json")"
-          state="$(jq -r '.state' <<<"$issue_json")"
+          current_head="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" \
+            --jq '.head.sha')"
 
-          if grep -qx 'ai-review:changes-required' <<<"$labels"; then
-            echo "::error::AI Review требует исправлений. Issue #${ISSUE_NUMBER}"
-            exit 1
-          fi
-
-          if grep -qx 'ai-review:approved' <<<"$labels"; then
-            if [[ "$state" != "closed" ]]; then
-              gh issue close "$ISSUE_NUMBER" \
-                --repo "$GITHUB_REPOSITORY" \
-                --reason completed >/dev/null
-            fi
-            echo "AI Review пройден. Issue #${ISSUE_NUMBER}"
+          if [[ "$current_head" != "$REVIEW_HEAD_SHA" ]]; then
+            echo "Устаревший AI Review для ${REVIEW_HEAD_SHA} не публикуется; текущий HEAD ${current_head}"
             exit 0
           fi
+
+          if [[ "$OPENCODE_OUTCOME" != "success" ]]; then
+            manual_review "Шаг OpenCode завершился со статусом ${OPENCODE_OUTCOME}."
+          fi
+
+          marker="<!-- ai-review-result:${REVIEW_HEAD_SHA} -->"
+          comments_json="$(gh api \
+            --paginate \
+            --slurp \
+            "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments?per_page=100")"
+
+          comment_body="$(jq -r --arg marker "$marker" '
+            [.[][]
+              | select(
+                  .user.login == "github-actions[bot]" and
+                  (.body | contains($marker))
+                )]
+            | sort_by(.id)
+            | last
+            | .body // empty
+          ' <<<"$comments_json")"
+
+          if [[ -z "$comment_body" ]]; then
+            manual_review "Не найден структурированный результат OpenCode для HEAD ${REVIEW_HEAD_SHA}."
+          fi
+
+          result_json="$(awk '
+            /^```json$/ { capture=1; next }
+            /^```$/ && capture { exit }
+            capture { print }
+          ' <<<"$comment_body")"
+
+          if [[ -z "$result_json" ]]; then
+            manual_review "Комментарий OpenCode не содержит JSON-блок результата."
+          fi
+
+          if ! jq -e '
+            (.status == "completed" or .status == "technical-error") and
+            (.summary | type == "string") and
+            (.findings | type == "array") and
+            all(.findings[];
+              ((.severity == "blocker") or
+               (.severity == "major") or
+               (.severity == "minor") or
+               (.severity == "nit")) and
+              (.file | type == "string") and
+              ((.line == null) or (.line | type == "number")) and
+              (.scenario | type == "string") and
+              (.impact | type == "string") and
+              (.fix | type == "string") and
+              (.confidence | type == "number")
+            )
+          ' <<<"$result_json" >/dev/null; then
+            manual_review "OpenCode вернул результат, не соответствующий ожидаемой JSON-схеме."
+          fi
+
+          status="$(jq -r '.status' <<<"$result_json")"
+          summary="$(jq -r '.summary' <<<"$result_json")"
+
+          if [[ "$status" == "technical-error" ]]; then
+            manual_review "OpenCode не смог закончить анализ: ${summary}"
+          fi
+
+          blocking_count="$(jq '
+            [.findings[]
+              | select(
+                  .severity == "blocker" or
+                  (.severity == "major" and .confidence >= 0.8)
+                )]
+            | length
+          ' <<<"$result_json")"
+
+          finding_count="$(jq '.findings | length' <<<"$result_json")"
+          verdict="approved"
+          verdict_label="ai-review:approved"
+          verdict_state="closed"
+          exit_code=0
+
+          if (( blocking_count > 0 )); then
+            verdict="changes-required"
+            verdict_label="ai-review:changes-required"
+            verdict_state="open"
+            exit_code=1
+          fi
+
+          issue_body_file="${RUNNER_TEMP}/ai-review-issue.md"
+          {
+            echo "<!-- ai-review:pr=${PR_NUMBER} -->"
+            echo "# AI Code Review для PR #${PR_NUMBER}"
+            echo
+            echo "**Вердикт:** \`${verdict}\`"
+            echo
+            printf '%s\n' "$summary"
+
+            if (( finding_count > 0 )); then
+              echo
+              echo "## Замечания"
+              echo
+              jq -r '
+                .findings
+                | to_entries[]
+                | "### \(.key + 1). \(.value.severity | ascii_upcase)\n\n" +
+                  "- **Файл:** `\(.value.file)`\n" +
+                  "- **Строка:** \(.value.line // "не указана")\n" +
+                  "- **Уверенность:** \(.value.confidence)\n" +
+                  "- **Сценарий:** \(.value.scenario)\n" +
+                  "- **Последствия:** \(.value.impact)\n" +
+                  "- **Исправление:** \(.value.fix)\n"
+              ' <<<"$result_json"
+            else
+              echo
+              echo "Подтверждённых замечаний нет."
+            fi
+          } >"$issue_body_file"
 
           gh api \
             --method PATCH \
             "repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}" \
-            -f state=open \
+            -f body="$(cat "$issue_body_file")" \
+            -f state="$verdict_state" \
             -f 'labels[]=ai-review' \
-            -f 'labels[]=ai-review:manual-review' >/dev/null
+            -f "labels[]=${verdict_label}" >/dev/null
 
-          echo "::error::OpenCode не опубликовал однозначный verdict. Нужна ручная проверка Issue #${ISSUE_NUMBER}"
-          exit 2
+          if [[ "$verdict_state" == "closed" ]]; then
+            gh api \
+              --method PATCH \
+              "repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}" \
+              -f state=closed \
+              -f state_reason=completed >/dev/null
+          fi
+
+          if (( exit_code == 1 )); then
+            echo "::error::AI Review требует исправлений. Issue #${ISSUE_NUMBER}"
+            exit 1
+          fi
+
+          echo "AI Review пройден. Issue #${ISSUE_NUMBER}"
