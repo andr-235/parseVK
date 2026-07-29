@@ -292,7 +292,8 @@ jobs:
                   .id != $keep_id and
                   .user.login == "github-actions[bot]" and
                   ((.body | contains($marker)) or
-                   (.body | contains("<!-- ai-review-result:")))
+                   (.body | contains("<!-- ai-review-result:")) or
+                   (.body | contains("[github run](")))
                 )
               | .id
             ' <<<"$comments_json")"
