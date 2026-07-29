@@ -132,7 +132,7 @@ class TestMessageEnvelope:
         assert envelope.occurred_at.tzinfo is UTC
         assert envelope.occurred_at.hour == 2  # 12:00 +10:00 → 02:00 UTC
 
-    def test_wire_json_z_utc(self) -> None:
+    def test_wire_json_zulu(self) -> None:
         """Wire JSON with Z offset is parsed and normalized to UTC."""
         payload = SamplePayload(event="wire", value=0)
         envelope = MessageEnvelope[SamplePayload](

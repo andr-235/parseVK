@@ -89,7 +89,7 @@ class TestMessageContract:
             topic="test.topic",
             producers=frozenset({"producer-a"}),
             consumers=frozenset({"consumer-b"}),
-            partition_key=PartitionKeySpec(paths=("entity_id",)),
+            partition_key=PartitionKeySpec(paths=("entityId",)),
             correlation_required=True,
             causation_policy="optional",
             compatibility="backward",
@@ -129,7 +129,7 @@ class TestContractCatalog:
             topic="test.topic",
             producers=frozenset({"producer-a"}),
             consumers=frozenset({"consumer-b"}),
-            partition_key=PartitionKeySpec(paths=("entity_id",)),
+            partition_key=PartitionKeySpec(paths=("entityId",)),
             correlation_required=True,
             causation_policy="optional",
         )
