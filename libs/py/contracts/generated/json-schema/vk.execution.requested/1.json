@@ -178,17 +178,8 @@
       "type": "null"
     },
     "correlationId": {
-      "anyOf": [
-        {
-          "format": "uuid",
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Correlationid"
+      "format": "uuid",
+      "type": "string"
     },
     "messageId": {
       "format": "uuid",

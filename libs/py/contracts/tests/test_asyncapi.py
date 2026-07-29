@@ -64,6 +64,27 @@ class TestAsyncApiGeneration:
         assert "vk_service_receive_vk_execution_requested_v1" in ops
         assert ops["vk_service_receive_vk_execution_requested_v1"]["action"] == "receive"
 
+    def test_operation_messages_ref_channels(self) -> None:
+        """Operation messages reference channels, not components."""
+        doc = generate_asyncapi(VK_CATALOG)
+        for op_name, op in doc.get("operations", {}).items():
+            assert "messages" in op, f"Operation {op_name} has no messages"
+            for msg in op["messages"]:
+                ref = msg["$ref"]
+                assert ref.startswith("#/channels/"), (
+                    f"Operation {op_name} message ref {ref} must point to channel"
+                )
+
+    def test_channel_messages_ref_components(self) -> None:
+        """Channel messages reference components."""
+        doc = generate_asyncapi(VK_CATALOG)
+        for ch_name, ch in doc.get("channels", {}).items():
+            for msg_name, msg_ref in ch.get("messages", {}).items():
+                ref = msg_ref["$ref"]
+                assert ref.startswith("#/components/messages/"), (
+                    f"Channel {ch_name} message {msg_name} ref {ref} must point to component"
+                )
+
     def test_writes_valid_yaml(self, tmp_path: Path) -> None:
         """Written AsyncAPI file is valid YAML."""
         path = write_asyncapi(VK_CATALOG, tmp_path)

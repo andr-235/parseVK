@@ -63,10 +63,14 @@ class TestJsonSchemaGeneration:
         schema2 = generate_json_schema(VK_EXECUTION_REQUESTED)
         assert schema1 == schema2
 
-    def test_correlation_in_required(self) -> None:
-        """correlation_required adds correlationId to required array."""
+    def test_correlation_required_is_non_nullable(self) -> None:
+        """correlation_required adds correlationId as non-nullable string."""
         schema = generate_json_schema(VK_EXECUTION_REQUESTED)
         assert "correlationId" in schema.get("required", [])
+        corr = schema.get("properties", {}).get("correlationId", {})
+        assert corr == {"type": "string", "format": "uuid"}, (
+            f"Expected non-nullable uuid, got {corr}"
+        )
 
     def test_causation_forbidden_is_null(self) -> None:
         """causation_policy=forbidden sets causationId to type null."""

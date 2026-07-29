@@ -5,12 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-import yaml  # type: ignore[import-untyped]
-
+from parsevk_contracts._metadata import PACKAGE_VERSION
 from parsevk_contracts.catalog import ContractCatalog, MessageContract
-
-PACKAGE_NAME = "parsevk-contracts"
-PACKAGE_VERSION = "0.1.0"
 
 
 def _message_name(contract: MessageContract) -> str:
@@ -59,7 +55,7 @@ def generate_asyncapi(catalog: ContractCatalog) -> dict[str, object]:
                     "$ref": f"#/channels/{channel_name}",
                 },
                 "messages": [
-                    {"$ref": f"#/components/messages/{msg_name}"},
+                    {"$ref": f"#/channels/{channel_name}/messages/{msg_name}"},
                 ],
             }
 
@@ -72,7 +68,7 @@ def generate_asyncapi(catalog: ContractCatalog) -> dict[str, object]:
                     "$ref": f"#/channels/{channel_name}",
                 },
                 "messages": [
-                    {"$ref": f"#/components/messages/{msg_name}"},
+                    {"$ref": f"#/channels/{channel_name}/messages/{msg_name}"},
                 ],
             }
 
@@ -104,6 +100,13 @@ def write_asyncapi(
     asyncapi_dir = output_dir / "asyncapi"
     asyncapi_dir.mkdir(parents=True, exist_ok=True)
     path = asyncapi_dir / "parsevk-contracts.yaml"
+
+    try:
+        import yaml
+    except ImportError as exc:
+        raise RuntimeError(
+            "AsyncAPI generation requires parsevk-contracts[generation]"
+        ) from exc
 
     document = generate_asyncapi(catalog)
     with open(path, "w") as f:

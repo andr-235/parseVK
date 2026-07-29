@@ -16,13 +16,13 @@ operations:
     channel:
       $ref: '#/channels/parsevk_vk_commands'
     messages:
-    - $ref: '#/components/messages/vk_execution_requested_v1'
+    - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_requested_v1'
   vk_service_receive_vk_execution_requested_v1:
     action: receive
     channel:
       $ref: '#/channels/parsevk_vk_commands'
     messages:
-    - $ref: '#/components/messages/vk_execution_requested_v1'
+    - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_requested_v1'
 components:
   messages:
     vk_execution_requested_v1:

@@ -6,14 +6,15 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from parsevk_contracts._metadata import PACKAGE_NAME, PACKAGE_VERSION
 from parsevk_contracts.catalog import ContractCatalog, MessageContract
 
 
 @dataclass(frozen=True, slots=True)
 class ManifestMetadata:
     repository: str = "github.com/andr-235/parseVK"
-    package: str = "parsevk-contracts"
-    package_version: str = "0.1.0"
+    package: str = PACKAGE_NAME
+    package_version: str = PACKAGE_VERSION
 
 
 def generate_manifest(

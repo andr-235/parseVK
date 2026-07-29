@@ -41,8 +41,13 @@ def generate_json_schema(contract: MessageContract) -> dict[str, object]:
     # Envelope policy constraints
     required: list[str] = list(schema.get("required", []))
 
-    if contract.correlation_required and "correlationId" not in required:
-        required.append("correlationId")
+    if contract.correlation_required:
+        if "correlationId" not in required:
+            required.append("correlationId")
+        properties["correlationId"] = {
+            "type": "string",
+            "format": "uuid",
+        }
 
     if contract.causation_policy == "forbidden" and "causationId" in properties:
         properties["causationId"] = {"type": "null"}
@@ -50,13 +55,10 @@ def generate_json_schema(contract: MessageContract) -> dict[str, object]:
     if contract.causation_policy == "required":
         if "causationId" not in required:
             required.append("causationId")
-        if "causationId" in properties:
-            properties["causationId"] = {
-                "oneOf": [
-                    {"type": "null"},
-                    {"type": "string", "format": "uuid"},
-                ]
-            }
+        properties["causationId"] = {
+            "type": "string",
+            "format": "uuid",
+        }
 
     if required:
         schema["required"] = required

@@ -6,6 +6,11 @@ dependencies = [
     "pydantic>=2.12,<3",
 ]
 
+[project.optional-dependencies]
+generation = [
+    "PyYAML>=6,<7",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -14,7 +19,7 @@ build-backend = "hatchling.build"
 packages = ["parsevk_contracts"]
 
 [dependency-groups]
-dev = ["pytest>=8", "pytest-asyncio>=0.23", "hypothesis>=6", "jsonschema>=4.20", "pyyaml>=6.0", "mypy>=1.15"]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "hypothesis>=6", "jsonschema>=4.20", "pyyaml>=6.0", "types-pyyaml>=6", "mypy>=1.15"]
 
 [tool.mypy]
 python_version = "3.12"
