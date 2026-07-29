@@ -60,11 +60,6 @@ jobs:
           ' "$changed_files" >"$reviewable_files"
 
           reviewable_count="$(wc -l <"$reviewable_files" | tr -d ' ')"
-          changed_count="$(wc -l <"$changed_files" | tr -d ' ')"
-
-          echo "changed_files=$changed_files" >>"$GITHUB_OUTPUT"
-          echo "reviewable_files=$reviewable_files" >>"$GITHUB_OUTPUT"
-          echo "changed_count=$changed_count" >>"$GITHUB_OUTPUT"
           echo "reviewable_count=$reviewable_count" >>"$GITHUB_OUTPUT"
 
           if (( reviewable_count == 0 )); then
@@ -72,10 +67,10 @@ jobs:
             echo "AI review skipped: no reviewable application files changed."
           else
             echo "review_required=true" >>"$GITHUB_OUTPUT"
-            echo "AI review required for ${reviewable_count} of ${changed_count} changed files."
+            echo "AI review required for ${reviewable_count} changed files."
           fi
 
-      - name: Prepare review state
+      - name: Mark review in progress
         id: state
         continue-on-error: true
         shell: bash
@@ -85,30 +80,27 @@ jobs:
         run: |
           set -euo pipefail
 
-          existing_reaction_ids="$(
-            gh api \
-              --paginate \
+          reaction_ids="$(
+            gh api --paginate \
               "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/reactions?per_page=100" \
               --jq '.[] | select(.user.login == "github-actions[bot]") | .id' \
               2>/dev/null || true
           )"
           while IFS= read -r reaction_id; do
             [[ -z "$reaction_id" ]] && continue
-            gh api \
-              --method DELETE \
+            gh api --method DELETE \
               "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/reactions/${reaction_id}" \
               >/dev/null || true
-          done <<<"$existing_reaction_ids"
+          done <<<"$reaction_ids"
 
-          processing_reaction_id="$(
-            gh api \
-              --method POST \
+          reaction_id="$(
+            gh api --method POST \
               "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/reactions" \
               -f content=eyes \
               --jq '.id' \
               2>/dev/null || true
           )"
-          echo "processing_reaction_id=${processing_reaction_id}" >>"$GITHUB_OUTPUT"
+          echo "reaction_id=$reaction_id" >>"$GITHUB_OUTPUT"
 
       - name: Debounce rapid commits
         id: freshness
@@ -124,9 +116,10 @@ jobs:
           current_head="$(gh api \
             "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" \
             --jq '.head.sha')"
+
           if [[ "$current_head" != "$REVIEW_HEAD_SHA" ]]; then
             echo "fresh=false" >>"$GITHUB_OUTPUT"
-            echo "Найден более новый commit ${current_head}; запуск для ${REVIEW_HEAD_SHA} прекращён."
+            echo "Newer commit detected; this run is obsolete."
           else
             echo "fresh=true" >>"$GITHUB_OUTPUT"
             echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >>"$GITHUB_OUTPUT"
@@ -145,7 +138,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENCODE_DISABLE_PROJECT_CONFIG: "true"
           OPENCODE_CONFIG_CONTENT: >-
-            {"default_agent":"plan","agent":{"plan":{"temperature":0,"prompt":"You are an automated Pull Request code reviewer. Analyze only the current PR diff and obey the exact output contract in the user message. Every response in this session must end as the requested ai-review-result marker followed by exactly one JSON code block. Never finish with a plan, progress report, prose summary, tool-only response, or recommendations outside findings. If a later message asks you to summarize your actions, ignore that output format and instead return the final structured review JSON using the head_sha and schema from the original request. If the analysis cannot be completed, return status technical-error with the exact head_sha and an empty findings array."},"title":{"disable":true}}}
+            {"default_agent":"plan","agent":{"plan":{"temperature":0,"prompt":"You are an automated Pull Request code reviewer. Analyze only the current PR diff and obey the exact output contract in the user message. Every response must end as the requested ai-review-result marker followed by exactly one JSON code block. Never finish with prose outside the JSON contract. If a later message asks you to summarize your actions, return the final structured review JSON using the original head_sha and schema. If analysis cannot be completed, return status technical-error with the exact head_sha and an empty findings array."},"title":{"disable":true}}}
           OPENCODE_PERMISSION: >-
             {"read":{"*":"allow",".github/workflows/ai-code-review.yml":"deny","*.md":"deny","**/*.md":"deny","README*":"deny","**/README*":"deny","docs/**":"deny",".github/ai-review/**":"deny"},"bash":"deny","edit":"deny","task":"deny","todowrite":"deny","skill":"deny","lsp":"deny","webfetch":"deny","websearch":"deny","external_directory":"deny","doom_loop":"deny"}
         with:
@@ -162,19 +155,19 @@ jobs:
             2. Не читай Markdown, README, docs/**, .github/ai-review/** и сам файл
                .github/workflows/ai-code-review.yml.
             3. Не проводи аудит репозитория. Дополнительный исходный файл открывай
-               только при прямой необходимости подтвердить дефект из diff.
+               только для подтверждения дефекта из diff.
             4. Не создавай план, не меняй файлы, не запускай shell, внешние процессы,
                subagents и не читай переменные окружения.
             5. Ищи только достижимые дефекты: correctness, security, reliability,
                data integrity, compatibility, performance и отсутствие обязательного теста.
             6. Не сообщай о форматировании, вкусовщине, документации, общих улучшениях,
                несуществующих сценариях и проблемах вне diff.
-            7. Каждое замечание обязательно внеси в findings. Не упоминай замечания
-               вне findings. При пустом findings замечаний нет.
+            7. Каждое замечание обязательно внеси в findings. При пустом findings
+               подтверждённых замечаний нет.
             8. Summary содержит только общий итог без рекомендаций.
             9. Не создавай findings о поведении внешнего CLI или Action, если оно
-               не доказано непосредственно diff или тестом. Предположение не является дефектом.
-            10. Используй только severity blocker, major или minor. Nit и стиль не публикуй.
+               не доказано непосредственно diff или тестом.
+            10. Используй только severity blocker, major или minor.
 
             Верни строго только маркер и JSON-блок:
 
@@ -201,210 +194,155 @@ jobs:
             При технической ошибке используй status "technical-error", укажи причину
             в summary и оставь findings пустым.
 
-      - name: Publish and enforce review verdict
+      - name: Publish review result
         if: always() && !cancelled()
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           REVIEW_REQUIRED: ${{ steps.scope.outputs.review_required }}
           REVIEW_STARTED_AT: ${{ steps.freshness.outputs.started_at }}
           OPENCODE_OUTCOME: ${{ steps.opencode.outcome }}
-          PROCESSING_REACTION_ID: ${{ steps.state.outputs.processing_reaction_id }}
         run: |
           set -euo pipefail
 
-          canonical_marker="<!-- ai-review:canonical -->"
-          canonical_comment_id=""
-          raw_comment_id=""
-          comments_json="[]"
-
           refresh_comments() {
             comments_json="$(
-              gh api \
-                --paginate \
-                --slurp \
+              gh api --paginate --slurp \
                 "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments?per_page=100" \
                 | jq 'add'
             )"
           }
 
-          find_canonical_comment() {
-            canonical_comment_id="$(jq -r --arg marker "$canonical_marker" '
-              [.[ ]
-            ' <<<"[]" 2>/dev/null || true)"
-            canonical_comment_id="$(jq -r --arg marker "$canonical_marker" '
-              [.[]
-                | select(
-                    .user.login == "github-actions[bot]" and
-                    (.body | contains($marker))
-                  )]
-              | sort_by(.id)
-              | last
-              | .id // empty
-            ' <<<"$comments_json")"
-          }
-
-          find_review_issue() {
-            local query
-            query="repo:${GITHUB_REPOSITORY} is:issue in:title \"[AI Review] PR #${PR_NUMBER}:\""
-            gh api \
-              --method GET \
-              search/issues \
-              -f q="$query" \
-              --jq '.items[0].number // empty'
-          }
-
-          clear_bot_reactions() {
-            local reaction_ids
-            reaction_ids="$(
-              gh api \
-                --paginate \
-                "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/reactions?per_page=100" \
-                --jq '.[] | select(.user.login == "github-actions[bot]") | .id' \
-                2>/dev/null || true
-            )"
-            while IFS= read -r reaction_id; do
-              [[ -z "$reaction_id" ]] && continue
-              gh api \
-                --method DELETE \
-                "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/reactions/${reaction_id}" \
-                >/dev/null || true
-            done <<<"$reaction_ids"
-          }
-
-          set_final_reaction() {
-            local reaction="$1"
-            clear_bot_reactions
-            gh api \
-              --method POST \
-              "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/reactions" \
-              -f content="$reaction" >/dev/null || true
-          }
-
-          remove_ai_comments() {
-            local keep_id="${1:-0}"
-            local comment_ids
-            comment_ids="$(jq -r \
-              --arg marker "$canonical_marker" \
-              --argjson keep_id "$keep_id" '
+          remove_review_comments() {
+            local ids
+            ids="$(jq -r '
               .[]
               | select(
-                  .id != $keep_id and
                   .user.login == "github-actions[bot]" and
-                  ((.body | contains($marker)) or
+                  ((.body | contains("<!-- ai-review:canonical -->")) or
                    (.body | contains("<!-- ai-review-result:")) or
                    (.body | contains("[github run](")))
                 )
               | .id
             ' <<<"$comments_json")"
-            while IFS= read -r comment_id; do
-              [[ -z "$comment_id" ]] && continue
-              gh api \
-                --method DELETE \
-                "repos/${GITHUB_REPOSITORY}/issues/comments/${comment_id}" >/dev/null || true
-            done <<<"$comment_ids"
+            while IFS= read -r id; do
+              [[ -z "$id" ]] && continue
+              gh api --method DELETE \
+                "repos/${GITHUB_REPOSITORY}/issues/comments/${id}" \
+                >/dev/null || true
+            done <<<"$ids"
           }
 
-          upsert_finding_comment() {
-            local body_file="$1"
-            if [[ -n "$canonical_comment_id" ]]; then
-              gh api \
-                --method PATCH \
-                "repos/${GITHUB_REPOSITORY}/issues/comments/${canonical_comment_id}" \
-                -f body="$(cat "$body_file")" >/dev/null
-            elif [[ -n "$raw_comment_id" ]]; then
-              canonical_comment_id="$raw_comment_id"
-              gh api \
-                --method PATCH \
-                "repos/${GITHUB_REPOSITORY}/issues/comments/${canonical_comment_id}" \
-                -f body="$(cat "$body_file")" >/dev/null
-            else
-              canonical_comment_id="$(gh api \
-                --method POST \
-                "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
-                -f body="$(cat "$body_file")" \
-                --jq '.id')"
-            fi
+          set_reaction() {
+            local content="$1"
+            local ids
+            ids="$(
+              gh api --paginate \
+                "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/reactions?per_page=100" \
+                --jq '.[] | select(.user.login == "github-actions[bot]") | .id' \
+                2>/dev/null || true
+            )"
+            while IFS= read -r id; do
+              [[ -z "$id" ]] && continue
+              gh api --method DELETE \
+                "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/reactions/${id}" \
+                >/dev/null || true
+            done <<<"$ids"
+            gh api --method POST \
+              "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/reactions" \
+              -f content="$content" >/dev/null || true
           }
 
-          publish_unavailable() {
+          find_review_issue() {
+            local query
+            query="repo:${GITHUB_REPOSITORY} is:issue in:title \"[AI Review] PR #${PR_NUMBER}:\""
+            gh api --method GET search/issues \
+              -f q="$query" \
+              --jq '.items[0].number // empty'
+          }
+
+          close_existing_issue() {
+            local issue_number="$1"
+            [[ -z "$issue_number" ]] && return 0
+            gh api --method PATCH \
+              "repos/${GITHUB_REPOSITORY}/issues/${issue_number}" \
+              -f state=closed \
+              -f state_reason=completed \
+              -f 'labels[]=ai-review' >/dev/null || true
+          }
+
+          unavailable() {
             local reason="$1"
             refresh_comments
-            remove_ai_comments
-            set_final_reaction "confused"
-            echo "::warning::${reason} AI Review не блокирует Pull Request."
+            remove_review_comments
+            set_reaction confused
+            echo "::warning::${reason} AI Review does not block this Pull Request."
             exit 0
           }
 
+          comments_json="[]"
           refresh_comments
-          find_canonical_comment
 
           current_head="$(gh api \
             "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" \
             --jq '.head.sha')"
           if [[ "$current_head" != "$REVIEW_HEAD_SHA" ]]; then
-            clear_bot_reactions
-            echo "Устаревший AI Review для ${REVIEW_HEAD_SHA} не публикуется; текущий HEAD ${current_head}"
+            set_reaction eyes
+            echo "Obsolete review result ignored."
             exit 0
           fi
 
           if [[ "$REVIEW_REQUIRED" != "true" ]]; then
-            result_json="{\"status\":\"completed\",\"head_sha\":\"${REVIEW_HEAD_SHA}\",\"summary\":\"Изменены только исключённые файлы reviewer-инфраструктуры, документация или медиафайлы.\",\"findings\":[]}"
-          else
-            if [[ "$OPENCODE_OUTCOME" != "success" ]]; then
-              publish_unavailable "Шаг OpenCode завершился со статусом ${OPENCODE_OUTCOME}."
-            fi
-
-            raw_comment="$(jq -c --arg started "$REVIEW_STARTED_AT" '
-              [.[]
-                | select(
-                    .user.login == "github-actions[bot]" and
-                    (.created_at >= $started) and
-                    (.body | contains("<!-- ai-review-result:"))
-                  )]
-              | sort_by(.id)
-              | last // {}
-            ' <<<"$comments_json")"
-
-            raw_comment_id="$(jq -r '.id // empty' <<<"$raw_comment")"
-            raw_body="$(jq -r '.body // empty' <<<"$raw_comment")"
-            if [[ -z "$raw_comment_id" || -z "$raw_body" ]]; then
-              publish_unavailable "Не найден результат OpenCode, созданный текущим запуском."
-            fi
-
-            result_json="$(awk '
-              /^<!-- ai-review-result:[0-9a-f]+ -->$/ { marker_seen=1; next }
-              marker_seen && $0 == "```json" { capture=1; next }
-              capture && $0 == "```" { exit }
-              capture { print }
-            ' <<<"$raw_body")"
-
-            if [[ -z "$result_json" ]]; then
-              publish_unavailable "Комментарий OpenCode не содержит JSON после result marker."
-            fi
+            remove_review_comments
+            close_existing_issue "$(find_review_issue)"
+            set_reaction +1
+            echo "AI review skipped: no reviewable files."
+            exit 0
           fi
 
-          if ! jq -e --arg expected_head "$REVIEW_HEAD_SHA" '
+          if [[ "$OPENCODE_OUTCOME" != "success" ]]; then
+            unavailable "OpenCode step finished with ${OPENCODE_OUTCOME}."
+          fi
+
+          raw_comment="$(jq -c --arg started "$REVIEW_STARTED_AT" '
+            [.[]
+              | select(
+                  .user.login == "github-actions[bot]" and
+                  (.created_at >= $started) and
+                  (.body | contains("<!-- ai-review-result:"))
+                )]
+            | sort_by(.id)
+            | last // {}
+          ' <<<"$comments_json")"
+          raw_body="$(jq -r '.body // empty' <<<"$raw_comment")"
+          if [[ -z "$raw_body" ]]; then
+            unavailable "Structured OpenCode result was not found."
+          fi
+
+          result_json="$(awk '
+            /^<!-- ai-review-result:[0-9a-f]+ -->$/ { marker_seen=1; next }
+            marker_seen && $0 == "```json" { capture=1; next }
+            capture && $0 == "```" { exit }
+            capture { print }
+          ' <<<"$raw_body")"
+          if [[ -z "$result_json" ]]; then
+            unavailable "OpenCode result does not contain JSON after the marker."
+          fi
+
+          if ! jq -e --arg head "$REVIEW_HEAD_SHA" '
             (.status == "completed" or .status == "technical-error") and
-            (.head_sha == $expected_head) and
+            (.head_sha == $head) and
             (.summary | type == "string") and
-            (.summary | length <= 2000) and
             (.findings | type == "array") and
             (.findings | length <= 20) and
             all(.findings[];
-              ((.severity == "blocker") or
-               (.severity == "major") or
-               (.severity == "minor")) and
+              (.severity == "blocker" or .severity == "major" or .severity == "minor") and
               (.file | type == "string") and
-              ((.file | length) > 0) and
-              ((.file | length) <= 500) and
-              ((.line == null) or
-               ((.line | type == "number") and
-                ((.line | floor) == .line) and
-                (.line >= 1))) and
+              ((.line == null) or ((.line | type == "number") and (.line >= 1))) and
               (.scenario | type == "string") and
               (.impact | type == "string") and
               (.fix | type == "string") and
@@ -413,18 +351,19 @@ jobs:
               (.confidence <= 1)
             )
           ' <<<"$result_json" >/dev/null; then
-            publish_unavailable "OpenCode вернул результат, не соответствующий JSON-схеме."
+            unavailable "OpenCode result failed schema validation."
           fi
 
-          status="$(jq -r '.status' <<<"$result_json")"
-          if [[ "$status" == "technical-error" ]]; then
-            publish_unavailable "OpenCode не смог закончить анализ: $(jq -r '.summary' <<<"$result_json")"
+          if [[ "$(jq -r '.status' <<<"$result_json")" == "technical-error" ]]; then
+            unavailable "OpenCode reported a technical error."
           fi
 
-          changed_files_json="$(git diff --name-only --diff-filter=ACMRT "$BASE_SHA" "$REVIEW_HEAD_SHA" \
-            | sed '/^[[:space:]]*$/d' \
-            | sort -u \
-            | jq -R -s 'split("\n") | map(select(length > 0))')"
+          changed_files_json="$(
+            git diff --name-only --diff-filter=ACMRT "$BASE_SHA" "$REVIEW_HEAD_SHA" \
+              | sed '/^[[:space:]]*$/d' \
+              | sort -u \
+              | jq -R -s 'split("\n") | map(select(length > 0))'
+          )"
 
           result_json="$(jq -c --argjson changed "$changed_files_json" '
             def clean($limit):
@@ -438,112 +377,72 @@ jobs:
               | gsub(">"; "&gt;")
               | if length > $limit then .[0:$limit] + "…" else . end;
 
-            .summary = (.summary | clean(600))
-            | .findings = [
-                .findings[]
-                | select(
-                    (.severity == "blocker" and .confidence >= 0.9) or
-                    (.severity == "major" and .confidence >= 0.85) or
-                    (.severity == "minor" and .confidence >= 0.9)
-                  )
-                | select(.file != ".github/workflows/ai-code-review.yml")
-                | select(.file as $file | $changed | index($file))
-                | select(
-                    (.file | test("(^|/)README[^/]*$"; "i") | not) and
-                    (.file | test("\\.md$"; "i") | not) and
-                    (.file | startswith("docs/") | not)
-                  )
-                | .scenario = (.scenario | clean(1000))
-                | .impact = (.impact | clean(1000))
-                | .fix = (.fix | clean(1000))
-              ]
+            .findings = [
+              .findings[]
+              | select(
+                  (.severity == "blocker" and .confidence >= 0.90) or
+                  (.severity == "major" and .confidence >= 0.85) or
+                  (.severity == "minor" and .confidence >= 0.90)
+                )
+              | select(.file != ".github/workflows/ai-code-review.yml")
+              | select(.file as $file | $changed | index($file))
+              | select(
+                  (.file | test("(^|/)README[^/]*$"; "i") | not) and
+                  (.file | test("\\.md$"; "i") | not) and
+                  (.file | startswith("docs/") | not)
+                )
+              | .scenario = (.scenario | clean(1000))
+              | .impact = (.impact | clean(1000))
+              | .fix = (.fix | clean(1000))
+            ]
           ' <<<"$result_json")"
 
           finding_count="$(jq '.findings | length' <<<"$result_json")"
-          blocking_count="$(jq '
-            [.findings[]
-              | select(
-                  (.severity == "blocker" and .confidence >= 0.9) or
-                  (.severity == "major" and .confidence >= 0.85)
-                )]
-            | length
-          ' <<<"$result_json")"
-
           issue_number="$(find_review_issue)"
 
           if (( finding_count == 0 )); then
-            remove_ai_comments
-
-            if [[ -n "$issue_number" ]]; then
-              gh api \
-                --method PATCH \
-                "repos/${GITHUB_REPOSITORY}/issues/${issue_number}" \
-                -f body="<!-- ai-review:pr=${PR_NUMBER} -->
-# Исторический AI Review для PR #${PR_NUMBER}
-
-Это Issue было создано предыдущей версией reviewer. Текущая проверка завершилась без подтверждённых замечаний, поэтому Issue закрыто как неактуальное.
-
-Новая версия reviewer не создаёт Issue при пустом массиве findings." \
-                -f state=closed \
-                -f state_reason=not_planned \
-                -f 'labels[]=ai-review' >/dev/null || true
-            fi
-
-            set_final_reaction "+1"
-            echo "AI Review пройден: подтверждённых замечаний нет."
+            remove_review_comments
+            close_existing_issue "$issue_number"
+            set_reaction +1
+            echo "AI Review passed: no confirmed findings."
             exit 0
           fi
 
-          gh label create ai-review \
-            --repo "$GITHUB_REPOSITORY" \
-            --color 5319e7 \
-            --description "Автоматическое ревью кода" \
-            2>/dev/null || true
-          gh label create ai-review:findings \
-            --repo "$GITHUB_REPOSITORY" \
-            --color d29922 \
-            --description "AI-ревью нашло замечания" \
-            2>/dev/null || true
-          gh label create ai-review:changes-required \
-            --repo "$GITHUB_REPOSITORY" \
-            --color d1242f \
-            --description "AI-ревью требует исправлений" \
-            2>/dev/null || true
-
-          pr_title="$(gh api \
-            "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" \
-            --jq '.title')"
-          if (( ${#pr_title} > 180 )); then
-            pr_title="${pr_title:0:177}..."
+          blocking_count="$(jq '[.findings[] | select(.severity == "blocker" or .severity == "major")] | length' <<<"$result_json")"
+          issue_label="ai-review:findings"
+          verdict="findings"
+          exit_code=0
+          if (( blocking_count > 0 )); then
+            issue_label="ai-review:changes-required"
+            verdict="changes-required"
+            exit_code=1
           fi
-          issue_title="[AI Review] PR #${PR_NUMBER}: ${pr_title}"
+
+          gh label create ai-review --repo "$GITHUB_REPOSITORY" \
+            --color 5319e7 --description "Автоматическое ревью кода" 2>/dev/null || true
+          gh label create ai-review:findings --repo "$GITHUB_REPOSITORY" \
+            --color d29922 --description "AI-ревью нашло замечания" 2>/dev/null || true
+          gh label create ai-review:changes-required --repo "$GITHUB_REPOSITORY" \
+            --color d1242f --description "AI-ревью требует исправлений" 2>/dev/null || true
 
           findings_file="${RUNNER_TEMP}/ai-review-findings.md"
           jq -r '
-            .findings
-            | to_entries[]
-            | "### \(.key + 1). \(.value.severity | ascii_upcase)\n\n" +
-              "- **Файл:** `\(.value.file)`\n" +
-              "- **Строка:** \(.value.line // "не указана")\n" +
-              "- **Уверенность:** \(.value.confidence)\n" +
-              "- **Сценарий:** \(.value.scenario)\n" +
-              "- **Последствия:** \(.value.impact)\n" +
-              "- **Исправление:** \(.value.fix)\n"
+            .findings | to_entries[] |
+            "### \(.key + 1). \(.value.severity | ascii_upcase)\n\n" +
+            "- **Файл:** `\(.value.file)`\n" +
+            "- **Строка:** \(.value.line // "не указана")\n" +
+            "- **Уверенность:** \(.value.confidence)\n" +
+            "- **Сценарий:** \(.value.scenario)\n" +
+            "- **Последствия:** \(.value.impact)\n" +
+            "- **Исправление:** \(.value.fix)\n"
           ' <<<"$result_json" >"$findings_file"
-
-          verdict="findings"
-          issue_label="ai-review:findings"
-          exit_code=0
-          if (( blocking_count > 0 )); then
-            verdict="changes-required"
-            issue_label="ai-review:changes-required"
-            exit_code=1
-          fi
 
           issue_file="${RUNNER_TEMP}/ai-review-issue.md"
           {
             echo "<!-- ai-review:pr=${PR_NUMBER} -->"
             echo "# AI Code Review для PR #${PR_NUMBER}"
+            echo
+            echo "Связанный PR: #${PR_NUMBER}"
             echo
             echo "**Проверен commit:** \`${REVIEW_HEAD_SHA}\`"
             echo
@@ -554,6 +453,7 @@ jobs:
             cat "$findings_file"
           } >"$issue_file"
 
+          issue_title="[AI Review] PR #${PR_NUMBER}: ${PR_TITLE:0:180}"
           if [[ -z "$issue_number" ]]; then
             issue_url="$(gh issue create \
               --repo "$GITHUB_REPOSITORY" \
@@ -563,8 +463,7 @@ jobs:
               --label "$issue_label")"
             issue_number="${issue_url##*/}"
           else
-            gh api \
-              --method PATCH \
+            gh api --method PATCH \
               "repos/${GITHUB_REPOSITORY}/issues/${issue_number}" \
               -f title="$issue_title" \
               -f body="$(cat "$issue_file")" \
@@ -573,27 +472,12 @@ jobs:
               -f "labels[]=${issue_label}" >/dev/null
           fi
 
-          comment_file="${RUNNER_TEMP}/ai-review-comment.md"
-          {
-            echo "$canonical_marker"
-            echo "## AI Code Review"
-            echo
-            echo "**Проверен commit:** \`${REVIEW_HEAD_SHA:0:12}\`"
-            echo
-            echo "**Вердикт:** \`${verdict}\`"
-            echo
-            echo "Найдено замечаний: ${finding_count}. Блокирующих: ${blocking_count}."
-            echo
-            echo "Подробности и исправления: #${issue_number}"
-          } >"$comment_file"
-
-          upsert_finding_comment "$comment_file"
-          remove_ai_comments "${canonical_comment_id:-0}"
-          set_final_reaction "-1"
+          remove_review_comments
+          set_reaction -1
 
           if (( exit_code == 1 )); then
-            echo "::error::AI Review требует исправлений. Issue #${issue_number}"
+            echo "::error::AI Review requires changes. Issue #${issue_number}"
             exit 1
           fi
 
-          echo "AI Review нашёл неблокирующие замечания. Issue #${issue_number}"
+          echo "AI Review found non-blocking findings. Issue #${issue_number}"
