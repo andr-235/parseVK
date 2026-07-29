@@ -28,7 +28,6 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
       PR_TITLE_JSON: ${{ toJSON(github.event.pull_request.title) }}
 
