@@ -69,6 +69,7 @@ jobs:
           else
             issue_title="$pr_title"
           fi
+
           title="[AI Review] PR #${PR_NUMBER}: ${issue_title}"
           body="$(cat <<EOF
           <!-- ai-review:pr=${PR_NUMBER} -->
@@ -135,18 +136,17 @@ jobs:
                compatibility, performance и отсутствие теста для реально изменённого поведения.
             6. Не сообщай о форматировании, вкусовщине, документации, общих улучшениях,
                несуществующих сценариях и проблемах вне diff.
-            7. Для каждого замечания укажи severity, файл, строку, сценарий ошибки,
-               последствия, конкретное исправление и уверенность от 0 до 1.
+            7. Каждое замечание обязательно внеси в массив `findings`. Нельзя упоминать дефект,
+               рекомендацию или сомнение вне `findings`. Если `findings` пуст, никаких замечаний нет.
+            8. Поле `summary` содержит только общий итог без конкретных рекомендаций и замечаний.
 
-            Формат финального ответа обязателен:
-            - первая строка: короткий человеческий итог;
-            - затем маркер `<!-- ai-review-result:${{ github.event.pull_request.head.sha }} -->`;
-            - затем один JSON-блок без текста после него:
+            Верни строго только маркер и JSON-блок, без текста до или после:
 
+            <!-- ai-review-result:${{ github.event.pull_request.head.sha }} -->
             ```json
             {
               "status": "completed",
-              "summary": "Краткий итог ревью",
+              "summary": "Общий итог ревью без отдельных замечаний",
               "findings": [
                 {
                   "severity": "blocker|major|minor|nit",
@@ -177,12 +177,32 @@ jobs:
         run: |
           set -euo pipefail
 
+          review_comment_id=""
+
           review_unavailable() {
             local reason="$1"
+            local unavailable_body
+
+            unavailable_body="$(cat <<EOF
+          <!-- ai-review-result:${REVIEW_HEAD_SHA} -->
+          ## ⚠️ AI Code Review недоступен
+
+          ${reason}
+
+          Этот статус не блокирует Pull Request.
+          EOF
+            )"
+
+            if [[ -n "$review_comment_id" ]]; then
+              gh api \
+                --method PATCH \
+                "repos/${GITHUB_REPOSITORY}/issues/comments/${review_comment_id}" \
+                -f body="$unavailable_body" >/dev/null || true
+            fi
 
             if [[ -n "${ISSUE_NUMBER:-}" ]]; then
-              local body
-              body="$(cat <<EOF
+              local issue_body
+              issue_body="$(cat <<EOF
           <!-- ai-review:pr=${PR_NUMBER} -->
           # AI Code Review для PR #${PR_NUMBER}
 
@@ -197,7 +217,7 @@ jobs:
               gh api \
                 --method PATCH \
                 "repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}" \
-                -f body="$body" \
+                -f body="$issue_body" \
                 -f state=open \
                 -f 'labels[]=ai-review' \
                 -f 'labels[]=ai-review:unavailable' >/dev/null || true
@@ -231,18 +251,20 @@ jobs:
             --slurp \
             "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments?per_page=100")"
 
-          comment_body="$(jq -r --arg marker "$marker" '
+          review_comment="$(jq -c --arg marker "$marker" '
             [.[][]
               | select(
                   .user.login == "github-actions[bot]" and
                   (.body | contains($marker))
                 )]
             | sort_by(.id)
-            | last
-            | .body // empty
+            | last // {}
           ' <<<"$comments_json")"
 
-          if [[ -z "$comment_body" ]]; then
+          review_comment_id="$(jq -r '.id // empty' <<<"$review_comment")"
+          comment_body="$(jq -r '.body // empty' <<<"$review_comment")"
+
+          if [[ -z "$review_comment_id" || -z "$comment_body" ]]; then
             review_unavailable "Не найден структурированный результат OpenCode для HEAD ${REVIEW_HEAD_SHA}."
           fi
 
@@ -270,17 +292,18 @@ jobs:
               (.scenario | type == "string") and
               (.impact | type == "string") and
               (.fix | type == "string") and
-              (.confidence | type == "number")
+              (.confidence | type == "number") and
+              (.confidence >= 0) and
+              (.confidence <= 1)
             )
           ' <<<"$result_json" >/dev/null; then
             review_unavailable "OpenCode вернул результат, не соответствующий ожидаемой JSON-схеме."
           fi
 
           status="$(jq -r '.status' <<<"$result_json")"
-          summary="$(jq -r '.summary' <<<"$result_json")"
-
           if [[ "$status" == "technical-error" ]]; then
-            review_unavailable "OpenCode не смог закончить анализ: ${summary}"
+            technical_reason="$(jq -r '.summary' <<<"$result_json")"
+            review_unavailable "OpenCode не смог закончить анализ: ${technical_reason}"
           fi
 
           blocking_count="$(jq '
@@ -305,6 +328,51 @@ jobs:
             exit_code=1
           fi
 
+          if (( finding_count == 0 )); then
+            normalized_summary="Подтверждённых замечаний нет."
+          else
+            normalized_summary="Найдено замечаний: ${finding_count}. Блокирующих: ${blocking_count}."
+          fi
+
+          findings_file="${RUNNER_TEMP}/ai-review-findings.md"
+          : >"$findings_file"
+          if (( finding_count > 0 )); then
+            jq -r '
+              .findings
+              | to_entries[]
+              | "### \(.key + 1). \(.value.severity | ascii_upcase)\n\n" +
+                "- **Файл:** `\(.value.file)`\n" +
+                "- **Строка:** \(.value.line // "не указана")\n" +
+                "- **Уверенность:** \(.value.confidence)\n" +
+                "- **Сценарий:** \(.value.scenario)\n" +
+                "- **Последствия:** \(.value.impact)\n" +
+                "- **Исправление:** \(.value.fix)\n"
+            ' <<<"$result_json" >"$findings_file"
+          fi
+
+          pr_comment_file="${RUNNER_TEMP}/ai-review-pr-comment.md"
+          {
+            echo "$marker"
+            echo "## AI Code Review"
+            echo
+            echo "**Вердикт:** \`${verdict}\`"
+            echo
+            echo "$normalized_summary"
+            if (( finding_count > 0 )); then
+              echo
+              echo "## Замечания"
+              echo
+              cat "$findings_file"
+            fi
+            echo
+            echo "Подробный статус: #${ISSUE_NUMBER}"
+          } >"$pr_comment_file"
+
+          gh api \
+            --method PATCH \
+            "repos/${GITHUB_REPOSITORY}/issues/comments/${review_comment_id}" \
+            -f body="$(cat "$pr_comment_file")" >/dev/null
+
           issue_body_file="${RUNNER_TEMP}/ai-review-issue.md"
           {
             echo "<!-- ai-review:pr=${PR_NUMBER} -->"
@@ -312,26 +380,12 @@ jobs:
             echo
             echo "**Вердикт:** \`${verdict}\`"
             echo
-            printf '%s\n' "$summary"
-
+            echo "$normalized_summary"
             if (( finding_count > 0 )); then
               echo
               echo "## Замечания"
               echo
-              jq -r '
-                .findings
-                | to_entries[]
-                | "### \(.key + 1). \(.value.severity | ascii_upcase)\n\n" +
-                  "- **Файл:** `\(.value.file)`\n" +
-                  "- **Строка:** \(.value.line // "не указана")\n" +
-                  "- **Уверенность:** \(.value.confidence)\n" +
-                  "- **Сценарий:** \(.value.scenario)\n" +
-                  "- **Последствия:** \(.value.impact)\n" +
-                  "- **Исправление:** \(.value.fix)\n"
-              ' <<<"$result_json"
-            else
-              echo
-              echo "Подтверждённых замечаний нет."
+              cat "$findings_file"
             fi
           } >"$issue_body_file"
 
