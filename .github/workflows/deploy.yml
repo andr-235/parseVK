@@ -2,7 +2,7 @@ name: Deploy to Production Server
 
 on:
   workflow_run:
-    workflows: ["CI"]
+    workflows: ["Full Release CI"]
     types:
       - completed
   workflow_dispatch:
@@ -100,7 +100,7 @@ jobs:
             exit 0
           fi
 
-          REQUIRED_WORKFLOWS=("CI" "Security Scanning")
+          REQUIRED_WORKFLOWS=("Full Release CI" "Security Scanning")
           MAX_ATTEMPTS=60
           SLEEP_SECONDS=20
 
