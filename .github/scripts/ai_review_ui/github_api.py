@@ -2,16 +2,13 @@ from __future__ import annotations
 
 import json
 import urllib.error
-import urllib.parse
 import urllib.request
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
+from .legacy import cleanup_legacy_output
 from .models import Finding, PublishError
 from .render import REVIEW_MARKER, render_inline_finding
-
-CANONICAL_MARKER = "<!-- ai-review:canonical -->"
-ISSUE_MARKER = "<!-- ai-review:pr={pr_number} -->"
 
 
 class GitHubApi:
@@ -80,12 +77,19 @@ class GitHubApi:
 
     def review_exists(self, number: int, head_sha: str) -> bool:
         marker = REVIEW_MARKER.format(head_sha=head_sha)
-        return any(
-            isinstance(review, Mapping) and marker in str(review.get("body") or "")
-            for review in self.paginated(
-                f"/repos/{self.repository}/pulls/{number}/reviews"
-            )
-        )
+        for review in self.paginated(
+            f"/repos/{self.repository}/pulls/{number}/reviews"
+        ):
+            if not isinstance(review, Mapping):
+                continue
+            user = review.get("user")
+            if not isinstance(user, Mapping):
+                continue
+            if user.get("login") != "github-actions[bot]":
+                continue
+            if marker in str(review.get("body") or ""):
+                return True
+        return False
 
     def create_review(
         self,
@@ -115,38 +119,5 @@ class GitHubApi:
             },
         )
 
-    def remove_canonical_comments(self, number: int) -> None:
-        for comment in self.paginated(
-            f"/repos/{self.repository}/issues/{number}/comments"
-        ):
-            if not isinstance(comment, Mapping):
-                continue
-            if str(comment.get("body") or "").find(CANONICAL_MARKER) < 0:
-                continue
-            if str((comment.get("user") or {}).get("login")) != "github-actions[bot]":
-                continue
-            self.request(
-                "DELETE",
-                f"/repos/{self.repository}/issues/comments/{comment['id']}",
-            )
-
-    def close_legacy_issue(self, number: int) -> None:
-        marker = ISSUE_MARKER.format(pr_number=number)
-        query = urllib.parse.quote("ai-review")
-        path = f"/repos/{self.repository}/issues?state=all&labels={query}"
-        for issue in self.paginated(path):
-            if not isinstance(issue, Mapping) or "pull_request" in issue:
-                continue
-            if marker not in str(issue.get("body") or ""):
-                continue
-            if issue.get("state") != "closed":
-                self.request(
-                    "PATCH",
-                    f"/repos/{self.repository}/issues/{issue['number']}",
-                    {"state": "closed", "state_reason": "completed"},
-                )
-            return
-
     def cleanup_legacy_output(self, number: int) -> None:
-        self.remove_canonical_comments(number)
-        self.close_legacy_issue(number)
+        cleanup_legacy_output(self, number)
