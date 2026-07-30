@@ -6,7 +6,6 @@ import unittest
 from pathlib import Path
 
 from ai_review_batch_publisher import publish_batch
-from ai_review_ui.models import SkipPublication
 
 
 class FakeApi:
@@ -90,31 +89,37 @@ class BatchPublisherTests(unittest.TestCase):
         )
         api = FakeApi(second, {first, second})
         outcome = publish_batch(api, 42, path)
-        self.assertIn("published=2", outcome)
+        self.assertIn("handled=2 reviews=1", outcome)
         self.assertEqual(len(api.created), 1)
         self.assertEqual(api.created[0][1], first)
         self.assertIn("Проверен commit `1111111111`", api.created[0][2])
         self.assertEqual(api.cleanup_calls, 1)
 
+    def test_older_batch_publishes_after_new_commit_arrives(self) -> None:
+        reviewed = "1" * 40
+        current = "2" * 40
+        path = self._batch(
+            reviewed,
+            [result(reviewed, "changes-required", with_finding=True)],
+        )
+        api = FakeApi(current, {reviewed, current})
+        outcome = publish_batch(api, 42, path)
+        self.assertIn("reviews=1", outcome)
+        self.assertEqual(len(api.created), 1)
+        self.assertEqual(api.created[0][1], reviewed)
+
     def test_removed_force_push_commit_is_not_published(self) -> None:
         current = "2" * 40
         removed = "3" * 40
         path = self._batch(
-            current,
+            removed,
             [result(removed, "changes-required", with_finding=True)],
         )
         api = FakeApi(current, {current})
         outcome = publish_batch(api, 42, path)
         self.assertIn("skipped=1", outcome)
         self.assertEqual(api.created, [])
-
-    def test_obsolete_batch_does_not_touch_pull_request(self) -> None:
-        path = self._batch("1" * 40, [])
-        api = FakeApi("2" * 40, {"2" * 40})
-        with self.assertRaises(SkipPublication):
-            publish_batch(api, 42, path)
-        self.assertEqual(api.created, [])
-        self.assertEqual(api.cleanup_calls, 0)
+        self.assertEqual(api.cleanup_calls, 1)
 
     @staticmethod
     def _batch(head: str, commit_results: list[dict]) -> Path:
