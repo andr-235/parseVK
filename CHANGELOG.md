@@ -1,3 +1,10 @@
+# [0.79.0](https://github.com/andr-235/parseVK/compare/v0.78.3...v0.79.0) (2026-07-30)
+
+
+### Features
+
+* **ai-review:** публиковать findings как inline GitHub review ([#314](https://github.com/andr-235/parseVK/issues/314)) ([fc626c1](https://github.com/andr-235/parseVK/commit/fc626c1f5a5733ca4a686d837a84df71307548e1))
+
 ## [0.78.3](https://github.com/andr-235/parseVK/compare/v0.78.2...v0.78.3) (2026-07-30)
 
 
