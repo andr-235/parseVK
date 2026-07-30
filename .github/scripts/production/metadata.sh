@@ -20,22 +20,34 @@ read_metadata_value() {
 load_metadata() {
   set_output "last_successful_commit" "$(read_metadata_value last_successful_commit)"
   set_output "last_successful_deploy_time" "$(read_metadata_value last_successful_deploy_time)"
+  set_output "previous_successful_commit" "$(read_metadata_value previous_successful_commit)"
+  set_output "previous_successful_deploy_time" "$(read_metadata_value previous_successful_deploy_time)"
 }
 
 write_metadata() {
-  local commit="$1"
-  local deploy_time="$2"
+  local commit="$1" deploy_time="$2" current_commit current_time
+  current_commit="$(read_metadata_value last_successful_commit)"
+  current_time="$(read_metadata_value last_successful_deploy_time)"
 
-  if [ -f "$METADATA_FILE" ]; then
-    jq --arg commit "$commit" \
-      --arg time "$deploy_time" \
-      '.last_successful_commit = $commit | .last_successful_deploy_time = $time' \
-      "$METADATA_FILE" >"${METADATA_FILE}.tmp"
+  if [ "$current_commit" = "$commit" ]; then
+    jq --arg time "$deploy_time" '.last_successful_deploy_time = $time' \
+      "${METADATA_FILE:-/dev/null}" >"${METADATA_FILE}.tmp"
     mv "${METADATA_FILE}.tmp" "$METADATA_FILE"
-  else
-    printf '{\n  "last_successful_commit": "%s",\n  "last_successful_deploy_time": "%s"\n}\n' \
-      "$commit" "$deploy_time" >"$METADATA_FILE"
+    return 0
   fi
+
+  jq -n \
+    --arg current "$commit" \
+    --arg current_time "$deploy_time" \
+    --arg previous "$current_commit" \
+    --arg previous_time "$current_time" \
+    '{
+      last_successful_commit: $current,
+      last_successful_deploy_time: $current_time,
+      previous_successful_commit: $previous,
+      previous_successful_deploy_time: $previous_time
+    }' >"${METADATA_FILE}.tmp"
+  mv "${METADATA_FILE}.tmp" "$METADATA_FILE"
 }
 
 case "${1:-}" in
@@ -44,6 +56,9 @@ case "${1:-}" in
     ;;
   read-commit)
     read_metadata_value last_successful_commit
+    ;;
+  read-previous-commit)
+    read_metadata_value previous_successful_commit
     ;;
   read-time)
     read_metadata_value last_successful_deploy_time
@@ -56,8 +71,7 @@ case "${1:-}" in
     write_metadata "$2" "$3"
     ;;
   *)
-    log_error "Usage: metadata.sh {load|read-commit|read-time|write}"
+    log_error "Usage: metadata.sh {load|read-commit|read-previous-commit|read-time|write}"
     exit 1
     ;;
 esac
-
