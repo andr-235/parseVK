@@ -19,8 +19,9 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path, PurePosixPath
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any
 
 SCHEMA_VERSION = 1
 MAX_CHUNK_FILES = 20
@@ -73,7 +74,7 @@ class Finding:
     confidence: float
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> "Finding":
+    def from_mapping(cls, value: Mapping[str, Any]) -> Finding:
         required = {"severity", "file", "line", "scenario", "impact", "fix", "confidence"}
         missing = required.difference(value)
         if missing:
@@ -143,7 +144,7 @@ class Scope:
         }
 
     @classmethod
-    def from_file(cls, path: Path) -> "Scope":
+    def from_file(cls, path: Path) -> Scope:
         value = load_json(path)
         return cls(
             schema_version=int(value["schema_version"]),
@@ -186,7 +187,7 @@ class FinalResult:
         }
 
     @classmethod
-    def from_file(cls, path: Path) -> "FinalResult":
+    def from_file(cls, path: Path) -> FinalResult:
         value = load_json(path)
         return cls(
             schema_version=int(value["schema_version"]),
@@ -232,13 +233,12 @@ def is_reviewable_path(path: str) -> bool:
 
 
 def run_git(args: Sequence[str], *, cwd: Path) -> str:
-    completed = subprocess.run(
-        ["git", *args],
+    completed = subprocess.run(  # noqa: S603 -- fixed executable with validated internal arguments
+        ["/usr/bin/git", *args],
         cwd=cwd,
         check=True,
         text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
     )
     return completed.stdout
 
