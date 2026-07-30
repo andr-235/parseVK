@@ -23,7 +23,10 @@ manifest_path() {
 }
 
 resolve_targets() {
-  require_project_file ".github/scripts/service_catalog.py"
+  [ -f "$SERVICE_CATALOG_CLI" ] || {
+    log_error "Service catalog CLI not found: $SERVICE_CATALOG_CLI"
+    return 1
+  }
   python3 "$SERVICE_CATALOG_CLI" --repo-root "$PROJECT_ROOT" changed --purpose deploy --all
 }
 
@@ -87,6 +90,26 @@ verify_release() {
   done < <(jq -r '.images[] | [.release_ref, .image_id] | @tsv' "$manifest")
 }
 
+prune_releases() {
+  local kept=0 manifest release
+  mapfile -t manifests < <(
+    find "$RELEASES_DIR" -mindepth 2 -maxdepth 2 -type f -name release.json -printf '%T@ %p\n' 2>/dev/null \
+      | sort -rn | cut -d' ' -f2-
+  )
+
+  for manifest in "${manifests[@]}"; do
+    [ "$(jq -r '.status // empty' "$manifest")" = "successful" ] || continue
+    kept=$((kept + 1))
+    if (( kept <= RELEASE_RETENTION )); then
+      continue
+    fi
+    while IFS= read -r release; do
+      docker image rm "$release" >/dev/null 2>&1 || true
+    done < <(jq -r '.images[].release_ref' "$manifest")
+    rm -rf "$(dirname "$manifest")"
+  done
+}
+
 promote_release() {
   local commit="$1" manifest
   validate_commit "$commit"
@@ -96,6 +119,7 @@ promote_release() {
     '.status = "successful" | .promoted_at = $promoted_at' "$manifest" >"${manifest}.tmp"
   mv "${manifest}.tmp" "$manifest"
   verify_release "$commit"
+  prune_releases
   log_info "Promoted local release: $commit"
 }
 
