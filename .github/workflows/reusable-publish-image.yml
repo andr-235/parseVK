@@ -59,6 +59,18 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Reject stale main commit
+        shell: bash
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: |
+          set -euo pipefail
+          MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          if [[ "$MAIN_SHA" != "$TARGET_SHA" ]]; then
+            echo "::error::Refusing stale image $TARGET_SHA; main is $MAIN_SHA"
+            exit 1
+          fi
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -101,6 +113,7 @@ jobs:
             echo "::error::Buildx did not return a valid image digest"
             exit 1
           }
+          docker buildx imagetools inspect "${IMAGE_REPOSITORY}@${DIGEST}" >/dev/null
           mkdir -p "$RUNNER_TEMP/image-metadata"
           jq -n \
             --arg service "$SERVICE" \
