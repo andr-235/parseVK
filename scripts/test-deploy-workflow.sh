@@ -46,6 +46,19 @@ if ! grep -En 'REQUIRED_WORKFLOWS=\("CI" "Security Scanning"\)' "$DEPLOY_WORKFLO
   exit 1
 fi
 
+if ! grep -En 'description: "Повторно развернуть текущий проверенный commit ветки main"' "$DEPLOY_WORKFLOW" >/dev/null || \
+   ! grep -En 'MANUAL_REF.*github\.ref' "$DEPLOY_WORKFLOW" >/dev/null || \
+   ! grep -En 'MANUAL_SHA.*github\.sha' "$DEPLOY_WORKFLOW" >/dev/null || \
+   ! grep -En 'MANUAL_REF.*refs/heads/main|\$MANUAL_REF.*refs/heads/main' "$DEPLOY_WORKFLOW" >/dev/null; then
+  echo "Regression: manual production deploy is not explicitly restricted to current main"
+  exit 1
+fi
+
+if grep -En 'workflow_dispatch\.inputs.*ref|inputs\.ref|MANUAL_REF_NAME|TARGET_REF' "$DEPLOY_WORKFLOW" >/dev/null; then
+  echo "Regression: manual production deploy accepts an arbitrary branch or ref"
+  exit 1
+fi
+
 if ! grep -En 'needs: gate' "$DEPLOY_WORKFLOW" >/dev/null || \
    ! grep -En "needs\.gate\.outputs\.deploy == 'true'" "$DEPLOY_WORKFLOW" >/dev/null; then
   echo "Regression: production deploy is not gated by the release verifier"
