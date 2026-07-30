@@ -6,6 +6,14 @@ on:
     types:
       - completed
   workflow_dispatch:
+    inputs:
+      deployment:
+        description: "Повторно развернуть текущий проверенный commit ветки main"
+        required: true
+        type: choice
+        options:
+          - current-main
+        default: current-main
 
 permissions:
   contents: read
@@ -37,13 +45,27 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EVENT_NAME: ${{ github.event_name }}
           WORKFLOW_RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          MANUAL_REF: ${{ github.ref }}
+          MANUAL_SHA: ${{ github.sha }}
+          MANUAL_DEPLOYMENT: ${{ inputs.deployment }}
         run: |
           set -euo pipefail
 
           if [ "$EVENT_NAME" = "workflow_run" ]; then
             TARGET_SHA="$WORKFLOW_RUN_SHA"
           else
-            TARGET_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+            # Manual production deploy is intentionally limited to the current
+            # main commit. Previous releases belong to rollback.yml; arbitrary
+            # branches must never bypass push CI and Security Scanning.
+            if [ "$MANUAL_DEPLOYMENT" != "current-main" ]; then
+              echo "::error::Неизвестный режим ручного production deploy: $MANUAL_DEPLOYMENT"
+              exit 1
+            fi
+            if [ "$MANUAL_REF" != "refs/heads/main" ]; then
+              echo "::error::Ручной production deploy разрешён только из ветки main. Выбрано: $MANUAL_REF"
+              exit 1
+            fi
+            TARGET_SHA="$MANUAL_SHA"
           fi
 
           MAIN_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
