@@ -31,6 +31,8 @@
       "libs/py/common/",
       "libs/py/contracts/",
       ".github/scripts/service_catalog.py",
+      ".github/scripts/service_catalog_lib/",
+      ".github/scripts/alembic_graph.py",
       ".github/scripts/validate_alembic_graphs.py",
       ".github/workflows/reusable-alembic-migration.yml"
     ]
