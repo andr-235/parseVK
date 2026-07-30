@@ -8,16 +8,21 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: write
   contents: write
   issues: write
   pull-requests: write
   id-token: write
 
+concurrency:
+  group: semantic-release-main
+  cancel-in-progress: false
+
 jobs:
   release:
     name: Semantic Release
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (
@@ -35,24 +40,48 @@ jobs:
 
       - name: Detect release commit
         id: release_commit
+        shell: bash
         run: |
           set -euo pipefail
 
-          COMMIT_MESSAGE=$(git log -1 --format=%B)
+          SOURCE_SHA="$(git rev-parse HEAD)"
+          COMMIT_MESSAGE="$(git log -1 --format=%B)"
+          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
           if printf '%s' "$COMMIT_MESSAGE" | grep -qF '[skip ci]'; then
-            echo "skip_release=true" >> $GITHUB_OUTPUT
+            echo "skip_release=true" >> "$GITHUB_OUTPUT"
           else
-            echo "skip_release=false" >> $GITHUB_OUTPUT
+            echo "skip_release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify source commit is current main
+        id: source_gate
+        if: steps.release_commit.outputs.skip_release != 'true'
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ steps.release_commit.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+
+          CURRENT_MAIN="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          if [[ "$CURRENT_MAIN" != "$SOURCE_SHA" ]]; then
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+            echo "Skipping stale CI source $SOURCE_SHA; main is $CURRENT_MAIN"
+          else
+            echo "stale=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Setup Node.js
-        if: steps.release_commit.outputs.skip_release != 'true'
+        if: >-
+          steps.release_commit.outputs.skip_release != 'true' &&
+          steps.source_gate.outputs.stale != 'true'
         uses: actions/setup-node@v6
         with:
           node-version: "20"
 
       - name: Install semantic-release
-        if: steps.release_commit.outputs.skip_release != 'true'
+        if: >-
+          steps.release_commit.outputs.skip_release != 'true' &&
+          steps.source_gate.outputs.stale != 'true'
         run: |
           npm install --no-save \
             semantic-release \
@@ -65,7 +94,9 @@ jobs:
             @semantic-release/github
 
       - name: Release
-        if: steps.release_commit.outputs.skip_release != 'true'
+        if: >-
+          steps.release_commit.outputs.skip_release != 'true' &&
+          steps.source_gate.outputs.stale != 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GIT_AUTHOR_NAME: github-actions[bot]
@@ -74,6 +105,75 @@ jobs:
           GIT_COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
         run: npx semantic-release
 
+      - name: Resolve semantic release commit
+        id: resolved_release
+        if: >-
+          steps.release_commit.outputs.skip_release != 'true' &&
+          steps.source_gate.outputs.stale != 'true'
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ steps.release_commit.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+
+          git fetch --no-tags origin main
+          RELEASE_SHA="$(git rev-parse origin/main)"
+          if [[ "$RELEASE_SHA" == "$SOURCE_SHA" ]]; then
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            echo "Semantic Release did not create a new commit."
+            exit 0
+          fi
+
+          RELEASE_PARENT="$(git rev-parse "${RELEASE_SHA}^")"
+          RELEASE_SUBJECT="$(git show -s --format=%s "$RELEASE_SHA")"
+          RELEASE_MESSAGE="$(git show -s --format=%B "$RELEASE_SHA")"
+          REMOTE_MAIN="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+
+          [[ "$REMOTE_MAIN" == "$RELEASE_SHA" ]] || {
+            echo "::error::Release commit is no longer current main: release=$RELEASE_SHA main=$REMOTE_MAIN"
+            exit 1
+          }
+          [[ "$RELEASE_PARENT" == "$SOURCE_SHA" ]] || {
+            echo "::error::Release commit parent mismatch: expected=$SOURCE_SHA actual=$RELEASE_PARENT"
+            exit 1
+          }
+          [[ "$RELEASE_SUBJECT" == chore\(release\):* ]] || {
+            echo "::error::Unexpected release commit subject: $RELEASE_SUBJECT"
+            exit 1
+          }
+          printf '%s' "$RELEASE_MESSAGE" | grep -qF '[skip ci]' || {
+            echo "::error::Release commit must contain [skip ci] to prevent push recursion"
+            exit 1
+          }
+
+          {
+            echo "created=true"
+            echo "release_sha=$RELEASE_SHA"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch release commit gates
+        if: steps.resolved_release.outputs.created == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_SHA: ${{ steps.resolved_release.outputs.release_sha }}
+        run: |
+          set -euo pipefail
+
+          CURRENT_MAIN="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          [[ "$CURRENT_MAIN" == "$RELEASE_SHA" ]] || {
+            echo "::error::Refusing gate dispatch for stale release $RELEASE_SHA; main is $CURRENT_MAIN"
+            exit 1
+          }
+
+          gh workflow run ci.yml --ref main
+          gh workflow run security.yml --ref main
+          echo "Dispatched CI and Security for semantic release commit $RELEASE_SHA"
+
       - name: Release status
         if: steps.release_commit.outputs.skip_release == 'true'
-        run: echo "Skipping release for release commit with [skip ci]"
+        run: echo "Skipping Semantic Release for version commit with [skip ci]"
+
+      - name: Stale source status
+        if: steps.source_gate.outputs.stale == 'true'
+        run: echo "Skipping Semantic Release because a newer main commit exists"
