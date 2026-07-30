@@ -9,7 +9,7 @@ Reviewer анализирует Pull Request моделью `opencode/big-pickle
 1. `prepare` удаляет прежнюю реакцию бота и ставит `👀`.
 2. `review` имеет только `contents: read`, запускает OpenCode и сохраняет валидированный `review-result.json` как artifact.
 3. `verdict` скачивает artifact внутри исходного workflow и формирует только красный или зелёный check. У job нет прав записи в Pull Request и Issue.
-4. `status` сверяет текущий `head_sha` и заменяет `👀` на реакцию валидированного verdict: `👍`, `😕`, `👎` либо отсутствие реакции для `unavailable`.
+4. `status` сверяет текущий `head_sha` и заменяет `👀` на реакцию валидированного verdict: `👍`, `😕` или `👎`.
 5. `AI Review Inline Publisher` запускается через `workflow_run`, читает artifact и является единственным владельцем GitHub review и inline-комментариев.
 6. `cleanup` при закрытии Pull Request удаляет служебные реакции и оставшийся legacy-вывод.
 
@@ -63,9 +63,9 @@ Producer-workflow публикует реакцию сразу после вал
 - `findings`: `😕`, check остаётся зелёным;
 - `changes-required`: `👎`, source check красный;
 - `review-required`: `😕`, source check красный;
-- `unavailable`: служебный `👀` удаляется, финальная реакция не ставится, PR не блокируется.
+- `unavailable`: `😕`, это техническая недоступность анализа, а не замечание к коду; PR не блокируется.
 
-Status-job работает только для текущего `head_sha`, удаляет предыдущие реакции `github-actions[bot]` и ставит не более одной итоговой реакции.
+Status-job работает только для текущего `head_sha`, удаляет предыдущие реакции `github-actions[bot]` и ставит ровно одну итоговую реакцию.
 
 Default-branch publisher работает идемпотентно по `head_sha` и публикует только review-контент:
 
