@@ -115,6 +115,10 @@ require_pattern "$DEPLOY" 'Restore previous local release after failed deploymen
   "Failed deployment does not restore the previous local release"
 require_pattern "$DEPLOY" 'steps\.release_snapshot\.outcome == .success.' \
   "Automatic restore is not limited to deployments that changed release images"
+require_pattern "$DEPLOY" 'Discard failed local release candidate' \
+  "Failed deployment candidates are not cleaned up"
+require_pattern "$DEPLOY" 'LOCAL_RELEASE_SCRIPT.*discard' \
+  "Deploy does not remove failed candidate tags and manifest"
 reject_pattern "$DEPLOY" 'workflow_dispatch\.inputs.*ref|inputs\.ref|TARGET_REF' \
   "Manual deploy accepts arbitrary refs"
 reject_pattern "$DEPLOY" 'commit contains \[skip ci\]' \
@@ -155,6 +159,10 @@ require_pattern "$LOCAL_RELEASE" 'parsevk-release' \
   "Local immutable image namespace is missing"
 require_pattern "$LOCAL_RELEASE" 'resolving build targets from Compose for release bootstrap' \
   "First release cannot recover targets when the old catalog is unavailable"
+require_pattern "$LOCAL_RELEASE" 'protected_current|last_successful_commit' \
+  "Release retention does not protect current metadata releases"
+require_pattern "$LOCAL_RELEASE" 'Refusing to discard successful release' \
+  "Candidate cleanup can delete a successful release"
 require_pattern "$LOCAL_RELEASE" 'status:"candidate"' \
   "Local release is not created as a candidate"
 require_pattern "$LOCAL_RELEASE" 'status = "successful"' \
