@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import argparse
 import tempfile
 import unittest
 from pathlib import Path
 
+from service_catalog import resolve_services
 from service_catalog_lib import git_changed_files
-from service_catalog_test_support import run_git
+from service_catalog_test_support import make_catalog, run_git
 
 
 class CatalogGitChangeTests(unittest.TestCase):
@@ -31,4 +33,20 @@ class CatalogGitChangeTests(unittest.TestCase):
             self.assertEqual(
                 git_changed_files(repo, base_sha, feature_sha),
                 ["feature.txt"],
+            )
+
+    def test_missing_base_with_head_selects_full_matrix(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            catalog = make_catalog(Path(directory) / "catalog.yaml")
+            args = argparse.Namespace(
+                all=False,
+                changed_file=[],
+                base="",
+                head="1" * 40,
+                purpose="pytest",
+                repo_root=Path(directory),
+            )
+            self.assertEqual(
+                [service.name for service in resolve_services(args, catalog)],
+                ["api"],
             )
