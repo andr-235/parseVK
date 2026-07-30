@@ -15,8 +15,7 @@ class FakeApi:
         self.exists = False
         self.created: tuple | None = None
         self.cleanup_calls = 0
-        self.reaction: str | None = "eyes"
-        self.remove_calls = 0
+        self.reaction_calls = 0
 
     def pull_request(self, _number: int) -> dict:
         return {
@@ -34,12 +33,11 @@ class FakeApi:
     def cleanup_legacy_output(self, _number: int) -> None:
         self.cleanup_calls += 1
 
-    def set_reaction(self, _number: int, content: str) -> None:
-        self.reaction = content
+    def set_reaction(self, _number: int, _content: str) -> None:
+        self.reaction_calls += 1
 
     def remove_reactions(self, _number: int) -> None:
-        self.remove_calls += 1
-        self.reaction = None
+        self.reaction_calls += 1
 
 
 def finding(severity: str = "major") -> Finding:
@@ -67,57 +65,56 @@ def result(*findings: Finding, verdict: str = "changes-required") -> ReviewResul
 
 
 class PublishTests(unittest.TestCase):
-    def test_changes_required_publishes_review_and_negative_reaction(self) -> None:
+    def test_changes_required_publishes_review_without_touching_status(self) -> None:
         api = FakeApi("a" * 40)
         outcome = publish_review_result(api, 42, result(finding()))
         self.assertIn("published 1 inline", outcome)
-        self.assertEqual(api.reaction, "-1")
+        self.assertEqual(api.reaction_calls, 0)
         self.assertEqual(api.cleanup_calls, 1)
         self.assertIsNotNone(api.created)
 
-    def test_minor_findings_keep_check_semantics_and_confused_reaction(self) -> None:
+    def test_minor_findings_publish_review_without_touching_status(self) -> None:
         api = FakeApi("a" * 40)
         publish_review_result(api, 42, result(finding("minor"), verdict="findings"))
-        self.assertEqual(api.reaction, "confused")
+        self.assertEqual(api.reaction_calls, 0)
         self.assertIsNotNone(api.created)
 
-    def test_approved_result_only_sets_positive_reaction(self) -> None:
+    def test_approved_result_requires_no_review_or_status_write(self) -> None:
         api = FakeApi("a" * 40)
         outcome = publish_review_result(api, 42, result(verdict="approved"))
-        self.assertEqual(outcome, "approved reaction published")
-        self.assertEqual(api.reaction, "+1")
+        self.assertEqual(outcome, "approved result requires no review")
+        self.assertEqual(api.reaction_calls, 0)
         self.assertIsNone(api.created)
         self.assertEqual(api.cleanup_calls, 1)
 
-    def test_unavailable_result_clears_processing_reaction(self) -> None:
+    def test_unavailable_result_is_suppressed_without_status_write(self) -> None:
         api = FakeApi("a" * 40)
         publish_review_result(api, 42, result(verdict="unavailable"))
-        self.assertIsNone(api.reaction)
-        self.assertEqual(api.remove_calls, 1)
+        self.assertEqual(api.reaction_calls, 0)
         self.assertIsNone(api.created)
 
     def test_manual_review_requirement_is_published_once(self) -> None:
         api = FakeApi("a" * 40)
         publish_review_result(api, 42, result(verdict="review-required"))
-        self.assertEqual(api.reaction, "confused")
+        self.assertEqual(api.reaction_calls, 0)
         self.assertIsNotNone(api.created)
         self.assertIn("Требуется ручное ревью", api.created[2])
         self.assertEqual(api.created[3], ())
 
-    def test_existing_review_is_idempotent_but_refreshes_reaction(self) -> None:
+    def test_existing_review_is_idempotent_without_status_write(self) -> None:
         api = FakeApi("a" * 40)
         api.exists = True
         outcome = publish_review_result(api, 42, result(finding()))
         self.assertEqual(outcome, "review already exists")
         self.assertIsNone(api.created)
-        self.assertEqual(api.reaction, "-1")
+        self.assertEqual(api.reaction_calls, 0)
         self.assertEqual(api.cleanup_calls, 1)
 
-    def test_obsolete_result_is_skipped_without_touching_reaction(self) -> None:
+    def test_obsolete_result_is_skipped_without_side_effects(self) -> None:
         api = FakeApi("b" * 40)
         with self.assertRaises(SkipPublication):
             publish_review_result(api, 42, result(finding()))
-        self.assertEqual(api.reaction, "eyes")
+        self.assertEqual(api.reaction_calls, 0)
 
     def test_findings_verdict_requires_validated_findings(self) -> None:
         api = FakeApi("a" * 40)
