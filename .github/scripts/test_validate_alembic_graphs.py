@@ -1,19 +1,10 @@
 from __future__ import annotations
 
-import importlib.util
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-MODULE_PATH = Path(__file__).with_name("validate_alembic_graphs.py")
-spec = importlib.util.spec_from_file_location("validate_alembic_graphs", MODULE_PATH)
-assert spec and spec.loader
-validate_alembic_graphs = importlib.util.module_from_spec(spec)
-sys.modules[spec.name] = validate_alembic_graphs
-spec.loader.exec_module(validate_alembic_graphs)
-
-validate_versions_dir = validate_alembic_graphs.validate_versions_dir
+from alembic_graph import validate_versions_dir
 
 
 def write_revision(
