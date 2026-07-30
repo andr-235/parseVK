@@ -4,14 +4,63 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEPLOY_WORKFLOW="$ROOT_DIR/.github/workflows/deploy.yml"
 ROLLBACK_WORKFLOW="$ROOT_DIR/.github/workflows/rollback.yml"
+CI_WORKFLOW="$ROOT_DIR/.github/workflows/ci.yml"
+SECURITY_WORKFLOW="$ROOT_DIR/.github/workflows/security.yml"
 
-if [ ! -f "$DEPLOY_WORKFLOW" ]; then
-  echo "Deploy workflow not found: $DEPLOY_WORKFLOW"
+for workflow in "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" "$CI_WORKFLOW" "$SECURITY_WORKFLOW"; do
+  if [ ! -f "$workflow" ]; then
+    echo "Workflow not found: $workflow"
+    exit 1
+  fi
+done
+
+if rg -n 'steps\.detect\.outputs\.(frontend_changed|python_changed)' "$CI_WORKFLOW" >/dev/null; then
+  echo "Regression: CI outputs reference the non-existent steps.detect id"
+  rg -n 'steps\.detect\.outputs\.(frontend_changed|python_changed)' "$CI_WORKFLOW"
   exit 1
 fi
 
-if [ ! -f "$ROLLBACK_WORKFLOW" ]; then
-  echo "Rollback workflow not found: $ROLLBACK_WORKFLOW"
+if ! rg -n 'steps\.filter\.outputs\.frontend_changed' "$CI_WORKFLOW" >/dev/null || \
+   ! rg -n 'steps\.filter\.outputs\.python_changed' "$CI_WORKFLOW" >/dev/null; then
+  echo "Regression: CI change outputs are not wired to steps.filter"
+  exit 1
+fi
+
+if ! rg -n 'name: Release Gate' "$CI_WORKFLOW" >/dev/null; then
+  echo "Regression: CI does not expose a stable Release Gate"
+  exit 1
+fi
+
+if ! rg -n 'name: Validate Production Release' "$CI_WORKFLOW" >/dev/null; then
+  echo "Regression: CI does not validate production release configuration"
+  exit 1
+fi
+
+if ! rg -n 'name: Security Gate' "$SECURITY_WORKFLOW" >/dev/null; then
+  echo "Regression: Security Scanning does not expose a stable Security Gate"
+  exit 1
+fi
+
+if ! rg -n 'REQUIRED_WORKFLOWS=\("CI" "Security Scanning"\)' "$DEPLOY_WORKFLOW" >/dev/null; then
+  echo "Regression: deploy does not wait for both CI and Security Scanning"
+  exit 1
+fi
+
+if ! rg -n 'needs: gate' "$DEPLOY_WORKFLOW" >/dev/null || \
+   ! rg -n "needs\.gate\.outputs\.deploy == 'true'" "$DEPLOY_WORKFLOW" >/dev/null; then
+  echo "Regression: production deploy is not gated by the release verifier"
+  exit 1
+fi
+
+if ! rg -n 'Verify container health' "$DEPLOY_WORKFLOW" >/dev/null; then
+  echo "Regression: deploy does not require post-release health verification"
+  exit 1
+fi
+
+health_line="$(rg -n 'Verify container health' "$DEPLOY_WORKFLOW" | head -n1 | cut -d: -f1)"
+metadata_line="$(rg -n 'Update deployment metadata' "$DEPLOY_WORKFLOW" | head -n1 | cut -d: -f1)"
+if [ -z "$health_line" ] || [ -z "$metadata_line" ] || (( health_line >= metadata_line )); then
+  echo "Regression: deployment metadata can be written before health verification"
   exit 1
 fi
 
@@ -68,16 +117,9 @@ if rg -n 'docker compose -f "\$COMPOSE_FILE" up ' "$DEPLOY_WORKFLOW" "$ROLLBACK_
   exit 1
 fi
 
-if rg -n 'images\.sh" prepare .*prometheus|images\.sh" prepare .*node-exporter|images\.sh" prepare .*grafana' "$DEPLOY_WORKFLOW" >/dev/null; then
-  echo "Regression: deploy workflow eagerly prepares monitoring images"
-  rg -n 'images\.sh" prepare .*prometheus|images\.sh" prepare .*node-exporter|images\.sh" prepare .*grafana' "$DEPLOY_WORKFLOW"
+if rg -n 'images\.sh" prepare .*prometheus|images\.sh" prepare .*node-exporter|images\.sh" prepare .*grafana' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" >/dev/null; then
+  echo "Regression: production workflows eagerly prepare monitoring images"
   exit 1
 fi
 
-if rg -n 'images\.sh" prepare .*prometheus|images\.sh" prepare .*node-exporter|images\.sh" prepare .*grafana' "$ROLLBACK_WORKFLOW" >/dev/null; then
-  echo "Regression: rollback workflow eagerly prepares monitoring images"
-  rg -n 'images\.sh" prepare .*prometheus|images\.sh" prepare .*node-exporter|images\.sh" prepare .*grafana' "$ROLLBACK_WORKFLOW"
-  exit 1
-fi
-
-echo "Production workflows use the shared production shell layer"
+echo "Production workflows are gated by CI, security, static validation and health checks"
