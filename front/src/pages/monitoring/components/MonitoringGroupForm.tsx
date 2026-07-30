@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { X } from 'lucide-react'
 import { useKeyPress } from '../../../shared/hooks/useKeyPress'
 import { useFocusTrap } from '../../../shared/hooks/useFocusTrap'
@@ -14,29 +14,20 @@ type Props = {
 
 const MESSENGER_OPTIONS = ['whatsapp', 'max'] as const
 
-export function MonitoringGroupForm({ group, onSave, onClose, isLoading }: Props) {
+export function MonitoringGroupForm(props: Props) {
+  const formKey = props.group ? `${props.group.messenger}:${props.group.chatId}` : 'new'
+  return <MonitoringGroupFormFields key={formKey} {...props} />
+}
+
+function MonitoringGroupFormFields({ group, onSave, onClose, isLoading }: Props) {
   const isEdit = !!group
   useKeyPress('Escape', onClose)
   const formRef = useFocusTrap(true)
 
-  const [name, setName] = useState('')
-  const [chatId, setChatId] = useState('')
-  const [messenger, setMessenger] = useState('whatsapp')
-  const [category, setCategory] = useState('')
-
-  useEffect(() => {
-    if (group) {
-      setName(group.name)
-      setChatId(group.chatId)
-      setMessenger(group.messenger)
-      setCategory(group.category ?? '')
-    } else {
-      setName('')
-      setChatId('')
-      setMessenger('whatsapp')
-      setCategory('')
-    }
-  }, [group])
+  const [name, setName] = useState(group?.name ?? '')
+  const [chatId, setChatId] = useState(group?.chatId ?? '')
+  const [messenger, setMessenger] = useState(group?.messenger ?? 'whatsapp')
+  const [category, setCategory] = useState(group?.category ?? '')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,51 +56,20 @@ export function MonitoringGroupForm({ group, onSave, onClose, isLoading }: Props
       <form onSubmit={handleSubmit} className="flex flex-1 flex-col justify-between p-4">
         <div className="space-y-4">
           <div>
-            <label htmlFor="gf-name" className="mb-1 block text-xs font-medium uppercase tracking-wider text-text-muted">
-              Название
-            </label>
-            <Input
-              id="gf-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Название чата или группы"
-              required
-            />
+            <label htmlFor="gf-name" className="mb-1 block text-xs font-medium uppercase tracking-wider text-text-muted">Название</label>
+            <Input id="gf-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Название чата или группы" required />
           </div>
           <div>
-            <label htmlFor="gf-chatId" className="mb-1 block text-xs font-medium uppercase tracking-wider text-text-muted">
-              ID чата
-            </label>
-            <Input
-              id="gf-chatId"
-              value={chatId}
-              onChange={(e) => setChatId(e.target.value)}
-              placeholder="ID во внешней системе"
-              required
-            />
+            <label htmlFor="gf-chatId" className="mb-1 block text-xs font-medium uppercase tracking-wider text-text-muted">ID чата</label>
+            <Input id="gf-chatId" value={chatId} onChange={(e) => setChatId(e.target.value)} placeholder="ID во внешней системе" required />
           </div>
           <div>
-            <label htmlFor="gf-messenger" className="mb-1 block text-xs font-medium uppercase tracking-wider text-text-muted">
-              Мессенджер
-            </label>
-            <Select
-              id="gf-messenger"
-              value={messenger}
-              options={MESSENGER_OPTIONS}
-              onChange={(v) => setMessenger(v)}
-              label="Мессенджер"
-            />
+            <label htmlFor="gf-messenger" className="mb-1 block text-xs font-medium uppercase tracking-wider text-text-muted">Мессенджер</label>
+            <Select id="gf-messenger" value={messenger} options={MESSENGER_OPTIONS} onChange={setMessenger} label="Мессенджер" />
           </div>
           <div>
-            <label htmlFor="gf-category" className="mb-1 block text-xs font-medium uppercase tracking-wider text-text-muted">
-              Категория
-            </label>
-            <Input
-              id="gf-category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="Например: работа, личное"
-            />
+            <label htmlFor="gf-category" className="mb-1 block text-xs font-medium uppercase tracking-wider text-text-muted">Категория</label>
+            <Input id="gf-category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Например: работа, личное" />
           </div>
         </div>
 
@@ -117,9 +77,7 @@ export function MonitoringGroupForm({ group, onSave, onClose, isLoading }: Props
           <Button variant="primary" size="sm" type="submit" disabled={!isValid || isLoading}>
             {isLoading ? 'Сохранение...' : 'Сохранить'}
           </Button>
-          <Button variant="secondary" size="sm" type="button" onClick={onClose} disabled={isLoading}>
-            Отмена
-          </Button>
+          <Button variant="secondary" size="sm" type="button" onClick={onClose} disabled={isLoading}>Отмена</Button>
         </div>
       </form>
     </aside>

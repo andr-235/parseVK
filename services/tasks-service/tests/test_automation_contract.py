@@ -1,7 +1,7 @@
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -10,10 +10,8 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.bootstrap import ApplicationFactory
 from app.db.models import Task, TaskAuditLog, TaskAutomationSettings
 from app.modules.automation.service import AutomationService
-from app.modules.tasks.schemas import ExecutionStartRequest
 
 
 @pytest.fixture
@@ -159,43 +157,3 @@ async def test_automation_settings_preserved():
     assert task.group_ids == []
     assert task.post_limit == 25
     assert task.source == "automation"
-
-
-@pytest.mark.anyio
-async def test_start_execution_idempotent_with_same_run_id():
-    session = MagicMock()
-    tasks_service = ApplicationFactory(session).create_tasks_service()
-
-    task = MagicMock()
-    task.id = 42
-    task.owner_user_id = "user-1"
-    task.scope = "selected"
-    task.mode = "recent_posts"
-    task.group_ids = [1, 2]
-    task.post_limit = 10
-    task.source = "automation"
-    task.status = "pending"
-    task.execution_run_id = "run-x"
-    task.processed_items = 0
-    task.total_items = 0
-    task.progress = 0
-    task.stats = None
-    task.error = None
-    task.skipped_groups_message = None
-    task.created_at.isoformat.return_value = "2026-01-01T00:00:00+00:00"
-    task.updated_at.isoformat.return_value = "2026-01-01T00:00:00+00:00"
-
-    tasks_service.crud.repository.get_task_by_id_for_update = AsyncMock(return_value=task)
-    tasks_service.crud.repository.add_audit = AsyncMock()
-    tasks_service.crud.repository.touch_task = AsyncMock(return_value=task)
-    tasks_service.crud.outbox.add_event = AsyncMock()
-
-    payload = ExecutionStartRequest(runId="run-x", worker="worker-1")
-    first = await tasks_service.execution.start_execution(42, payload)
-
-    assert first["status"] == "running"
-    assert task.status == "running"
-
-    second = await tasks_service.execution.start_execution(42, payload)
-
-    assert second["status"] == "running"

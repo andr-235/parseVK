@@ -55,19 +55,6 @@ class FakeLeaseStore:
         return True
 
 
-class FakeTasksClient:
-    def __init__(self):
-        self.calls = []
-
-    async def start_execution(self, *args, **kwargs):
-        self.calls.append(("start", args, kwargs))
-        return {"status": "running"}
-
-    async def fail_execution(self, *args, **kwargs):
-        self.calls.append(("fail", args, kwargs))
-        return {"status": "failed"}
-
-
 class FakeSession:
     async def __aenter__(self):
         return self
@@ -82,7 +69,7 @@ class FakeSession:
         return None
 
 
-def build_executor(service, lease_store, tasks_client, **overrides):
+def build_executor(service, lease_store, **overrides):
     options = {
         "lease_seconds": 1,
         "heartbeat_seconds": 0.01,
@@ -95,6 +82,5 @@ def build_executor(service, lease_store, tasks_client, **overrides):
         lease_store=lease_store,
         session_factory=FakeSession,
         ingestion_factory=lambda _session: service,
-        tasks_client=tasks_client,
         **options,
     )

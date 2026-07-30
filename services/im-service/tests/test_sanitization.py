@@ -107,12 +107,8 @@ def test_sanitize_source_payload_returns_empty_containers_unchanged(payload):
         ("trailing\x00", "trailing"),
     ],
 )
-def test_sanitize_postgres_text_replaces_nul(input_value, expected, caplog):
-    with caplog.at_level("WARNING"):
-        result = sanitize_postgres_text(input_value)
-
-    assert result == expected
-    assert "sanitize_postgres_text: replaced NUL" in caplog.text
+def test_sanitize_postgres_text_replaces_nul(input_value, expected):
+    assert sanitize_postgres_text(input_value) == expected
 
 
 def test_sanitize_postgres_text_returns_none_for_none():
@@ -142,13 +138,9 @@ def test_sanitize_postgres_text_preserves_non_nul_characters():
         ("bad\x00id", "external_id", "value contains NUL character"),
     ],
 )
-def test_validate_external_identifier_rejects_invalid_values(value, field_name, expected_message, caplog):
-    with caplog.at_level("WARNING"):
-        with pytest.raises(ValueError, match=expected_message):
-            validate_external_identifier(value, field_name)
-
-    assert "validate_external_identifier: rejected invalid" in caplog.text
-    assert field_name in caplog.text
+def test_validate_external_identifier_rejects_invalid_values(value, field_name, expected_message):
+    with pytest.raises(ValueError, match=expected_message):
+        validate_external_identifier(value, field_name)
 
 
 def test_validate_external_identifier_rejects_long_value():

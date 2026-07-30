@@ -29,6 +29,7 @@ class FakeRepository:
         self.comments = []
         self.incremented = []
         self.comment_counts = {}
+        self.projection_revisions: dict[str, int] = {}
         self.saved = 0
 
     async def is_processed(self, consumer_name, event_id):
@@ -57,6 +58,10 @@ class FakeRepository:
 
     async def set_post_comments_count(self, post_external_key, count):
         self.comment_counts[post_external_key] = count
+
+    async def increment_projection_revision(self, post_key):
+        self.projection_revisions[post_key] = self.projection_revisions.get(post_key, 0) + 1
+        return self.projection_revisions[post_key]
 
     async def get_comment_ids_for_post(self, post_key):
         owner_id, post_id = post_key.split(":")

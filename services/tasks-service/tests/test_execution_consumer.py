@@ -14,7 +14,7 @@ use_service_path()
 
 from aiokafka import ConsumerRecord
 
-from app.db.models import OutboxEvent, ProcessedEvent
+from app.db.models import ProcessedEvent
 from app.modules.execution_events.consumer import (
     EXECUTION_EVENT_TYPES,
     _parse_payload,
@@ -149,18 +149,18 @@ def _mock_result_task_row(row):
     return m
 
 
-def _mock_session_with_task_row(row):
+def _mock_session_with_task_row(row, *, include_duplicate_check: bool = True):
     session = AsyncMock()
     session.execute = AsyncMock()
     session.add = MagicMock()
     session.commit = AsyncMock()
     session.rollback = AsyncMock()
 
-    session.execute.side_effect = [
-        _mock_result_none(),  # duplicate check
-        _mock_result_task_row(row),  # SELECT FOR UPDATE
-        MagicMock(),  # UPDATE
-    ]
+    results = []
+    if include_duplicate_check:
+        results.append(_mock_result_none())
+    results.extend([_mock_result_task_row(row), MagicMock()])
+    session.execute.side_effect = results
     return session
 
 
@@ -415,11 +415,12 @@ async def test_handle_execution_event_malformed_payload_skips_with_offset_commit
 
 # ---------------------------------------------------------------------------
 # Service-level lifecycle transitions
+
 # ---------------------------------------------------------------------------
 
 @pytest.mark.anyio
 async def test_apply_started_from_pending_emits_state_changed():
-    session = _mock_session_with_task_row(_make_task_row(status="pending"))
+    session = _mock_session_with_task_row(_make_task_row(status="pending"), include_duplicate_check=False)
     service = ExecutionEventService(session)
 
     ok = await service.apply_started(42, "run-42", 1, "user-1")
@@ -431,7 +432,7 @@ async def test_apply_started_from_pending_emits_state_changed():
 
 @pytest.mark.anyio
 async def test_apply_started_from_running_does_not_emit():
-    session = _mock_session_with_task_row(_make_task_row(status="running"))
+    session = _mock_session_with_task_row(_make_task_row(status="running"), include_duplicate_check=False)
     service = ExecutionEventService(session)
 
     ok = await service.apply_started(42, "run-42", 2, "user-1")
@@ -445,17 +446,17 @@ async def test_happy_path_started_progressed_completed():
     row = _make_task_row(status="pending")
 
     # started
-    session1 = _mock_session_with_task_row(row)
+    session1 = _mock_session_with_task_row(row, include_duplicate_check=False)
     service1 = ExecutionEventService(session1)
     assert await service1.apply_started(42, "run-42", 1, "user-1") is True
 
     # progressed
-    session2 = _mock_session_with_task_row(_make_task_row(status="running", last_seq=1, revision=1))
+    session2 = _mock_session_with_task_row(_make_task_row(status="running", last_seq=1, revision=1), include_duplicate_check=False)
     service2 = ExecutionEventService(session2)
     assert await service2.apply_progressed(42, "run-42", 2, 10, 100, 0.1, {"p": 10}, "user-1") is True
 
     # completed
-    session3 = _mock_session_with_task_row(_make_task_row(status="running", last_seq=2, revision=2))
+    session3 = _mock_session_with_task_row(_make_task_row(status="running", last_seq=2, revision=2), include_duplicate_check=False)
     service3 = ExecutionEventService(session3)
     assert await service3.apply_completed(42, "run-42", 3, 100, 100, {"p": 100}, "user-1") is True
     added3 = [call.args[0] for call in session3.add.call_args_list]
@@ -468,17 +469,17 @@ async def test_happy_path_started_progressed_completed():
 @pytest.mark.anyio
 async def test_happy_path_started_progressed_failed():
     # started
-    session1 = _mock_session_with_task_row(_make_task_row(status="pending"))
+    session1 = _mock_session_with_task_row(_make_task_row(status="pending"), include_duplicate_check=False)
     service1 = ExecutionEventService(session1)
     assert await service1.apply_started(42, "run-42", 1, "user-1") is True
 
     # progressed
-    session2 = _mock_session_with_task_row(_make_task_row(status="running", last_seq=1, revision=1))
+    session2 = _mock_session_with_task_row(_make_task_row(status="running", last_seq=1, revision=1), include_duplicate_check=False)
     service2 = ExecutionEventService(session2)
     assert await service2.apply_progressed(42, "run-42", 2, 50, 100, 0.5, {"p": 50}, "user-1") is True
 
     # failed
-    session3 = _mock_session_with_task_row(_make_task_row(status="running", last_seq=2, revision=2))
+    session3 = _mock_session_with_task_row(_make_task_row(status="running", last_seq=2, revision=2), include_duplicate_check=False)
     service3 = ExecutionEventService(session3)
     assert await service3.apply_failed(42, "run-42", 3, 50, 100, {"p": 50}, "boom", "runtime", "user-1") is True
     added3 = [call.args[0] for call in session3.add.call_args_list]
