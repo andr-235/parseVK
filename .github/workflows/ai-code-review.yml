@@ -31,10 +31,10 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - name: Checkout reviewer code
+      - name: Checkout trusted reviewer code
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
           sparse-checkout: |
             .github/scripts/ai_review.py
@@ -50,6 +50,8 @@ jobs:
     name: Analyze Pull Request
     env:
       AI_REVIEW_DIR: ${{ github.workspace }}/.ai-review-runtime
+      TRUSTED_REVIEWER_DIR: ${{ runner.temp }}/ai-review-trusted
+      AI_REVIEW_SCRIPT: ${{ runner.temp }}/ai-review-trusted/ai_review.py
     if: >-
       github.event.action != 'closed' &&
       github.event.pull_request.draft == false &&
@@ -61,6 +63,22 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Checkout trusted reviewer code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/ai_review.py
+            .github/scripts/test_ai_review.py
+          sparse-checkout-cone-mode: false
+
+      - name: Isolate trusted reviewer code
+        run: |
+          mkdir -p "$TRUSTED_REVIEWER_DIR"
+          cp .github/scripts/ai_review.py "$TRUSTED_REVIEWER_DIR/ai_review.py"
+          cp .github/scripts/test_ai_review.py "$TRUSTED_REVIEWER_DIR/test_ai_review.py"
+
       - name: Checkout Pull Request
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -68,12 +86,12 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Test reviewer logic
+      - name: Test trusted reviewer logic
         id: self_test
         continue-on-error: true
         env:
-          PYTHONPATH: .github/scripts
-        run: python -m unittest discover -s .github/scripts -p 'test_ai_review.py' -v
+          PYTHONPATH: ${{ runner.temp }}/ai-review-trusted
+        run: python -m unittest discover -s "$TRUSTED_REVIEWER_DIR" -p 'test_ai_review.py' -v
 
       - name: Build review scope
         id: scope
@@ -251,10 +269,10 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - name: Checkout publisher code
+      - name: Checkout trusted publisher code
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
           sparse-checkout: |
             .github/scripts/ai_review.py
@@ -303,10 +321,10 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - name: Checkout cleanup code
+      - name: Checkout trusted cleanup code
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
           sparse-checkout: |
             .github/scripts/ai_review.py
