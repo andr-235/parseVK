@@ -409,7 +409,8 @@ def render_prompt(head_sha: str, reviewable_files: Sequence[str]) -> str:
 7. Каждое замечание обязательно внеси в findings. При пустом findings замечаний нет.
 8. Указывай строку из изменённого hunk. line=null допустим только для дефекта уровня конфигурации, схемы или миграции.
 9. Используй только severity blocker, major или minor.
-10. Верни строго один JSON-объект без Markdown и текста до или после.
+10. Прямое противоречие между изменённой реализацией и явным именем функции, docstring, invariant или return contract классифицируй как major correctness-дефект с confidence не ниже 0.95.
+11. Верни строго один JSON-объект без Markdown и текста до или после.
 
 Схема результата:
 {{
