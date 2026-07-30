@@ -1,3 +1,10 @@
+# [0.81.0](https://github.com/andr-235/parseVK/compare/v0.80.0...v0.81.0) (2026-07-30)
+
+
+### Features
+
+* **ai-review:** учитывать доверенные AGENTS.md ([#323](https://github.com/andr-235/parseVK/issues/323)) ([301996b](https://github.com/andr-235/parseVK/commit/301996b19f80b9072d293623bfc1ca4bc9ef7b6a)), closes [#320](https://github.com/andr-235/parseVK/issues/320)
+
 # [0.80.0](https://github.com/andr-235/parseVK/compare/v0.79.1...v0.80.0) (2026-07-30)
 
 
