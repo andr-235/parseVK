@@ -1,0 +1,44 @@
+name: One-shot AI reviewer rejection diagnostics
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: >-
+      github.event.pull_request.head.ref == 'fix/ai-review-rejection-diagnostics' &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout diagnostics branch
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: fix/ai-review-rejection-diagnostics
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Apply rejection diagnostics patch
+        run: python .github/scripts/patch_ai_review_rejections.py
+
+      - name: Verify safe metadata logging
+        run: |
+          grep -F 'AI_REVIEW_REJECTED' .github/scripts/ai_review.py
+          grep -F 'below-confidence' .github/scripts/ai_review.py
+          grep -F 'outside-changed-lines' .github/scripts/ai_review.py
+
+      - name: Test reviewer and commit Python changes
+        run: |
+          PYTHONPATH=.github/scripts python -m unittest discover -s .github/scripts -p 'test_ai_review.py' -v
+          rm .github/scripts/patch_ai_review_rejections.py
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .github/scripts/ai_review.py
+          git add -u .github/scripts/patch_ai_review_rejections.py
+          git commit -m 'fix(ai-review): log rejection metadata'
+          git push origin HEAD:fix/ai-review-rejection-diagnostics
