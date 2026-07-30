@@ -225,6 +225,30 @@ jobs:
           echo "skip_reason=$SKIP_REASON" >> "$GITHUB_OUTPUT"
           echo "Selected validated release commit: $TARGET_SHA"
 
+      - name: Bootstrap current local release
+        if: >-
+          steps.deployment_context.outputs.skip_deploy != 'true' &&
+          steps.deployment_metadata.outputs.last_successful_commit != ''
+        working-directory: /opt/parseVK
+        env:
+          CURRENT_RELEASE: ${{ steps.deployment_metadata.outputs.last_successful_commit }}
+        run: |
+          set -euo pipefail
+
+          MANIFEST="$PROJECT_ROOT/.releases/$CURRENT_RELEASE/release.json"
+          if [ -f "$MANIFEST" ]; then
+            echo "Current release manifest already exists: $MANIFEST"
+            exit 0
+          fi
+
+          echo "Bootstrapping rollback manifest for currently running release $CURRENT_RELEASE"
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" COMPOSE_PROJECT_NAME="$COMPOSE_PROJECT_NAME" \
+            SERVICE_CATALOG_CLI="$PROJECT_ROOT/.github/scripts/service_catalog.py" \
+            bash "$LOCAL_RELEASE_SCRIPT" snapshot "$CURRENT_RELEASE"
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" COMPOSE_PROJECT_NAME="$COMPOSE_PROJECT_NAME" \
+            SERVICE_CATALOG_CLI="$PROJECT_ROOT/.github/scripts/service_catalog.py" \
+            bash "$LOCAL_RELEASE_SCRIPT" promote "$CURRENT_RELEASE"
+
       - name: Update code
         if: steps.deployment_context.outputs.skip_deploy != 'true'
         working-directory: /opt/parseVK
