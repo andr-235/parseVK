@@ -9,34 +9,39 @@ from pathlib import Path
 from ai_review_batch_lib.aggregate import build_batch
 from ai_review_batch_lib.plan import build_plan
 
+GIT = "/usr/bin/git"
+
+
+def run_git(repo: Path, *args: str, capture_output: bool = False) -> None:
+    subprocess.run(  # noqa: S603 -- fixed git executable, controlled test args
+        [GIT, *args], cwd=repo, check=True, capture_output=capture_output
+    )
+
+
+def git_output(repo: Path, *args: str) -> str:
+    return subprocess.check_output(  # noqa: S603 -- fixed git executable
+        [GIT, *args], cwd=repo, text=True
+    ).strip()
+
 
 class CommitPlanTests(unittest.TestCase):
     def setUp(self) -> None:
         self.repo = Path(tempfile.mkdtemp())
-        subprocess.run(["git", "init"], cwd=self.repo, check=True, capture_output=True)
+        run_git(self.repo, "init", capture_output=True)
         for key, value in (
             ("user.email", "review@example.com"),
             ("user.name", "Reviewer"),
         ):
-            subprocess.run(
-                ["git", "config", key, value], cwd=self.repo, check=True
-            )
+            run_git(self.repo, "config", key, value)
         self.commits = [self._commit(str(index)) for index in range(4)]
 
     def _commit(self, value: str) -> str:
         path = self.repo / "value.txt"
         previous = path.read_text(encoding="utf-8") if path.exists() else ""
         path.write_text(previous + value + "\n", encoding="utf-8")
-        subprocess.run(["git", "add", "value.txt"], cwd=self.repo, check=True)
-        subprocess.run(
-            ["git", "commit", "-m", f"commit {value}"],
-            cwd=self.repo,
-            check=True,
-            capture_output=True,
-        )
-        return subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], cwd=self.repo, text=True
-        ).strip()
+        run_git(self.repo, "add", "value.txt")
+        run_git(self.repo, "commit", "-m", f"commit {value}", capture_output=True)
+        return git_output(self.repo, "rev-parse", "HEAD")
 
     def test_opened_reviews_every_commit_after_base(self) -> None:
         plan = build_plan(
@@ -65,10 +70,12 @@ class CommitPlanTests(unittest.TestCase):
 
     def test_force_push_rebuilds_plan_from_current_merge_base(self) -> None:
         old_head = self.commits[3]
-        subprocess.run(
-            ["git", "checkout", "-b", "rewritten", self.commits[0]],
-            cwd=self.repo,
-            check=True,
+        run_git(
+            self.repo,
+            "checkout",
+            "-b",
+            "rewritten",
+            self.commits[0],
             capture_output=True,
         )
         rewritten = [self._commit("new-a"), self._commit("new-b")]
