@@ -25,6 +25,9 @@ case "$1 $2" in
     [ -f "$file" ] || exit 1
     cat "$file"
     ;;
+  "image rm")
+    rm -f "$state/$(key "$3")"
+    ;;
   "tag "*)
     src="$2"
     dst="$3"
@@ -48,6 +51,7 @@ export FAKE_DOCKER_STATE="$TMP_DIR/docker-state"
 export PROJECT_ROOT="$TMP_DIR/project"
 export SERVICE_CATALOG_CLI="$TMP_DIR/project/.github/scripts/service_catalog.py"
 export RELEASES_DIR="$TMP_DIR/project/.releases"
+export DEPLOYMENT_METADATA_FILE="$TMP_DIR/project/.deployment-metadata.json"
 
 commit="1234567890abcdef1234567890abcdef12345678"
 bash "$SCRIPT" snapshot "$commit"
@@ -65,4 +69,25 @@ bash "$SCRIPT" activate "$commit"
 grep -qx 'sha256:frontend' "$TMP_DIR/docker-state/parsevk-frontend_latest"
 grep -qx 'sha256:gateway' "$TMP_DIR/docker-state/parsevk-api-gateway_latest"
 
-echo "Local immutable release snapshot, verification and activation are valid"
+jq -n --arg current "$commit" \
+  '{last_successful_commit:$current, previous_successful_commit:""}' \
+  >"$DEPLOYMENT_METADATA_FILE"
+export RELEASE_RETENTION=1
+
+commit_two="2234567890abcdef1234567890abcdef12345678"
+printf 'sha256:frontend-two\n' >"$TMP_DIR/docker-state/parsevk-frontend_latest"
+printf 'sha256:gateway-two\n' >"$TMP_DIR/docker-state/parsevk-api-gateway_latest"
+bash "$SCRIPT" snapshot "$commit_two"
+bash "$SCRIPT" promote "$commit_two"
+
+commit_three="3234567890abcdef1234567890abcdef12345678"
+printf 'sha256:frontend-three\n' >"$TMP_DIR/docker-state/parsevk-frontend_latest"
+printf 'sha256:gateway-three\n' >"$TMP_DIR/docker-state/parsevk-api-gateway_latest"
+bash "$SCRIPT" snapshot "$commit_three"
+bash "$SCRIPT" promote "$commit_three"
+
+[ -f "$RELEASES_DIR/$commit/release.json" ]
+[ ! -e "$RELEASES_DIR/$commit_two" ]
+[ -f "$RELEASES_DIR/$commit_three/release.json" ]
+
+echo "Local immutable release lifecycle and protected retention are valid"
