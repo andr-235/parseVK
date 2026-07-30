@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}\")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CI="$ROOT_DIR/.github/workflows/ci.yml"
 RELEASE="$ROOT_DIR/.github/workflows/release.yml"
 RELEASE_CONFIG="$ROOT_DIR/.releaserc.json"
