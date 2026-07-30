@@ -4,8 +4,9 @@ path = Path(__file__).with_name("ai_review.py")
 text = path.read_text(encoding="utf-8")
 
 replacements = {
-    "from typing import Any, Iterable, Mapping, Sequence\n": (
+    "from pathlib import Path, PurePosixPath\nfrom typing import Any, Iterable, Mapping, Sequence\n": (
         "from collections.abc import Iterable, Mapping, Sequence\n"
+        "from pathlib import Path, PurePosixPath\n"
         "from typing import Any\n"
     ),
     'def from_mapping(cls, value: Mapping[str, Any]) -> "Finding":': (
