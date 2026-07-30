@@ -6,6 +6,9 @@ from pathlib import Path
 SOURCE_WORKFLOW = Path(".github/workflows/ai-code-review.yml")
 PUBLISHER_WORKFLOW = Path(".github/workflows/ai-review-inline-publisher.yml")
 
+UPLOAD_V6_SHA = "b7c566a772e6b6bfb58ed0dc250532a479d7789f"
+DOWNLOAD_V7_SHA = "37930b1c2abaa49bbe596cd826c3c89aef350131"
+
 
 class WorkflowContractTests(unittest.TestCase):
     @classmethod
@@ -20,6 +23,7 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("unit: ${{ fromJSON(needs.plan.outputs.matrix) }}", self.source)
         self.assertIn("${{ matrix.unit.base_sha }}", self.source)
         self.assertIn("${{ matrix.unit.head_sha }}", self.source)
+        self.assertIn("test_ai_review_batch_plan_edges.py", self.source)
 
     def test_rapid_pushes_do_not_cancel_previous_commit_review(self) -> None:
         self.assertIn(
@@ -33,11 +37,22 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("github.event.workflow_run.id || github.run_id", self.publisher)
         self.assertIn("cancel-in-progress: false", self.publisher)
 
-    def test_each_commit_uploads_unique_validated_result(self) -> None:
+    def test_each_commit_uploads_exact_non_hidden_result(self) -> None:
         self.assertIn("ai-review-commit-${{ github.run_id }}-", self.source)
-        self.assertIn('".ai-review-artifact/${HEAD_SHA}.json"', self.source)
+        self.assertIn('artifact_dir="$RUNNER_TEMP/ai-review-artifact"', self.source)
+        self.assertIn("path: ${{ steps.result.outputs.path }}", self.source)
+        self.assertIn("reason\": \"emergency-fallback", self.source)
+        self.assertNotIn(".ai-review-artifact/*.json", self.source)
         self.assertIn("pattern: ai-review-commit-${{ github.run_id }}-*", self.source)
         self.assertIn("name: ai-review-result-${{ github.run_id }}", self.source)
+
+    def test_artifact_actions_use_node24_releases(self) -> None:
+        self.assertIn(f"actions/upload-artifact@{UPLOAD_V6_SHA} # v6", self.source)
+        self.assertIn(f"actions/download-artifact@{DOWNLOAD_V7_SHA} # v7", self.source)
+        self.assertIn(f"actions/download-artifact@{DOWNLOAD_V7_SHA} # v7", self.publisher)
+        self.assertNotIn("actions/upload-artifact@ea165f8d", self.source)
+        self.assertNotIn("actions/download-artifact@d3f86a106", self.source)
+        self.assertNotIn("actions/download-artifact@d3f86a106", self.publisher)
 
     def test_verdict_aggregates_without_publishing_reviews(self) -> None:
         verdict = self.source.split("  verdict:\n", 1)[1].split("  status:\n", 1)[0]
