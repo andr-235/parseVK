@@ -16,7 +16,8 @@
       "docker-compose.yml",
       "pyproject.toml",
       "libs/py/common/",
-      "libs/py/contracts/"
+      "libs/py/contracts/",
+      ".github/workflows/reusable-docker-security.yml"
     ],
     "deploy": [
       ".dockerignore",
