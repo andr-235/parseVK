@@ -31,3 +31,15 @@ show_error_codes = true
 [tool.pydantic-mypy]
 init_forbid_extra = true
 warn_required_dynamic_aliases = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC", "S"]
+ignore = ["S101", "B008", "B017", "E402", "S105", "S106", "S107", "S110", "S310", "S608", "E501"]
+per-file-ignores = {"tests/test_validation.py" = ["F821"]}
+
+[tool.ruff.lint.isort]
+known-first-party = ["parsevk_contracts"]
