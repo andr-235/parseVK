@@ -8,8 +8,12 @@ on:
       - .github/service-catalog.yaml
       - .github/scripts/release_manifest.py
       - .github/scripts/test_release_manifest.py
+      - .github/workflows/ci.yml
+      - .github/workflows/release.yml
+      - .github/workflows/security.yml
       - .github/workflows/publish-release-images.yml
       - .github/workflows/reusable-publish-image.yml
+      - .releaserc.json
       - scripts/test-release-workflow.sh
   push:
     branches:
@@ -49,7 +53,7 @@ jobs:
     if: >-
       github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.event == 'workflow_dispatch' &&
       github.event.workflow_run.head_branch == 'main' &&
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
@@ -61,14 +65,14 @@ jobs:
       target_sha: ${{ steps.release.outputs.target_sha }}
       matrix: ${{ steps.matrix.outputs.value }}
     steps:
-      - name: Checkout validated commit
+      - name: Checkout validated release commit
         uses: actions/checkout@v6
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 1
+          fetch-depth: 2
           persist-credentials: false
 
-      - name: Verify current main and successful CI
+      - name: Verify current release commit and successful CI
         id: release
         shell: bash
         env:
@@ -76,6 +80,17 @@ jobs:
           TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
+
+          RELEASE_SUBJECT="$(git log -1 --format=%s)"
+          RELEASE_MESSAGE="$(git log -1 --format=%B)"
+          [[ "$RELEASE_SUBJECT" == chore\(release\):* ]] || {
+            echo "::error::Only semantic release commits may publish images: $RELEASE_SUBJECT"
+            exit 1
+          }
+          printf '%s' "$RELEASE_MESSAGE" | grep -qF '[skip ci]' || {
+            echo "::error::Semantic release commit is missing [skip ci]"
+            exit 1
+          }
 
           for attempt in $(seq 1 60); do
             MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
@@ -85,24 +100,24 @@ jobs:
             fi
 
             state="$(gh api \
-              "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${TARGET_SHA}&event=push&per_page=20" \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${TARGET_SHA}&event=workflow_dispatch&per_page=20" \
               --jq '(.workflow_runs | sort_by(.run_number, .run_attempt) | last) | [.status, .conclusion] | @tsv' \
               2>/dev/null || true)"
 
             if [[ "$state" == $'completed\tsuccess' ]]; then
               echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
-              echo "CI and Security are successful for $TARGET_SHA"
+              echo "Dispatched CI and Security are successful for release $TARGET_SHA"
               exit 0
             fi
             if [[ "$state" == completed$'\t'* && "$state" != $'completed\tsuccess' ]]; then
-              echo "::error::CI did not succeed for $TARGET_SHA: $state"
+              echo "::error::Dispatched CI did not succeed for $TARGET_SHA: $state"
               exit 1
             fi
-            echo "Waiting for CI on $TARGET_SHA (attempt $attempt/60, state=${state:-missing})"
+            echo "Waiting for dispatched CI on $TARGET_SHA (attempt $attempt/60, state=${state:-missing})"
             sleep 15
           done
 
-          echo "::error::Timed out waiting for successful CI on $TARGET_SHA"
+          echo "::error::Timed out waiting for successful dispatched CI on $TARGET_SHA"
           exit 1
 
       - name: Build complete image matrix
@@ -141,8 +156,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      statuses: write
     steps:
-      - name: Checkout validated commit
+      - name: Checkout validated release commit
         uses: actions/checkout@v6
         with:
           ref: ${{ needs.gate.outputs.target_sha }}
@@ -188,6 +204,22 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+      - name: Mark immutable release published
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_SHA: ${{ needs.gate.outputs.target_sha }}
+        run: |
+          set -euo pipefail
+          IMAGE_COUNT="$(find release-image-metadata -name '*.json' | wc -l | tr -d ' ')"
+          gh api \
+            --method POST \
+            "repos/${GITHUB_REPOSITORY}/statuses/${TARGET_SHA}" \
+            -f state=success \
+            -f context=release/immutable-ghcr \
+            -f description="${IMAGE_COUNT} immutable images and manifest published" \
+            -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
       - name: Write workflow summary
         shell: bash
         run: |
@@ -197,4 +229,5 @@ jobs:
             echo "- Commit: \`${{ needs.gate.outputs.target_sha }}\`"
             echo "- Images: \`$(find release-image-metadata -name '*.json' | wc -l)\`"
             echo "- Artifact: \`release-manifest-${{ needs.gate.outputs.target_sha }}\`"
+            echo "- Status: \`release/immutable-ghcr\`"
           } >> "$GITHUB_STEP_SUMMARY"
