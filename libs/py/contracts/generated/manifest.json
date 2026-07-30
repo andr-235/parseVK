@@ -1,0 +1,31 @@
+{
+  "contracts": [
+    {
+      "causationPolicy": "forbidden",
+      "compatibility": "backward",
+      "consumers": [
+        "vk-service"
+      ],
+      "correlationPath": "payload.executionId",
+      "correlationRequired": true,
+      "messageType": "vk.execution.requested",
+      "partitionKey": {
+        "paths": [
+          "payload.executionId"
+        ],
+        "separator": ":"
+      },
+      "producers": [
+        "tasks-service"
+      ],
+      "schemaVersion": 1,
+      "topic": "parsevk.vk.commands"
+    }
+  ],
+  "manifestVersion": 1,
+  "package": {
+    "name": "parsevk-contracts",
+    "repository": "github.com/andr-235/parseVK",
+    "version": "0.1.0"
+  }
+}

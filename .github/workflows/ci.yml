@@ -23,20 +23,23 @@ jobs:
     outputs:
       frontend_changed: ${{ steps.filter.outputs.frontend_changed }}
       python_changed: ${{ steps.filter.outputs.python_changed }}
+      common_changed: ${{ steps.filter.outputs.common_changed }}
+      services_changed: ${{ steps.filter.outputs.services_changed }}
+      contracts_changed: ${{ steps.filter.outputs.contracts_changed }}
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+
       - name: Detect changed paths
         id: filter
         shell: bash
         run: |
           set -euo pipefail
 
-          EVENT_NAME="${{ github.event_name }}"
-          if [ "$EVENT_NAME" = "pull_request" ]; then
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             BASE_SHA="${{ github.event.pull_request.base.sha }}"
-            HEAD_SHA="${{ github.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           else
             BASE_SHA="${{ github.event.before }}"
             HEAD_SHA="${{ github.sha }}"
@@ -44,31 +47,61 @@ jobs:
 
           FRONTEND_CHANGED=false
           PYTHON_CHANGED=false
+          COMMON_CHANGED=false
+          SERVICES_CHANGED=false
+          CONTRACTS_CHANGED=false
 
-          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+          if [[ -z "$BASE_SHA" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
             echo "Base commit not found; treating as full change set"
             FRONTEND_CHANGED=true
             PYTHON_CHANGED=true
+            COMMON_CHANGED=true
+            SERVICES_CHANGED=true
+            CONTRACTS_CHANGED=true
           else
-            CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
-            if [ -z "$CHANGED_FILES" ]; then
+            CHANGED_FILES="$(git diff --name-only --diff-filter=ACMRT "$BASE_SHA" "$HEAD_SHA")"
+            if [[ -z "$CHANGED_FILES" ]]; then
               echo "No changed files detected"
             else
               echo "Changed files:"
-              echo "$CHANGED_FILES"
+              printf '%s\n' "$CHANGED_FILES"
             fi
 
-            if echo "$CHANGED_FILES" | grep -qE '^front/'; then
+            if grep -qE '^front/' <<<"$CHANGED_FILES"; then
               FRONTEND_CHANGED=true
             fi
 
-            if echo "$CHANGED_FILES" | grep -qE '^(services/|libs/py/common/|pyproject\.toml)'; then
+            if grep -qE '\.py$|(^|/)pyproject\.toml$|^\.github/workflows/ci\.yml$' <<<"$CHANGED_FILES"; then
               PYTHON_CHANGED=true
+            fi
+
+            if grep -qE '^libs/py/common/' <<<"$CHANGED_FILES"; then
+              COMMON_CHANGED=true
+            fi
+
+            if grep -qE '^services/' <<<"$CHANGED_FILES"; then
+              SERVICES_CHANGED=true
+            fi
+
+            if grep -qE '^libs/py/contracts/|^\.github/scripts/validate_contract_examples\.py$|^\.github/workflows/ci\.yml$' <<<"$CHANGED_FILES"; then
+              CONTRACTS_CHANGED=true
+            fi
+
+            # Root Python configuration can affect every Python package.
+            if grep -qE '^pyproject\.toml$' <<<"$CHANGED_FILES"; then
+              COMMON_CHANGED=true
+              SERVICES_CHANGED=true
+              CONTRACTS_CHANGED=true
             fi
           fi
 
-          echo "frontend_changed=$FRONTEND_CHANGED" >> "$GITHUB_OUTPUT"
-          echo "python_changed=$PYTHON_CHANGED" >> "$GITHUB_OUTPUT"
+          {
+            echo "frontend_changed=$FRONTEND_CHANGED"
+            echo "python_changed=$PYTHON_CHANGED"
+            echo "common_changed=$COMMON_CHANGED"
+            echo "services_changed=$SERVICES_CHANGED"
+            echo "contracts_changed=$CONTRACTS_CHANGED"
+          } >> "$GITHUB_OUTPUT"
 
   lint:
     name: Lint Frontend
@@ -103,17 +136,45 @@ jobs:
         run: bun run build
 
   ruff:
-    name: Ruff lint
+    name: Ruff changed Python files
     runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.python_changed == 'true'
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - name: Run ruff check on all Python sources
-        run: uvx ruff check --output-format=github services/ libs/
+      - name: Run Ruff on changed Python files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+          fi
+
+          mapfile -t PYTHON_FILES < <(
+            git diff --name-only --diff-filter=ACMRT "$BASE_SHA" "$HEAD_SHA" -- '*.py' \
+              | while IFS= read -r path; do
+                  [[ -f "$path" ]] && printf '%s\n' "$path"
+                done
+          )
+
+          if (( ${#PYTHON_FILES[@]} == 0 )); then
+            echo "No changed Python files to lint."
+            exit 0
+          fi
+
+          printf 'Ruff files:\n'
+          printf '  %s\n' "${PYTHON_FILES[@]}"
+          uvx ruff check --output-format=github "${PYTHON_FILES[@]}"
 
   alembic-graphs:
     name: Validate Alembic graphs
@@ -161,7 +222,7 @@ jobs:
     name: Test common lib
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.python_changed == 'true'
+    if: needs.changes.outputs.common_changed == 'true'
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v5
@@ -169,7 +230,7 @@ jobs:
           enable-cache: true
       - name: Install dependencies
         working-directory: libs/py/common
-        run: uv sync --group dev
+        run: uv sync --group dev --frozen
       - name: Run tests
         working-directory: libs/py/common
         run: uv run pytest -v
@@ -178,7 +239,7 @@ jobs:
     name: Test ${{ matrix.service }}
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.python_changed == 'true'
+    if: needs.changes.outputs.services_changed == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -201,10 +262,63 @@ jobs:
           enable-cache: true
       - name: Install dependencies
         working-directory: services/${{ matrix.service }}
-        run: uv sync --group test
+        run: uv sync --extra test --frozen
       - name: Run tests
         working-directory: services/${{ matrix.service }}
         run: uv run pytest -v
+
+  contracts-python:
+    name: Contracts Python checks
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.contracts_changed == 'true'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        working-directory: libs/py/contracts
+        run: uv sync --group dev --frozen
+      - name: Run tests
+        working-directory: libs/py/contracts
+        run: uv run pytest -v
+      - name: Run strict typecheck
+        working-directory: libs/py/contracts
+        run: uv run mypy parsevk_contracts
+      - name: Check generated artifacts
+        working-directory: libs/py/contracts
+        run: uv run python -m parsevk_contracts.generation.cli check
+      - name: Validate examples against schemas
+        working-directory: libs/py/contracts
+        run: uv run python "${{ github.workspace }}/.github/scripts/validate_contract_examples.py"
+      - name: Verify py.typed in wheel
+        working-directory: libs/py/contracts
+        run: |
+          uv build
+          unzip -l dist/*.whl | grep 'parsevk_contracts/py.typed'
+
+  contracts-asyncapi:
+    name: Validate Contracts AsyncAPI
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.contracts_changed == 'true'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        working-directory: libs/py/contracts
+        run: uv sync --group dev --frozen
+      - name: Regenerate AsyncAPI
+        working-directory: libs/py/contracts
+        run: uv run python -c "from parsevk_contracts.generation import generate_all; from parsevk_contracts.vk.commands import CATALOG; generate_all(CATALOG)"
+      - name: Validate AsyncAPI
+        run: npx --yes @asyncapi/cli@6.0.2 validate libs/py/contracts/generated/asyncapi/parsevk-contracts.yaml
 
   release-gate:
     name: Release Gate
@@ -220,12 +334,17 @@ jobs:
       - frontend-tests
       - pytest-libs
       - pytest-services
+      - contracts-python
+      - contracts-asyncapi
     steps:
       - name: Enforce required checks
         shell: bash
         env:
           FRONTEND_CHANGED: ${{ needs.changes.outputs.frontend_changed }}
           PYTHON_CHANGED: ${{ needs.changes.outputs.python_changed }}
+          COMMON_CHANGED: ${{ needs.changes.outputs.common_changed }}
+          SERVICES_CHANGED: ${{ needs.changes.outputs.services_changed }}
+          CONTRACTS_CHANGED: ${{ needs.changes.outputs.contracts_changed }}
           CHANGES_RESULT: ${{ needs.changes.result }}
           LINT_RESULT: ${{ needs.lint.result }}
           TYPECHECK_RESULT: ${{ needs.typecheck.result }}
@@ -235,6 +354,8 @@ jobs:
           FRONTEND_TESTS_RESULT: ${{ needs.frontend-tests.result }}
           PYTEST_LIBS_RESULT: ${{ needs.pytest-libs.result }}
           PYTEST_SERVICES_RESULT: ${{ needs.pytest-services.result }}
+          CONTRACTS_PYTHON_RESULT: ${{ needs.contracts-python.result }}
+          CONTRACTS_ASYNCAPI_RESULT: ${{ needs.contracts-asyncapi.result }}
         run: |
           set -euo pipefail
           failures=0
@@ -242,7 +363,7 @@ jobs:
           require_success() {
             local name="$1"
             local result="$2"
-            if [ "$result" != "success" ]; then
+            if [[ "$result" != "success" ]]; then
               echo "::error::${name} завершён со статусом ${result}"
               failures=$((failures + 1))
             fi
@@ -257,7 +378,7 @@ jobs:
                 require_success "$name" "$result"
                 ;;
               false)
-                if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
+                if [[ "$result" != "success" && "$result" != "skipped" ]]; then
                   echo "::error::${name} завершён со статусом ${result}"
                   failures=$((failures + 1))
                 fi
@@ -277,9 +398,11 @@ jobs:
           require_conditional "Typecheck Frontend" "$FRONTEND_CHANGED" "$TYPECHECK_RESULT"
           require_conditional "Test Frontend" "$FRONTEND_CHANGED" "$FRONTEND_TESTS_RESULT"
 
-          require_conditional "Ruff lint" "$PYTHON_CHANGED" "$RUFF_RESULT"
-          require_conditional "Test common lib" "$PYTHON_CHANGED" "$PYTEST_LIBS_RESULT"
-          require_conditional "Test Python services" "$PYTHON_CHANGED" "$PYTEST_SERVICES_RESULT"
+          require_conditional "Ruff changed Python files" "$PYTHON_CHANGED" "$RUFF_RESULT"
+          require_conditional "Test common lib" "$COMMON_CHANGED" "$PYTEST_LIBS_RESULT"
+          require_conditional "Test Python services" "$SERVICES_CHANGED" "$PYTEST_SERVICES_RESULT"
+          require_conditional "Contracts Python checks" "$CONTRACTS_CHANGED" "$CONTRACTS_PYTHON_RESULT"
+          require_conditional "Validate Contracts AsyncAPI" "$CONTRACTS_CHANGED" "$CONTRACTS_ASYNCAPI_RESULT"
 
           if (( failures > 0 )); then
             echo "::error::Release Gate заблокирован: ${failures} обязательных проверок не пройдены."

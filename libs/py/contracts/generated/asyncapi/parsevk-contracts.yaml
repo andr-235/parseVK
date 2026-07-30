@@ -1,0 +1,34 @@
+asyncapi: 3.1.0
+info:
+  title: ParseVK Contracts
+  version: 0.1.0
+  description: AsyncAPI specification for ParseVK Kafka message contracts
+defaultContentType: application/json
+channels:
+  parsevk_vk_commands:
+    address: parsevk.vk.commands
+    messages:
+      vk_execution_requested_v1:
+        $ref: '#/components/messages/vk_execution_requested_v1'
+operations:
+  tasks_service_send_vk_execution_requested_v1:
+    action: send
+    channel:
+      $ref: '#/channels/parsevk_vk_commands'
+    messages:
+    - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_requested_v1'
+  vk_service_receive_vk_execution_requested_v1:
+    action: receive
+    channel:
+      $ref: '#/channels/parsevk_vk_commands'
+    messages:
+    - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_requested_v1'
+components:
+  messages:
+    vk_execution_requested_v1:
+      name: vk.execution.requested
+      title: vk.execution.requested
+      summary: vk.execution.requested v1
+      contentType: application/json
+      payload:
+        $ref: ../json-schema/vk.execution.requested/1.json
