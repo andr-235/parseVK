@@ -1,3 +1,10 @@
+## [0.83.1](https://github.com/andr-235/parseVK/compare/v0.83.0...v0.83.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* **release:** validate semantic release commit before GHCR publish ([#339](https://github.com/andr-235/parseVK/issues/339)) ([dd64f57](https://github.com/andr-235/parseVK/commit/dd64f575a42367474ba538eb45972c24d193d72b)), closes [#23](https://github.com/andr-235/parseVK/issues/23) [#1019](https://github.com/andr-235/parseVK/issues/1019) [#804](https://github.com/andr-235/parseVK/issues/804)
+
 # [0.83.0](https://github.com/andr-235/parseVK/compare/v0.82.0...v0.83.0) (2026-07-30)
 
 
