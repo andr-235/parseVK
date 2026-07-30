@@ -1,3 +1,10 @@
+## [0.77.2](https://github.com/andr-235/parseVK/compare/v0.77.1...v0.77.2) (2026-07-30)
+
+
+### Bug Fixes
+
+* **ai-review:** load reviewer code from trusted base ([#306](https://github.com/andr-235/parseVK/issues/306)) ([477958c](https://github.com/andr-235/parseVK/commit/477958caf706d59a5aabf204fbe1f4269f8a3c68))
+
 ## [0.77.1](https://github.com/andr-235/parseVK/compare/v0.77.0...v0.77.1) (2026-07-30)
 
 
