@@ -1,3 +1,10 @@
+## [0.78.2](https://github.com/andr-235/parseVK/compare/v0.78.1...v0.78.2) (2026-07-30)
+
+
+### Bug Fixes
+
+* **ai-review:** стабилизировать ревью средних и крупных PR ([#309](https://github.com/andr-235/parseVK/issues/309)) ([654bfbf](https://github.com/andr-235/parseVK/commit/654bfbffc4890f1f3212376ce9fc034ad6fc9c32))
+
 ## [0.78.1](https://github.com/andr-235/parseVK/compare/v0.78.0...v0.78.1) (2026-07-30)
 
 
