@@ -373,6 +373,80 @@ jobs:
               print(f"::warning::{summary}")
           PY
 
+  finalize_progress:
+    name: Clear review in progress
+    needs: [prepare, review, verdict]
+    if: >-
+      always() &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == github.repository_owner &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Remove processing reaction for this HEAD
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          api_url = os.environ.get("GITHUB_API_URL", "https://api.github.com").rstrip("/")
+          repository = os.environ["GITHUB_REPOSITORY"]
+          pr_number = os.environ["PR_NUMBER"]
+          expected_head = os.environ["EXPECTED_HEAD"]
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "parsevk-ai-review-progress-cleanup",
+          }
+
+          def request(method: str, path: str):
+              value = urllib.request.Request(
+                  f"{api_url}{path}",
+                  headers=headers,
+                  method=method,
+              )
+              with urllib.request.urlopen(value, timeout=30) as response:
+                  payload = response.read()
+              return json.loads(payload) if payload else None
+
+          pull_request = request("GET", f"/repos/{repository}/pulls/{pr_number}")
+          current_head = str((pull_request or {}).get("head", {}).get("sha") or "")
+          if current_head != expected_head:
+              print(
+                  "::notice::Processing reaction belongs to an obsolete HEAD; "
+                  "the current run leaves it untouched."
+              )
+              raise SystemExit(0)
+
+          reactions = request(
+              "GET",
+              f"/repos/{repository}/issues/{pr_number}/reactions?per_page=100",
+          )
+          removed = 0
+          for reaction in reactions or []:
+              user = reaction.get("user") or {}
+              if reaction.get("content") != "eyes":
+                  continue
+              if user.get("login") != "github-actions[bot]":
+                  continue
+              request(
+                  "DELETE",
+                  f"/repos/{repository}/issues/{pr_number}/reactions/{reaction['id']}",
+              )
+              removed += 1
+          print(f"Removed {removed} processing reaction(s).")
+          PY
+
   cleanup:
     name: Clean up closed Pull Request
     if: >-
