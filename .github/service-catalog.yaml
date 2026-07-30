@@ -1,16 +1,29 @@
 {
   "schema_version": 1,
-  "global_change_paths": [
-    ".github/service-catalog.yaml",
-    ".github/scripts/service_catalog.py",
-    ".github/workflows/ci.yml",
-    ".github/workflows/security.yml",
-    ".github/workflows/deploy.yml",
-    ".dockerignore",
-    "pyproject.toml",
-    "libs/py/common/",
-    "libs/py/contracts/"
-  ],
+  "global_change_paths": {
+    "pytest": [
+      "pyproject.toml",
+      "libs/py/common/",
+      "libs/py/contracts/"
+    ],
+    "audit": [
+      "pyproject.toml",
+      "libs/py/common/",
+      "libs/py/contracts/"
+    ],
+    "docker": [
+      ".dockerignore",
+      "pyproject.toml",
+      "libs/py/common/",
+      "libs/py/contracts/"
+    ],
+    "deploy": [
+      ".dockerignore",
+      "pyproject.toml",
+      "libs/py/common/",
+      "libs/py/contracts/"
+    ]
+  },
   "services": {
     "frontend": {
       "kind": "frontend",
