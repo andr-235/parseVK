@@ -1,0 +1,78 @@
+# AI Code Review
+
+Reviewer анализирует Pull Request моделью `opencode/big-pickle`, но публикация результата полностью отделена от модели.
+
+## Архитектура
+
+Workflow состоит из четырёх независимых частей:
+
+1. `prepare` удаляет прежнюю реакцию бота и ставит `👀`.
+2. `review` имеет только `contents: read`, запускает OpenCode CLI напрямую и сохраняет сырой ответ локально. У этого job нет прав записи в Pull Request и Issue.
+3. `publish` скачивает только валидированный `review-result.json`, управляет реакциями и создаёт Issue при наличии замечаний.
+4. `cleanup` срабатывает при закрытии Pull Request, удаляет служебные реакции и комментарии и закрывает связанное Issue.
+
+OpenCode больше не запускается в режиме `opencode github run`, поэтому сырой JSON не публикуется в обсуждение PR и не успевает попасть в уведомления.
+
+## Область анализа
+
+Reviewer пропускает:
+
+- Markdown, README и `docs/**`;
+- изображения и PDF;
+- `.github/workflows/ai-code-review.yml`;
+- `.github/ai-review/**`;
+- `.github/scripts/ai_review*` (проверяется unit-тестами, а не самой моделью).
+
+Для анализа допускается не более 25 файлов и 1500 изменённых строк. Более крупный PR получает `😕` и не блокируется, поскольку ставить `👍` после частичного анализа было бы довольно смелой формой оптимизма.
+
+## Проверка findings
+
+Python-модуль проверяет:
+
+- JSON-схему и точный `head_sha`;
+- severity и confidence;
+- принадлежность файла текущему diff;
+- принадлежность строки изменённому hunk с допуском ±3 строки;
+- допустимость `line: null` только для конфигураций, схем и миграций;
+- длину и безопасность публикуемого текста.
+
+Пороги:
+
+- `blocker`: `confidence >= 0.90`, блокирует PR;
+- `major`: `confidence >= 0.85`, блокирует PR;
+- `minor`: `confidence >= 0.90`, создаёт Issue, но Action остаётся зелёным.
+
+## Публикация
+
+- нет замечаний: только `👍`, без комментария и Issue;
+- только minor: `😕`, Issue с подробностями, Action зелёный;
+- major или blocker: `👎`, Issue с подробностями, Action красный;
+- техническая ошибка или слишком большой PR: `😕`, без нового Issue и без блокировки.
+
+Issue ищется по скрытому marker в body:
+
+```html
+<!-- ai-review:pr=123 -->
+```
+
+Переименование Issue не создаёт дубликат.
+
+## Безопасность
+
+- reviewer запускается только для PR владельца репозитория;
+- PR из fork и Dependabot не получают secrets;
+- `review` job не имеет `issues: write` или `pull-requests: write`;
+- `GITHUB_TOKEN` не передаётся процессу OpenCode;
+- проектный `opencode.json` не загружается;
+- shell, edit, task, todo, LSP и внешний интернет модели запрещены;
+- OpenCode installer и CLI закреплены на версии `1.17.7`;
+- сессия не публикуется.
+
+## Тесты
+
+```bash
+PYTHONPATH=.github/scripts \
+python -m unittest discover -s .github/scripts -p 'test_ai_review.py' -v
+```
+
+Тестируются пустой результат, minor, major, неправильный SHA, finding вне hunk, file-level finding, prompt injection и повреждённый JSONL.

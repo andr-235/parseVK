@@ -1,3 +1,24 @@
+## [0.77.2](https://github.com/andr-235/parseVK/compare/v0.77.1...v0.77.2) (2026-07-30)
+
+
+### Bug Fixes
+
+* **ai-review:** load reviewer code from trusted base ([#306](https://github.com/andr-235/parseVK/issues/306)) ([477958c](https://github.com/andr-235/parseVK/commit/477958caf706d59a5aabf204fbe1f4269f8a3c68))
+
+## [0.77.1](https://github.com/andr-235/parseVK/compare/v0.77.0...v0.77.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* **deploy:** блокировать production до успешных проверок ([#303](https://github.com/andr-235/parseVK/issues/303)) ([655fcb6](https://github.com/andr-235/parseVK/commit/655fcb6ff16287c6aac39fe3b389709d74a84725))
+
+# [0.77.0](https://github.com/andr-235/parseVK/compare/v0.76.0...v0.77.0) (2026-07-29)
+
+
+### Features
+
+* добавить AI-ревью Pull Request через OpenCode Zen ([#296](https://github.com/andr-235/parseVK/issues/296)) ([4ad20f6](https://github.com/andr-235/parseVK/commit/4ad20f6776e31a4e48aec4ec4e2f937dc214152f))
+
 # [0.76.0](https://github.com/andr-235/parseVK/compare/v0.75.0...v0.76.0) (2026-07-28)
 
 

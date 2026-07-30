@@ -1,0 +1,343 @@
+name: AI Code Review
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened, ready_for_review, closed]
+
+concurrency:
+  group: ai-code-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions: {}
+
+env:
+  PYTHONUNBUFFERED: "1"
+  AI_REVIEW_SCRIPT: .github/scripts/ai_review.py
+
+jobs:
+  prepare:
+    name: Mark review in progress
+    if: >-
+      github.event.action != 'closed' &&
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == github.repository_owner &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout trusted reviewer code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/ai_review.py
+          sparse-checkout-cone-mode: false
+
+      - name: Add processing reaction
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: python "$AI_REVIEW_SCRIPT" mark --pr "$PR_NUMBER"
+
+  review:
+    name: Analyze Pull Request
+    env:
+      AI_REVIEW_DIR: ${{ github.workspace }}/.ai-review-runtime
+      TRUSTED_REVIEWER_DIR: ${{ runner.temp }}/ai-review-trusted
+      AI_REVIEW_SCRIPT: ${{ runner.temp }}/ai-review-trusted/ai_review.py
+    if: >-
+      github.event.action != 'closed' &&
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == github.repository_owner &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout trusted reviewer code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/ai_review.py
+            .github/scripts/test_ai_review.py
+          sparse-checkout-cone-mode: false
+
+      - name: Isolate trusted reviewer code
+        run: |
+          mkdir -p "$TRUSTED_REVIEWER_DIR"
+          cp .github/scripts/ai_review.py "$TRUSTED_REVIEWER_DIR/ai_review.py"
+          cp .github/scripts/test_ai_review.py "$TRUSTED_REVIEWER_DIR/test_ai_review.py"
+
+      - name: Checkout Pull Request
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Test trusted reviewer logic
+        id: self_test
+        continue-on-error: true
+        env:
+          PYTHONPATH: ${{ runner.temp }}/ai-review-trusted
+        run: python -m unittest discover -s "$TRUSTED_REVIEWER_DIR" -p 'test_ai_review.py' -v
+
+      - name: Build review scope
+        id: scope
+        continue-on-error: true
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          mkdir -p "$AI_REVIEW_DIR"
+          python "$AI_REVIEW_SCRIPT" scope \
+            --base "$BASE_SHA" \
+            --head "$HEAD_SHA" \
+            --output-dir "$AI_REVIEW_DIR"
+          echo "status=$(python -c 'import json,os; print(json.load(open(os.path.join(os.environ["AI_REVIEW_DIR"], "scope.json"), encoding="utf-8"))["status"])')" >> "$GITHUB_OUTPUT"
+
+      - name: Debounce rapid commits
+        id: freshness
+        if: >-
+          steps.self_test.outcome == 'success' &&
+          steps.scope.outcome == 'success' &&
+          steps.scope.outputs.status == 'review'
+        env:
+          CURRENT_HEAD_URL: ${{ github.event.pull_request.url }}
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sleep 45
+          current_head="$(curl --fail --silent --show-error \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "$CURRENT_HEAD_URL" | python -c 'import json,sys; print(json.load(sys.stdin)["head"]["sha"])')"
+          if [[ "$current_head" == "$EXPECTED_HEAD" ]]; then
+            echo "fresh=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "fresh=false" >> "$GITHUB_OUTPUT"
+            echo "Newer commit detected; OpenCode will not run for ${EXPECTED_HEAD}."
+          fi
+
+      - name: Checkout pinned OpenCode installer
+        if: steps.freshness.outputs.fresh == 'true'
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: anomalyco/opencode
+          ref: 4ed4f749e644ffb5b279fb30b7b915e743d80142 # action v1.17.7
+          path: .opencode-installer
+          persist-credentials: false
+          sparse-checkout: install
+          sparse-checkout-cone-mode: false
+
+      - name: Install pinned OpenCode CLI
+        id: install
+        if: steps.freshness.outputs.fresh == 'true'
+        continue-on-error: true
+        env:
+          VERSION: 1.17.7
+        run: |
+          bash .opencode-installer/install --no-modify-path
+          rm -rf .opencode-installer
+          echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
+
+      - name: Run OpenCode without GitHub publishing
+        id: opencode
+        if: >-
+          steps.freshness.outputs.fresh == 'true' &&
+          steps.install.outcome == 'success'
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          OPENCODE_DISABLE_PROJECT_CONFIG: "true"
+          OPENCODE_CONFIG_CONTENT: >-
+            {"default_agent":"plan","agent":{"plan":{"temperature":0,"prompt":"You are an automated Pull Request code reviewer. Analyze only the attached diff and obey the exact JSON contract in the user prompt. Never return prose, Markdown, a plan, or tool-only output. If analysis cannot be completed, return status technical-error with the exact head_sha and an empty findings array."},"title":{"disable":true}}}
+          OPENCODE_PERMISSION: >-
+            {"read":{"*":"allow",".github/workflows/ai-code-review.yml":"deny","*.md":"deny","**/*.md":"deny","README*":"deny","**/README*":"deny","docs/**":"deny",".github/ai-review/**":"deny",".github/scripts/ai_review*":"deny"},"bash":"deny","edit":"deny","task":"deny","todowrite":"deny","skill":"deny","lsp":"deny","webfetch":"deny","websearch":"deny","external_directory":"deny","doom_loop":"deny"}
+        run: |
+          set +e
+          opencode run \
+            --format json \
+            --model opencode/big-pickle \
+            --agent plan \
+            --no-share \
+            --file "$AI_REVIEW_DIR/review.diff" \
+            < "$AI_REVIEW_DIR/prompt.txt" \
+            > "$AI_REVIEW_DIR/opencode-events.jsonl" \
+            2> "$AI_REVIEW_DIR/opencode.stderr"
+          exit_code=$?
+          set -e
+          echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+          if (( exit_code != 0 )); then
+            echo "::warning::OpenCode exited with code ${exit_code}."
+          fi
+
+      - name: Build validated review result
+        id: finalize
+        continue-on-error: true
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          TEST_OUTCOME: ${{ steps.self_test.outcome }}
+          SCOPE_OUTCOME: ${{ steps.scope.outcome }}
+          SCOPE_STATUS: ${{ steps.scope.outputs.status }}
+          FRESH: ${{ steps.freshness.outputs.fresh }}
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          OPENCODE_EXIT: ${{ steps.opencode.outputs.exit_code }}
+        run: |
+          mkdir -p "$AI_REVIEW_DIR"
+          if [[ "$TEST_OUTCOME" != "success" ]]; then
+            python "$AI_REVIEW_SCRIPT" fallback \
+              --head "$HEAD_SHA" \
+              --reason reviewer-self-test-failed \
+              --summary 'Внутренние тесты reviewer завершились ошибкой.' \
+              --output "$AI_REVIEW_DIR/review-result.json"
+          elif [[ "$SCOPE_OUTCOME" != "success" ]]; then
+            python "$AI_REVIEW_SCRIPT" fallback \
+              --head "$HEAD_SHA" \
+              --reason scope-failed \
+              --summary 'Не удалось определить область AI-ревью.' \
+              --output "$AI_REVIEW_DIR/review-result.json"
+          elif [[ "${FRESH:-true}" == "false" ]]; then
+            python "$AI_REVIEW_SCRIPT" fallback \
+              --head "$HEAD_SHA" \
+              --reason obsolete-run \
+              --summary 'Запуск устарел до обращения к модели.' \
+              --output "$AI_REVIEW_DIR/review-result.json"
+          elif [[ "$SCOPE_STATUS" == "review" && "$INSTALL_OUTCOME" != "success" ]]; then
+            python "$AI_REVIEW_SCRIPT" fallback \
+              --head "$HEAD_SHA" \
+              --reason opencode-install-failed \
+              --summary 'Не удалось установить закреплённую версию OpenCode CLI.' \
+              --output "$AI_REVIEW_DIR/review-result.json"
+          else
+            python "$AI_REVIEW_SCRIPT" finalize \
+              --scope "$AI_REVIEW_DIR/scope.json" \
+              --events "$AI_REVIEW_DIR/opencode-events.jsonl" \
+              --exit-code "${OPENCODE_EXIT:-0}" \
+              --output "$AI_REVIEW_DIR/review-result.json"
+          fi
+
+      - name: Ensure a publishable result exists
+        if: always()
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          mkdir -p "$AI_REVIEW_DIR"
+          if [[ ! -s "$AI_REVIEW_DIR/review-result.json" ]]; then
+            python "$AI_REVIEW_SCRIPT" fallback \
+              --head "$HEAD_SHA" \
+              --reason result-generation-failed \
+              --summary 'Reviewer не смог сформировать итоговый результат.' \
+              --output "$AI_REVIEW_DIR/review-result.json"
+          fi
+
+      - name: Upload validated result
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ai-review-result-${{ github.run_id }}
+          path: ${{ github.workspace }}/.ai-review-runtime/review-result.json
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish review verdict
+    env:
+      AI_REVIEW_DIR: ${{ github.workspace }}/.ai-review-runtime
+    needs: [prepare, review]
+    if: >-
+      always() &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == github.repository_owner &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout trusted publisher code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/ai_review.py
+          sparse-checkout-cone-mode: false
+
+      - name: Download validated result
+        id: download
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ai-review-result-${{ github.run_id }}
+          path: ${{ github.workspace }}/.ai-review-runtime
+
+      - name: Create fallback when the review artifact is unavailable
+        if: steps.download.outcome != 'success'
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          mkdir -p "$AI_REVIEW_DIR"
+          python "$AI_REVIEW_SCRIPT" fallback \
+            --head "$HEAD_SHA" \
+            --reason missing-review-artifact \
+            --summary 'Артефакт AI-ревью отсутствует.' \
+            --output "$AI_REVIEW_DIR/review-result.json"
+
+      - name: Publish reactions and findings
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          python "$AI_REVIEW_SCRIPT" publish \
+            --pr "$PR_NUMBER" \
+            --title "$PR_TITLE" \
+            --result "$AI_REVIEW_DIR/review-result.json"
+
+  cleanup:
+    name: Clean up closed Pull Request
+    if: >-
+      github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == github.repository_owner
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout trusted cleanup code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/ai_review.py
+          sparse-checkout-cone-mode: false
+
+      - name: Remove reactions, comments and close linked Issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MERGED: ${{ github.event.pull_request.merged }}
+        run: |
+          args=()
+          if [[ "$MERGED" == "true" ]]; then
+            args+=(--merged)
+          fi
+          python "$AI_REVIEW_SCRIPT" cleanup --pr "$PR_NUMBER" "${args[@]}"
