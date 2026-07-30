@@ -73,6 +73,7 @@ class ResultTests(unittest.TestCase):
         result = ai_review.finalize_result(self.scope(), events, 0)
         self.assertEqual(result.verdict, "approved")
         self.assertEqual(result.reaction, "+1")
+        self.assertEqual(result.summary, "Подтверждённых замечаний нет.")
 
     def test_minor_is_non_blocking_and_confused(self) -> None:
         events = self.write_events(
@@ -175,8 +176,7 @@ class ResultTests(unittest.TestCase):
             result = ai_review.finalize_result(self.scope(), root, 0)
         self.assertEqual(result.verdict, "findings")
         self.assertEqual(len(result.findings), 1)
-        self.assertIn("chunk 1", result.summary)
-        self.assertIn("chunk 2", result.summary)
+        self.assertEqual(result.summary, "Подтверждено замечаний: 1 (minor: 1).")
 
     def test_finding_outside_changed_hunk_is_dropped(self) -> None:
         events = self.write_events(
@@ -200,6 +200,7 @@ class ResultTests(unittest.TestCase):
         result = ai_review.finalize_result(self.scope(), events, 0)
         self.assertEqual(result.verdict, "approved")
         self.assertEqual(result.dropped_findings, 1)
+        self.assertEqual(result.summary, "Подтверждённых замечаний нет.")
 
     def test_file_level_config_finding_is_allowed(self) -> None:
         events = self.write_events(

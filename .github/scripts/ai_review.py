@@ -601,6 +601,17 @@ def event_paths(events_path: Path | None) -> tuple[Path, ...]:
     return tuple(sorted(events_path.glob("opencode-events-*.jsonl")))
 
 
+def render_result_summary(findings: Sequence[Finding]) -> str:
+    if not findings:
+        return "Подтверждённых замечаний нет."
+    counts = {
+        severity: sum(1 for finding in findings if finding.severity == severity)
+        for severity in ("blocker", "major", "minor")
+    }
+    parts = [f"{severity}: {count}" for severity, count in counts.items() if count]
+    return f"Подтверждено замечаний: {len(findings)} ({', '.join(parts)})."
+
+
 def finalize_result(scope: Scope, events_path: Path | None, exit_code: int) -> FinalResult:
     if scope.status == "skipped":
         return skipped_result(scope)
@@ -614,7 +625,6 @@ def finalize_result(scope: Scope, events_path: Path | None, exit_code: int) -> F
         return unavailable_result(scope.head_sha, "missing-events", "Файлы событий OpenCode отсутствуют.")
 
     try:
-        summaries: list[str] = []
         model_findings: list[Finding] = []
         for path in paths:
             text = extract_text_events(path)
@@ -622,7 +632,6 @@ def finalize_result(scope: Scope, events_path: Path | None, exit_code: int) -> F
             status, summary, findings = validate_model_result(raw, scope.head_sha)
             if status == "technical-error":
                 return unavailable_result(scope.head_sha, "model-technical-error", summary)
-            summaries.append(summary)
             model_findings.extend(findings)
 
         unique: dict[tuple[Any, ...], Finding] = {}
@@ -638,7 +647,7 @@ def finalize_result(scope: Scope, events_path: Path | None, exit_code: int) -> F
             unique.setdefault(key, finding)
         accepted, dropped = filter_findings(tuple(unique.values()), scope)
         dropped += len(model_findings) - len(unique)
-        summary = " | ".join(summaries)
+        summary = render_result_summary(accepted)
     except ReviewError as error:
         return unavailable_result(scope.head_sha, "invalid-model-result", str(error))
 
