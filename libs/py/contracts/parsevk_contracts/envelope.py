@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Generic, TypeVar
 from uuid import UUID
 
 from pydantic import AwareDatetime, field_validator
 
 from ._base import ContractModel
-
-PayloadT = TypeVar("PayloadT", bound=ContractModel)
 
 
 class EnvelopeHeader(ContractModel):
@@ -22,7 +19,7 @@ class EnvelopeHeader(ContractModel):
     schema_version: int
 
 
-class MessageEnvelope(ContractModel, Generic[PayloadT]):
+class MessageEnvelope[PayloadT: ContractModel](ContractModel):
     """Typed message envelope for Kafka events.
 
     Pure DTO — no business methods, no validation logic.
