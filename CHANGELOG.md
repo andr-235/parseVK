@@ -1,3 +1,10 @@
+## [0.81.1](https://github.com/andr-235/parseVK/compare/v0.81.0...v0.81.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* **ai-review:** пропускать inline publish без artifact ([#329](https://github.com/andr-235/parseVK/issues/329)) ([ef8ee39](https://github.com/andr-235/parseVK/commit/ef8ee39520d1e18329ed3a5d789a23cd021841df))
+
 # [0.81.0](https://github.com/andr-235/parseVK/compare/v0.80.0...v0.81.0) (2026-07-30)
 
 
