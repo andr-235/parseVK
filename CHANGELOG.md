@@ -1,3 +1,10 @@
+## [0.78.1](https://github.com/andr-235/parseVK/compare/v0.78.0...v0.78.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* **ai-review:** исправить использование runner.temp ([3cfe92d](https://github.com/andr-235/parseVK/commit/3cfe92d577fba10e0a9fc798ab73643aef2c54ff))
+
 # [0.78.0](https://github.com/andr-235/parseVK/compare/v0.77.2...v0.78.0) (2026-07-30)
 
 
