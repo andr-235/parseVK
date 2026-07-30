@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "global_change_paths": {
     "pytest": [
       "pyproject.toml",
@@ -16,7 +16,8 @@
       "docker-compose.yml",
       "pyproject.toml",
       "libs/py/common/",
-      "libs/py/contracts/"
+      "libs/py/contracts/",
+      ".github/workflows/reusable-docker-security.yml"
     ],
     "deploy": [
       ".dockerignore",
@@ -24,6 +25,18 @@
       "pyproject.toml",
       "libs/py/common/",
       "libs/py/contracts/"
+    ],
+    "migration": [
+      ".github/service-catalog.yaml",
+      "docker-compose.yml",
+      "pyproject.toml",
+      "libs/py/common/",
+      "libs/py/contracts/",
+      ".github/scripts/service_catalog.py",
+      ".github/scripts/service_catalog_lib/",
+      ".github/scripts/alembic_graph.py",
+      ".github/scripts/validate_alembic_graphs.py",
+      ".github/workflows/reusable-alembic-migration.yml"
     ]
   },
   "services": {
@@ -40,107 +53,197 @@
       "pytest": false,
       "dependency_audit": false,
       "docker_scan": true,
-      "compose_build": ["frontend"]
+      "compose_build": [
+        "frontend"
+      ],
+      "migration": null
     },
     "api-gateway": {
       "kind": "python",
       "path": "services/api-gateway",
       "dockerfile": "services/api-gateway/Dockerfile",
-      "change_paths": ["services/api-gateway/"],
+      "change_paths": [
+        "services/api-gateway/"
+      ],
       "pytest": true,
       "dependency_audit": true,
       "docker_scan": true,
-      "compose_build": ["api-gateway"]
+      "compose_build": [
+        "api-gateway"
+      ],
+      "migration": null
     },
     "identity-service": {
       "kind": "python",
       "path": "services/identity-service",
       "dockerfile": "services/identity-service/Dockerfile",
-      "change_paths": ["services/identity-service/"],
+      "change_paths": [
+        "services/identity-service/"
+      ],
       "pytest": true,
       "dependency_audit": true,
       "docker_scan": true,
-      "compose_build": ["identity-service", "identity-migrate", "identity-seed-admin"]
+      "compose_build": [
+        "identity-service",
+        "identity-migrate",
+        "identity-seed-admin"
+      ],
+      "migration": {
+        "database_url_env": "IDENTITY_DATABASE_URL",
+        "compose_target": "identity-migrate"
+      }
     },
     "tasks-service": {
       "kind": "python",
       "path": "services/tasks-service",
       "dockerfile": "services/tasks-service/Dockerfile",
-      "change_paths": ["services/tasks-service/"],
+      "change_paths": [
+        "services/tasks-service/"
+      ],
       "pytest": true,
       "dependency_audit": true,
       "docker_scan": true,
-      "compose_build": ["tasks-service", "tasks-migrate"]
+      "compose_build": [
+        "tasks-service",
+        "tasks-migrate"
+      ],
+      "migration": {
+        "database_url_env": "TASKS_DATABASE_URL",
+        "compose_target": "tasks-migrate"
+      }
     },
     "vk-service": {
       "kind": "python",
       "path": "services/vk-service",
       "dockerfile": "services/vk-service/Dockerfile",
-      "change_paths": ["services/vk-service/"],
+      "change_paths": [
+        "services/vk-service/"
+      ],
       "pytest": true,
       "dependency_audit": true,
       "docker_scan": true,
-      "compose_build": ["vk-service", "vk-migrate"]
+      "compose_build": [
+        "vk-service",
+        "vk-migrate"
+      ],
+      "migration": {
+        "database_url_env": "VK_SERVICE_DATABASE_URL",
+        "compose_target": "vk-migrate"
+      }
     },
     "content-service": {
       "kind": "python",
       "path": "services/content-service",
       "dockerfile": "services/content-service/Dockerfile",
-      "change_paths": ["services/content-service/"],
+      "change_paths": [
+        "services/content-service/"
+      ],
       "pytest": true,
       "dependency_audit": true,
       "docker_scan": true,
-      "compose_build": ["content-service", "content-migrate"]
+      "compose_build": [
+        "content-service",
+        "content-migrate"
+      ],
+      "migration": {
+        "database_url_env": "CONTENT_DATABASE_URL",
+        "compose_target": "content-migrate"
+      }
     },
     "listings-service": {
       "kind": "python",
       "path": "services/listings-service",
       "dockerfile": "services/listings-service/Dockerfile",
-      "change_paths": ["services/listings-service/"],
+      "change_paths": [
+        "services/listings-service/"
+      ],
       "pytest": true,
       "dependency_audit": true,
       "docker_scan": true,
-      "compose_build": ["listings-service", "listings-migrate"]
+      "compose_build": [
+        "listings-service",
+        "listings-migrate"
+      ],
+      "migration": {
+        "database_url_env": "LISTINGS_DATABASE_URL",
+        "compose_target": "listings-migrate"
+      }
     },
     "moderation-service": {
       "kind": "python",
       "path": "services/moderation-service",
       "dockerfile": "services/moderation-service/Dockerfile",
-      "change_paths": ["services/moderation-service/"],
+      "change_paths": [
+        "services/moderation-service/"
+      ],
       "pytest": true,
       "dependency_audit": true,
       "docker_scan": true,
-      "compose_build": ["moderation-service", "moderation-migrate"]
+      "compose_build": [
+        "moderation-service",
+        "moderation-migrate"
+      ],
+      "migration": {
+        "database_url_env": "MODERATION_DATABASE_URL",
+        "compose_target": "moderation-migrate"
+      }
     },
     "realtime-service": {
       "kind": "python",
       "path": "services/realtime-service",
       "dockerfile": "services/realtime-service/Dockerfile",
-      "change_paths": ["services/realtime-service/"],
+      "change_paths": [
+        "services/realtime-service/"
+      ],
       "pytest": true,
       "dependency_audit": true,
       "docker_scan": true,
-      "compose_build": ["realtime-service", "realtime-migrate"]
+      "compose_build": [
+        "realtime-service",
+        "realtime-migrate"
+      ],
+      "migration": {
+        "database_url_env": "REALTIME_DATABASE_URL",
+        "compose_target": "realtime-migrate"
+      }
     },
     "telegram-service": {
       "kind": "python",
       "path": "services/telegram-service",
       "dockerfile": "services/telegram-service/Dockerfile",
-      "change_paths": ["services/telegram-service/"],
+      "change_paths": [
+        "services/telegram-service/"
+      ],
       "pytest": true,
       "dependency_audit": true,
       "docker_scan": true,
-      "compose_build": ["telegram-service", "telegram-migrate"]
+      "compose_build": [
+        "telegram-service",
+        "telegram-migrate"
+      ],
+      "migration": {
+        "database_url_env": "TELEGRAM_SERVICE_DATABASE_URL",
+        "compose_target": "telegram-migrate"
+      }
     },
     "im-service": {
       "kind": "python",
       "path": "services/im-service",
       "dockerfile": "services/im-service/Dockerfile",
-      "change_paths": ["services/im-service/"],
+      "change_paths": [
+        "services/im-service/"
+      ],
       "pytest": true,
       "dependency_audit": true,
       "docker_scan": true,
-      "compose_build": ["im-service", "im-migrate"]
+      "compose_build": [
+        "im-service",
+        "im-migrate"
+      ],
+      "migration": {
+        "database_url_env": "IM_SERVICE_DATABASE_URL",
+        "compose_target": "im-migrate"
+      }
     }
   }
 }

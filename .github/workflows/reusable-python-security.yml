@@ -1,0 +1,31 @@
+name: Reusable Python Dependency Security
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        description: Python service directory name under services/
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    name: Audit ${{ inputs.service }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Audit Python dependencies
+        working-directory: services/${{ inputs.service }}
+        run: |
+          set -euo pipefail
+          uv sync --frozen
+          if ! uv audit --frozen --no-dev; then
+            echo "::warning::Python dependency findings detected in ${{ inputs.service }}; currently advisory until the existing backlog is fixed."
+          fi

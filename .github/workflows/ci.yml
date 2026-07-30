@@ -26,7 +26,10 @@ jobs:
       common_changed: ${{ steps.filter.outputs.common_changed }}
       services_changed: ${{ steps.services.outputs.changed }}
       service_matrix: ${{ steps.services.outputs.value }}
+      migrations_changed: ${{ steps.migrations.outputs.changed }}
+      migration_matrix: ${{ steps.migrations.outputs.value }}
       contracts_changed: ${{ steps.filter.outputs.contracts_changed }}
+      quality_workflow_changed: ${{ steps.filter.outputs.quality_workflow_changed }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -53,6 +56,7 @@ jobs:
           PYTHON_CHANGED=false
           COMMON_CHANGED=false
           CONTRACTS_CHANGED=false
+          QUALITY_WORKFLOW_CHANGED=false
 
           if [[ -z "$BASE_SHA" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
             echo "Base commit not found; treating as full change set"
@@ -60,8 +64,9 @@ jobs:
             PYTHON_CHANGED=true
             COMMON_CHANGED=true
             CONTRACTS_CHANGED=true
+            QUALITY_WORKFLOW_CHANGED=true
           else
-            CHANGED_FILES="$(git diff --name-only --diff-filter=ACMRT "$BASE_SHA" "$HEAD_SHA")"
+            CHANGED_FILES="$(git diff --name-only --diff-filter=ACMRT "$BASE_SHA...$HEAD_SHA")"
             if [[ -z "$CHANGED_FILES" ]]; then
               echo "No changed files detected"
             else
@@ -85,6 +90,10 @@ jobs:
               CONTRACTS_CHANGED=true
             fi
 
+            if grep -qE '^\.github/workflows/reusable-python-quality\.yml$' <<<"$CHANGED_FILES"; then
+              QUALITY_WORKFLOW_CHANGED=true
+            fi
+
             if grep -qE '^pyproject\.toml$' <<<"$CHANGED_FILES"; then
               COMMON_CHANGED=true
               CONTRACTS_CHANGED=true
@@ -96,14 +105,14 @@ jobs:
             echo "python_changed=$PYTHON_CHANGED"
             echo "common_changed=$COMMON_CHANGED"
             echo "contracts_changed=$CONTRACTS_CHANGED"
+            echo "quality_workflow_changed=$QUALITY_WORKFLOW_CHANGED"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Build Python service test matrix
-        id: services
+      - name: Resolve comparison range
+        id: range
         shell: bash
         run: |
           set -euo pipefail
-
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             BASE_SHA="${{ github.event.pull_request.base.sha }}"
             HEAD_SHA="${{ github.event.pull_request.head.sha }}"
@@ -114,11 +123,27 @@ jobs:
             BASE_SHA=""
             HEAD_SHA="${{ github.sha }}"
           fi
+          {
+            echo "base=$BASE_SHA"
+            echo "head=$HEAD_SHA"
+          } >> "$GITHUB_OUTPUT"
 
+      - name: Build Python service test matrix
+        id: services
+        run: |
           python3 .github/scripts/service_catalog.py matrix \
             --purpose pytest \
-            --base "$BASE_SHA" \
-            --head "$HEAD_SHA" \
+            --base "${{ steps.range.outputs.base }}" \
+            --head "${{ steps.range.outputs.head }}" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Build migration test matrix
+        id: migrations
+        run: |
+          python3 .github/scripts/service_catalog.py matrix \
+            --purpose migration \
+            --base "${{ steps.range.outputs.base }}" \
+            --head "${{ steps.range.outputs.head }}" \
             --github-output "$GITHUB_OUTPUT"
 
   lint:
@@ -185,7 +210,7 @@ jobs:
             mapfile -t PYTHON_FILES < <(git ls-files '*.py')
           else
             mapfile -t PYTHON_FILES < <(
-              git diff --name-only --diff-filter=ACMRT "$BASE_SHA" "$HEAD_SHA" -- '*.py' \
+              git diff --name-only --diff-filter=ACMRT "$BASE_SHA...$HEAD_SHA" -- '*.py' \
                 | while IFS= read -r path; do
                     [[ -f "$path" ]] && printf '%s\n' "$path"
                   done
@@ -208,6 +233,8 @@ jobs:
       - uses: actions/checkout@v6
       - name: Test catalog CLI
         run: python3 .github/scripts/test_service_catalog.py -v
+      - name: Test Alembic graph validator
+        run: python3 .github/scripts/test_validate_alembic_graphs.py -v
       - name: Validate repository and Compose coverage
         run: python3 .github/scripts/service_catalog.py validate --compose-file docker-compose.yml
 
@@ -271,8 +298,7 @@ jobs:
         run: uv run pytest -v
 
   pytest-services:
-    name: Test ${{ matrix.service }}
-    runs-on: ubuntu-latest
+    name: Test Python services
     needs: changes
     if: needs.changes.outputs.services_changed == 'true'
     strategy:
@@ -280,19 +306,30 @@ jobs:
       max-parallel: 4
       matrix:
         service: ${{ fromJSON(needs.changes.outputs.service_matrix) }}
-    env:
-      PYTHONPATH: ${{ github.workspace }}/libs/py/common
-    steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-      - name: Install dependencies
-        working-directory: services/${{ matrix.service }}
-        run: uv sync --extra test --frozen
-      - name: Run tests
-        working-directory: services/${{ matrix.service }}
-        run: uv run pytest -v
+    uses: ./.github/workflows/reusable-python-quality.yml
+    with:
+      service: ${{ matrix.service }}
+
+  quality-workflow-smoke:
+    name: Smoke reusable Python quality
+    needs: changes
+    if: needs.changes.outputs.quality_workflow_changed == 'true'
+    uses: ./.github/workflows/reusable-python-quality.yml
+    with:
+      service: identity-service
+
+  migration-services:
+    name: Test database migrations
+    needs: changes
+    if: needs.changes.outputs.migrations_changed == 'true'
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.changes.outputs.migration_matrix) }}
+    uses: ./.github/workflows/reusable-alembic-migration.yml
+    with:
+      service: ${{ matrix.service }}
+      database_url_env: ${{ matrix.database_url_env }}
 
   contracts-python:
     name: Contracts Python checks
@@ -407,6 +444,8 @@ jobs:
       - frontend-tests
       - pytest-libs
       - pytest-services
+      - quality-workflow-smoke
+      - migration-services
       - contracts-python
       - contracts-asyncapi
     steps:
@@ -417,6 +456,8 @@ jobs:
           PYTHON_CHANGED: ${{ needs.changes.outputs.python_changed }}
           COMMON_CHANGED: ${{ needs.changes.outputs.common_changed }}
           SERVICES_CHANGED: ${{ needs.changes.outputs.services_changed }}
+          MIGRATIONS_CHANGED: ${{ needs.changes.outputs.migrations_changed }}
+          QUALITY_WORKFLOW_CHANGED: ${{ needs.changes.outputs.quality_workflow_changed }}
           CONTRACTS_CHANGED: ${{ needs.changes.outputs.contracts_changed }}
           CHANGES_RESULT: ${{ needs.changes.result }}
           LINT_RESULT: ${{ needs.lint.result }}
@@ -428,6 +469,8 @@ jobs:
           FRONTEND_TESTS_RESULT: ${{ needs.frontend-tests.result }}
           PYTEST_LIBS_RESULT: ${{ needs.pytest-libs.result }}
           PYTEST_SERVICES_RESULT: ${{ needs.pytest-services.result }}
+          MIGRATION_SERVICES_RESULT: ${{ needs.migration-services.result }}
+          QUALITY_WORKFLOW_RESULT: ${{ needs.quality-workflow-smoke.result }}
           CONTRACTS_PYTHON_RESULT: ${{ needs.contracts-python.result }}
           CONTRACTS_ASYNCAPI_RESULT: ${{ needs.contracts-asyncapi.result }}
         run: |
@@ -475,6 +518,8 @@ jobs:
           require_conditional "Ruff changed Python files" "$PYTHON_CHANGED" "$RUFF_RESULT"
           require_conditional "Test common lib" "$COMMON_CHANGED" "$PYTEST_LIBS_RESULT"
           require_conditional "Test Python services" "$SERVICES_CHANGED" "$PYTEST_SERVICES_RESULT"
+          require_conditional "Smoke reusable Python quality" "$QUALITY_WORKFLOW_CHANGED" "$QUALITY_WORKFLOW_RESULT"
+          require_conditional "Execute Alembic migrations" "$MIGRATIONS_CHANGED" "$MIGRATION_SERVICES_RESULT"
           require_conditional "Contracts Python checks" "$CONTRACTS_CHANGED" "$CONTRACTS_PYTHON_RESULT"
           require_conditional "Validate Contracts AsyncAPI" "$CONTRACTS_CHANGED" "$CONTRACTS_ASYNCAPI_RESULT"
 

@@ -1,93 +1,69 @@
 #!/usr/bin/env python3
-"""Validate Alembic revision graphs without importing service dependencies."""
+"""Validate Alembic revision graphs declared by the service catalog."""
 
-import ast
+from __future__ import annotations
+
+import argparse
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 
+from alembic_graph import validate_versions_dir
+from service_catalog_lib import CATALOG_PATH, Catalog, CatalogError, Service
+
 ROOT = Path(__file__).resolve().parents[2]
-MAX_REVISION_LENGTH = 32
 
 
-def _metadata(path: Path) -> tuple[str, tuple[str, ...]]:
-    values: dict[str, object] = {}
-    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-
-    for node in tree.body:
-        name: str | None = None
-        if isinstance(node, ast.Assign) and len(node.targets) == 1:
-            target = node.targets[0]
-            if isinstance(target, ast.Name):
-                name = target.id
-        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
-            name = node.target.id
-
-        if name in {"revision", "down_revision"} and node.value is not None:
-            values[name] = ast.literal_eval(node.value)
-
-    revision = values.get("revision")
-    down_revision = values.get("down_revision")
-    if not isinstance(revision, str):
-        raise ValueError("revision must be a string literal")
-    if down_revision is None:
-        parents: tuple[str, ...] = ()
-    elif isinstance(down_revision, str):
-        parents = (down_revision,)
-    elif isinstance(down_revision, (tuple, list)) and all(
-        isinstance(parent, str) for parent in down_revision
-    ):
-        parents = tuple(down_revision)
-    else:
-        raise ValueError("down_revision must be None, a string, or a string sequence")
-
-    return revision, parents
+def select_services(catalog: Catalog, requested: Iterable[str]) -> tuple[Service, ...]:
+    services = {service.name: service for service in catalog.selected("migration")}
+    names = tuple(requested)
+    if not names:
+        return tuple(services.values())
+    unknown = sorted(set(names) - services.keys())
+    if unknown:
+        raise CatalogError(
+            "requested services are not migration services: " + ", ".join(unknown)
+        )
+    return tuple(services[name] for name in names)
 
 
-def main() -> int:
+def validate_services(
+    catalog: Catalog, repo_root: Path, requested: Iterable[str] = ()
+) -> list[str]:
     errors: list[str] = []
+    for service in select_services(catalog, requested):
+        versions = repo_root / service.path / "alembic" / "versions"
+        service_errors, head = validate_versions_dir(service.name, versions)
+        errors.extend(service_errors)
+        if not service_errors and head is not None:
+            print(f"{service.name}: {head} (head)")
+    return errors
 
-    for versions_dir in sorted(ROOT.glob("services/*/alembic/versions")):
-        service = versions_dir.parents[1].name
-        revisions: dict[str, Path] = {}
-        referenced: set[str] = set()
 
-        for path in sorted(versions_dir.glob("*.py")):
-            if path.name == "__init__.py":
-                continue
-            try:
-                revision, parents = _metadata(path)
-            except (SyntaxError, ValueError) as exc:
-                errors.append(f"{service}: {path.name}: {exc}")
-                continue
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--repo-root", type=Path, default=ROOT)
+    parser.add_argument("--catalog", type=Path, default=CATALOG_PATH)
+    parser.add_argument("--service", action="append", default=[])
+    return parser
 
-            if len(revision) > MAX_REVISION_LENGTH:
-                errors.append(
-                    f"{service}: revision {revision!r} is {len(revision)} characters; "
-                    f"maximum is {MAX_REVISION_LENGTH}"
-                )
-            if revision in revisions:
-                errors.append(
-                    f"{service}: duplicate revision {revision!r} in "
-                    f"{revisions[revision].name} and {path.name}"
-                )
-            revisions[revision] = path
-            referenced.update(parents)
 
-        missing = sorted(referenced - revisions.keys())
-        if missing:
-            errors.append(f"{service}: missing parent revisions: {', '.join(missing)}")
-
-        heads = sorted(revisions.keys() - referenced)
-        if len(heads) != 1:
-            errors.append(f"{service}: expected exactly one head, found {heads}")
-        elif revisions:
-            print(f"{service}: {heads[0]} (head)")
-
+def main(argv: Sequence[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    repo_root = args.repo_root.resolve()
+    catalog_path = args.catalog
+    if not catalog_path.is_absolute():
+        catalog_path = repo_root / catalog_path
+    try:
+        catalog = Catalog.load(catalog_path)
+        errors = validate_services(catalog, repo_root, args.service)
+    except CatalogError as exc:
+        print(f"Alembic graph validation failed:\n- {exc}")
+        return 1
     if errors:
         print("\nAlembic graph validation failed:")
         for error in errors:
             print(f"- {error}")
         return 1
-
     return 0
 
 
