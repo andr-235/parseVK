@@ -1,3 +1,16 @@
+# [0.80.0](https://github.com/andr-235/parseVK/compare/v0.79.1...v0.80.0) (2026-07-30)
+
+
+### Bug Fixes
+
+* **ai-review:** логировать причины отклонения findings ([#319](https://github.com/andr-235/parseVK/issues/319)) ([96fb2b8](https://github.com/andr-235/parseVK/commit/96fb2b81baa5511f41da4163adc5cbc9415b2f44))
+* **ai-review:** перепривязывать близкие строки findings к diff ([#322](https://github.com/andr-235/parseVK/issues/322)) ([85809e1](https://github.com/andr-235/parseVK/commit/85809e1e1be0cb71bbd29ee082ba4cd13fd35558))
+
+
+### Features
+
+* **contracts:** PR01 exit gates — compatibility & registry validation ([#282](https://github.com/andr-235/parseVK/issues/282)) ([#308](https://github.com/andr-235/parseVK/issues/308)) ([e0936fb](https://github.com/andr-235/parseVK/commit/e0936fb79b05346abe7fe0f30f8e79269fd78996))
+
 ## [0.79.1](https://github.com/andr-235/parseVK/compare/v0.79.0...v0.79.1) (2026-07-30)
 
 
