@@ -6,16 +6,30 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
 SERVICE_CATALOG_CLI="${SERVICE_CATALOG_CLI:-$PROJECT_ROOT/.github/scripts/service_catalog.py}"
-declare -A PULLED_IMAGES=()
+ALLOW_IMAGE_PULLS="${ALLOW_IMAGE_PULLS:-false}"
+declare -A PREPARED_IMAGES=()
 
-pull_image() {
+prepare_image() {
   local image="$1"
-  if [ -n "${PULLED_IMAGES[$image]:-}" ]; then
+  if [ -n "${PREPARED_IMAGES[$image]:-}" ]; then
     return 0
   fi
-  PULLED_IMAGES[$image]=1
-  log_info "Pulling image: $image"
-  retry_with_backoff 3 5 "timeout 300s docker pull $image"
+  PREPARED_IMAGES[$image]=1
+
+  if docker image inspect "$image" >/dev/null 2>&1; then
+    log_info "Using local image: $image"
+    return 0
+  fi
+
+  if [ "$ALLOW_IMAGE_PULLS" = "true" ]; then
+    log_warn "Local image missing; explicit external pull enabled: $image"
+    retry_with_backoff 3 5 "timeout 300s docker pull $image"
+    return 0
+  fi
+
+  log_error "Required build image is not available locally: $image"
+  log_error "Seed it on the self-hosted runner or explicitly set ALLOW_IMAGE_PULLS=true"
+  return 1
 }
 
 resolve_services() {
@@ -31,7 +45,7 @@ resolve_services() {
 
   local targets
   targets="$(python3 "$SERVICE_CATALOG_CLI" --repo-root "$PROJECT_ROOT" changed --purpose deploy --all)"
-  read -r -a target_array <<< "$targets"
+  read -r -a target_array <<<"$targets"
   printf '%s\n' "${target_array[@]}"
   printf '%s\n' prometheus node-exporter grafana
 }
@@ -60,28 +74,28 @@ prepare_images() {
   fi
 
   local -a services
-  mapfile -t services <<< "$resolved"
+  mapfile -t services <<<"$resolved"
 
   if contains_service frontend "${services[@]}"; then
-    pull_image "oven/bun:1-alpine"
-    pull_image "nginx:alpine"
+    prepare_image "oven/bun:1-alpine"
+    prepare_image "nginx:alpine"
   fi
 
   if contains_service prometheus "${services[@]}"; then
-    pull_image "prom/prometheus:v3.11.3"
+    prepare_image "prom/prometheus:v3.11.3"
   fi
   if contains_service node-exporter "${services[@]}"; then
-    pull_image "prom/node-exporter:v1.11.1"
+    prepare_image "prom/node-exporter:v1.11.1"
   fi
   if contains_service grafana "${services[@]}"; then
-    pull_image "grafana/grafana:13.0.1-security-01"
+    prepare_image "grafana/grafana:13.0.1-security-01"
   fi
 
   local service
   for service in "${services[@]}"; do
     case "$service" in
       api-gateway|*-service)
-        pull_image "python:3.12.13-slim"
+        prepare_image "python:3.12.13-slim"
         break
         ;;
     esac
@@ -94,7 +108,7 @@ build_services() {
     return 0
   fi
 
-  log_info "Building local services: $*"
+  log_info "Building local services with persistent BuildKit cache: $*"
   retry_with_backoff 2 10 "timeout 1200s docker compose --progress plain -f \"$COMPOSE_FILE\" build $*"
 }
 
