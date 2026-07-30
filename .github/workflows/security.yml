@@ -8,6 +8,11 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact release commit SHA to scan
+        required: true
+        type: string
   schedule:
     - cron: "0 0 * * 1"
 
@@ -27,6 +32,25 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_sha || github.sha }}
+
+      - name: Verify dispatched security target
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: |
+          set -euo pipefail
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          CURRENT_MAIN="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          [[ "$ACTUAL_SHA" == "$TARGET_SHA" ]] || {
+            echo "::error::Dispatched Security checked out $ACTUAL_SHA, expected $TARGET_SHA"
+            exit 1
+          }
+          [[ "$CURRENT_MAIN" == "$TARGET_SHA" ]] || {
+            echo "::error::Dispatched Security target is stale: target=$TARGET_SHA main=$CURRENT_MAIN"
+            exit 1
+          }
 
       - name: Build Python audit matrix
         id: audit
@@ -65,6 +89,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_sha || github.sha }}
       - uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
@@ -74,6 +100,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_sha || github.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -160,6 +188,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: ${{ github.event_name == 'workflow_dispatch' && 2 || 0 }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_sha || github.sha }}
 
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2

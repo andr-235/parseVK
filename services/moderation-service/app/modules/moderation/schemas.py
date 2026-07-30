@@ -11,7 +11,7 @@ class CommentModerationState(BaseModel):
     date: datetime | None
     author_vk_id: int | None
     is_read: bool
-    status: str
+    status: str | None
     source: str
     matched_keywords: list[str]
 
@@ -23,7 +23,7 @@ class UpdateCommentReadStatus(BaseModel):
 
 
 class UpdateCommentStatus(BaseModel):
-    status: str
+    status: str | None
 
 
 class CommentModerationList(BaseModel):

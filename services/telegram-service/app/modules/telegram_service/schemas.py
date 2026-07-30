@@ -5,11 +5,11 @@ from common.schemas import CamelModel
 
 
 class TelegramJobStatus(str, Enum):
-    PENDING = "PENDING"
-    RUNNING = "RUNNING"
-    DONE = "DONE"
-    FAILED = "FAILED"
-    CANCELLED = "CANCELLED"
+    PENDING = "pending"
+    RUNNING = "running"
+    DONE = "done"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
 class TelegramExportStartResponse(CamelModel):

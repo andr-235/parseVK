@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * RealtimeProvider — React context provider for realtime event stream.
  * 
@@ -38,7 +39,7 @@ export function RealtimeProvider({ children, enabled = true }: RealtimeProviderP
   const handlersRef = useRef<Set<RealtimeEventHandler>>(new Set())
   const clientRef = useRef<RealtimeClient | null>(null)
   const queryClient = useQueryClient()
-  const user = useAuth((s) => s.user)
+  const userId = useAuth((s) => s.user?.id)
   const coalesceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const subscribe = useCallback((handler: RealtimeEventHandler): () => void => {
@@ -73,12 +74,12 @@ export function RealtimeProvider({ children, enabled = true }: RealtimeProviderP
     const client = getClient()
     clientRef.current = client
 
-    if (!enabled || !user) {
+    if (!enabled || !userId) {
       client.disconnect()
       return
     }
 
-    client.resetForUser(user.id)
+    client.resetForUser(userId)
 
     const eventHandler: RealtimeEventHandler = (event) => {
       // Dispatch to all registered handlers
@@ -121,7 +122,7 @@ export function RealtimeProvider({ children, enabled = true }: RealtimeProviderP
       clearInterval(statusInterval)
       client.disconnect()
     }
-  }, [enabled, user?.id, queryClient, invalidateComments])
+  }, [enabled, userId, queryClient, invalidateComments])
 
   return (
     <RealtimeContext.Provider value={{ subscribe, isConnected }}>
