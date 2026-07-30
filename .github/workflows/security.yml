@@ -8,10 +8,11 @@ on:
     branches:
       - main
   schedule:
-    - cron: "0 0 * * 1" # Weekly on Monday
+    - cron: "0 0 * * 1"
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
   dependency-review:
@@ -25,7 +26,6 @@ jobs:
       - uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
-
 
   dependency-scan:
     name: Scan Dependencies
@@ -41,20 +41,29 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
-      - name: Scan Frontend dependencies
+      - name: Scan Frontend production dependencies
         id: scan-frontend
-        continue-on-error: true
         working-directory: front
         run: |
+          set -euo pipefail
           bun install --frozen-lockfile
-          bun audit --json > audit-frontend.json || true
-          if [ -f audit-frontend.json ]; then
-            VULN_COUNT=$(cat audit-frontend.json | jq -r '.metadata.vulnerabilities.total // 0')
-            echo "vulnerabilities=$VULN_COUNT" >> $GITHUB_OUTPUT
-            if [ "$VULN_COUNT" -gt 0 ]; then
-              echo "Found $VULN_COUNT vulnerabilities in Frontend dependencies"
-              cat audit-frontend.json | jq -r '.vulnerabilities | to_entries[] | "\(.key): \(.value.severity)"' || true
-            fi
+
+          set +e
+          bun audit --prod --json > audit-frontend.json
+          AUDIT_EXIT=$?
+          set -e
+
+          jq empty audit-frontend.json
+          CRITICAL_COUNT=$(jq '[to_entries[] | select((.value | type) == "array") | .value[] | select(.severity == "critical")] | length' audit-frontend.json)
+          HIGH_COUNT=$(jq '[to_entries[] | select((.value | type) == "array") | .value[] | select(.severity == "high")] | length' audit-frontend.json)
+
+          echo "critical=$CRITICAL_COUNT" >> "$GITHUB_OUTPUT"
+          echo "high=$HIGH_COUNT" >> "$GITHUB_OUTPUT"
+          echo "Frontend production audit: critical=$CRITICAL_COUNT high=$HIGH_COUNT"
+
+          if [ "$AUDIT_EXIT" -ne 0 ] && [ "$CRITICAL_COUNT" -eq 0 ] && [ "$HIGH_COUNT" -eq 0 ]; then
+            echo "::error::bun audit failed without a valid vulnerability report"
+            exit "$AUDIT_EXIT"
           fi
 
       - name: Upload Frontend audit results
@@ -66,11 +75,10 @@ jobs:
           if-no-files-found: ignore
 
       - name: Fail on critical vulnerabilities
-        if: steps.scan-frontend.outputs.vulnerabilities > 0
+        if: steps.scan-frontend.outputs.critical > 0
         run: |
-          echo "⚠️ Security vulnerabilities detected!"
-          echo "Frontend vulnerabilities: ${steps.scan-frontend.outputs.vulnerabilities:-0}"
-          echo "Please review and fix critical vulnerabilities before merging."
+          echo "Critical frontend vulnerabilities: ${{ steps.scan-frontend.outputs.critical }}"
+          echo "High frontend vulnerabilities: ${{ steps.scan-frontend.outputs.high }}"
           exit 1
 
   python-dependency-scan:
@@ -95,15 +103,16 @@ jobs:
           enable-cache: true
       - name: Audit Python dependencies (${{ matrix.service }})
         working-directory: services/${{ matrix.service }}
-        continue-on-error: true
         run: |
-          uv sync
-          uv audit || echo "uv audit completed with findings"
+          set -euo pipefail
+          uv sync --frozen
+          if ! uv audit --frozen --no-dev; then
+            echo "::warning::Python dependency findings detected in ${{ matrix.service }}; currently advisory until the existing backlog is fixed."
+          fi
 
   docker-scan:
     name: Scan Docker Images
     runs-on: ubuntu-latest
-    needs: []
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     steps:
       - uses: actions/checkout@v6
@@ -125,17 +134,16 @@ jobs:
 
           FRONTEND_CHANGED=false
 
-          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000" ] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
             FRONTEND_CHANGED=true
           else
-            CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" || true)
-            
+            CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
             if echo "$CHANGED_FILES" | grep -qE '^front/|^docker/frontend\.Dockerfile|^docker/frontend-entrypoint\.sh|^docker/frontend\.nginx\.conf'; then
               FRONTEND_CHANGED=true
             fi
           fi
 
-          echo "frontend_changed=$FRONTEND_CHANGED" >> $GITHUB_OUTPUT
+          echo "frontend_changed=$FRONTEND_CHANGED" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -173,7 +181,6 @@ jobs:
         with:
           sarif_file: "trivy-frontend-results.sarif"
           wait-for-processing: false
-        continue-on-error: true
 
   secret-scan:
     name: Scan for Secrets
@@ -192,3 +199,55 @@ jobs:
           no-git: false
           exit-code: 1
           redact: true
+
+  security-gate:
+    name: Security Gate
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - dependency-review
+      - dependency-scan
+      - python-dependency-scan
+      - docker-scan
+      - secret-scan
+    steps:
+      - name: Enforce security workflow integrity
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DEPENDENCY_REVIEW_RESULT: ${{ needs.dependency-review.result }}
+          DEPENDENCY_SCAN_RESULT: ${{ needs.dependency-scan.result }}
+          PYTHON_SCAN_RESULT: ${{ needs.python-dependency-scan.result }}
+          DOCKER_SCAN_RESULT: ${{ needs.docker-scan.result }}
+          SECRET_SCAN_RESULT: ${{ needs.secret-scan.result }}
+        run: |
+          set -euo pipefail
+          failures=0
+
+          require_success() {
+            local name="$1"
+            local result="$2"
+            if [ "$result" != "success" ]; then
+              echo "::error::${name} завершён со статусом ${result}"
+              failures=$((failures + 1))
+            fi
+          }
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            require_success "Dependency Review" "$DEPENDENCY_REVIEW_RESULT"
+          elif [ "$DEPENDENCY_REVIEW_RESULT" != "skipped" ]; then
+            echo "::error::Dependency Review должен быть skipped для события ${EVENT_NAME}, получено ${DEPENDENCY_REVIEW_RESULT}"
+            failures=$((failures + 1))
+          fi
+
+          require_success "Frontend dependency scan" "$DEPENDENCY_SCAN_RESULT"
+          require_success "Python dependency scan" "$PYTHON_SCAN_RESULT"
+          require_success "Docker image scan" "$DOCKER_SCAN_RESULT"
+          require_success "Secret scan" "$SECRET_SCAN_RESULT"
+
+          if (( failures > 0 )); then
+            echo "::error::Security Gate заблокирован: ${failures} проверок не пройдены."
+            exit 1
+          fi
+
+          echo "Security Gate пройден для commit ${{ github.sha }}"
