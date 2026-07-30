@@ -1,0 +1,185 @@
+name: Publish Release Images
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/service-catalog.yaml
+      - .github/scripts/release_manifest.py
+      - .github/scripts/test_release_manifest.py
+      - .github/workflows/publish-release-images.yml
+      - .github/workflows/reusable-publish-image.yml
+      - scripts/test-release-workflow.sh
+  workflow_run:
+    workflows:
+      - Security Scanning
+    types:
+      - completed
+
+permissions: {}
+
+concurrency:
+  group: publish-release-images-main
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    name: Validate immutable release contracts
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v5
+      - name: Run release workflow contracts
+        run: bash scripts/test-release-workflow.sh
+      - name: Run Ruff
+        run: >-
+          uvx ruff check
+          .github/scripts/release_manifest.py
+          .github/scripts/test_release_manifest.py
+
+  gate:
+    name: Verify release gates
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      target_sha: ${{ steps.release.outputs.target_sha }}
+      matrix: ${{ steps.matrix.outputs.value }}
+    steps:
+      - name: Checkout validated commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify current main and successful CI
+        id: release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          for attempt in $(seq 1 60); do
+            MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+            if [[ "$MAIN_SHA" != "$TARGET_SHA" ]]; then
+              echo "::error::Refusing stale release $TARGET_SHA; main is $MAIN_SHA"
+              exit 1
+            fi
+
+            state="$(gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${TARGET_SHA}&event=push&per_page=20" \
+              --jq '(.workflow_runs | sort_by(.run_number, .run_attempt) | last) | [.status, .conclusion] | @tsv' \
+              2>/dev/null || true)"
+
+            if [[ "$state" == $'completed\tsuccess' ]]; then
+              echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+              echo "CI and Security are successful for $TARGET_SHA"
+              exit 0
+            fi
+            if [[ "$state" == completed$'\t'* && "$state" != $'completed\tsuccess' ]]; then
+              echo "::error::CI did not succeed for $TARGET_SHA: $state"
+              exit 1
+            fi
+            echo "Waiting for CI on $TARGET_SHA (attempt $attempt/60, state=${state:-missing})"
+            sleep 15
+          done
+
+          echo "::error::Timed out waiting for successful CI on $TARGET_SHA"
+          exit 1
+
+      - name: Build complete image matrix
+        id: matrix
+        run: >-
+          python3 .github/scripts/service_catalog.py matrix
+          --purpose docker
+          --all
+          --github-output "$GITHUB_OUTPUT"
+
+  publish-images:
+    name: Publish immutable images
+    needs: gate
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.gate.outputs.matrix) }}
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+      packages: write
+    uses: ./.github/workflows/reusable-publish-image.yml
+    with:
+      service: ${{ matrix.service }}
+      dockerfile: ${{ matrix.dockerfile }}
+      image_repository: ghcr.io/${{ github.repository_owner }}/parsevk-${{ matrix.service }}
+      target_sha: ${{ needs.gate.outputs.target_sha }}
+      build_args: ${{ matrix.service == 'frontend' && 'VITE_APP_TITLE=Центр аналитики\nVITE_API_URL=/api\nVITE_API_WS_URL=auto\nVITE_DEV_MODE=false' || '' }}
+
+  manifest:
+    name: Build release manifest
+    needs:
+      - gate
+      - publish-images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout validated commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.gate.outputs.target_sha }}
+          persist-credentials: false
+
+      - name: Download image metadata
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: published-image-*-${{ needs.gate.outputs.target_sha }}
+          path: release-image-metadata
+          merge-multiple: true
+
+      - name: Build and validate release manifest
+        shell: bash
+        env:
+          TARGET_SHA: ${{ needs.gate.outputs.target_sha }}
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/release_manifest.py \
+            --catalog .github/service-catalog.yaml \
+            --metadata-dir release-image-metadata \
+            --repository "$GITHUB_REPOSITORY" \
+            --commit-sha "$TARGET_SHA" \
+            --output-dir release-manifest
+
+      - name: Upload immutable release manifest
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-manifest-${{ needs.gate.outputs.target_sha }}
+          path: release-manifest/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Write workflow summary
+        shell: bash
+        run: |
+          {
+            echo "## Immutable release"
+            echo
+            echo "- Commit: \`${{ needs.gate.outputs.target_sha }}\`"
+            echo "- Images: \`$(find release-image-metadata -name '*.json' | wc -l)\`"
+            echo "- Artifact: \`release-manifest-${{ needs.gate.outputs.target_sha }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
