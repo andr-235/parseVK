@@ -15,6 +15,7 @@ permissions: {}
 env:
   PYTHONUNBUFFERED: "1"
   AI_REVIEW_SCRIPT: .github/scripts/ai_review.py
+  AI_REVIEW_AGENTS_SCRIPT: .github/scripts/ai_review_agents.py
 
 jobs:
   prepare:
@@ -68,7 +69,9 @@ jobs:
           persist-credentials: false
           sparse-checkout: |
             .github/scripts/ai_review.py
+            .github/scripts/ai_review_agents.py
             .github/scripts/test_ai_review.py
+            .github/scripts/test_ai_review_agents.py
           sparse-checkout-cone-mode: false
 
       - name: Isolate trusted reviewer code
@@ -77,9 +80,18 @@ jobs:
           mkdir -p "$trusted_dir"
           cp .github/scripts/ai_review.py "$trusted_dir/ai_review.py"
           cp .github/scripts/test_ai_review.py "$trusted_dir/test_ai_review.py"
+          agents_script=""
+          if [[ -f .github/scripts/ai_review_agents.py ]]; then
+            cp .github/scripts/ai_review_agents.py "$trusted_dir/ai_review_agents.py"
+            agents_script="$trusted_dir/ai_review_agents.py"
+          fi
+          if [[ -f .github/scripts/test_ai_review_agents.py ]]; then
+            cp .github/scripts/test_ai_review_agents.py "$trusted_dir/test_ai_review_agents.py"
+          fi
           {
             echo "TRUSTED_REVIEWER_DIR=$trusted_dir"
             echo "AI_REVIEW_SCRIPT=$trusted_dir/ai_review.py"
+            echo "AI_REVIEW_AGENTS_SCRIPT=$agents_script"
           } >> "$GITHUB_ENV"
 
       - name: Checkout Pull Request
@@ -92,7 +104,7 @@ jobs:
       - name: Test trusted reviewer logic
         id: self_test
         continue-on-error: true
-        run: PYTHONPATH="$TRUSTED_REVIEWER_DIR" python -m unittest discover -s "$TRUSTED_REVIEWER_DIR" -p 'test_ai_review.py' -v
+        run: PYTHONPATH="$TRUSTED_REVIEWER_DIR" python -m unittest discover -s "$TRUSTED_REVIEWER_DIR" -p 'test_ai_review*.py' -v
 
       - name: Build review scope
         id: scope
@@ -106,6 +118,15 @@ jobs:
             --base "$BASE_SHA" \
             --head "$HEAD_SHA" \
             --output-dir "$AI_REVIEW_DIR"
+          if [[ -n "$AI_REVIEW_AGENTS_SCRIPT" ]]; then
+            python "$AI_REVIEW_AGENTS_SCRIPT" \
+              --base "$BASE_SHA" \
+              --scope "$AI_REVIEW_DIR/scope.json" \
+              --prompt-dir "$AI_REVIEW_DIR" \
+              --repo "$GITHUB_WORKSPACE"
+          else
+            echo "Trusted base does not contain AGENTS.md injector yet; bootstrap run skips it."
+          fi
           echo "status=$(python -c 'import json,os; print(json.load(open(os.path.join(os.environ["AI_REVIEW_DIR"], "scope.json"), encoding="utf-8"))["status"])')" >> "$GITHUB_OUTPUT"
 
       - name: Debounce rapid commits
@@ -227,7 +248,7 @@ jobs:
             python "$AI_REVIEW_SCRIPT" fallback \
               --head "$HEAD_SHA" \
               --reason scope-failed \
-              --summary 'Не удалось определить область AI-ревью.' \
+              --summary 'Не удалось подготовить область или доверенные инструкции AI-ревью.' \
               --output "$AI_REVIEW_DIR/review-result.json"
           elif [[ "${FRESH:-true}" == "false" ]]; then
             python "$AI_REVIEW_SCRIPT" fallback \
