@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "global_change_paths": [
+    ".github/service-catalog.yaml",
+    ".github/scripts/service_catalog.py",
+    ".github/workflows/ci.yml",
+    ".github/workflows/security.yml",
+    ".github/workflows/deploy.yml",
+    ".dockerignore",
+    "pyproject.toml",
+    "libs/py/common/",
+    "libs/py/contracts/"
+  ],
+  "services": {
+    "frontend": {
+      "kind": "frontend",
+      "path": "front",
+      "dockerfile": "docker/frontend.Dockerfile",
+      "change_paths": [
+        "front/",
+        "docker/frontend.Dockerfile",
+        "docker/frontend.nginx.conf",
+        "docker/frontend-entrypoint.sh"
+      ],
+      "pytest": false,
+      "dependency_audit": false,
+      "docker_scan": true,
+      "compose_build": ["frontend"]
+    },
+    "api-gateway": {
+      "kind": "python",
+      "path": "services/api-gateway",
+      "dockerfile": "services/api-gateway/Dockerfile",
+      "change_paths": ["services/api-gateway/"],
+      "pytest": true,
+      "dependency_audit": true,
+      "docker_scan": true,
+      "compose_build": ["api-gateway"]
+    },
+    "identity-service": {
+      "kind": "python",
+      "path": "services/identity-service",
+      "dockerfile": "services/identity-service/Dockerfile",
+      "change_paths": ["services/identity-service/"],
+      "pytest": true,
+      "dependency_audit": true,
+      "docker_scan": true,
+      "compose_build": ["identity-service", "identity-migrate", "identity-seed-admin"]
+    },
+    "tasks-service": {
+      "kind": "python",
+      "path": "services/tasks-service",
+      "dockerfile": "services/tasks-service/Dockerfile",
+      "change_paths": ["services/tasks-service/"],
+      "pytest": true,
+      "dependency_audit": true,
+      "docker_scan": true,
+      "compose_build": ["tasks-service", "tasks-migrate"]
+    },
+    "vk-service": {
+      "kind": "python",
+      "path": "services/vk-service",
+      "dockerfile": "services/vk-service/Dockerfile",
+      "change_paths": ["services/vk-service/"],
+      "pytest": true,
+      "dependency_audit": true,
+      "docker_scan": true,
+      "compose_build": ["vk-service", "vk-migrate"]
+    },
+    "content-service": {
+      "kind": "python",
+      "path": "services/content-service",
+      "dockerfile": "services/content-service/Dockerfile",
+      "change_paths": ["services/content-service/"],
+      "pytest": true,
+      "dependency_audit": true,
+      "docker_scan": true,
+      "compose_build": ["content-service", "content-migrate"]
+    },
+    "listings-service": {
+      "kind": "python",
+      "path": "services/listings-service",
+      "dockerfile": "services/listings-service/Dockerfile",
+      "change_paths": ["services/listings-service/"],
+      "pytest": true,
+      "dependency_audit": true,
+      "docker_scan": true,
+      "compose_build": ["listings-service", "listings-migrate"]
+    },
+    "moderation-service": {
+      "kind": "python",
+      "path": "services/moderation-service",
+      "dockerfile": "services/moderation-service/Dockerfile",
+      "change_paths": ["services/moderation-service/"],
+      "pytest": true,
+      "dependency_audit": true,
+      "docker_scan": true,
+      "compose_build": ["moderation-service", "moderation-migrate"]
+    },
+    "realtime-service": {
+      "kind": "python",
+      "path": "services/realtime-service",
+      "dockerfile": "services/realtime-service/Dockerfile",
+      "change_paths": ["services/realtime-service/"],
+      "pytest": true,
+      "dependency_audit": true,
+      "docker_scan": true,
+      "compose_build": ["realtime-service", "realtime-migrate"]
+    },
+    "telegram-service": {
+      "kind": "python",
+      "path": "services/telegram-service",
+      "dockerfile": "services/telegram-service/Dockerfile",
+      "change_paths": ["services/telegram-service/"],
+      "pytest": true,
+      "dependency_audit": true,
+      "docker_scan": true,
+      "compose_build": ["telegram-service", "telegram-migrate"]
+    },
+    "im-service": {
+      "kind": "python",
+      "path": "services/im-service",
+      "dockerfile": "services/im-service/Dockerfile",
+      "change_paths": ["services/im-service/"],
+      "pytest": true,
+      "dependency_audit": true,
+      "docker_scan": true,
+      "compose_build": ["im-service", "im-migrate"]
+    }
+  }
+}
