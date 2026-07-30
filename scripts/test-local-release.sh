@@ -90,4 +90,20 @@ bash "$SCRIPT" promote "$commit_three"
 [ ! -e "$RELEASES_DIR/$commit_two" ]
 [ -f "$RELEASES_DIR/$commit_three/release.json" ]
 
-echo "Local immutable release lifecycle and protected retention are valid"
+failed_commit="4234567890abcdef1234567890abcdef12345678"
+printf 'sha256:failed-frontend\n' >"$TMP_DIR/docker-state/parsevk-frontend_latest"
+printf 'sha256:failed-gateway\n' >"$TMP_DIR/docker-state/parsevk-api-gateway_latest"
+bash "$SCRIPT" snapshot "$failed_commit"
+[ -f "$RELEASES_DIR/$failed_commit/release.json" ]
+bash "$SCRIPT" discard "$failed_commit"
+[ ! -e "$RELEASES_DIR/$failed_commit" ]
+[ ! -e "$TMP_DIR/docker-state/parsevk-release_frontend_sha-$failed_commit" ]
+[ ! -e "$TMP_DIR/docker-state/parsevk-release_api-gateway_sha-$failed_commit" ]
+
+if bash "$SCRIPT" discard "$commit_three" >/dev/null 2>&1; then
+  echo "Successful release was incorrectly discarded"
+  exit 1
+fi
+
+[ -f "$RELEASES_DIR/$commit_three/release.json" ]
+echo "Local immutable release lifecycle, protected retention and candidate cleanup are valid"
