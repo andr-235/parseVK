@@ -1,3 +1,10 @@
+# [0.78.0](https://github.com/andr-235/parseVK/compare/v0.77.2...v0.78.0) (2026-07-30)
+
+
+### Features
+
+* **contracts:** typed message contracts — catalog, validation, generation, CI ([#305](https://github.com/andr-235/parseVK/issues/305)) ([a493df6](https://github.com/andr-235/parseVK/commit/a493df67c835c32a96dedfb19d10af83e04300c2))
+
 ## [0.77.2](https://github.com/andr-235/parseVK/compare/v0.77.1...v0.77.2) (2026-07-30)
 
 
