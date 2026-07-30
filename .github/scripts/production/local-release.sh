@@ -151,11 +151,34 @@ activate_release() {
   log_info "Activated local release images: $commit"
 }
 
+discard_candidate() {
+  local commit="$1" manifest status release
+  validate_commit "$commit"
+  manifest="$(manifest_path "$commit")"
+  if [ ! -f "$manifest" ]; then
+    log_info "No local release candidate to discard: $commit"
+    return 0
+  fi
+
+  status="$(jq -r '.status // empty' "$manifest")"
+  if [ "$status" = "successful" ]; then
+    log_error "Refusing to discard successful release: $commit"
+    return 1
+  fi
+
+  while IFS= read -r release; do
+    docker image rm "$release" >/dev/null 2>&1 || true
+  done < <(jq -r '.images[].release_ref' "$manifest")
+  rm -rf "$(dirname "$manifest")"
+  log_info "Discarded failed local release candidate: $commit"
+}
+
 case "${1:-}" in
   snapshot) [ "$#" -eq 2 ] && snapshot_release "$2" || exit 2 ;;
   promote) [ "$#" -eq 2 ] && promote_release "$2" || exit 2 ;;
   verify) [ "$#" -eq 2 ] && verify_release "$2" || exit 2 ;;
   activate) [ "$#" -eq 2 ] && activate_release "$2" || exit 2 ;;
+  discard) [ "$#" -eq 2 ] && discard_candidate "$2" || exit 2 ;;
   path) [ "$#" -eq 2 ] && manifest_path "$2" || exit 2 ;;
-  *) log_error "Usage: local-release.sh {snapshot|promote|verify|activate|path} <commit>"; exit 1 ;;
+  *) log_error "Usage: local-release.sh {snapshot|promote|verify|activate|discard|path} <commit>"; exit 1 ;;
 esac
