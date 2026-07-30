@@ -22,10 +22,16 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("${{ matrix.unit.head_sha }}", self.source)
 
     def test_rapid_pushes_do_not_cancel_previous_commit_review(self) -> None:
+        self.assertIn(
+            "github.event.pull_request.head.sha || github.run_id",
+            self.source,
+        )
         self.assertIn("cancel-in-progress: false", self.source)
         self.assertIn("max-parallel: 4", self.source)
-        self.assertIn("Check commit still belongs to Pull Request", self.source)
-        self.assertIn("obsolete-commit", self.source)
+        self.assertNotIn("Check commit still belongs to Pull Request", self.source)
+        self.assertNotIn("obsolete-commit", self.source)
+        self.assertIn("github.event.workflow_run.id || github.run_id", self.publisher)
+        self.assertIn("cancel-in-progress: false", self.publisher)
 
     def test_each_commit_uploads_unique_validated_result(self) -> None:
         self.assertIn("ai-review-commit-${{ github.run_id }}-", self.source)
