@@ -202,6 +202,30 @@ class ResultTests(unittest.TestCase):
         self.assertEqual(result.dropped_findings, 1)
         self.assertEqual(result.summary, "Подтверждённых замечаний нет.")
 
+    def test_nearby_line_is_reanchored_to_changed_line(self) -> None:
+        events = self.write_events(
+            {
+                "status": "completed",
+                "head_sha": "b" * 40,
+                "summary": "nearby",
+                "findings": [
+                    {
+                        "severity": "major",
+                        "file": "src/app.py",
+                        "line": 15,
+                        "scenario": "scenario",
+                        "impact": "impact",
+                        "fix": "fix",
+                        "confidence": 0.99,
+                    }
+                ],
+            }
+        )
+        result = ai_review.finalize_result(self.scope(), events, 0)
+        self.assertEqual(result.verdict, "changes-required")
+        self.assertEqual(result.findings[0].line, 11)
+        self.assertEqual(result.dropped_findings, 0)
+
     def test_file_level_config_finding_is_allowed(self) -> None:
         events = self.write_events(
             {
