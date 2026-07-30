@@ -72,8 +72,47 @@ jobs:
             .github/scripts/ai_review_ui
           sparse-checkout-cone-mode: false
 
+      - name: Check validated AI review artifact
+        id: artifact
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+          ARTIFACT_NAME: ai-review-result-${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+
+          response_file="$RUNNER_TEMP/ai-review-artifacts.json"
+          curl --fail --silent --show-error \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/artifacts?per_page=100" \
+            > "$response_file"
+
+          python - "$response_file" "$ARTIFACT_NAME" "$GITHUB_OUTPUT" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          response_path, expected_name, output_path = sys.argv[1:]
+          payload = json.loads(Path(response_path).read_text(encoding="utf-8"))
+          artifacts = payload.get("artifacts", [])
+          exists = any(
+              artifact.get("name") == expected_name and not artifact.get("expired", False)
+              for artifact in artifacts
+          )
+          with Path(output_path).open("a", encoding="utf-8") as output:
+              output.write(f"exists={'true' if exists else 'false'}\n")
+          print(
+              f"Artifact {expected_name!r} "
+              + ("is available." if exists else "was not produced by the source run.")
+          )
+          PY
+
       - name: Download validated AI review result
         id: download
+        if: steps.artifact.outputs.exists == 'true'
         continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -95,6 +134,12 @@ jobs:
           --pr "$PR_NUMBER"
           --result .ai-review-runtime/review-result.json
 
-      - name: Report missing artifact
-        if: steps.download.outcome != 'success'
-        run: echo 'Validated AI review artifact is unavailable; legacy publisher remains authoritative.'
+      - name: Skip inline publishing without an artifact
+        if: steps.artifact.outputs.exists != 'true'
+        run: echo 'Source AI review run produced no validated artifact; inline publishing is not required.'
+
+      - name: Report artifact download failure
+        if: >-
+          steps.artifact.outputs.exists == 'true' &&
+          steps.download.outcome != 'success'
+        run: echo 'Validated artifact exists but could not be downloaded; legacy publisher remains authoritative.'
