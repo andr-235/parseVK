@@ -55,14 +55,18 @@ class CatalogTests(unittest.TestCase):
         self.assertFalse(path_matches(".dockerignore.backup", [".dockerignore"]))
         self.assertTrue(path_matches("services/api/app.py", ["services/api/"]))
 
-    def test_catalog_only_change_does_not_run_application_jobs(self) -> None:
+    def test_migration_contract_changes_only_run_migrations(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             catalog = make_catalog(Path(directory) / "catalog.yaml")
-            for purpose in ("pytest", "docker", "deploy", "migration"):
-                with self.subTest(purpose=purpose):
-                    self.assertEqual(
-                        catalog.changed(purpose, [".github/service-catalog.yaml"]), ()
-                    )
+            for changed in (".github/service-catalog.yaml", "docker-compose.yml"):
+                self.assertEqual(
+                    [service.name for service in catalog.changed("migration", [changed])],
+                    ["api"],
+                )
+            for purpose in ("pytest", "docker", "deploy"):
+                self.assertEqual(
+                    catalog.changed(purpose, [".github/service-catalog.yaml"]), ()
+                )
 
     def test_deploy_targets_are_flattened(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
