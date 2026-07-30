@@ -35,7 +35,7 @@ jobs:
             --all \
             --github-output "$GITHUB_OUTPUT"
 
-      - name: Build changed Docker image matrix
+      - name: Build Docker image matrix
         id: docker
         shell: bash
         run: |
@@ -44,14 +44,6 @@ jobs:
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             BASE_SHA="${{ github.event.pull_request.base.sha }}"
             HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-            python3 .github/scripts/service_catalog.py matrix \
-              --purpose docker \
-              --base "$BASE_SHA" \
-              --head "$HEAD_SHA" \
-              --github-output "$GITHUB_OUTPUT"
-          elif [[ "${{ github.event_name }}" == "push" ]]; then
-            BASE_SHA="${{ github.event.before }}"
-            HEAD_SHA="${{ github.sha }}"
             python3 .github/scripts/service_catalog.py matrix \
               --purpose docker \
               --base "$BASE_SHA" \
@@ -143,7 +135,7 @@ jobs:
       service: ${{ matrix.service }}
 
   docker-scan:
-    name: Scan changed Docker images
+    name: Scan Docker images
     needs: catalog
     if: needs.catalog.outputs.docker_changed == 'true'
     strategy:
