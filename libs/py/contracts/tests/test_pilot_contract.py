@@ -6,6 +6,8 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
+from pydantic import ValidationError
+
 from parsevk_contracts.envelope import MessageEnvelope
 from parsevk_contracts.vk.commands import (
     CATALOG,
@@ -16,7 +18,6 @@ from parsevk_contracts.vk.commands import (
     VkExecutionRequested,
     VkSourceDemandRequest,
 )
-from pydantic import ValidationError
 
 
 def make_valid_demand(

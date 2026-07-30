@@ -6,9 +6,10 @@ from datetime import UTC, datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
+from pydantic import ValidationError
+
 from parsevk_contracts._base import ContractModel
 from parsevk_contracts.envelope import MessageEnvelope
-from pydantic import ValidationError
 
 
 class SamplePayload(ContractModel):

@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import yaml
+
 from parsevk_contracts.generation.asyncapi import generate_asyncapi, write_asyncapi
 from parsevk_contracts.vk.commands import CATALOG as VK_CATALOG
 

@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import jsonschema
+
 from parsevk_contracts._base import ContractModel
 from parsevk_contracts.catalog import ContractCatalog, MessageContract
 from parsevk_contracts.generation import generate_all

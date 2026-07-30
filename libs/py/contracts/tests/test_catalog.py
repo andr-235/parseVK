@@ -6,6 +6,7 @@ from dataclasses import FrozenInstanceError
 from typing import Any, cast
 
 import pytest
+
 from parsevk_contracts._base import ContractModel
 from parsevk_contracts.catalog import ContractCatalog, MessageContract, PartitionKeySpec
 from parsevk_contracts.errors import DuplicateContractError, PartitionKeyError, UnknownContractError

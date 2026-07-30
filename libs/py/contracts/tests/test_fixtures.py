@@ -6,11 +6,11 @@ from pathlib import Path
 
 import jsonschema
 import pytest
+from pydantic import ValidationError
+
 from parsevk_contracts.envelope import MessageEnvelope
 from parsevk_contracts.generation.json_schema import generate_json_schema
 from parsevk_contracts.vk.commands import VK_EXECUTION_REQUESTED, VkExecutionRequested
-from pydantic import ValidationError
-
 from tests.fixtures import load_fixture
 
 FIXTURES_DIR = Path(__file__).resolve().parent.parent / "examples"

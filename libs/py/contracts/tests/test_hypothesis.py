@@ -8,6 +8,8 @@ from uuid import UUID
 import pytest
 from hypothesis import assume, given
 from hypothesis import strategies as st
+from pydantic import ValidationError
+
 from parsevk_contracts.envelope import MessageEnvelope
 from parsevk_contracts.vk.commands import (
     VK_EXECUTION_REQUESTED,
@@ -17,7 +19,6 @@ from parsevk_contracts.vk.commands import (
     VkExecutionRequested,
     VkSourceDemandRequest,
 )
-from pydantic import ValidationError
 
 # ── Hypothesis strategies ─────────────────────────────────────────────────────
 
