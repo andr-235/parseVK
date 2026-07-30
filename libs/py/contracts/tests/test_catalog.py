@@ -111,8 +111,8 @@ class TestMessageContract:
             schema_version=1,
             payload_model=SamplePayload,
             topic="test.topic",
-            producers=frozenset(),
-            consumers=frozenset(),
+            producers=frozenset({"default-producer"}),
+            consumers=frozenset({"default-consumer"}),
         )
         assert contract.correlation_required is False
         assert contract.causation_policy == "optional"
@@ -172,16 +172,16 @@ class TestContractCatalog:
             schema_version=1,
             payload_model=SamplePayload,
             topic="topic.a",
-            producers=frozenset(),
-            consumers=frozenset(),
+            producers=frozenset({"producer-a"}),
+            consumers=frozenset({"consumer-a"}),
         )
         c2 = MessageContract(
             message_type="event.b",
             schema_version=1,
             payload_model=SamplePayload,
             topic="topic.b",
-            producers=frozenset(),
-            consumers=frozenset(),
+            producers=frozenset({"producer-b"}),
+            consumers=frozenset({"consumer-b"}),
         )
         cat = ContractCatalog.from_contracts((c1, c2))
         assert cat.get("event.a", 1).message_type == "event.a"
@@ -194,8 +194,8 @@ class TestContractCatalog:
             schema_version=1,
             payload_model=SamplePayload,
             topic="topic.a",
-            producers=frozenset(),
-            consumers=frozenset(),
+            producers=frozenset({"producer-a"}),
+            consumers=frozenset({"consumer-a"}),
         )
         cat = ContractCatalog.from_contracts((c1,))
         with pytest.raises(FrozenInstanceError):
@@ -208,8 +208,8 @@ class TestContractCatalog:
             schema_version=1,
             payload_model=SamplePayload,
             topic="topic.a",
-            producers=frozenset(),
-            consumers=frozenset(),
+            producers=frozenset({"producer-a"}),
+            consumers=frozenset({"consumer-a"}),
         )
         cat = ContractCatalog.from_contracts((c1,))
         mutable_view = cast(Any, cat._by_identity)
@@ -223,8 +223,8 @@ class TestContractCatalog:
             schema_version=1,
             payload_model=SamplePayload,
             topic="topic.a",
-            producers=frozenset(),
-            consumers=frozenset(),
+            producers=frozenset({"producer-a"}),
+            consumers=frozenset({"consumer-a"}),
         )
         with pytest.raises(DuplicateContractError):
             ContractCatalog.from_contracts((c1, c1))

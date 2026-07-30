@@ -301,6 +301,8 @@ jobs:
     if: needs.changes.outputs.contracts_changed == 'true'
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -313,9 +315,52 @@ jobs:
       - name: Run strict typecheck
         working-directory: libs/py/contracts
         run: uv run mypy parsevk_contracts
+      - name: Validate registry metadata
+        working-directory: libs/py/contracts
+        run: uv run python -m parsevk_contracts.generation.cli validate-registry
       - name: Check generated artifacts
         working-directory: libs/py/contracts
         run: uv run python -m parsevk_contracts.generation.cli check
+      - name: Extract baseline generated artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            BASE_SHA="${{ github.event.before }}"
+          else
+            BASE_SHA="$(git rev-parse HEAD^ 2>/dev/null || true)"
+          fi
+
+          if [[ -z "$BASE_SHA" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+            echo "::error::Unable to resolve contract baseline SHA"
+            exit 2
+          fi
+
+          if ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            echo "::error::Baseline commit is unavailable: ${BASE_SHA}"
+            exit 2
+          fi
+
+          BASELINE_DIR="${RUNNER_TEMP}/contracts-baseline"
+          mkdir -p "$BASELINE_DIR"
+          git archive "$BASE_SHA" libs/py/contracts/generated |
+            tar -x -C "$BASELINE_DIR"
+          echo "BASELINE_DIR=$BASELINE_DIR" >> "$GITHUB_ENV"
+      - name: Check contract compatibility
+        shell: bash
+        working-directory: libs/py/contracts
+        run: |
+          set -euo pipefail
+          test -n "${BASELINE_DIR:-}" || {
+            echo "::error::Contract baseline was not extracted"
+            exit 2
+          }
+          uv run python -m parsevk_contracts.generation.cli compatibility \
+            --baseline "$BASELINE_DIR/libs/py/contracts/generated" \
+            --current generated
       - name: Validate examples against schemas
         working-directory: libs/py/contracts
         run: uv run python "${{ github.workspace }}/.github/scripts/validate_contract_examples.py"
