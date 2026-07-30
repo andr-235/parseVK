@@ -29,7 +29,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime
 from types import UnionType
-from typing import Union, get_args, get_origin
+from typing import Union, cast, get_args, get_origin
 from uuid import UUID
 
 from pydantic import ValidationError
@@ -123,6 +123,15 @@ def _reject_known_python_field_names(
                             _reject_known_python_field_names(item, nested_model, error_type, skip_recursion)
 
 
+def _make_envelope_type(
+    payload_model: type[ContractModel],
+) -> type[MessageEnvelope[ContractModel]]:
+    return cast(
+        type[MessageEnvelope[ContractModel]],
+        MessageEnvelope[payload_model],  # type: ignore[valid-type]
+    )
+
+
 def prepare_for_publish(
     catalog: ContractCatalog,
     *,
@@ -162,11 +171,6 @@ def prepare_for_publish(
 
     contract = catalog.get(header.message_type, header.schema_version)
 
-    if producer not in contract.producers:
-        raise ProducerNotAllowedError(
-            f"Service '{producer}' is not allowed to publish '{message_type}'"
-        )
-
     try:
         payload_model = contract.payload_model.model_validate(
             payload, strict=True, extra="forbid",
@@ -177,9 +181,7 @@ def prepare_for_publish(
             f"Payload validation failed for '{message_type}': {exc}"
         ) from exc
 
-    envelope_type: type[MessageEnvelope[ContractModel]] = MessageEnvelope[
-        contract.payload_model
-    ]
+    envelope_type = _make_envelope_type(contract.payload_model)
 
     try:
         envelope = envelope_type.model_validate(
@@ -202,6 +204,12 @@ def prepare_for_publish(
         raise ContractValidationError(
             f"Envelope validation failed for '{message_type}': {exc}"
         ) from exc
+
+    if producer not in contract.producers:
+        raise ProducerNotAllowedError(
+            f"Envelope producer '{envelope.producer}' is not allowed "
+            f"to publish '{message_type}'"
+        )
 
     _enforce_envelope_policy(contract, envelope)
 
@@ -274,9 +282,7 @@ def parse_for_consume(
             f"Service '{consumer}' is not allowed to consume '{message_type}'"
         )
 
-    envelope_type: type[MessageEnvelope[ContractModel]] = MessageEnvelope[
-        contract.payload_model  # type: ignore[name-defined]
-    ]
+    envelope_type = _make_envelope_type(contract.payload_model)
 
     _reject_known_python_field_names(raw, envelope_type, InvalidEnvelopeError, skip_recursion={"payload"})
 

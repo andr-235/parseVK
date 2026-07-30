@@ -256,8 +256,8 @@ def make_valid_producer_payload_dict(
     uid1, uid2, uid3 = uuid4(), uuid4(), uuid4()
     return {
         "task_id": 1,
-        "task_run_id": task_run_id or uid1,
-        "execution_id": execution_id or uid2,
+        "task_run_id": uid1 if task_run_id is None else task_run_id,
+        "execution_id": uid2 if execution_id is None else execution_id,
         "demands": ({
             "demand_id": uid3,
             "source": {
@@ -285,47 +285,12 @@ def make_valid_producer_payload_dict(
 class TestPilotProducer:
     """Real-world producer boundary tests for vk.execution.requested."""
 
-    def make_payload_dict(
-        self,
-        task_run_id: object = None,
-        execution_id: object = None,
-    ) -> dict[str, object]:
-        uid1, uid2, uid3 = uuid4(), uuid4(), uuid4()
-        return {
-            "task_id": 1,
-            "task_run_id": task_run_id or uid1,
-            "execution_id": execution_id or uid2,
-            "demands": (
-                {
-                    "demand_id": uid3,
-                    "source": {
-                        "source_id": uuid4(),
-                        "provider": "vk",
-                        "source_type": "community",
-                        "external_id": "123",
-                        "owner_id": -123,
-                    },
-                },
-            ),
-            "post_selection": {
-                "strategy": "latestByPublishedAt",
-                "limit_per_source": 100,
-            },
-            "comment_selection": {
-                "mode": "all",
-                "include_thread_replies": True,
-            },
-            "task_revision": 1,
-            "source_set_revision": 1,
-            "snapshot_sha256": "a" * 64,
-        }
-
     def test_snake_case_uuid_tuple_accept(self) -> None:
         """snake_case + UUID objects + tuple → accepted."""
         from parsevk_contracts.validation import prepare_for_publish
 
         execution_id = uuid4()
-        payload = self.make_payload_dict(execution_id=execution_id)
+        payload = make_valid_producer_payload_dict(execution_id=execution_id)
         result = prepare_for_publish(
             CATALOG,
             message_type="vk.execution.requested",
@@ -383,7 +348,7 @@ class TestPilotProducer:
         from parsevk_contracts.errors import ContractValidationError
         from parsevk_contracts.validation import prepare_for_publish
 
-        payload = self.make_payload_dict(
+        payload = make_valid_producer_payload_dict(
             task_run_id=str(uuid4()),
             execution_id=str(uuid4()),
         )
@@ -405,7 +370,7 @@ class TestPilotProducer:
         from parsevk_contracts.errors import ContractValidationError
         from parsevk_contracts.validation import prepare_for_publish
 
-        payload = self.make_payload_dict()
+        payload = make_valid_producer_payload_dict()
         payload["demands"] = list(payload["demands"])  # tuple → list
         with pytest.raises(ContractValidationError):
             prepare_for_publish(
@@ -555,4 +520,227 @@ class TestCommentSelectionValidation:
                 correlation_id=execution_id,
                 causation_id=None,
                 payload=payload,
+            )
+
+
+class TestProducerEnvelopeStrictMetadata:
+    """Strict validation of producer envelope metadata fields."""
+
+    def test_message_id_uuid_accept(self) -> None:
+        from parsevk_contracts.validation import prepare_for_publish
+        execution_id = uuid4()
+        result = prepare_for_publish(
+            CATALOG,
+            message_type="vk.execution.requested",
+            schema_version=1,
+            producer="tasks-service",
+            message_id=uuid4(),
+            occurred_at=datetime.now(UTC),
+            correlation_id=execution_id,
+            causation_id=None,
+            payload=make_valid_producer_payload_dict(execution_id=execution_id),
+        )
+        assert isinstance(result.envelope.message_id, UUID)
+
+    def test_message_id_string_rejected(self) -> None:
+        from parsevk_contracts.errors import ContractValidationError
+        from parsevk_contracts.validation import prepare_for_publish
+        execution_id = uuid4()
+        with pytest.raises(ContractValidationError):
+            prepare_for_publish(
+                CATALOG,
+                message_type="vk.execution.requested",
+                schema_version=1,
+                producer="tasks-service",
+                message_id=str(uuid4()),  # type: ignore[arg-type]
+                occurred_at=datetime.now(UTC),
+                correlation_id=execution_id,
+                causation_id=None,
+                payload=make_valid_producer_payload_dict(execution_id=execution_id),
+            )
+
+    def test_occurred_at_aware_datetime_accept(self) -> None:
+        from parsevk_contracts.validation import prepare_for_publish
+        execution_id = uuid4()
+        result = prepare_for_publish(
+            CATALOG,
+            message_type="vk.execution.requested",
+            schema_version=1,
+            producer="tasks-service",
+            message_id=uuid4(),
+            occurred_at=datetime.now(UTC),
+            correlation_id=execution_id,
+            causation_id=None,
+            payload=make_valid_producer_payload_dict(execution_id=execution_id),
+        )
+        assert result.envelope.occurred_at is not None
+
+    def test_occurred_at_iso_string_rejected(self) -> None:
+        from parsevk_contracts.errors import ContractValidationError
+        from parsevk_contracts.validation import prepare_for_publish
+        execution_id = uuid4()
+        with pytest.raises(ContractValidationError):
+            prepare_for_publish(
+                CATALOG,
+                message_type="vk.execution.requested",
+                schema_version=1,
+                producer="tasks-service",
+                message_id=uuid4(),
+                occurred_at=datetime.now(UTC).isoformat(),  # type: ignore[arg-type]
+                correlation_id=execution_id,
+                causation_id=None,
+                payload=make_valid_producer_payload_dict(execution_id=execution_id),
+            )
+
+    def test_occurred_at_naive_datetime_rejected(self) -> None:
+        from datetime import datetime
+
+        from parsevk_contracts.errors import ContractValidationError
+        from parsevk_contracts.validation import prepare_for_publish
+        execution_id = uuid4()
+        with pytest.raises(ContractValidationError):
+            prepare_for_publish(
+                CATALOG,
+                message_type="vk.execution.requested",
+                schema_version=1,
+                producer="tasks-service",
+                message_id=uuid4(),
+                occurred_at=datetime(2026, 7, 30, 12, 0, 0),  # type: ignore[arg-type]
+                correlation_id=execution_id,
+                causation_id=None,
+                payload=make_valid_producer_payload_dict(execution_id=execution_id),
+            )
+
+    def test_correlation_id_uuid_accept(self) -> None:
+        from parsevk_contracts.validation import prepare_for_publish
+        execution_id = uuid4()
+        result = prepare_for_publish(
+            CATALOG,
+            message_type="vk.execution.requested",
+            schema_version=1,
+            producer="tasks-service",
+            message_id=uuid4(),
+            occurred_at=datetime.now(UTC),
+            correlation_id=execution_id,
+            causation_id=None,
+            payload=make_valid_producer_payload_dict(execution_id=execution_id),
+        )
+        assert isinstance(result.envelope.correlation_id, UUID)
+
+    def test_correlation_id_string_rejected(self) -> None:
+        from parsevk_contracts.errors import ContractValidationError
+        from parsevk_contracts.validation import prepare_for_publish
+        execution_id = uuid4()
+        with pytest.raises(ContractValidationError):
+            prepare_for_publish(
+                CATALOG,
+                message_type="vk.execution.requested",
+                schema_version=1,
+                producer="tasks-service",
+                message_id=uuid4(),
+                occurred_at=datetime.now(UTC),
+                correlation_id=str(execution_id),  # type: ignore[arg-type]
+                causation_id=None,
+                payload=make_valid_producer_payload_dict(execution_id=execution_id),
+            )
+
+    def test_causation_id_string_rejected(self) -> None:
+        from parsevk_contracts.errors import ContractValidationError
+        from parsevk_contracts.validation import prepare_for_publish
+        execution_id = uuid4()
+        with pytest.raises(ContractValidationError):
+            prepare_for_publish(
+                CATALOG,
+                message_type="vk.execution.requested",
+                schema_version=1,
+                producer="tasks-service",
+                message_id=uuid4(),
+                occurred_at=datetime.now(UTC),
+                correlation_id=execution_id,
+                causation_id=str(uuid4()),  # type: ignore[arg-type]
+                payload=make_valid_producer_payload_dict(execution_id=execution_id),
+            )
+
+    def test_schema_version_one_accept(self) -> None:
+        from parsevk_contracts.validation import prepare_for_publish
+        execution_id = uuid4()
+        result = prepare_for_publish(
+            CATALOG,
+            message_type="vk.execution.requested",
+            schema_version=1,
+            producer="tasks-service",
+            message_id=uuid4(),
+            occurred_at=datetime.now(UTC),
+            correlation_id=execution_id,
+            causation_id=None,
+            payload=make_valid_producer_payload_dict(execution_id=execution_id),
+        )
+        assert result.envelope.schema_version == 1
+
+    def test_schema_version_true_rejected(self) -> None:
+        from parsevk_contracts.errors import ContractValidationError
+        from parsevk_contracts.validation import prepare_for_publish
+        execution_id = uuid4()
+        with pytest.raises(ContractValidationError):
+            prepare_for_publish(
+                CATALOG,
+                message_type="vk.execution.requested",
+                schema_version=True,  # type: ignore[arg-type]
+                producer="tasks-service",
+                message_id=uuid4(),
+                occurred_at=datetime.now(UTC),
+                correlation_id=execution_id,
+                causation_id=None,
+                payload=make_valid_producer_payload_dict(execution_id=execution_id),
+            )
+
+    def test_schema_version_string_rejected(self) -> None:
+        from parsevk_contracts.errors import ContractValidationError
+        from parsevk_contracts.validation import prepare_for_publish
+        execution_id = uuid4()
+        with pytest.raises(ContractValidationError):
+            prepare_for_publish(
+                CATALOG,
+                message_type="vk.execution.requested",
+                schema_version="1",  # type: ignore[arg-type]
+                producer="tasks-service",
+                message_id=uuid4(),
+                occurred_at=datetime.now(UTC),
+                correlation_id=execution_id,
+                causation_id=None,
+                payload=make_valid_producer_payload_dict(execution_id=execution_id),
+            )
+
+    def test_message_type_int_rejected(self) -> None:
+        from parsevk_contracts.errors import ContractValidationError
+        from parsevk_contracts.validation import prepare_for_publish
+        execution_id = uuid4()
+        with pytest.raises(ContractValidationError):
+            prepare_for_publish(
+                CATALOG,
+                message_type=123,  # type: ignore[arg-type]
+                schema_version=1,
+                producer="tasks-service",
+                message_id=uuid4(),
+                occurred_at=datetime.now(UTC),
+                correlation_id=execution_id,
+                causation_id=None,
+                payload=make_valid_producer_payload_dict(execution_id=execution_id),
+            )
+
+    def test_producer_int_rejected(self) -> None:
+        from parsevk_contracts.errors import ContractValidationError
+        from parsevk_contracts.validation import prepare_for_publish
+        execution_id = uuid4()
+        with pytest.raises(ContractValidationError):
+            prepare_for_publish(
+                CATALOG,
+                message_type="vk.execution.requested",
+                schema_version=1,
+                producer=123,  # type: ignore[arg-type]
+                message_id=uuid4(),
+                occurred_at=datetime.now(UTC),
+                correlation_id=execution_id,
+                causation_id=None,
+                payload=make_valid_producer_payload_dict(execution_id=execution_id),
             )
