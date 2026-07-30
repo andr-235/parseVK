@@ -18,6 +18,7 @@ spec.loader.exec_module(service_catalog)
 Catalog = service_catalog.Catalog
 CatalogError = service_catalog.CatalogError
 _deploy_targets = service_catalog._deploy_targets
+_executable = service_catalog._executable
 _git_changed_files = service_catalog._git_changed_files
 _path_matches = service_catalog._path_matches
 _service_matrix = service_catalog._service_matrix
@@ -66,8 +67,8 @@ def make_catalog(path: Path) -> Catalog:
 
 
 def run_git(repo: Path, *args: str) -> str:
-    result = subprocess.run(
-        ["git", *args],
+    result = subprocess.run(  # noqa: S603 - git executable and arguments are controlled by the test
+        [_executable("git"), *args],
         cwd=repo,
         text=True,
         capture_output=True,
