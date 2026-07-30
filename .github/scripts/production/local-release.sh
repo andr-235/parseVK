@@ -23,11 +23,16 @@ manifest_path() {
 }
 
 resolve_targets() {
-  [ -f "$SERVICE_CATALOG_CLI" ] || {
-    log_error "Service catalog CLI not found: $SERVICE_CATALOG_CLI"
-    return 1
-  }
-  python3 "$SERVICE_CATALOG_CLI" --repo-root "$PROJECT_ROOT" changed --purpose deploy --all
+  if [ -f "$SERVICE_CATALOG_CLI" ]; then
+    python3 "$SERVICE_CATALOG_CLI" --repo-root "$PROJECT_ROOT" changed --purpose deploy --all
+    return 0
+  fi
+
+  log_warn "Service catalog unavailable; resolving build targets from Compose for release bootstrap"
+  compose config --format json \
+    | jq -r '.services | to_entries[] | select((.value.build // null) != null) | .key' \
+    | sort -u \
+    | paste -sd' ' -
 }
 
 active_ref() {
