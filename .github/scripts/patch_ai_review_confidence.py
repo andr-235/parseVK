@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# One-shot patch: keep thresholds unchanged and calibrate only direct contract contradictions.
 path = Path(".github/workflows/ai-code-review.yml")
 text = path.read_text(encoding="utf-8")
 old = (
