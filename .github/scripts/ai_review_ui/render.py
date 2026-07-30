@@ -40,30 +40,62 @@ def compact_title(finding: Finding) -> str:
     return title or "Проверьте найденный дефект"
 
 
-def render_inline_finding(finding: Finding) -> str:
-    icon, label = SEVERITY_STYLE[finding.severity]
+def quote_markdown(text: str) -> str:
+    """Keep every model-provided line inside a GitHub alert block."""
+    return "\n".join(f"> {line}" if line else ">" for line in text.splitlines())
+
+
+def render_alert(kind: str, title: str, body: str) -> str:
+    return "\n".join(
+        (
+            f"> [!{kind}]",
+            f"> **{title}**",
+            ">",
+            quote_markdown(body),
+        )
+    )
+
+
+def render_finding_sections(finding: Finding) -> tuple[str, str, str]:
+    return (
+        render_alert("NOTE", "Что не так", finding.scenario),
+        render_alert("WARNING", "Последствия", finding.impact),
+        render_alert("TIP", "Как исправить", finding.fix),
+    )
+
+
+def render_confidence(finding: Finding) -> str:
     confidence = round(finding.confidence * 100)
     return (
-        f"{INLINE_MARKER}\n"
-        f"**{icon} {label} · {compact_title(finding)}**\n\n"
-        f"{finding.scenario}\n\n"
-        f"> **Последствия:** {finding.impact}\n\n"
-        f"**Исправление:** {finding.fix}\n\n"
-        f"<sub>Уверенность: {confidence}% · анализ Big Pickle, "
-        "проверка diff-фильтрами parseVK</sub>"
+        f"<sub>📈 Уверенность: {confidence}% · 🧠 Big Pickle · "
+        "🛡️ diff-фильтры parseVK</sub>"
+    )
+
+
+def render_inline_finding(finding: Finding) -> str:
+    icon, label = SEVERITY_STYLE[finding.severity]
+    return "\n\n".join(
+        (
+            INLINE_MARKER,
+            f"### {icon} {label} · {compact_title(finding)}",
+            *render_finding_sections(finding),
+            render_confidence(finding),
+        )
     )
 
 
 def render_file_finding(finding: Finding, index: int) -> str:
     icon, label = SEVERITY_STYLE[finding.severity]
-    confidence = round(finding.confidence * 100)
-    return (
-        f"#### {index}. {icon} {label} · `{finding.file}`\n\n"
-        f"**{compact_title(finding)}**\n\n"
-        f"{finding.scenario}\n\n"
-        f"- **Последствия:** {finding.impact}\n"
-        f"- **Исправление:** {finding.fix}\n"
-        f"- **Уверенность:** {confidence}%\n"
+    location = f"`{finding.file}`"
+    if finding.line is not None:
+        location += f" · строка {finding.line}"
+    return "\n\n".join(
+        (
+            f"#### {index}. {icon} {label} · {compact_title(finding)}",
+            f"<sub>📄 {location}</sub>",
+            *render_finding_sections(finding),
+            render_confidence(finding),
+        )
     )
 
 
@@ -83,6 +115,12 @@ def verdict_text(result: ReviewResult) -> str:
     return "🟡 Есть неблокирующие замечания"
 
 
+def verdict_alert_kind(result: ReviewResult) -> str:
+    if result.verdict == "changes-required":
+        return "CAUTION"
+    return "WARNING"
+
+
 def split_findings(
     result: ReviewResult,
 ) -> tuple[tuple[Finding, ...], tuple[Finding, ...]]:
@@ -100,13 +138,18 @@ def render_review_body(
     result: ReviewResult,
     overflow: Sequence[Finding],
 ) -> str:
+    summary = "\n\n".join(
+        (
+            verdict_text(result),
+            f"Проверен commit `{result.head_sha[:10]}`",
+            f"Замечания: {count_summary(result.findings)}",
+        )
+    )
     sections = [
         REVIEW_MARKER.format(head_sha=result.head_sha),
         "### 🔍 parseVK AI Review",
         "",
-        f"**Итог:** {verdict_text(result)}  ",
-        f"**Проверен commit:** `{result.head_sha[:10]}`  ",
-        f"**Замечания:** {count_summary(result.findings)}",
+        render_alert(verdict_alert_kind(result), "Итог ревью", summary),
     ]
     if overflow:
         sections.extend(
