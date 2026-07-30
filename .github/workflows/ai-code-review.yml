@@ -8,7 +8,7 @@ on:
 
 concurrency:
   group: ai-code-review-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions: {}
 
@@ -16,6 +16,7 @@ env:
   PYTHONUNBUFFERED: "1"
   AI_REVIEW_SCRIPT: .github/scripts/ai_review.py
   AI_REVIEW_AGENTS_SCRIPT: .github/scripts/ai_review_agents.py
+  AI_REVIEW_BATCH_SCRIPT: .github/scripts/ai_review_batch.py
 
 jobs:
   prepare:
@@ -46,10 +47,8 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: python "$AI_REVIEW_SCRIPT" mark --pr "$PR_NUMBER"
 
-  review:
-    name: Analyze Pull Request
-    env:
-      AI_REVIEW_DIR: ${{ github.workspace }}/.ai-review-runtime
+  plan:
+    name: Plan commit reviews
     if: >-
       github.event.action != 'closed' &&
       github.event.pull_request.draft == false &&
@@ -57,9 +56,131 @@ jobs:
       github.event.pull_request.user.login == github.repository_owner &&
       github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      count: ${{ steps.plan.outputs.count }}
+      status: ${{ steps.plan.outputs.status }}
+    steps:
+      - name: Checkout trusted commit planner
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/ai_review_batch.py
+            .github/scripts/ai_review_batch_lib
+            .github/scripts/test_ai_review_batch.py
+          sparse-checkout-cone-mode: false
+
+      - name: Isolate trusted commit planner
+        run: |
+          trusted_dir="$RUNNER_TEMP/ai-review-batch"
+          mkdir -p "$trusted_dir"
+          batch_script=""
+          if [[ -f .github/scripts/ai_review_batch.py ]]; then
+            cp .github/scripts/ai_review_batch.py "$trusted_dir/ai_review_batch.py"
+            cp -R .github/scripts/ai_review_batch_lib "$trusted_dir/ai_review_batch_lib"
+            batch_script="$trusted_dir/ai_review_batch.py"
+          fi
+          if [[ -f .github/scripts/test_ai_review_batch.py ]]; then
+            cp .github/scripts/test_ai_review_batch.py "$trusted_dir/test_ai_review_batch.py"
+          fi
+          {
+            echo "TRUSTED_BATCH_DIR=$trusted_dir"
+            echo "AI_REVIEW_BATCH_SCRIPT=$batch_script"
+          } >> "$GITHUB_ENV"
+
+      - name: Test trusted commit planner
+        if: env.AI_REVIEW_BATCH_SCRIPT != ''
+        run: >-
+          PYTHONPATH="$TRUSTED_BATCH_DIR"
+          python -m unittest discover
+          -s "$TRUSTED_BATCH_DIR"
+          -p 'test_ai_review_batch.py'
+          -v
+
+      - name: Checkout Pull Request history
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Build commit review plan
+        id: plan
+        env:
+          ACTION: ${{ github.event.action }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          mkdir -p .ai-review-runtime
+          if [[ -n "$AI_REVIEW_BATCH_SCRIPT" ]]; then
+            PYTHONPATH="$TRUSTED_BATCH_DIR" python "$AI_REVIEW_BATCH_SCRIPT" plan \
+              --action "$ACTION" \
+              --base "$BASE_SHA" \
+              --before "$BEFORE_SHA" \
+              --head "$HEAD_SHA" \
+              --repo "$GITHUB_WORKSPACE" \
+              --output .ai-review-runtime/commit-plan.json \
+              --github-output "$GITHUB_OUTPUT"
+          else
+            parent_sha="$(git rev-parse "${HEAD_SHA}^1")"
+            python - "$parent_sha" "$HEAD_SHA" "$GITHUB_OUTPUT" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          parent, head, output_path = sys.argv[1:]
+          unit = {"index": "001", "base_sha": parent, "head_sha": head}
+          plan = {
+              "schema_version": 1,
+              "run_head_sha": head,
+              "start_sha": parent,
+              "status": "review",
+              "reason": "bootstrap-single-commit",
+              "units": [unit],
+              "commit_count": 1,
+          }
+          Path(".ai-review-runtime/commit-plan.json").write_text(
+              json.dumps(plan, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          with Path(output_path).open("a", encoding="utf-8") as output:
+              output.write(f"matrix={json.dumps([unit], separators=(',', ':'))}\n")
+              output.write("count=1\n")
+              output.write("status=review\n")
+          PY
+          fi
+
+      - name: Upload commit review plan
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ai-review-plan-${{ github.run_id }}
+          path: .ai-review-runtime/commit-plan.json
+          if-no-files-found: error
+          retention-days: 1
+
+  review:
+    name: Review commit ${{ matrix.unit.index }}
+    needs: [plan]
+    if: >-
+      needs.plan.outputs.status == 'review' &&
+      needs.plan.outputs.count != '0'
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        unit: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
       contents: read
+      pull-requests: read
+    env:
+      AI_REVIEW_DIR: ${{ github.workspace }}/.ai-review-runtime/${{ matrix.unit.index }}
     steps:
       - name: Checkout trusted reviewer code
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -93,24 +214,46 @@ jobs:
             echo "AI_REVIEW_AGENTS_SCRIPT=$agents_script"
           } >> "$GITHUB_ENV"
 
-      - name: Checkout Pull Request
+      - name: Checkout reviewed commit
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ matrix.unit.head_sha }}
           fetch-depth: 0
           persist-credentials: false
 
       - name: Test trusted reviewer logic
         id: self_test
         continue-on-error: true
-        run: PYTHONPATH="$TRUSTED_REVIEWER_DIR" python -m unittest discover -s "$TRUSTED_REVIEWER_DIR" -p 'test_ai_review*.py' -v
+        run: >-
+          PYTHONPATH="$TRUSTED_REVIEWER_DIR"
+          python -m unittest discover
+          -s "$TRUSTED_REVIEWER_DIR"
+          -p 'test_ai_review*.py'
+          -v
 
-      - name: Build review scope
+      - name: Check commit still belongs to Pull Request
+        id: eligible
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REVIEWED_SHA: ${{ matrix.unit.head_sha }}
+        run: |
+          response="$(curl --fail --silent --show-error \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/commits?per_page=100")"
+          found="$(REVIEWED_SHA="$REVIEWED_SHA" python -c 'import json,os,sys; expected=os.environ["REVIEWED_SHA"]; print("true" if any(item.get("sha")==expected for item in json.load(sys.stdin)) else "false")' <<<"$response")"
+          echo "current=$found" >> "$GITHUB_OUTPUT"
+
+      - name: Build commit review scope
         id: scope
+        if: steps.eligible.outputs.current == 'true'
         continue-on-error: true
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ matrix.unit.base_sha }}
+          HEAD_SHA: ${{ matrix.unit.head_sha }}
+          TRUSTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           mkdir -p "$AI_REVIEW_DIR"
           python "$AI_REVIEW_SCRIPT" scope \
@@ -119,41 +262,18 @@ jobs:
             --output-dir "$AI_REVIEW_DIR"
           if [[ -n "$AI_REVIEW_AGENTS_SCRIPT" ]]; then
             python "$AI_REVIEW_AGENTS_SCRIPT" \
-              --base "$BASE_SHA" \
+              --base "$TRUSTED_BASE_SHA" \
               --scope "$AI_REVIEW_DIR/scope.json" \
               --prompt-dir "$AI_REVIEW_DIR" \
               --repo "$GITHUB_WORKSPACE"
-          else
-            echo "Trusted base does not contain AGENTS.md injector yet; bootstrap run skips it."
           fi
           echo "status=$(python -c 'import json,os; print(json.load(open(os.path.join(os.environ["AI_REVIEW_DIR"], "scope.json"), encoding="utf-8"))["status"])')" >> "$GITHUB_OUTPUT"
 
-      - name: Debounce rapid commits
-        id: freshness
+      - name: Checkout pinned OpenCode installer
         if: >-
           steps.self_test.outcome == 'success' &&
           steps.scope.outcome == 'success' &&
           steps.scope.outputs.status == 'review'
-        env:
-          CURRENT_HEAD_URL: ${{ github.event.pull_request.url }}
-          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          sleep 45
-          current_head="$(curl --fail --silent --show-error \
-            -H 'Accept: application/vnd.github+json' \
-            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "$CURRENT_HEAD_URL" | python -c 'import json,sys; print(json.load(sys.stdin)["head"]["sha"])')"
-          if [[ "$current_head" == "$EXPECTED_HEAD" ]]; then
-            echo "fresh=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "fresh=false" >> "$GITHUB_OUTPUT"
-            echo "Newer commit detected; OpenCode will not run for ${EXPECTED_HEAD}."
-          fi
-
-      - name: Checkout pinned OpenCode installer
-        if: steps.freshness.outputs.fresh == 'true'
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: anomalyco/opencode
@@ -165,7 +285,10 @@ jobs:
 
       - name: Install pinned OpenCode CLI
         id: install
-        if: steps.freshness.outputs.fresh == 'true'
+        if: >-
+          steps.self_test.outcome == 'success' &&
+          steps.scope.outcome == 'success' &&
+          steps.scope.outputs.status == 'review'
         continue-on-error: true
         env:
           VERSION: 1.17.7
@@ -174,16 +297,16 @@ jobs:
           rm -rf .opencode-installer
           echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
 
-      - name: Run OpenCode without GitHub publishing
+      - name: Run OpenCode for reviewed commit
         id: opencode
         if: >-
-          steps.freshness.outputs.fresh == 'true' &&
+          steps.scope.outputs.status == 'review' &&
           steps.install.outcome == 'success'
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           OPENCODE_DISABLE_PROJECT_CONFIG: "true"
           OPENCODE_CONFIG_CONTENT: >-
-            {"default_agent":"plan","agent":{"plan":{"temperature":0,"prompt":"You are an automated Pull Request code reviewer. Analyze only the attached diff and obey the exact JSON contract in the user prompt. Never return prose, Markdown, a plan, or tool-only output. If analysis cannot be completed, return status technical-error with the exact head_sha and an empty findings array."},"title":{"disable":true}}}
+            {"default_agent":"plan","agent":{"plan":{"temperature":0,"prompt":"You are an automated commit code reviewer. Analyze only the attached commit diff and obey the exact JSON contract in the user prompt. Never return prose, Markdown, a plan, or tool-only output. If analysis cannot be completed, return status technical-error with the exact head_sha and an empty findings array."},"title":{"disable":true}}}
           OPENCODE_PERMISSION: >-
             {"read":{"*":"allow",".github/workflows/ai-code-review.yml":"deny","*.md":"deny","**/*.md":"deny","README*":"deny","**/README*":"deny","docs/**":"deny",".github/ai-review/**":"deny",".github/scripts/ai_review*":"deny"},"bash":"deny","edit":"deny","task":"deny","todowrite":"deny","skill":"deny","lsp":"deny","webfetch":"deny","websearch":"deny","external_directory":"deny","doom_loop":"deny"}
         run: |
@@ -191,53 +314,46 @@ jobs:
           exit_code=0
           shopt -s nullglob
           prompts=("$AI_REVIEW_DIR"/prompt-*.txt)
-          if (( ${#prompts[@]} == 0 )); then
-            echo "::error::Reviewer scope did not produce any prompt chunks."
-            exit_code=2
-          else
-            for prompt in "${prompts[@]}"; do
-              suffix="${prompt##*/prompt-}"
-              suffix="${suffix%.txt}"
-              diff="$AI_REVIEW_DIR/review-${suffix}.diff"
-              events="$AI_REVIEW_DIR/opencode-events-${suffix}.jsonl"
-              stderr="$AI_REVIEW_DIR/opencode-${suffix}.stderr"
-              echo "Running AI review chunk ${suffix} of ${#prompts[@]}."
-              opencode run \
-                --format json \
-                --model opencode/big-pickle \
-                --agent plan \
-                --no-share \
-                --file "$diff" \
-                < "$prompt" \
-                > "$events" \
-                2> "$stderr"
-              chunk_exit=$?
-              if (( chunk_exit != 0 )); then
-                exit_code=$chunk_exit
-                break
-              fi
-            done
-          fi
+          for prompt in "${prompts[@]}"; do
+            suffix="${prompt##*/prompt-}"
+            suffix="${suffix%.txt}"
+            opencode run \
+              --format json \
+              --model opencode/big-pickle \
+              --agent plan \
+              --no-share \
+              --file "$AI_REVIEW_DIR/review-${suffix}.diff" \
+              < "$prompt" \
+              > "$AI_REVIEW_DIR/opencode-events-${suffix}.jsonl" \
+              2> "$AI_REVIEW_DIR/opencode-${suffix}.stderr"
+            chunk_exit=$?
+            if (( chunk_exit != 0 )); then
+              exit_code=$chunk_exit
+              break
+            fi
+          done
           set -e
           echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
-          if (( exit_code != 0 )); then
-            echo "::warning::OpenCode exited with code ${exit_code}."
-          fi
 
-      - name: Build validated review result
-        id: finalize
-        continue-on-error: true
+      - name: Build validated commit result
+        if: always()
         env:
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_SHA: ${{ matrix.unit.head_sha }}
+          ELIGIBLE: ${{ steps.eligible.outputs.current }}
           TEST_OUTCOME: ${{ steps.self_test.outcome }}
           SCOPE_OUTCOME: ${{ steps.scope.outcome }}
           SCOPE_STATUS: ${{ steps.scope.outputs.status }}
-          FRESH: ${{ steps.freshness.outputs.fresh }}
           INSTALL_OUTCOME: ${{ steps.install.outcome }}
           OPENCODE_EXIT: ${{ steps.opencode.outputs.exit_code }}
         run: |
           mkdir -p "$AI_REVIEW_DIR"
-          if [[ "$TEST_OUTCOME" != "success" ]]; then
+          if [[ "$ELIGIBLE" != "true" ]]; then
+            python "$AI_REVIEW_SCRIPT" fallback \
+              --head "$HEAD_SHA" \
+              --reason obsolete-commit \
+              --summary 'Commit больше не входит в актуальный Pull Request.' \
+              --output "$AI_REVIEW_DIR/review-result.json"
+          elif [[ "$TEST_OUTCOME" != "success" ]]; then
             python "$AI_REVIEW_SCRIPT" fallback \
               --head "$HEAD_SHA" \
               --reason reviewer-self-test-failed \
@@ -247,13 +363,7 @@ jobs:
             python "$AI_REVIEW_SCRIPT" fallback \
               --head "$HEAD_SHA" \
               --reason scope-failed \
-              --summary 'Не удалось подготовить область или доверенные инструкции AI-ревью.' \
-              --output "$AI_REVIEW_DIR/review-result.json"
-          elif [[ "${FRESH:-true}" == "false" ]]; then
-            python "$AI_REVIEW_SCRIPT" fallback \
-              --head "$HEAD_SHA" \
-              --reason obsolete-run \
-              --summary 'Запуск устарел до обращения к модели.' \
+              --summary 'Не удалось подготовить commit scope.' \
               --output "$AI_REVIEW_DIR/review-result.json"
           elif [[ "$SCOPE_STATUS" == "review" && "$INSTALL_OUTCOME" != "success" ]]; then
             python "$AI_REVIEW_SCRIPT" fallback \
@@ -268,33 +378,22 @@ jobs:
               --exit-code "${OPENCODE_EXIT:-0}" \
               --output "$AI_REVIEW_DIR/review-result.json"
           fi
+          mkdir -p .ai-review-artifact
+          cp "$AI_REVIEW_DIR/review-result.json" \
+            ".ai-review-artifact/${HEAD_SHA}.json"
 
-      - name: Ensure a publishable result exists
-        if: always()
-        env:
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          mkdir -p "$AI_REVIEW_DIR"
-          if [[ ! -s "$AI_REVIEW_DIR/review-result.json" ]]; then
-            python "$AI_REVIEW_SCRIPT" fallback \
-              --head "$HEAD_SHA" \
-              --reason result-generation-failed \
-              --summary 'Reviewer не смог сформировать итоговый результат.' \
-              --output "$AI_REVIEW_DIR/review-result.json"
-          fi
-
-      - name: Upload validated result
+      - name: Upload validated commit result
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: ai-review-result-${{ github.run_id }}
-          path: ${{ github.workspace }}/.ai-review-runtime/review-result.json
+          name: ai-review-commit-${{ github.run_id }}-${{ matrix.unit.index }}
+          path: .ai-review-artifact/*.json
           if-no-files-found: error
           retention-days: 1
 
   verdict:
     name: Evaluate review verdict
-    needs: [prepare, review]
+    needs: [prepare, plan, review]
     if: >-
       always() &&
       github.event.action != 'closed' &&
@@ -307,74 +406,118 @@ jobs:
       actions: read
       contents: read
     steps:
-      - name: Download validated result
+      - name: Checkout trusted batch aggregator
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/ai_review_batch.py
+            .github/scripts/ai_review_batch_lib
+          sparse-checkout-cone-mode: false
+
+      - name: Isolate trusted batch aggregator
+        run: |
+          trusted_dir="$RUNNER_TEMP/ai-review-batch"
+          mkdir -p "$trusted_dir"
+          batch_script=""
+          if [[ -f .github/scripts/ai_review_batch.py ]]; then
+            cp .github/scripts/ai_review_batch.py "$trusted_dir/ai_review_batch.py"
+            cp -R .github/scripts/ai_review_batch_lib "$trusted_dir/ai_review_batch_lib"
+            batch_script="$trusted_dir/ai_review_batch.py"
+          fi
+          {
+            echo "TRUSTED_BATCH_DIR=$trusted_dir"
+            echo "AI_REVIEW_BATCH_SCRIPT=$batch_script"
+          } >> "$GITHUB_ENV"
+
+      - name: Download commit review plan
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
+          name: ai-review-plan-${{ github.run_id }}
+          path: .ai-review-runtime
+
+      - name: Download validated commit results
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: ai-review-commit-${{ github.run_id }}-*
+          path: .ai-review-runtime/commit-results
+          merge-multiple: true
+
+      - name: Aggregate commit review results
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [[ -n "$AI_REVIEW_BATCH_SCRIPT" ]]; then
+            PYTHONPATH="$TRUSTED_BATCH_DIR" python "$AI_REVIEW_BATCH_SCRIPT" aggregate \
+              --plan .ai-review-runtime/commit-plan.json \
+              --results-dir .ai-review-runtime/commit-results \
+              --output .ai-review-runtime/review-result.json
+          else
+            first_result="$(find .ai-review-runtime/commit-results -name '*.json' -type f | head -n 1)"
+            if [[ -n "$first_result" ]]; then
+              cp "$first_result" .ai-review-runtime/review-result.json
+            else
+              python - "$HEAD_SHA" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          head = sys.argv[1]
+          value = {
+              "schema_version": 1,
+              "status": "technical-error",
+              "reason": "bootstrap-result-missing",
+              "head_sha": head,
+              "summary": "Reviewer не сформировал commit result.",
+              "findings": [],
+              "dropped_findings": 0,
+              "verdict": "unavailable",
+              "reaction": "confused",
+              "blocking_count": 0,
+          }
+          Path(".ai-review-runtime/review-result.json").write_text(
+              json.dumps(value, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+            fi
+          fi
+
+      - name: Upload validated result
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
           name: ai-review-result-${{ github.run_id }}
-          path: ${{ github.workspace }}/.ai-review-runtime
+          path: |
+            .ai-review-runtime/review-result.json
+            .ai-review-runtime/commit-results/*.json
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Evaluate validated verdict without publishing
         env:
-          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
-          RESULT_PATH: ${{ github.workspace }}/.ai-review-runtime/review-result.json
-        shell: bash
+          RESULT_PATH: .ai-review-runtime/review-result.json
         run: |
           python - <<'PY'
           import json
           import os
           from pathlib import Path
 
-          result_path = Path(os.environ["RESULT_PATH"])
-          try:
-              payload = json.loads(result_path.read_text(encoding="utf-8"))
-          except (OSError, json.JSONDecodeError) as error:
-              print(f"::error::Cannot read validated AI review result: {error}")
-              raise SystemExit(2) from error
-
-          expected_head = os.environ["EXPECTED_HEAD"]
-          if payload.get("head_sha") != expected_head:
-              print("::error::Validated AI review result belongs to another HEAD.")
-              raise SystemExit(2)
-
+          payload = json.loads(Path(os.environ["RESULT_PATH"]).read_text(encoding="utf-8"))
           verdict = payload.get("verdict")
-          allowed = {
-              "approved",
-              "changes-required",
-              "findings",
-              "review-required",
-              "unavailable",
-          }
-          if verdict not in allowed:
-              print(f"::error::Unsupported AI review verdict: {verdict!r}")
-              raise SystemExit(2)
-
-          summary = str(payload.get("summary") or "AI review produced no summary.")
-          blocking = int(payload.get("blocking_count") or 0)
-          findings = payload.get("findings")
-          finding_count = len(findings) if isinstance(findings, list) else 0
           print(f"AI Review verdict: {verdict}")
-          print(f"Findings: {finding_count}; blocking: {blocking}")
-          print(summary)
-
-          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
-          if summary_path:
-              with open(summary_path, "a", encoding="utf-8") as stream:
-                  stream.write("## AI Code Review verdict\n\n")
-                  stream.write(f"- Verdict: `{verdict}`\n")
-                  stream.write(f"- Findings: {finding_count}\n")
-                  stream.write(f"- Blocking: {blocking}\n\n")
-                  stream.write(f"{summary}\n")
-
+          print(payload.get("summary", ""))
           if verdict in {"changes-required", "review-required"}:
-              print(f"::error::AI Review verdict blocks this Pull Request: {verdict}")
               raise SystemExit(1)
           if verdict == "unavailable":
-              print(f"::warning::{summary}")
+              print("::warning::Commit review batch is partially unavailable.")
           PY
 
   status:
     name: Publish review status
-    needs: [prepare, review, verdict]
+    needs: [prepare, verdict]
     if: >-
       always() &&
       github.event.action != 'closed' &&
@@ -393,7 +536,7 @@ jobs:
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: ai-review-result-${{ github.run_id }}
-          path: ${{ github.workspace }}/.ai-review-runtime
+          path: .ai-review-runtime
 
       - name: Replace processing reaction with validated status
         env:
@@ -401,7 +544,7 @@ jobs:
           EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          RESULT_PATH: ${{ github.workspace }}/.ai-review-runtime/review-result.json
+          RESULT_PATH: .ai-review-runtime/review-result.json
         run: |
           python - <<'PY'
           import json
@@ -441,21 +584,9 @@ jobs:
           verdict = "unavailable"
           result_path = Path(os.environ["RESULT_PATH"])
           if os.environ.get("DOWNLOAD_OUTCOME") == "success" and result_path.is_file():
-              try:
-                  payload = json.loads(result_path.read_text(encoding="utf-8"))
-              except (OSError, json.JSONDecodeError) as error:
-                  print(f"::warning::Cannot read AI review status artifact: {error}")
-              else:
-                  if payload.get("head_sha") == expected_head:
-                      candidate = payload.get("verdict")
-                      if candidate in {
-                          "approved",
-                          "changes-required",
-                          "findings",
-                          "review-required",
-                          "unavailable",
-                      }:
-                          verdict = candidate
+              payload = json.loads(result_path.read_text(encoding="utf-8"))
+              if payload.get("head_sha") == expected_head:
+                  verdict = str(payload.get("verdict") or "unavailable")
 
           reaction_by_verdict = {
               "approved": "+1",
@@ -477,11 +608,10 @@ jobs:
                   f"/repos/{repository}/issues/{pr_number}/reactions/{reaction['id']}",
               )
 
-          final_reaction = reaction_by_verdict[verdict]
           request(
               "POST",
               f"/repos/{repository}/issues/{pr_number}/reactions",
-              {"content": final_reaction},
+              {"content": reaction_by_verdict.get(verdict, "confused")},
           )
           print(f"Published AI review status: {verdict}")
           PY
