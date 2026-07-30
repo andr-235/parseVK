@@ -23,7 +23,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: publish-release-images-main
+  group: publish-release-images-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'main' }}
   cancel-in-progress: true
 
 jobs:
