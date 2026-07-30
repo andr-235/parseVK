@@ -10,6 +10,7 @@ RELEASES_DIR="${RELEASES_DIR:-$(project_root)/.releases}"
 RELEASE_IMAGE_NAMESPACE="${RELEASE_IMAGE_NAMESPACE:-parsevk-release}"
 COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-parsevk}"
 RELEASE_RETENTION="${RELEASE_RETENTION:-3}"
+DEPLOYMENT_METADATA_FILE="${DEPLOYMENT_METADATA_FILE:-$(project_root)/.deployment-metadata.json}"
 
 validate_commit() {
   [[ "$1" =~ ^[0-9a-f]{7,40}$ ]] || {
@@ -95,8 +96,19 @@ verify_release() {
   done < <(jq -r '.images[] | [.release_ref, .image_id] | @tsv' "$manifest")
 }
 
+metadata_commit() {
+  local key="$1"
+  if [ ! -f "$DEPLOYMENT_METADATA_FILE" ]; then
+    printf '\n'
+    return 0
+  fi
+  jq -r ".${key} // empty" "$DEPLOYMENT_METADATA_FILE" 2>/dev/null || printf '\n'
+}
+
 prune_releases() {
-  local kept=0 manifest release
+  local kept=0 manifest release commit protected_current protected_previous
+  protected_current="$(metadata_commit last_successful_commit)"
+  protected_previous="$(metadata_commit previous_successful_commit)"
   mapfile -t manifests < <(
     find "$RELEASES_DIR" -mindepth 2 -maxdepth 2 -type f -name release.json -printf '%T@ %p\n' 2>/dev/null \
       | sort -rn | cut -d' ' -f2-
@@ -105,7 +117,8 @@ prune_releases() {
   for manifest in "${manifests[@]}"; do
     [ "$(jq -r '.status // empty' "$manifest")" = "successful" ] || continue
     kept=$((kept + 1))
-    if (( kept <= RELEASE_RETENTION )); then
+    commit="$(jq -r '.commit_sha // empty' "$manifest")"
+    if [ "$commit" = "$protected_current" ] || [ "$commit" = "$protected_previous" ] || (( kept <= RELEASE_RETENTION )); then
       continue
     fi
     while IFS= read -r release; do
