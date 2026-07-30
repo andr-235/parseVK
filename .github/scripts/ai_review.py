@@ -31,6 +31,7 @@ MAX_REVIEW_FILES = MAX_CHUNK_FILES * MAX_REVIEW_CHUNKS
 MAX_CHANGED_LINES = MAX_CHUNK_CHANGED_LINES * MAX_REVIEW_CHUNKS
 MAX_FINDINGS = 20
 CONTEXT_RADIUS = 3
+REANCHOR_RADIUS = 5
 
 EXCLUDED_EXACT = {".github/workflows/ai-code-review.yml"}
 EXCLUDED_PREFIXES = ("docs/", ".github/ai-review/", ".github/scripts/ai_review")
@@ -409,7 +410,8 @@ def render_prompt(head_sha: str, reviewable_files: Sequence[str]) -> str:
 7. Каждое замечание обязательно внеси в findings. При пустом findings замечаний нет.
 8. Указывай строку из изменённого hunk. line=null допустим только для дефекта уровня конфигурации, схемы или миграции.
 9. Используй только severity blocker, major или minor.
-10. Верни строго один JSON-объект без Markdown и текста до или после.
+10. Прямое противоречие между изменённой реализацией и явным именем функции, docstring, invariant или return contract классифицируй как major correctness-дефект с confidence не ниже 0.95.
+11. Верни строго один JSON-объект без Markdown и текста до или после.
 
 Схема результата:
 {{
@@ -515,11 +517,41 @@ def file_level_allowed(path: str) -> bool:
     return any(part in components for part in FILE_LEVEL_PARTS)
 
 
-def line_is_changed(path: str, line: int | None, line_map: Mapping[str, Sequence[int]]) -> bool:
+def anchor_finding_line(
+    path: str,
+    line: int | None,
+    line_map: Mapping[str, Sequence[int]],
+) -> tuple[bool, int | None]:
     if line is None:
-        return file_level_allowed(path)
-    changed = line_map.get(path, ())
-    return any(abs(line - candidate) <= CONTEXT_RADIUS for candidate in changed)
+        return file_level_allowed(path), None
+    changed = tuple(line_map.get(path, ()))
+    if not changed:
+        return False, None
+    nearest = min(changed, key=lambda candidate: abs(line - candidate))
+    if abs(line - nearest) > REANCHOR_RADIUS:
+        return False, None
+    return True, nearest
+
+
+def log_rejected_finding(reason: str, finding: Finding) -> None:
+    metadata = {
+        "reason": reason,
+        "severity": finding.severity,
+        "file": finding.file,
+        "line": finding.line,
+        "confidence": round(finding.confidence, 4),
+    }
+    print(f"AI_REVIEW_REJECTED {json.dumps(metadata, ensure_ascii=False, sort_keys=True)}")
+
+
+def log_reanchored_finding(finding: Finding, anchored_line: int) -> None:
+    metadata = {
+        "file": finding.file,
+        "from_line": finding.line,
+        "to_line": anchored_line,
+        "severity": finding.severity,
+    }
+    print(f"AI_REVIEW_REANCHORED {json.dumps(metadata, ensure_ascii=False, sort_keys=True)}")
 
 
 def filter_findings(findings: Sequence[Finding], scope: Scope) -> tuple[tuple[Finding, ...], int]:
@@ -527,14 +559,21 @@ def filter_findings(findings: Sequence[Finding], scope: Scope) -> tuple[tuple[Fi
     reviewable = set(scope.reviewable_files)
     for finding in findings:
         if finding.confidence < SEVERITY_THRESHOLDS[finding.severity]:
+            log_rejected_finding("below-confidence", finding)
             continue
         if finding.file not in reviewable or not is_reviewable_path(finding.file):
+            log_rejected_finding("outside-review-scope", finding)
             continue
-        if not line_is_changed(finding.file, finding.line, scope.line_map):
+        anchored, line = anchor_finding_line(finding.file, finding.line, scope.line_map)
+        if not anchored:
+            log_rejected_finding("outside-changed-lines", finding)
             continue
+        if finding.line is not None and line is not None and finding.line != line:
+            log_reanchored_finding(finding, line)
         accepted.append(
             dataclasses.replace(
                 finding,
+                line=line,
                 scenario=sanitize(finding.scenario, 1000),
                 impact=sanitize(finding.impact, 1000),
                 fix=sanitize(finding.fix, 1000),

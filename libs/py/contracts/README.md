@@ -146,6 +146,45 @@ uv run python -m parsevk_contracts.generation.cli check
 
 If the check fails (missing, stale, or changed files), the CI job fails — this ensures that any contract change is accompanied by regenerated artifacts.
 
+## CLI Commands
+
+The CLI supports four commands:
+
+### generate
+Generate JSON Schema, manifest, and AsyncAPI artifacts:
+
+```bash
+uv run python -m parsevk_contracts.generation.cli generate
+```
+
+### check
+Verify that committed generated artifacts match the current catalog (drift detection):
+
+```bash
+uv run python -m parsevk_contracts.generation.cli check
+```
+
+### validate-registry
+Validate that all registered contracts have complete metadata — non-empty producers/consumers, valid schema version, accessible partition/correlation paths, and supported policy values:
+
+```bash
+uv run python -m parsevk_contracts.generation.cli validate-registry
+```
+
+### compatibility
+Compare generated contract artifacts against a baseline (e.g. from the `main` branch). Detects removed identities, schema changes, and immutable field modifications:
+
+```bash
+uv run python -m parsevk_contracts.generation.cli compatibility \
+  --baseline /path/to/baseline/generated \
+  --current generated
+```
+
+Exit codes:
+- `0` — all checks passed
+- `1` — violations found (details on stderr)
+- `2` — operational error (missing files, invalid JSON)
+
 ## Package structure
 
 ```

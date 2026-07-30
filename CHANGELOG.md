@@ -1,3 +1,37 @@
+# [0.81.0](https://github.com/andr-235/parseVK/compare/v0.80.0...v0.81.0) (2026-07-30)
+
+
+### Features
+
+* **ai-review:** учитывать доверенные AGENTS.md ([#323](https://github.com/andr-235/parseVK/issues/323)) ([301996b](https://github.com/andr-235/parseVK/commit/301996b19f80b9072d293623bfc1ca4bc9ef7b6a)), closes [#320](https://github.com/andr-235/parseVK/issues/320)
+
+# [0.80.0](https://github.com/andr-235/parseVK/compare/v0.79.1...v0.80.0) (2026-07-30)
+
+
+### Bug Fixes
+
+* **ai-review:** логировать причины отклонения findings ([#319](https://github.com/andr-235/parseVK/issues/319)) ([96fb2b8](https://github.com/andr-235/parseVK/commit/96fb2b81baa5511f41da4163adc5cbc9415b2f44))
+* **ai-review:** перепривязывать близкие строки findings к diff ([#322](https://github.com/andr-235/parseVK/issues/322)) ([85809e1](https://github.com/andr-235/parseVK/commit/85809e1e1be0cb71bbd29ee082ba4cd13fd35558))
+
+
+### Features
+
+* **contracts:** PR01 exit gates — compatibility & registry validation ([#282](https://github.com/andr-235/parseVK/issues/282)) ([#308](https://github.com/andr-235/parseVK/issues/308)) ([e0936fb](https://github.com/andr-235/parseVK/commit/e0936fb79b05346abe7fe0f30f8e79269fd78996))
+
+## [0.79.1](https://github.com/andr-235/parseVK/compare/v0.79.0...v0.79.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* **ai-review:** калибровать прямые противоречия контракту ([#317](https://github.com/andr-235/parseVK/issues/317)) ([ac0561d](https://github.com/andr-235/parseVK/commit/ac0561d7f61421fb40e36b79243deef613e56a7d))
+
+# [0.79.0](https://github.com/andr-235/parseVK/compare/v0.78.3...v0.79.0) (2026-07-30)
+
+
+### Features
+
+* **ai-review:** публиковать findings как inline GitHub review ([#314](https://github.com/andr-235/parseVK/issues/314)) ([fc626c1](https://github.com/andr-235/parseVK/commit/fc626c1f5a5733ca4a686d837a84df71307548e1))
+
 ## [0.78.3](https://github.com/andr-235/parseVK/compare/v0.78.2...v0.78.3) (2026-07-30)
 
 
