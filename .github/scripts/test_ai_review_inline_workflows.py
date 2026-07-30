@@ -34,7 +34,7 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn('"approved": "+1"', status)
         self.assertIn('"changes-required": "-1"', status)
         self.assertIn('"findings": "confused"', status)
-        self.assertIn('"unavailable": None', status)
+        self.assertIn('"unavailable": "confused"', status)
         self.assertIn('user.get("login") != "github-actions[bot]"', status)
 
     def test_default_branch_publisher_owns_review_comments(self) -> None:
