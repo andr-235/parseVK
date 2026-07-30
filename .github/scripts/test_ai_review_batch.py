@@ -70,6 +70,28 @@ class CommitPlanTests(unittest.TestCase):
         )
         self.assertEqual(plan["units"][0]["base_sha"], self.commits[1])
 
+    def test_force_push_rebuilds_plan_from_current_merge_base(self) -> None:
+        old_head = self.commits[3]
+        subprocess.run(
+            ["git", "checkout", "-b", "rewritten", self.commits[0]],
+            cwd=self.repo,
+            check=True,
+            capture_output=True,
+        )
+        rewritten = [self._commit("new-a"), self._commit("new-b")]
+        plan = build_plan(
+            action="synchronize",
+            base_sha=self.commits[0],
+            before_sha=old_head,
+            head_sha=rewritten[-1],
+            cwd=self.repo,
+        )
+        self.assertEqual(
+            [unit["head_sha"] for unit in plan["units"]],
+            rewritten,
+        )
+        self.assertEqual(plan["start_sha"], self.commits[0])
+
 
 class AggregateTests(unittest.TestCase):
     def test_blocking_commit_wins_batch_verdict(self) -> None:
