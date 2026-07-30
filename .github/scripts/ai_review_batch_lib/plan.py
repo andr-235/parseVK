@@ -10,7 +10,7 @@ ZERO_SHA = "0" * 40
 
 
 def _git(args: list[str], cwd: Path, *, check: bool = True) -> str:
-    completed = subprocess.run(
+    completed = subprocess.run(  # noqa: S603 -- fixed git executable, internal args
         ["/usr/bin/git", *args],
         cwd=cwd,
         check=check,
@@ -21,7 +21,7 @@ def _git(args: list[str], cwd: Path, *, check: bool = True) -> str:
 
 
 def _is_ancestor(base: str, head: str, cwd: Path) -> bool:
-    completed = subprocess.run(
+    completed = subprocess.run(  # noqa: S603 -- fixed git executable and command
         ["/usr/bin/git", "merge-base", "--is-ancestor", base, head],
         cwd=cwd,
         check=False,
