@@ -1,0 +1,68 @@
+name: Reusable Docker Image Security
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        description: Catalog service name
+        required: true
+        type: string
+      dockerfile:
+        description: Dockerfile path
+        required: true
+        type: string
+      image:
+        description: Local image tag for scanning
+        required: true
+        type: string
+      build_args:
+        description: Optional multiline Docker build arguments
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  image-security:
+    name: Image security ${{ inputs.service }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build image for scanning
+        id: build-image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ inputs.dockerfile }}
+          push: false
+          load: true
+          tags: ${{ inputs.image }}
+          cache-from: type=gha,scope=security-${{ inputs.service }}
+          cache-to: type=gha,mode=max,scope=security-${{ inputs.service }}
+          build-args: ${{ inputs.build_args }}
+
+      - name: Run Trivy vulnerability scanner
+        if: steps.build-image.outcome == 'success'
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ inputs.image }}
+          format: sarif
+          output: trivy-${{ inputs.service }}-results.sarif
+          severity: CRITICAL,HIGH
+
+      - name: Upload Trivy results to GitHub Security
+        if: always() && steps.build-image.outcome == 'success'
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-${{ inputs.service }}-results.sarif
+          wait-for-processing: false
