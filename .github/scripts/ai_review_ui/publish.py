@@ -8,12 +8,6 @@ from .models import PublishError, ReviewResult, SkipPublication
 from .render import render_review_body, split_findings
 
 PUBLISHABLE_VERDICTS = {"changes-required", "findings"}
-REACTIONS = {
-    "approved": "+1",
-    "changes-required": "-1",
-    "findings": "confused",
-    "review-required": "confused",
-}
 
 
 def nested(value: Mapping[str, Any], *keys: str) -> Any:
@@ -87,19 +81,16 @@ def publish_review_result(
     validate_pull_request(api, number, result)
 
     if result.verdict == "unavailable":
-        api.remove_reactions(number)
         cleanup_legacy_best_effort(api, number, "Unavailable result suppressed")
         return "unavailable result suppressed"
 
     if result.verdict == "approved":
-        cleanup_legacy_best_effort(api, number, "Approved result published")
-        api.set_reaction(number, REACTIONS[result.verdict])
-        return "approved reaction published"
+        cleanup_legacy_best_effort(api, number, "Approved result processed")
+        return "approved result requires no review"
 
     if result.verdict == "review-required":
         outcome = ensure_review(api, number, result)
         cleanup_legacy_best_effort(api, number, "Manual review requirement published")
-        api.set_reaction(number, REACTIONS[result.verdict])
         return outcome
 
     if result.verdict not in PUBLISHABLE_VERDICTS or not result.findings:
@@ -109,5 +100,4 @@ def publish_review_result(
 
     outcome = ensure_review(api, number, result)
     cleanup_legacy_best_effort(api, number, "Inline review published")
-    api.set_reaction(number, REACTIONS[result.verdict])
     return outcome
