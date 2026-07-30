@@ -56,6 +56,9 @@ pids
 *.pid
 *.seed
 *.pid.lock
+.deployment-metadata.json
+.rollback-state.json
+.releases/
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
@@ -86,4 +89,3 @@ __pycache__/
 .venv/
 venv/
 env/
-
