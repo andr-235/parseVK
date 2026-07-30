@@ -1,3 +1,10 @@
+# [0.85.0](https://github.com/andr-235/parseVK/compare/v0.84.0...v0.85.0) (2026-07-30)
+
+
+### Features
+
+* **ai-review:** проверять Pull Request по commits ([#353](https://github.com/andr-235/parseVK/issues/353)) ([2382091](https://github.com/andr-235/parseVK/commit/23820916fce49a4869e33ee15f7c26de0ab0ae05))
+
 # [0.84.0](https://github.com/andr-235/parseVK/compare/v0.83.2...v0.84.0) (2026-07-30)
 
 
