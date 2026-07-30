@@ -143,7 +143,3 @@ class PublishTests(unittest.TestCase):
         outcome = publish_inline_review(api, 42, result(verdict="approved"))
         self.assertEqual(outcome, "skipped verdict approved")
         self.assertIsNone(api.created)
-
-
-if __name__ == "__main__":
-    unittest.main()
