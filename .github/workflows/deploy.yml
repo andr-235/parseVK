@@ -2,7 +2,7 @@ name: Deploy to Production Server
 
 on:
   workflow_run:
-    workflows: ["Full Release CI"]
+    workflows: ["CI"]
     types:
       - completed
   workflow_dispatch:
@@ -100,7 +100,7 @@ jobs:
             exit 0
           fi
 
-          REQUIRED_WORKFLOWS=("Full Release CI" "Security Scanning")
+          REQUIRED_WORKFLOWS=("CI" "Security Scanning")
           MAX_ATTEMPTS=60
           SLEEP_SECONDS=20
 
@@ -148,9 +148,256 @@ jobs:
               exit 0
             fi
 
-            echo "Ожидание release gates для ${TARGET_SHA}: попытка ${attempt}/${MAX_ATTEMPTS}"
+            if (( attempt == MAX_ATTEMPTS )); then
+              echo "::error::Истекло время ожидания release gates для ${TARGET_SHA}"
+              exit 1
+            fi
+
+            echo "Ожидание обязательных проверок: попытка ${attempt}/${MAX_ATTEMPTS}"
             sleep "$SLEEP_SECONDS"
           done
 
-          echo "::error::Таймаут ожидания release gates для ${TARGET_SHA}"
-          exit 1
+  deploy:
+    name: Deploy to Debian Server
+    needs: gate
+    if: needs.gate.outputs.deploy == 'true'
+    runs-on: [self-hosted]
+    timeout-minutes: 90
+    permissions:
+      contents: read
+
+    env:
+      DOCKER_BUILDKIT: 1
+      COMPOSE_DOCKER_CLI_BUILD: 1
+      COMPOSE_FILE: docker-compose.yml
+      COMPOSE_PROJECT_NAME: parsevk
+      PROJECT_ROOT: /opt/parseVK
+      PRODUCTION_SCRIPTS_DIR: ${{ github.workspace }}/.github/scripts/production
+      SERVICE_CATALOG_CLI: ${{ github.workspace }}/.github/scripts/service_catalog.py
+      LOCAL_RELEASE_SCRIPT: ${{ github.workspace }}/.github/scripts/production/local-release.sh
+      TARGET_SHA: ${{ needs.gate.outputs.target_sha }}
+      ALLOW_IMAGE_PULLS: "false"
+      PULL_POLICY: never
+
+    steps:
+      - name: Checkout validated code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          ref: ${{ needs.gate.outputs.target_sha }}
+          persist-credentials: false
+
+      - name: Load deployment metadata
+        id: deployment_metadata
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" GITHUB_OUTPUT="$GITHUB_OUTPUT" \
+            bash "$PRODUCTION_SCRIPTS_DIR/metadata.sh" load
+
+      - name: Determine deployment context
+        id: deployment_context
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
+
+          if ! git remote get-url origin > /dev/null 2>&1; then
+            echo "Error: Git remote 'origin' is not configured"
+            exit 1
+          fi
+
+          if ! git fetch --no-tags origin "$TARGET_SHA"; then
+            echo "Error: Failed to fetch target commit $TARGET_SHA"
+            exit 1
+          fi
+
+          LAST_SUCCESSFUL="${{ steps.deployment_metadata.outputs.last_successful_commit }}"
+          SKIP_DEPLOY=false
+          SKIP_REASON=""
+
+          if [ -n "$LAST_SUCCESSFUL" ] && [ "$LAST_SUCCESSFUL" = "$TARGET_SHA" ]; then
+            SKIP_DEPLOY=true
+            SKIP_REASON="commit is already deployed"
+          fi
+
+          echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+          echo "skip_deploy=$SKIP_DEPLOY" >> "$GITHUB_OUTPUT"
+          echo "skip_reason=$SKIP_REASON" >> "$GITHUB_OUTPUT"
+          echo "Selected validated release commit: $TARGET_SHA"
+
+      - name: Bootstrap current local release
+        if: >-
+          steps.deployment_context.outputs.skip_deploy != 'true' &&
+          steps.deployment_metadata.outputs.last_successful_commit != ''
+        working-directory: /opt/parseVK
+        env:
+          CURRENT_RELEASE: ${{ steps.deployment_metadata.outputs.last_successful_commit }}
+        run: |
+          set -euo pipefail
+
+          echo "Refreshing rollback manifest for currently running release $CURRENT_RELEASE"
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" COMPOSE_PROJECT_NAME="$COMPOSE_PROJECT_NAME" \
+            SERVICE_CATALOG_CLI="$PROJECT_ROOT/.github/scripts/service_catalog.py" \
+            bash "$LOCAL_RELEASE_SCRIPT" snapshot "$CURRENT_RELEASE"
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" COMPOSE_PROJECT_NAME="$COMPOSE_PROJECT_NAME" \
+            SERVICE_CATALOG_CLI="$PROJECT_ROOT/.github/scripts/service_catalog.py" \
+            bash "$LOCAL_RELEASE_SCRIPT" promote "$CURRENT_RELEASE"
+
+      - name: Update code
+        if: steps.deployment_context.outputs.skip_deploy != 'true'
+        working-directory: /opt/parseVK
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+
+          echo "=== Updating code ==="
+          if ! git fetch --no-tags origin "$TARGET_SHA"; then
+            echo "Error: Failed to fetch target commit $TARGET_SHA"
+            exit 1
+          fi
+
+          if ! git checkout -f "$TARGET_SHA"; then
+            echo "Error: Failed to checkout commit $TARGET_SHA"
+            exit 1
+          fi
+
+          git branch -f deployed "$TARGET_SHA"
+          echo "Updated to commit: $(git rev-parse HEAD)"
+
+      - name: Production preflight
+        if: steps.deployment_context.outputs.skip_deploy != 'true'
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
+            bash "$PRODUCTION_SCRIPTS_DIR/preflight.sh"
+
+      - name: Detect changed services from catalog
+        id: changed_services
+        if: steps.deployment_context.outputs.skip_deploy != 'true'
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
+
+          PREV_COMMIT="${{ steps.deployment_metadata.outputs.last_successful_commit }}"
+          CURRENT_COMMIT="$(git rev-parse HEAD)"
+
+          python3 "$SERVICE_CATALOG_CLI" \
+            --repo-root "$PROJECT_ROOT" \
+            changed \
+            --purpose deploy \
+            --base "$PREV_COMMIT" \
+            --head "$CURRENT_COMMIT" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Build local application images
+        if: steps.deployment_context.outputs.skip_deploy != 'true'
+        working-directory: /opt/parseVK
+        timeout-minutes: 30
+        env:
+          SERVICES_TO_BUILD: ${{ steps.changed_services.outputs.value }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "$SERVICES_TO_BUILD" ]; then
+            read -r -a BUILD_TARGETS <<< "$SERVICES_TO_BUILD"
+            PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" ALLOW_IMAGE_PULLS="$ALLOW_IMAGE_PULLS" \
+              bash "$PRODUCTION_SCRIPTS_DIR/images.sh" prepare "${BUILD_TARGETS[@]}"
+            PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
+              bash "$PRODUCTION_SCRIPTS_DIR/images.sh" build "${BUILD_TARGETS[@]}"
+          else
+            echo "No application images changed since the last successful deployment"
+          fi
+
+      - name: Snapshot local release images
+        id: release_snapshot
+        if: steps.deployment_context.outputs.skip_deploy != 'true'
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" COMPOSE_PROJECT_NAME="$COMPOSE_PROJECT_NAME" \
+            SERVICE_CATALOG_CLI="$SERVICE_CATALOG_CLI" bash "$LOCAL_RELEASE_SCRIPT" snapshot "$TARGET_SHA"
+
+      - name: Start release containers
+        if: steps.deployment_context.outputs.skip_deploy != 'true'
+        working-directory: /opt/parseVK
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" PULL_POLICY="$PULL_POLICY" \
+            UP_ARGS="-d --no-build" bash "$PRODUCTION_SCRIPTS_DIR/release.sh"
+
+      - name: Verify container health
+        if: steps.deployment_context.outputs.skip_deploy != 'true'
+        working-directory: /opt/parseVK
+        timeout-minutes: 7
+        env:
+          FULL_DEPLOY: "true"
+          MAX_ATTEMPTS: "30"
+        run: |
+          set -euo pipefail
+          COMPOSE_FILE="$COMPOSE_FILE" FULL_DEPLOY="$FULL_DEPLOY" MAX_ATTEMPTS="$MAX_ATTEMPTS" \
+            bash "${{ github.workspace }}/.github/scripts/health-check.sh"
+
+      - name: Promote local release
+        if: success() && steps.deployment_context.outputs.skip_deploy != 'true'
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" COMPOSE_PROJECT_NAME="$COMPOSE_PROJECT_NAME" \
+            SERVICE_CATALOG_CLI="$SERVICE_CATALOG_CLI" bash "$LOCAL_RELEASE_SCRIPT" promote "$TARGET_SHA"
+
+      - name: Update deployment metadata
+        if: success() && steps.deployment_context.outputs.skip_deploy != 'true'
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
+          CURRENT_COMMIT="$(git rev-parse HEAD)"
+          CURRENT_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
+            bash "$PRODUCTION_SCRIPTS_DIR/metadata.sh" write "$CURRENT_COMMIT" "$CURRENT_TIME"
+
+      - name: Restore previous local release after failed deployment
+        if: >-
+          failure() &&
+          steps.release_snapshot.outcome == 'success' &&
+          steps.deployment_metadata.outputs.last_successful_commit != ''
+        working-directory: /opt/parseVK
+        timeout-minutes: 15
+        env:
+          PREVIOUS_RELEASE: ${{ steps.deployment_metadata.outputs.last_successful_commit }}
+        run: |
+          set -euo pipefail
+
+          echo "Deployment failed; restoring previous local release $PREVIOUS_RELEASE"
+          git fetch --no-tags origin "$PREVIOUS_RELEASE"
+          git checkout -f "$PREVIOUS_RELEASE"
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" COMPOSE_PROJECT_NAME="$COMPOSE_PROJECT_NAME" \
+            SERVICE_CATALOG_CLI="$PROJECT_ROOT/.github/scripts/service_catalog.py" \
+            bash "$LOCAL_RELEASE_SCRIPT" activate "$PREVIOUS_RELEASE"
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" PULL_POLICY="$PULL_POLICY" \
+            UP_ARGS="-d --no-build" bash "$PRODUCTION_SCRIPTS_DIR/release.sh"
+          COMPOSE_FILE="$COMPOSE_FILE" FULL_DEPLOY="true" MAX_ATTEMPTS="30" \
+            bash "$PROJECT_ROOT/.github/scripts/health-check.sh"
+
+      - name: Discard failed local release candidate
+        if: failure() && steps.release_snapshot.outcome == 'success'
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
+            bash "$LOCAL_RELEASE_SCRIPT" discard "$TARGET_SHA"
+
+      - name: Deployment status
+        if: always()
+        run: |
+          if [ "${{ steps.deployment_context.outputs.skip_deploy }}" = "true" ]; then
+            echo "⏭️ Deployment skipped: ${{ steps.deployment_context.outputs.skip_reason }}"
+            echo "Commit: $TARGET_SHA"
+          elif [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Local release deployed successfully and is healthy"
+            echo "Commit: $(cd /opt/parseVK && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
+          else
+            echo "❌ Deployment failed; previous local release restoration was attempted"
+            echo "Commit: $(cd /opt/parseVK && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
+          fi
