@@ -8,6 +8,7 @@ CI_WORKFLOW="$ROOT_DIR/.github/workflows/ci.yml"
 SECURITY_WORKFLOW="$ROOT_DIR/.github/workflows/security.yml"
 SERVICE_CATALOG="$ROOT_DIR/.github/service-catalog.yaml"
 SERVICE_CATALOG_CLI="$ROOT_DIR/.github/scripts/service_catalog.py"
+IMAGES_SCRIPT="$ROOT_DIR/.github/scripts/production/images.sh"
 
 for file in \
   "$DEPLOY_WORKFLOW" \
@@ -117,7 +118,7 @@ for script in \
   "$ROOT_DIR/.github/scripts/production/common.sh" \
   "$ROOT_DIR/.github/scripts/production/metadata.sh" \
   "$ROOT_DIR/.github/scripts/production/preflight.sh" \
-  "$ROOT_DIR/.github/scripts/production/images.sh" \
+  "$IMAGES_SCRIPT" \
   "$ROOT_DIR/.github/scripts/production/migrations.sh" \
   "$ROOT_DIR/.github/scripts/production/release.sh"
 do
@@ -143,6 +144,22 @@ fi
 
 if grep -En 'images\.sh" prepare .*prometheus|images\.sh" prepare .*node-exporter|images\.sh" prepare .*grafana' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" >/dev/null; then
   echo "Regression: production workflows eagerly prepare monitoring images"
+  exit 1
+fi
+
+missing_catalog_output=""
+if missing_catalog_output="$(
+  PROJECT_ROOT="$ROOT_DIR" \
+  COMPOSE_FILE="$ROOT_DIR/docker-compose.yml" \
+  SERVICE_CATALOG_CLI="$ROOT_DIR/.github/scripts/does-not-exist.py" \
+    bash "$IMAGES_SCRIPT" prepare 2>&1
+)"; then
+  echo "Regression: image preparation succeeded without the service catalog CLI"
+  exit 1
+fi
+if ! grep -q 'Failed to resolve image preparation targets' <<< "$missing_catalog_output"; then
+  echo "Regression: image preparation failure does not explain catalog resolution error"
+  printf '%s\n' "$missing_catalog_output"
   exit 1
 fi
 
