@@ -266,7 +266,7 @@ def _git_changed_files(repo_root: Path, base: str, head: str) -> list[str] | Non
     if verify.returncode != 0:
         return None
     result = subprocess.run(  # noqa: S603 - fixed git arguments, SHAs are separate argv items
-        [git, "diff", "--name-only", "--diff-filter=ACMRT", base, head],
+        [git, "diff", "--name-only", "--diff-filter=ACMRT", f"{base}...{head}"],
         cwd=repo_root,
         text=True,
         capture_output=True,
