@@ -11,7 +11,7 @@ def write_revision(
     directory: Path,
     filename: str,
     revision: str,
-    down_revision: str | tuple[str, ...] | None,
+    down_revision: str | tuple[str, ...] | list[str] | None,
 ) -> None:
     directory.mkdir(parents=True, exist_ok=True)
     (directory / filename).write_text(
@@ -48,6 +48,14 @@ class AlembicGraphTests(unittest.TestCase):
             write_revision(versions, "002.py", "002", "missing")
             errors, _ = validate_versions_dir("demo", versions)
             self.assertTrue(any("missing parent revisions" in error for error in errors))
+
+    def test_empty_parent_sequence_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            versions = Path(directory)
+            write_revision(versions, "001.py", "001", [])
+            errors, head = validate_versions_dir("demo", versions)
+            self.assertTrue(any("non-empty string sequence" in error for error in errors))
+            self.assertIsNone(head)
 
     def test_multiple_bases_are_allowed_when_they_merge(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
