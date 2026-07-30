@@ -6,16 +6,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
 UP_ARGS="${UP_ARGS:--d}"
+PULL_POLICY="${PULL_POLICY:-never}"
 SERVICES=("$@")
 
 start_services() {
   if [ "${#SERVICES[@]}" -gt 0 ]; then
-    if compose up --remove-orphans ${UP_ARGS} "${SERVICES[@]}"; then
+    if compose up --pull "$PULL_POLICY" --remove-orphans ${UP_ARGS} "${SERVICES[@]}"; then
       log_info "Containers started successfully"
       print_compose_status
       return 0
     fi
-  elif compose up --remove-orphans ${UP_ARGS}; then
+  elif compose up --pull "$PULL_POLICY" --remove-orphans ${UP_ARGS}; then
     log_info "Containers started successfully"
     print_compose_status
     return 0
