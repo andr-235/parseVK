@@ -4,10 +4,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PUBLISH="$ROOT_DIR/.github/workflows/publish-release-images.yml"
 REUSABLE="$ROOT_DIR/.github/workflows/reusable-publish-image.yml"
+SECURITY="$ROOT_DIR/.github/workflows/security.yml"
 MANIFEST="$ROOT_DIR/.github/scripts/release_manifest.py"
 MANIFEST_TEST="$ROOT_DIR/.github/scripts/test_release_manifest.py"
 
-for file in "$PUBLISH" "$REUSABLE" "$MANIFEST" "$MANIFEST_TEST"; do
+for file in "$PUBLISH" "$REUSABLE" "$SECURITY" "$MANIFEST" "$MANIFEST_TEST"; do
   [[ -f "$file" ]] || { echo "Required immutable release file not found: $file"; exit 1; }
 done
 
@@ -41,6 +42,14 @@ require_pattern "$PUBLISH" 'merge-multiple: true' "Digest metadata is not flatte
 require_pattern "$PUBLISH" '--commit-sha' "Manifest is not bound to the validated commit"
 require_pattern "$PUBLISH" 'release-manifest-.*target_sha' "Release artifact is not commit-addressed"
 reject_pattern "$PUBLISH" 'workflow_dispatch:' "Release workflow accepts manual arbitrary execution"
+
+require_pattern "$SECURITY" 'if \[\[.*github\.event_name.*pull_request' \
+  "Security workflow does not keep PR Docker scans incremental"
+require_pattern "$SECURITY" 'else' "Security workflow has no full-release branch"
+require_pattern "$SECURITY" '--purpose docker' "Security workflow does not build a Docker matrix"
+require_pattern "$SECURITY" '--all' "Main Security does not scan the complete release matrix"
+reject_pattern "$SECURITY" 'github\.event_name.*push.*BASE_SHA' \
+  "Main Security still scans only changed Docker images"
 
 require_pattern "$REUSABLE" 'packages: write' "Reusable publisher cannot push to GHCR"
 require_pattern "$REUSABLE" 'attestations: write' "Reusable publisher cannot write attestations"
