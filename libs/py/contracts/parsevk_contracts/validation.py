@@ -79,7 +79,7 @@ def _resolve_contract_model(ann: object) -> type[ContractModel] | None:
         for arg in args:
             if isinstance(arg, type) and issubclass(arg, ContractModel) and arg is not ContractModel:
                 return arg
-    if origin is tuple:
+    if origin in (tuple, list, set, frozenset):
         for arg in args:
             if arg is not Ellipsis:
                 if isinstance(arg, type) and issubclass(arg, ContractModel) and arg is not ContractModel:
@@ -137,13 +137,30 @@ def prepare_for_publish(
 ) -> PreparedMessage:
     """Prepare a message for publishing.
 
-    1. Looks up contract by message_type + schema_version
-    2. Validates producer is allowed
-    3. Validates payload with strict=True + extra="forbid"
-    4. Builds the typed envelope
-    5. Returns PreparedMessage with envelope, topic, partition_key, value, headers
+    1. Validates header metadata with strict=True
+    2. Looks up contract by message_type + schema_version
+    3. Validates producer is allowed
+    4. Validates payload with strict=True + extra="forbid"
+    5. Builds the typed envelope with strict=True
+    6. Returns PreparedMessage with envelope, topic, partition_key, value, headers
     """
-    contract = catalog.get(message_type, schema_version)
+    try:
+        header = EnvelopeHeader.model_validate(
+            {
+                "message_type": message_type,
+                "schema_version": schema_version,
+            },
+            strict=True,
+            extra="forbid",
+            by_alias=False,
+            by_name=True,
+        )
+    except ValidationError as exc:
+        raise ContractValidationError(
+            f"Invalid envelope header: {exc}"
+        ) from exc
+
+    contract = catalog.get(header.message_type, header.schema_version)
 
     if producer not in contract.producers:
         raise ProducerNotAllowedError(
@@ -160,16 +177,31 @@ def prepare_for_publish(
             f"Payload validation failed for '{message_type}': {exc}"
         ) from exc
 
-    envelope: MessageEnvelope[ContractModel] = MessageEnvelope(
-        message_id=message_id,
-        message_type=message_type,
-        schema_version=schema_version,
-        occurred_at=occurred_at,
-        producer=producer,
-        correlation_id=correlation_id,
-        causation_id=causation_id,
-        payload=payload_model,
-    )
+    envelope_type: type[MessageEnvelope[ContractModel]] = MessageEnvelope[
+        contract.payload_model
+    ]
+
+    try:
+        envelope = envelope_type.model_validate(
+            {
+                "message_id": message_id,
+                "message_type": message_type,
+                "schema_version": schema_version,
+                "occurred_at": occurred_at,
+                "producer": producer,
+                "correlation_id": correlation_id,
+                "causation_id": causation_id,
+                "payload": payload_model,
+            },
+            strict=True,
+            extra="forbid",
+            by_alias=False,
+            by_name=True,
+        )
+    except ValidationError as exc:
+        raise ContractValidationError(
+            f"Envelope validation failed for '{message_type}': {exc}"
+        ) from exc
 
     _enforce_envelope_policy(contract, envelope)
 

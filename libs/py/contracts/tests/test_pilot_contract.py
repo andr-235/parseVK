@@ -247,6 +247,41 @@ class TestEnvelopeWithPilotContract:
         assert wire["payload"]["executionId"] == str(payload.execution_id)
 
 
+def make_valid_producer_payload_dict(
+    task_run_id: object = None,
+    execution_id: object = None,
+    include_thread_replies: object = True,
+) -> dict[str, object]:
+    """Build a valid producer payload dict with snake_case keys and non-empty demands."""
+    uid1, uid2, uid3 = uuid4(), uuid4(), uuid4()
+    return {
+        "task_id": 1,
+        "task_run_id": task_run_id or uid1,
+        "execution_id": execution_id or uid2,
+        "demands": ({
+            "demand_id": uid3,
+            "source": {
+                "source_id": uuid4(),
+                "provider": "vk",
+                "source_type": "community",
+                "external_id": "123",
+                "owner_id": -123,
+            },
+        },),
+        "post_selection": {
+            "strategy": "latestByPublishedAt",
+            "limit_per_source": 100,
+        },
+        "comment_selection": {
+            "mode": "all",
+            "include_thread_replies": include_thread_replies,
+        },
+        "task_revision": 1,
+        "source_set_revision": 1,
+        "snapshot_sha256": "a" * 64,
+    }
+
+
 class TestPilotProducer:
     """Real-world producer boundary tests for vk.execution.requested."""
 
@@ -305,15 +340,25 @@ class TestPilotProducer:
         assert isinstance(result.envelope.payload, VkExecutionRequested)
 
     def test_camel_case_payload_rejected(self) -> None:
-        """camelCase keys in producer payload → rejected."""
+        """camelCase keys in producer payload → rejected (non-empty demands)."""
         from parsevk_contracts.errors import ContractValidationError
         from parsevk_contracts.validation import prepare_for_publish
 
+        execution_id = uuid4()
         payload: dict[str, object] = {
             "taskId": 1,
             "taskRunId": uuid4(),
-            "executionId": uuid4(),
-            "demands": (),
+            "executionId": execution_id,
+            "demands": ({
+                "demandId": uuid4(),
+                "source": {
+                    "sourceId": uuid4(),
+                    "provider": "vk",
+                    "sourceType": "community",
+                    "externalId": "123",
+                    "ownerId": -123,
+                },
+            },),
             "postSelection": {"strategy": "latestByPublishedAt", "limitPerSource": 100},
             "commentSelection": {"mode": "all", "includeThreadReplies": True},
             "taskRevision": 1,
@@ -328,7 +373,7 @@ class TestPilotProducer:
                 producer="tasks-service",
                 message_id=uuid4(),
                 occurred_at=datetime.now(UTC),
-                correlation_id=uuid4(),
+                correlation_id=execution_id,
                 causation_id=None,
                 payload=payload,
             )
@@ -495,17 +540,10 @@ class TestCommentSelectionValidation:
         from parsevk_contracts.errors import ContractValidationError
         from parsevk_contracts.validation import prepare_for_publish
         execution_id = uuid4()
-        payload: dict[str, object] = {
-            "task_id": 1,
-            "task_run_id": uuid4(),
-            "execution_id": execution_id,
-            "demands": (),
-            "post_selection": {"strategy": "latestByPublishedAt", "limit_per_source": 100},
-            "comment_selection": {"mode": "all", "include_thread_replies": 1},
-            "task_revision": 1,
-            "source_set_revision": 1,
-            "snapshot_sha256": "a" * 64,
-        }
+        payload = make_valid_producer_payload_dict(
+            execution_id=execution_id,
+            include_thread_replies=1,
+        )
         with pytest.raises(ContractValidationError):
             prepare_for_publish(
                 CATALOG,

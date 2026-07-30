@@ -26,15 +26,23 @@ def main() -> int:
 
     failures = 0
 
+    def classify_fixture(path: Path) -> str | None:
+        for prefix in (
+            "valid-",
+            "consume-",
+            "invalid-schema-",
+            "invalid-contract-",
+        ):
+            if path.stem.startswith(prefix):
+                return prefix.removesuffix("-")
+        return None
+
     all_json: list[Path] = sorted(examples_dir.glob("*.json"))
     known_prefixes = frozenset({"valid", "consume", "invalid-schema", "invalid-contract"})
 
     for path in all_json:
-        stem = path.stem
-        prefix = stem.split("-")[0] if "-" in stem else stem
-        if prefix == "invalid":
-            prefix = "invalid-schema" if "schema" in stem else "invalid-contract"
-        if prefix not in known_prefixes:
+        prefix = classify_fixture(path)
+        if prefix is None:
             print(f"  FAIL {path.name}: unknown prefix (expected one of: {', '.join(sorted(known_prefixes))})", file=sys.stderr)
             failures += 1
 
