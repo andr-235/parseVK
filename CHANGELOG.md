@@ -1,3 +1,10 @@
+## [0.78.3](https://github.com/andr-235/parseVK/compare/v0.78.2...v0.78.3) (2026-07-30)
+
+
+### Bug Fixes
+
+* **ai-review:** формировать summary только из принятых findings ([#312](https://github.com/andr-235/parseVK/issues/312)) ([442bf6a](https://github.com/andr-235/parseVK/commit/442bf6a679363e1232666b92239694cf7f8bf871))
+
 ## [0.78.2](https://github.com/andr-235/parseVK/compare/v0.78.1...v0.78.2) (2026-07-30)
 
 
