@@ -94,9 +94,7 @@ def ancestors_of(head: str, revisions: dict[str, Revision]) -> set[str]:
     return ancestors
 
 
-def validate_versions_dir(
-    service: str, versions_dir: Path
-) -> tuple[list[str], str | None]:
+def validate_versions_dir(service: str, versions_dir: Path) -> tuple[list[str], str | None]:
     errors: list[str] = []
     revisions: dict[str, Revision] = {}
     referenced: set[str] = set()
