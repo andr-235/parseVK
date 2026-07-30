@@ -1,0 +1,71 @@
+name: Diagnose Release 0.84.0 CI
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/diagnose-release-0840-ci.yml
+
+permissions:
+  actions: read
+  checks: read
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect release workflow runs and failed steps
+        uses: actions/github-script@v7
+        env:
+          TARGET_SHA: aaca8d262970cd44a125c8ac2f3bed8756ed798d
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const headSha = process.env.TARGET_SHA;
+
+            const runsResponse = await github.rest.actions.listWorkflowRunsForRepo({
+              owner,
+              repo,
+              head_sha: headSha,
+              per_page: 100,
+            });
+
+            core.info(`TARGET_SHA=${headSha}`);
+            core.info(`WORKFLOW_RUNS=${runsResponse.data.workflow_runs.length}`);
+
+            for (const run of runsResponse.data.workflow_runs) {
+              core.info(`RUN id=${run.id} name=${JSON.stringify(run.name)} event=${run.event} status=${run.status} conclusion=${run.conclusion} attempt=${run.run_attempt} url=${run.html_url}`);
+
+              const jobsResponse = await github.paginate(
+                github.rest.actions.listJobsForWorkflowRun,
+                {
+                  owner,
+                  repo,
+                  run_id: run.id,
+                  per_page: 100,
+                },
+              );
+
+              for (const job of jobsResponse) {
+                core.info(`JOB id=${job.id} name=${JSON.stringify(job.name)} status=${job.status} conclusion=${job.conclusion} url=${job.html_url}`);
+                for (const step of job.steps ?? []) {
+                  if (step.conclusion === 'failure' || step.conclusion === 'cancelled') {
+                    core.info(`FAILED_STEP job_id=${job.id} number=${step.number} name=${JSON.stringify(step.name)} conclusion=${step.conclusion}`);
+                  }
+                }
+              }
+            }
+
+            const checksResponse = await github.rest.checks.listForRef({
+              owner,
+              repo,
+              ref: headSha,
+              per_page: 100,
+              filter: 'latest',
+            });
+
+            core.info(`CHECK_RUNS=${checksResponse.data.check_runs.length}`);
+            for (const check of checksResponse.data.check_runs) {
+              core.info(`CHECK id=${check.id} name=${JSON.stringify(check.name)} status=${check.status} conclusion=${check.conclusion} url=${check.html_url}`);
+            }
