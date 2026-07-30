@@ -63,7 +63,7 @@ jobs:
             COMMON_CHANGED=true
             CONTRACTS_CHANGED=true
           else
-            CHANGED_FILES="$(git diff --name-only --diff-filter=ACMRT "$BASE_SHA" "$HEAD_SHA")"
+            CHANGED_FILES="$(git diff --name-only --diff-filter=ACMRT "$BASE_SHA...$HEAD_SHA")"
             if [[ -z "$CHANGED_FILES" ]]; then
               echo "No changed files detected"
             else
@@ -202,7 +202,7 @@ jobs:
             mapfile -t PYTHON_FILES < <(git ls-files '*.py')
           else
             mapfile -t PYTHON_FILES < <(
-              git diff --name-only --diff-filter=ACMRT "$BASE_SHA" "$HEAD_SHA" -- '*.py' \
+              git diff --name-only --diff-filter=ACMRT "$BASE_SHA...$HEAD_SHA" -- '*.py' \
                 | while IFS= read -r path; do
                     [[ -f "$path" ]] && printf '%s\n' "$path"
                   done
