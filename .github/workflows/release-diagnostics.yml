@@ -1,0 +1,60 @@
+name: Release Diagnostics
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/release-diagnostics.yml
+
+permissions:
+  actions: read
+  checks: read
+  contents: read
+  packages: read
+  statuses: read
+
+jobs:
+  inspect:
+    name: Inspect immutable release chain
+    runs-on: ubuntu-latest
+    env:
+      TARGET_SHA: a9e54ef941220938243d7fa4427fd3e408531ac5
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: List workflow runs for release commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${TARGET_SHA}&per_page=100" \
+            --jq '.workflow_runs | sort_by(.created_at)[] | [.id,.name,.event,.status,(.conclusion // "-"),.run_number,.created_at,.updated_at] | @tsv'
+
+      - name: Inspect release-related jobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t RUN_IDS < <(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${TARGET_SHA}&per_page=100" \
+            --jq '.workflow_runs[] | select(.name == "CI" or .name == "Security Scanning" or .name == "Publish Release Images" or .name == "Release") | .id')
+
+          for run_id in "${RUN_IDS[@]}"; do
+            echo "=== RUN ${run_id} ==="
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" \
+              --jq '[.id,.name,.event,.status,(.conclusion // "-"),.run_number,.html_url] | @tsv'
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs?per_page=100" \
+              --jq '.jobs[] | [.id,.name,.status,(.conclusion // "-"),.started_at,.completed_at] | @tsv'
+          done
+
+      - name: Inspect checks and commit statuses
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== CHECK RUNS ==="
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/${GITHUB_REPOSITORY}/commits/${TARGET_SHA}/check-runs?per_page=100" \
+            --jq '.check_runs[] | [.id,.name,.status,(.conclusion // "-"),.details_url] | @tsv'
+          echo "=== COMMIT STATUSES ==="
+          gh api "repos/${GITHUB_REPOSITORY}/commits/${TARGET_SHA}/statuses" \
+            --jq '.[] | [.context,.state,.description,.target_url] | @tsv'
