@@ -158,6 +158,7 @@ jobs:
       service: ${{ matrix.service }}
       dockerfile: ${{ matrix.dockerfile }}
       image: ${{ matrix.image }}
+      build_args: ${{ matrix.service == 'frontend' && 'VITE_APP_TITLE=Центр аналитики\nVITE_API_URL=/api\nVITE_API_WS_URL=auto\nVITE_DEV_MODE=false' || '' }}
 
   secret-scan:
     name: Scan for Secrets
