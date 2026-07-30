@@ -49,7 +49,18 @@ contains_service() {
 }
 
 prepare_images() {
-  mapfile -t services < <(resolve_services "$@")
+  local resolved
+  if ! resolved="$(resolve_services "$@")"; then
+    log_error "Failed to resolve image preparation targets"
+    return 1
+  fi
+  if [ -z "$resolved" ]; then
+    log_info "No image preparation targets resolved"
+    return 0
+  fi
+
+  local -a services
+  mapfile -t services <<< "$resolved"
 
   if contains_service frontend "${services[@]}"; then
     pull_image "oven/bun:1-alpine"
