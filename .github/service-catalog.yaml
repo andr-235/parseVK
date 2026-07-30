@@ -27,6 +27,8 @@
       "libs/py/contracts/"
     ],
     "migration": [
+      ".github/service-catalog.yaml",
+      "docker-compose.yml",
       "pyproject.toml",
       "libs/py/common/",
       "libs/py/contracts/",
