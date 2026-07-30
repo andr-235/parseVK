@@ -1,3 +1,10 @@
+## [0.77.1](https://github.com/andr-235/parseVK/compare/v0.77.0...v0.77.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* **deploy:** блокировать production до успешных проверок ([#303](https://github.com/andr-235/parseVK/issues/303)) ([655fcb6](https://github.com/andr-235/parseVK/commit/655fcb6ff16287c6aac39fe3b389709d74a84725))
+
 # [0.77.0](https://github.com/andr-235/parseVK/compare/v0.76.0...v0.77.0) (2026-07-29)
 
 
