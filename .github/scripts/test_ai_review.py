@@ -31,6 +31,19 @@ class DiffParserTests(unittest.TestCase):
         self.assertEqual(ai_review.parse_changed_lines(diff), {})
 
 
+class ChunkingTests(unittest.TestCase):
+    def test_partitions_medium_review_by_file_limit(self) -> None:
+        paths = tuple(f"src/file_{index}.py" for index in range(21))
+        counts = {path: 90 for path in paths}
+        chunks = ai_review.partition_by_limits(paths, counts)
+        self.assertEqual(tuple(len(chunk) for chunk in chunks), (20, 1))
+
+    def test_partitions_by_changed_line_limit(self) -> None:
+        paths = ("a.py", "b.py", "c.py")
+        chunks = ai_review.partition_by_limits(paths, {"a.py": 1200, "b.py": 900, "c.py": 100})
+        self.assertEqual(chunks, (("a.py",), ("b.py", "c.py")))
+
+
 class ResultTests(unittest.TestCase):
     def scope(self) -> ai_review.Scope:
         return ai_review.Scope(
@@ -114,6 +127,56 @@ class ResultTests(unittest.TestCase):
         )
         result = ai_review.finalize_result(self.scope(), events, 0)
         self.assertEqual(result.verdict, "unavailable")
+        self.assertEqual(result.reaction, "")
+
+    def test_oversized_review_blocks_without_emoji(self) -> None:
+        scope = ai_review.Scope(
+            schema_version=1,
+            base_sha="a" * 40,
+            head_sha="b" * 40,
+            status="oversized",
+            reason="pr-too-large",
+            reviewable_files=tuple(f"src/{index}.py" for index in range(81)),
+            changed_lines=9000,
+            line_map={},
+        )
+        result = ai_review.finalize_result(scope, None, 0)
+        self.assertEqual(result.verdict, "review-required")
+        self.assertEqual(result.status, "blocked")
+        self.assertEqual(result.reaction, "")
+
+    def test_directory_events_are_combined(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            payloads = [
+                {"status": "completed", "head_sha": "b" * 40, "summary": "chunk 1", "findings": []},
+                {
+                    "status": "completed",
+                    "head_sha": "b" * 40,
+                    "summary": "chunk 2",
+                    "findings": [
+                        {
+                            "severity": "minor",
+                            "file": "src/app.py",
+                            "line": 10,
+                            "scenario": "scenario",
+                            "impact": "impact",
+                            "fix": "fix",
+                            "confidence": 0.95,
+                        }
+                    ],
+                },
+            ]
+            for index, payload in enumerate(payloads, start=1):
+                event = {"type": "text", "part": {"text": json.dumps(payload, ensure_ascii=False)}}
+                (root / f"opencode-events-{index:03d}.jsonl").write_text(
+                    json.dumps(event, ensure_ascii=False) + "\n", encoding="utf-8"
+                )
+            result = ai_review.finalize_result(self.scope(), root, 0)
+        self.assertEqual(result.verdict, "findings")
+        self.assertEqual(len(result.findings), 1)
+        self.assertIn("chunk 1", result.summary)
+        self.assertIn("chunk 2", result.summary)
 
     def test_finding_outside_changed_hunk_is_dropped(self) -> None:
         events = self.write_events(

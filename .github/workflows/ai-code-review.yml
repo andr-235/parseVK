@@ -50,8 +50,6 @@ jobs:
     name: Analyze Pull Request
     env:
       AI_REVIEW_DIR: ${{ github.workspace }}/.ai-review-runtime
-      TRUSTED_REVIEWER_DIR: ${{ runner.temp }}/ai-review-trusted
-      AI_REVIEW_SCRIPT: ${{ runner.temp }}/ai-review-trusted/ai_review.py
     if: >-
       github.event.action != 'closed' &&
       github.event.pull_request.draft == false &&
@@ -59,7 +57,7 @@ jobs:
       github.event.pull_request.user.login == github.repository_owner &&
       github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:
@@ -75,9 +73,14 @@ jobs:
 
       - name: Isolate trusted reviewer code
         run: |
-          mkdir -p "$TRUSTED_REVIEWER_DIR"
-          cp .github/scripts/ai_review.py "$TRUSTED_REVIEWER_DIR/ai_review.py"
-          cp .github/scripts/test_ai_review.py "$TRUSTED_REVIEWER_DIR/test_ai_review.py"
+          trusted_dir="$RUNNER_TEMP/ai-review-trusted"
+          mkdir -p "$trusted_dir"
+          cp .github/scripts/ai_review.py "$trusted_dir/ai_review.py"
+          cp .github/scripts/test_ai_review.py "$trusted_dir/test_ai_review.py"
+          {
+            echo "TRUSTED_REVIEWER_DIR=$trusted_dir"
+            echo "AI_REVIEW_SCRIPT=$trusted_dir/ai_review.py"
+          } >> "$GITHUB_ENV"
 
       - name: Checkout Pull Request
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -89,9 +92,7 @@ jobs:
       - name: Test trusted reviewer logic
         id: self_test
         continue-on-error: true
-        env:
-          PYTHONPATH: ${{ runner.temp }}/ai-review-trusted
-        run: python -m unittest discover -s "$TRUSTED_REVIEWER_DIR" -p 'test_ai_review.py' -v
+        run: PYTHONPATH="$TRUSTED_REVIEWER_DIR" python -m unittest discover -s "$TRUSTED_REVIEWER_DIR" -p 'test_ai_review.py' -v
 
       - name: Build review scope
         id: scope
@@ -167,16 +168,36 @@ jobs:
             {"read":{"*":"allow",".github/workflows/ai-code-review.yml":"deny","*.md":"deny","**/*.md":"deny","README*":"deny","**/README*":"deny","docs/**":"deny",".github/ai-review/**":"deny",".github/scripts/ai_review*":"deny"},"bash":"deny","edit":"deny","task":"deny","todowrite":"deny","skill":"deny","lsp":"deny","webfetch":"deny","websearch":"deny","external_directory":"deny","doom_loop":"deny"}
         run: |
           set +e
-          opencode run \
-            --format json \
-            --model opencode/big-pickle \
-            --agent plan \
-            --no-share \
-            --file "$AI_REVIEW_DIR/review.diff" \
-            < "$AI_REVIEW_DIR/prompt.txt" \
-            > "$AI_REVIEW_DIR/opencode-events.jsonl" \
-            2> "$AI_REVIEW_DIR/opencode.stderr"
-          exit_code=$?
+          exit_code=0
+          shopt -s nullglob
+          prompts=("$AI_REVIEW_DIR"/prompt-*.txt)
+          if (( ${#prompts[@]} == 0 )); then
+            echo "::error::Reviewer scope did not produce any prompt chunks."
+            exit_code=2
+          else
+            for prompt in "${prompts[@]}"; do
+              suffix="${prompt##*/prompt-}"
+              suffix="${suffix%.txt}"
+              diff="$AI_REVIEW_DIR/review-${suffix}.diff"
+              events="$AI_REVIEW_DIR/opencode-events-${suffix}.jsonl"
+              stderr="$AI_REVIEW_DIR/opencode-${suffix}.stderr"
+              echo "Running AI review chunk ${suffix} of ${#prompts[@]}."
+              opencode run \
+                --format json \
+                --model opencode/big-pickle \
+                --agent plan \
+                --no-share \
+                --file "$diff" \
+                < "$prompt" \
+                > "$events" \
+                2> "$stderr"
+              chunk_exit=$?
+              if (( chunk_exit != 0 )); then
+                exit_code=$chunk_exit
+                break
+              fi
+            done
+          fi
           set -e
           echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
           if (( exit_code != 0 )); then
@@ -223,7 +244,7 @@ jobs:
           else
             python "$AI_REVIEW_SCRIPT" finalize \
               --scope "$AI_REVIEW_DIR/scope.json" \
-              --events "$AI_REVIEW_DIR/opencode-events.jsonl" \
+              --events "$AI_REVIEW_DIR" \
               --exit-code "${OPENCODE_EXIT:-0}" \
               --output "$AI_REVIEW_DIR/review-result.json"
           fi
