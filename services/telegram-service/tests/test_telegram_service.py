@@ -1,8 +1,58 @@
 import asyncio
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
+from uuid import UUID, uuid4
 
 import pytest
-from app.main import app as telegram_app
 from httpx import ASGITransport, AsyncClient
+
+from app.main import app as telegram_app
+from app.modules.telegram_service.router import get_service
+from app.modules.telegram_service.service import TelegramServiceService
+
+
+class InMemoryTelegramRepository:
+    def __init__(self) -> None:
+        self.jobs: dict[UUID, dict] = {}
+        self.logs: dict[UUID, list[dict]] = {}
+
+    async def create_job(self, params: dict, total_count: int) -> dict:
+        job_id = uuid4()
+        job = {
+            "id": str(job_id),
+            "status": "pending",
+            "fetchedCount": 0,
+            "totalCount": total_count,
+            "progress": 0,
+            "warning": None,
+            "error": None,
+            "xlsxPath": None,
+            "createdAt": datetime.now(UTC).isoformat(),
+            "params": params,
+        }
+        self.jobs[job_id] = job
+        self.logs[job_id] = []
+        return dict(job)
+
+    async def get_job(self, job_id: UUID) -> dict | None:
+        job = self.jobs.get(job_id)
+        return dict(job) if job else None
+
+    async def update_job(self, job_id: UUID, data: dict) -> None:
+        self.jobs[job_id].update(data)
+
+    async def add_log(self, job_id: UUID, level: str, message: str) -> dict:
+        log = {
+            "id": str(uuid4()),
+            "level": level,
+            "message": message,
+            "createdAt": datetime.now(UTC).isoformat(),
+        }
+        self.logs[job_id].append(log)
+        return dict(log)
+
+    async def get_logs(self, job_id: UUID) -> list[dict]:
+        return [dict(log) for log in self.logs.get(job_id, [])]
 
 
 @pytest.fixture
@@ -12,23 +62,47 @@ def app():
 
 @pytest.fixture(autouse=True)
 def mock_db_connection(monkeypatch):
-    from unittest.mock import AsyncMock, MagicMock
-
     import app.db.session
 
-    # Mock connection
     mock_conn = AsyncMock()
     mock_conn.execute.return_value = MagicMock()
 
-    # Mock context manager connect()
     mock_connect = MagicMock()
     mock_connect.__aenter__.return_value = mock_conn
 
-    # Mock engine
     mock_engine = MagicMock()
     mock_engine.connect.return_value = mock_connect
 
     monkeypatch.setattr(app.db.session, "engine", mock_engine)
+
+
+@pytest.fixture
+def service(monkeypatch) -> TelegramServiceService:
+    repository = InMemoryTelegramRepository()
+    telegram_service = TelegramServiceService(repository)
+
+    async def complete_export(job_id: UUID, params: dict, total_count: int) -> None:
+        await repository.update_job(job_id, {"status": "running"})
+        await repository.add_log(job_id, "info", "Экспорт запущен")
+        await repository.update_job(
+            job_id,
+            {
+                "status": "done",
+                "fetchedCount": total_count,
+                "progress": 100,
+                "xlsxPath": f"/downloads/telegram_export_{job_id}.xlsx",
+            },
+        )
+
+    monkeypatch.setattr(telegram_service, "run_export_job", complete_export)
+    return telegram_service
+
+
+@pytest.fixture(autouse=True)
+def override_service_dependency(service: TelegramServiceService):
+    telegram_app.dependency_overrides[get_service] = lambda: service
+    yield
+    telegram_app.dependency_overrides.pop(get_service, None)
 
 
 @pytest.fixture
@@ -59,31 +133,27 @@ async def test_telegram_export_lifecycle(client: AsyncClient):
         "target": "https://t.me/test_group",
         "limit": 100,
         "activeOnly": True,
-        "verifyPhones": False
+        "verifyPhones": False,
     }
-    
-    # 1. Start export job
+
     response = await client.post("/internal/telegram/export", json=payload, headers=headers)
     assert response.status_code == 201
     data = response.json()
     assert "jobId" in data
     assert data["status"] == "pending"
-    
+
     job_id = data["jobId"]
-    
-    # 2. Retrieve job details (loop until it starts/completes)
-    response = await client.get(f"/internal/telegram/jobs/{job_id}", headers=headers)
-    assert response.status_code == 200
-    job_data = response.json()
+    job_data = None
+    for _ in range(20):
+        response = await client.get(f"/internal/telegram/jobs/{job_id}", headers=headers)
+        assert response.status_code == 200
+        job_data = response.json()
+        if job_data["job"]["status"] == "done":
+            break
+        await asyncio.sleep(0.01)
+
+    assert job_data is not None
     assert job_data["job"]["id"] == job_id
-    assert len(job_data["logs"]) > 0
-
-    # Wait for the async task to run and complete (simulated in service)
-    # Since it sleeps for ~3.4s before starting the fetch loop, we wait a bit
-    await asyncio.sleep(1.0)
-    
-    response = await client.get(f"/internal/telegram/jobs/{job_id}", headers=headers)
-    assert response.status_code == 200
-    job_data = response.json()
-    assert job_data["job"]["status"] in ["pending", "running", "done"]
-
+    assert job_data["job"]["status"] == "done"
+    assert job_data["job"]["fetchedCount"] == 100
+    assert len(job_data["logs"]) == 1

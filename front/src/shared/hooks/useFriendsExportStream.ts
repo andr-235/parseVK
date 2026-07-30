@@ -69,7 +69,6 @@ export function useFriendsExportStream(
 
   useEffect(() => {
     if (!jobId) {
-      setStatusSafe('idle')
       return
     }
 
@@ -78,14 +77,17 @@ export function useFriendsExportStream(
 
     const abortController = new AbortController()
     abortControllerRef.current = abortController
-
-    setStatusSafe('connecting')
-    setError(null)
-    setXlsxPath(null)
-
     let buffer = ''
 
     async function connect(attempt = 0) {
+      if (attempt === 0) {
+        await Promise.resolve()
+        if (abortController.signal.aborted) return
+        setStatusSafe('connecting')
+        setError(null)
+        setXlsxPath(null)
+      }
+
       try {
         const token = getAccessToken()
         const headers: Record<string, string> = { Accept: 'text/event-stream' }
@@ -185,5 +187,14 @@ export function useFriendsExportStream(
     }
   }, [jobId, streamUrlBuilder, setStatusSafe])
 
-  return { logs, progress, status, xlsxPath, error, retryAttempt, maxRetries: RETRY_MAX_ATTEMPTS, reset }
+  return {
+    logs: jobId ? logs : [],
+    progress: jobId ? progress : { fetchedCount: 0, totalCount: 0 },
+    status: jobId ? status : 'idle',
+    xlsxPath: jobId ? xlsxPath : null,
+    error: jobId ? error : null,
+    retryAttempt: jobId ? retryAttempt : 0,
+    maxRetries: RETRY_MAX_ATTEMPTS,
+    reset,
+  }
 }

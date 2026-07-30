@@ -128,7 +128,7 @@ async def test_check_and_run_due_active_task_skips():
 @pytest.mark.asyncio
 async def test_health_reports_automation_scheduler():
     app = create_app()
-    _automation_scheduler_health.mark_success()
+    _automation_scheduler_health.mark_cycle_success()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/health")
@@ -202,7 +202,7 @@ async def test_different_owners_use_different_sessions(monkeypatch):
     monkeypatch.setattr(automation_worker.asyncio, "sleep", sleep_and_stop)
 
     with pytest.raises(asyncio.CancelledError):
-        await automation_worker.run_automation_scheduler_forever()
+        await automation_worker.run_automation_scheduler_forever(MagicMock())
 
     assert owner_ids_called, "list_enabled_owner_ids should have been called"
     # sessions_used should contain at least 3 sessions:
@@ -264,7 +264,7 @@ async def test_one_owner_error_does_not_affect_others(monkeypatch):
     monkeypatch.setattr(automation_worker.asyncio, "sleep", sleep_and_stop)
 
     with pytest.raises(asyncio.CancelledError):
-        await automation_worker.run_automation_scheduler_forever()
+        await automation_worker.run_automation_scheduler_forever(MagicMock())
 
     assert "user-1" in processed_owners, "user-1 should have been processed"
     assert "user-2" in processed_owners, "user-2 should also have been processed despite user-1 error"
@@ -318,7 +318,7 @@ async def test_settings_reloaded_inside_user_transaction(monkeypatch):
     monkeypatch.setattr(automation_worker.asyncio, "sleep", sleep_and_stop)
 
     with pytest.raises(asyncio.CancelledError):
-        await automation_worker.run_automation_scheduler_forever()
+        await automation_worker.run_automation_scheduler_forever(MagicMock())
 
     assert len(get_settings_calls) >= 1, "get_settings_by_owner should have been called"
     assert "user-1" in get_settings_calls
@@ -374,7 +374,7 @@ async def test_disabled_settings_not_processed(monkeypatch):
     monkeypatch.setattr(automation_worker.asyncio, "sleep", sleep_and_stop)
 
     with pytest.raises(asyncio.CancelledError):
-        await automation_worker.run_automation_scheduler_forever()
+        await automation_worker.run_automation_scheduler_forever(MagicMock())
 
     assert "user-1" in processed
     assert "user-2" not in processed, "Disabled user should not be processed"
@@ -433,7 +433,7 @@ async def test_max_owners_per_cycle_limit(monkeypatch):
     monkeypatch.setattr(automation_worker.asyncio, "sleep", sleep_and_stop)
 
     with pytest.raises(asyncio.CancelledError):
-        await automation_worker.run_automation_scheduler_forever()
+        await automation_worker.run_automation_scheduler_forever(MagicMock())
 
     assert len(processed) <= 100, f"Should process at most 100 owners, got {len(processed)}"
     assert len(processed) == 100, f"Should process exactly 100 owners when 200 are available, got {len(processed)}"

@@ -156,6 +156,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE_SHA: ${{ steps.release_commit.outputs.source_sha }}
           RELEASE_SHA: ${{ steps.resolved_release.outputs.release_sha }}
         run: |
           set -euo pipefail
@@ -166,8 +167,12 @@ jobs:
             exit 1
           }
 
-          gh workflow run ci.yml --ref main
-          gh workflow run security.yml --ref main
+          gh workflow run ci.yml --ref main \
+            --field target_sha="$RELEASE_SHA" \
+            --field base_sha="$SOURCE_SHA" \
+            --field full_validation=true
+          gh workflow run security.yml --ref main \
+            --field target_sha="$RELEASE_SHA"
           echo "Dispatched CI and Security for semantic release commit $RELEASE_SHA"
 
       - name: Release status

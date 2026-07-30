@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEPLOY="$ROOT_DIR/.github/workflows/deploy.yml"
 ROLLBACK="$ROOT_DIR/.github/workflows/rollback.yml"
-CI="$ROOT_DIR/.github/workflows/ci.yml"
+PR_CI="$ROOT_DIR/.github/workflows/pr-ci.yml"
+FULL_CI="$ROOT_DIR/.github/workflows/ci.yml"
 SECURITY="$ROOT_DIR/.github/workflows/security.yml"
 QUALITY="$ROOT_DIR/.github/workflows/reusable-python-quality.yml"
 PY_SECURITY="$ROOT_DIR/.github/workflows/reusable-python-security.yml"
@@ -17,7 +18,7 @@ LOCAL_RELEASE="$ROOT_DIR/.github/scripts/production/local-release.sh"
 METADATA="$ROOT_DIR/.github/scripts/production/metadata.sh"
 
 required=(
-  "$DEPLOY" "$ROLLBACK" "$CI" "$SECURITY" "$QUALITY" "$PY_SECURITY"
+  "$DEPLOY" "$ROLLBACK" "$PR_CI" "$FULL_CI" "$SECURITY" "$QUALITY" "$PY_SECURITY"
   "$DOCKER_SECURITY" "$ALEMBIC" "$ROOT_DIR/.github/service-catalog.yaml"
   "$ROOT_DIR/.github/scripts/service_catalog.py"
   "$ROOT_DIR/.github/scripts/validate_alembic_graphs.py"
@@ -46,30 +47,45 @@ reject_pattern() {
   if grep -Eq -- "$pattern" "$file"; then echo "$message"; exit 1; fi
 }
 
-require_pattern "$CI" 'service_matrix:.*steps\.services\.outputs\.value' \
+require_pattern "$PR_CI" 'name: CI' "Incremental PR CI lost its stable workflow name"
+require_pattern "$PR_CI" 'service_matrix:.*steps\.services\.outputs\.value' \
   "Python service matrix is not catalog-driven"
-require_pattern "$CI" 'uses: \./\.github/workflows/reusable-python-quality\.yml' \
+require_pattern "$PR_CI" 'uses: \./\.github/workflows/reusable-python-quality\.yml' \
   "CI does not call reusable Python quality"
-require_pattern "$CI" 'quality_workflow_changed:.*steps\.filter\.outputs\.quality_workflow_changed' \
+require_pattern "$PR_CI" 'quality_workflow_changed:.*steps\.filter\.outputs\.quality_workflow_changed' \
   "CI does not expose reusable quality workflow changes"
-require_pattern "$CI" 'quality-workflow-smoke:' \
+require_pattern "$PR_CI" 'quality-workflow-smoke:' \
   "CI does not smoke-test reusable Python quality"
-require_pattern "$CI" 'service: identity-service' \
+require_pattern "$PR_CI" 'service: identity-service' \
   "Reusable Python quality smoke service is missing"
-require_pattern "$CI" 'QUALITY_WORKFLOW_RESULT:.*needs\.quality-workflow-smoke\.result' \
+require_pattern "$PR_CI" 'QUALITY_WORKFLOW_RESULT:.*needs\.quality-workflow-smoke\.result' \
   "Release Gate does not collect quality smoke result"
-require_pattern "$CI" 'require_conditional "Smoke reusable Python quality"' \
+require_pattern "$PR_CI" 'require_conditional "Smoke reusable Python quality"' \
   "Release Gate does not enforce quality smoke"
-require_pattern "$CI" 'migration_matrix:.*steps\.migrations\.outputs\.value' \
+require_pattern "$PR_CI" 'migration_matrix:.*steps\.migrations\.outputs\.value' \
   "Migration matrix is not catalog-driven"
-require_pattern "$CI" 'uses: \./\.github/workflows/reusable-alembic-migration\.yml' \
+require_pattern "$PR_CI" 'uses: \./\.github/workflows/reusable-alembic-migration\.yml' \
   "CI does not call reusable Alembic workflow"
-require_pattern "$CI" 'require_conditional "Execute Alembic migrations"' \
+require_pattern "$PR_CI" 'require_conditional "Execute Alembic migrations"' \
   "Release Gate does not enforce executable migrations"
-require_pattern "$CI" 'git diff .*"\$BASE_SHA\.\.\.\$HEAD_SHA"' \
+require_pattern "$PR_CI" 'git diff .*"\$BASE_SHA\.\.\.\$HEAD_SHA"' \
   "CI change detection does not use merge-base diff"
-reject_pattern "$CI" 'working-directory: services/\$\{\{ matrix\.service \}\}' \
+reject_pattern "$PR_CI" 'working-directory: services/\$\{\{ matrix\.service \}\}' \
   "Inline Python service quality returned to CI"
+require_pattern "$PR_CI" 'name: Release Gate' "Incremental Release Gate is missing"
+
+require_pattern "$FULL_CI" 'name: Full Release CI' "Full Release CI workflow is missing"
+require_pattern "$FULL_CI" 'workflow_dispatch:' "Full Release CI cannot be dispatched"
+require_pattern "$FULL_CI" 'target_sha:' "Full Release CI is not bound to an exact target SHA"
+require_pattern "$FULL_CI" 'base_sha:' "Full Release CI is missing the validated source SHA"
+require_pattern "$FULL_CI" '--purpose pytest' "Full Release CI does not build the service test matrix"
+require_pattern "$FULL_CI" '--purpose migration' "Full Release CI does not build the migration matrix"
+require_pattern "$FULL_CI" '--all' "Full Release CI does not select every release target"
+require_pattern "$FULL_CI" 'uses: \./\.github/workflows/reusable-python-quality\.yml' \
+  "Full Release CI does not execute reusable service quality"
+require_pattern "$FULL_CI" 'uses: \./\.github/workflows/reusable-alembic-migration\.yml' \
+  "Full Release CI does not execute all migrations"
+require_pattern "$FULL_CI" 'name: Full Release Gate' "Full Release Gate is missing"
 
 require_pattern "$QUALITY" 'uv sync --extra test --frozen' \
   "Reusable quality workflow does not install frozen test dependencies"
@@ -95,12 +111,21 @@ require_pattern "$DOCKER_SECURITY" 'github/codeql-action/upload-sarif@v4' \
 require_pattern "$DOCKER_SECURITY" 'build-args:.*inputs\.build_args' "Reusable Docker security lost build arguments"
 require_pattern "$SECURITY" 'build_args:.*matrix\.service.*frontend' "Frontend security scan lost production build arguments"
 require_pattern "$SECURITY" 'name: Security Gate' "Security Gate is missing"
-require_pattern "$CI" 'name: Release Gate' "Release Gate is missing"
 
-require_pattern "$DEPLOY" 'REQUIRED_WORKFLOWS=\("CI" "Security Scanning"\)' \
-  "Deploy does not wait for CI and Security"
+require_pattern "$DEPLOY" 'workflows: \["Full Release CI"\]' \
+  "Automatic deploy is not triggered by Full Release CI"
+require_pattern "$DEPLOY" 'REQUIRED_WORKFLOWS=\("Full Release CI" "Security Scanning"\)' \
+  "Deploy does not wait for Full Release CI and Security"
 require_pattern "$DEPLOY" "github\.event\.workflow_run\.event == 'workflow_dispatch'" \
   "Automatic deploy is not tied to the validated semantic release commit"
+require_pattern "$DEPLOY" 'RELEASE_SUBJECT.*chore\\\(release\\\)' \
+  "Deploy does not reject non-release commits"
+require_pattern "$DEPLOY" "grep -qF '\[skip ci\]'" \
+  "Deploy does not validate the semantic-release marker"
+require_pattern "$DEPLOY" 'GATE_EVENT="workflow_dispatch"' \
+  "Deploy does not require explicitly dispatched full release gates"
+reject_pattern "$DEPLOY" 'GATE_EVENT="push"' \
+  "Deploy can fall back to incremental push checks"
 require_pattern "$DEPLOY" 'needs\.gate\.outputs\.deploy == .true.' \
   "Deploy is not gated"
 require_pattern "$DEPLOY" '--purpose deploy' \
@@ -207,4 +232,4 @@ python3 "$ROOT_DIR/.github/scripts/test_service_catalog.py" -v
 python3 "$ROOT_DIR/.github/scripts/test_validate_alembic_graphs.py" -v
 bash "$ROOT_DIR/scripts/test-local-release.sh"
 bash "$ROOT_DIR/scripts/test-deployment-metadata.sh"
-echo "CI/CD reusable workflows, offline production releases and migration gates are valid"
+echo "Incremental CI, full release validation, offline production releases and migration gates are valid"
