@@ -1,0 +1,43 @@
+name: One-shot AI reviewer line reanchor
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: >-
+      github.event.pull_request.head.ref == 'fix/ai-review-line-reanchor' &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout reanchor branch
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: fix/ai-review-line-reanchor
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Apply bounded line reanchor patch
+        run: python .github/scripts/patch_ai_review_reanchor.py
+
+      - name: Verify and test reviewer
+        run: |
+          grep -F 'REANCHOR_RADIUS = 5' .github/scripts/ai_review.py
+          grep -F 'AI_REVIEW_REANCHORED' .github/scripts/ai_review.py
+          PYTHONPATH=.github/scripts python -m unittest discover -s .github/scripts -p 'test_ai_review.py' -v
+
+      - name: Remove patch script and commit Python changes
+        run: |
+          rm .github/scripts/patch_ai_review_reanchor.py
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .github/scripts/ai_review.py .github/scripts/test_ai_review.py
+          git add -u .github/scripts/patch_ai_review_reanchor.py
+          git commit -m 'fix(ai-review): reanchor nearby finding lines'
+          git push origin HEAD:fix/ai-review-line-reanchor
