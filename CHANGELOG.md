@@ -1,3 +1,10 @@
+## [0.79.1](https://github.com/andr-235/parseVK/compare/v0.79.0...v0.79.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* **ai-review:** калибровать прямые противоречия контракту ([#317](https://github.com/andr-235/parseVK/issues/317)) ([ac0561d](https://github.com/andr-235/parseVK/commit/ac0561d7f61421fb40e36b79243deef613e56a7d))
+
 # [0.79.0](https://github.com/andr-235/parseVK/compare/v0.78.3...v0.79.0) (2026-07-30)
 
 
