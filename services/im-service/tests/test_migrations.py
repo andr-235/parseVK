@@ -111,6 +111,7 @@ def test_all_revisions_listed() -> None:
         "20260720_0002",
         "20260720_0003",
         "20260722_0001",
+        "20260723_0001",
     ]
 
     script = _get_script()

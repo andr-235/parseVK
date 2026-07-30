@@ -88,7 +88,9 @@ export function WatchlistPage() {
     if (settingsData) {
 
       // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFormTrackAllComments(settingsData.trackAllComments)
       setFormPollInterval(settingsData.pollIntervalMinutes)
+      setFormMaxAuthors(settingsData.maxAuthors)
     }
   }, [settingsData])
 

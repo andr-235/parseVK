@@ -70,6 +70,8 @@ export function CommentsTable({ onSelect, selectedId, onError, onAddToWatchlist,
     return ['Все группы', ...groups]
   }, [localComments])
 
+  const effectiveGroupFilter = groupOptions.includes(groupFilter) ? groupFilter : 'Все группы'
+
   const total = query.data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
@@ -79,7 +81,7 @@ export function CommentsTable({ onSelect, selectedId, onError, onAddToWatchlist,
 
   const paged = useMemo(() => {
     let items = localComments
-    if (groupFilter !== 'Все группы') items = items.filter((c) => c.group === groupFilter)
+    if (effectiveGroupFilter !== 'Все группы') items = items.filter((c) => c.group === effectiveGroupFilter)
     if (statusFilter !== 'Все статусы') items = items.filter((c) => c.status === statusFilter)
     return [...items].sort((a, b) => {
       const av = String(a[sort.key] ?? '')
@@ -87,7 +89,7 @@ export function CommentsTable({ onSelect, selectedId, onError, onAddToWatchlist,
       const cmp = av.localeCompare(bv, 'ru')
       return sort.dir === 'asc' ? cmp : -cmp
     })
-  }, [localComments, groupFilter, statusFilter, sort])
+  }, [localComments, effectiveGroupFilter, statusFilter, sort])
 
   const pagedRef = useRef(paged)
   useEffect(() => { pagedRef.current = paged }, [paged])
@@ -134,12 +136,6 @@ export function CommentsTable({ onSelect, selectedId, onError, onAddToWatchlist,
   const handleToggleAll = useCallback(() => toggleAll(paged.map((c) => c.id)), [toggleAll, paged])
   const resetFilters = useCallback(() => { setSearch(''); setGroupFilter('Все группы'); setStatusFilter('Все статусы'); setPage(1) }, [])
 
-  useEffect(() => {
-    if (groupFilter !== 'Все группы' && !groupOptions.includes(groupFilter)) {
-      setGroupFilter('Все группы')
-    }
-  }, [groupFilter, groupOptions])
-
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     const rows = pagedRef.current
     const idx = focusedIndex
@@ -178,7 +174,7 @@ export function CommentsTable({ onSelect, selectedId, onError, onAddToWatchlist,
 
       <FilterToolbar
         search={search} onSearchChange={setSearch}
-        groupFilter={groupFilter} groupOptions={groupOptions} onGroupFilterChange={(v) => { setGroupFilter(v); setPage(1) }}
+        groupFilter={effectiveGroupFilter} groupOptions={groupOptions} onGroupFilterChange={(v) => { setGroupFilter(v); setPage(1) }}
         statusFilter={statusFilter} onStatusFilterChange={(v) => { setStatusFilter(v); setPage(1) }}
         onReset={resetFilters} selectedCount={count}
       />

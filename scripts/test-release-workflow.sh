@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PR_CI="$ROOT_DIR/.github/workflows/pr-ci.yml"
 CI="$ROOT_DIR/.github/workflows/ci.yml"
 RELEASE="$ROOT_DIR/.github/workflows/release.yml"
 RELEASE_CONFIG="$ROOT_DIR/.releaserc.json"
@@ -13,7 +14,7 @@ SERVICE_CATALOG_TEST="$ROOT_DIR/.github/scripts/test_service_catalog.py"
 MANIFEST="$ROOT_DIR/.github/scripts/release_manifest.py"
 MANIFEST_TEST="$ROOT_DIR/.github/scripts/test_release_manifest.py"
 
-for file in "$CI" "$RELEASE" "$RELEASE_CONFIG" "$PUBLISH" "$REUSABLE" "$SECURITY" "$SERVICE_CATALOG" "$SERVICE_CATALOG_TEST" "$MANIFEST" "$MANIFEST_TEST"; do
+for file in "$PR_CI" "$CI" "$RELEASE" "$RELEASE_CONFIG" "$PUBLISH" "$REUSABLE" "$SECURITY" "$SERVICE_CATALOG" "$SERVICE_CATALOG_TEST" "$MANIFEST" "$MANIFEST_TEST"; do
   [[ -f "$file" ]] || { echo "Required immutable release file not found: $file"; exit 1; }
 done
 
@@ -31,10 +32,24 @@ reject_pattern() {
   if grep -Eq -- "$pattern" "$file"; then echo "$message"; exit 1; fi
 }
 
-require_pattern "$CI" 'workflow_dispatch:' "CI cannot be dispatched for semantic release commits"
-require_pattern "$SERVICE_CATALOG" 'args\.head and not args\.base' \
-  "CI dispatch without a comparison base does not select the full service matrix"
+require_pattern "$PR_CI" '^name: CI$' "Incremental CI lost the workflow name used by Semantic Release"
+require_pattern "$PR_CI" 'pull_request:' "Incremental CI no longer validates pull requests"
+require_pattern "$PR_CI" 'push:' "Incremental CI no longer validates main pushes"
+
+require_pattern "$CI" '^name: Full Release CI$' "Full Release CI workflow is missing"
+require_pattern "$CI" 'workflow_dispatch:' "Full Release CI cannot be dispatched for semantic release commits"
+require_pattern "$CI" 'target_sha:' "Full Release CI is not bound to an exact target SHA"
+require_pattern "$CI" 'base_sha:' "Full Release CI is missing the validated source SHA"
+require_pattern "$CI" 'full_validation:' "Full Release CI does not require explicit full validation"
+require_pattern "$CI" 'Verify exact release target' "Full Release CI does not verify its exact checkout"
+require_pattern "$CI" '--purpose pytest' "Full Release CI does not build the Python test matrix"
+require_pattern "$CI" '--purpose migration' "Full Release CI does not build the migration matrix"
+require_pattern "$CI" '--all' "Full Release CI does not select the complete release matrix"
+require_pattern "$CI" 'name: Full Release Gate' "Full Release CI has no aggregate release gate"
+
 require_pattern "$SECURITY" 'workflow_dispatch:' "Security cannot be dispatched for semantic release commits"
+require_pattern "$SECURITY" 'target_sha:' "Security dispatch is not bound to an exact target SHA"
+require_pattern "$SECURITY" 'Verify dispatched security target' "Security does not verify its dispatched checkout"
 require_pattern "$SECURITY" 'if \[\[.*github\.event_name.*pull_request' \
   "Security workflow does not keep PR Docker scans incremental"
 require_pattern "$SECURITY" 'else' "Security workflow has no full-release branch"
@@ -56,8 +71,11 @@ require_pattern "$RELEASE" 'RELEASE_PARENT.*SOURCE_SHA' "Release parent is not b
 require_pattern "$RELEASE" 'RELEASE_SUBJECT.*chore\\\(release\\\)' \
   "Release commit subject is not validated"
 require_pattern "$RELEASE" "grep -qF '\[skip ci\]'" "Release commit marker is not validated"
-require_pattern "$RELEASE" 'gh workflow run ci\.yml --ref main' "Release workflow does not dispatch CI"
+require_pattern "$RELEASE" 'gh workflow run ci\.yml --ref main' "Release workflow does not dispatch Full Release CI"
 require_pattern "$RELEASE" 'gh workflow run security\.yml --ref main' "Release workflow does not dispatch Security"
+require_pattern "$RELEASE" 'target_sha=.*RELEASE_SHA' "Release does not pass the exact release SHA to gates"
+require_pattern "$RELEASE" 'base_sha=.*SOURCE_SHA' "Release does not pass the validated source SHA to Full Release CI"
+require_pattern "$RELEASE" 'full_validation=true' "Release does not request full CI validation"
 require_pattern "$RELEASE" 'git ls-remote origin refs/heads/main' "Release dispatch accepts stale main"
 require_pattern "$RELEASE_CONFIG" '\[skip ci\]' "Semantic Release commit no longer prevents push recursion"
 
@@ -67,7 +85,8 @@ require_pattern "$PUBLISH" "workflow_run\.event == 'workflow_dispatch'" \
   "Publisher accepts Security runs not explicitly dispatched for a release commit"
 reject_pattern "$PUBLISH" "workflow_run\.event == 'push'" "Source push Security can publish images"
 require_pattern "$PUBLISH" "workflow_run\.head_branch == 'main'" "Non-main commit can publish images"
-require_pattern "$PUBLISH" 'event=workflow_dispatch' "Publisher does not verify dispatched CI"
+require_pattern "$PUBLISH" 'actions/workflows/ci\.yml/runs' "Publisher does not verify Full Release CI by workflow file"
+require_pattern "$PUBLISH" 'event=workflow_dispatch' "Publisher does not verify dispatched Full Release CI"
 require_pattern "$PUBLISH" 'chore\\\(release\\\):' "Publisher does not validate semantic release subject"
 require_pattern "$PUBLISH" "grep -qF '\[skip ci\]'" "Publisher does not validate release marker"
 require_pattern "$PUBLISH" 'git ls-remote origin refs/heads/main' "Publisher does not reject stale main"
@@ -87,6 +106,7 @@ require_pattern "$PUBLISH" 'release-manifest-.*target_sha' "Release artifact is 
 require_pattern "$PUBLISH" 'statuses: write' "Publisher cannot record immutable release status"
 require_pattern "$PUBLISH" 'release/immutable-ghcr' "Publisher does not create durable release status"
 require_pattern "$PUBLISH" '\.github/workflows/release\.yml' "Release workflow changes do not run contracts"
+require_pattern "$PUBLISH" '\.github/workflows/ci\.yml' "Full Release CI changes do not run contracts"
 require_pattern "$PUBLISH" '\.releaserc\.json' "Semantic Release config changes do not run contracts"
 reject_pattern "$PUBLISH" 'workflow_dispatch:' "Publisher accepts manual arbitrary image publication"
 
@@ -109,4 +129,4 @@ done
 PYTHONPATH="$ROOT_DIR/.github/scripts" python3 "$SERVICE_CATALOG_TEST" -v
 PYTHONPATH="$ROOT_DIR/.github/scripts" python3 "$MANIFEST_TEST" -v
 python3 -m py_compile "$SERVICE_CATALOG" "$MANIFEST" "$MANIFEST_TEST"
-echo "Semantic release gates and immutable GHCR publication contracts are valid"
+echo "Incremental CI, exact full release gates and immutable publication contracts are valid"

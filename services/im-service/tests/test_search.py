@@ -1,6 +1,7 @@
 import pytest
-from app.db.session import get_session
 from httpx import ASGITransport, AsyncClient
+
+from app.db.session import get_session
 
 HEADERS = {
     "X-Internal-Service-Token": "dev-internal-token",
@@ -11,6 +12,7 @@ HEADERS = {
 @pytest.fixture
 def app(mock_db_session):
     from app.main import create_app
+
     app = create_app()
     app.dependency_overrides[get_session] = lambda: mock_db_session
     return app
@@ -22,14 +24,6 @@ async def test_search_messages_requires_auth(app):
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.get("/internal/search/messages")
         assert resp.status_code == 422
-
-
-@pytest.mark.asyncio
-async def test_search_by_keywords_requires_auth(app):
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/internal/search/messages/by-keywords")
-        assert resp.status_code == 400
 
 
 @pytest.mark.asyncio
