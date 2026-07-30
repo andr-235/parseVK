@@ -104,10 +104,16 @@ require_pattern "$DEPLOY" 'needs\.gate\.outputs\.deploy == .true.' \
   "Deploy is not gated"
 require_pattern "$DEPLOY" '--purpose deploy' \
   "Deploy targets are not catalog-driven"
-require_pattern "$DEPLOY" 'local-release\.sh.*snapshot|LOCAL_RELEASE_SCRIPT.*snapshot' \
+require_pattern "$DEPLOY" 'Bootstrap current local release' \
+  "First local release does not preserve the currently running deployment"
+require_pattern "$DEPLOY" 'LOCAL_RELEASE_SCRIPT.*snapshot|local-release\.sh.*snapshot' \
   "Deploy does not snapshot a complete local release"
-require_pattern "$DEPLOY" 'local-release\.sh.*promote|LOCAL_RELEASE_SCRIPT.*promote' \
+require_pattern "$DEPLOY" 'LOCAL_RELEASE_SCRIPT.*promote|local-release\.sh.*promote' \
   "Deploy does not promote the healthy local release"
+require_pattern "$DEPLOY" 'Restore previous local release after failed deployment' \
+  "Failed deployment does not restore the previous local release"
+require_pattern "$DEPLOY" 'steps\.release_snapshot\.outcome == .success.' \
+  "Automatic restore is not limited to deployments that changed release images"
 reject_pattern "$DEPLOY" 'workflow_dispatch\.inputs.*ref|inputs\.ref|TARGET_REF' \
   "Manual deploy accepts arbitrary refs"
 reject_pattern "$DEPLOY" 'commit contains \[skip ci\]' \
@@ -146,6 +152,8 @@ require_pattern "$RELEASE" '--pull "\$PULL_POLICY"' \
   "Compose release does not enforce an explicit pull policy"
 require_pattern "$LOCAL_RELEASE" 'parsevk-release' \
   "Local immutable image namespace is missing"
+require_pattern "$LOCAL_RELEASE" 'resolving build targets from Compose for release bootstrap' \
+  "First release cannot recover targets when the old catalog is unavailable"
 require_pattern "$LOCAL_RELEASE" 'status:"candidate"' \
   "Local release is not created as a candidate"
 require_pattern "$LOCAL_RELEASE" 'status = "successful"' \
