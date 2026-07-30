@@ -1,0 +1,32 @@
+name: Export Deploy Gate Patch
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/export-deploy-patch.yml
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/full-release-validation
+      - name: Patch only release workflow names
+        run: |
+          set -euo pipefail
+          sed -i 's/workflows: \["CI"\]/workflows: ["Full Release CI"]/' .github/workflows/deploy.yml
+          sed -i 's/REQUIRED_WORKFLOWS=("CI" "Security Scanning")/REQUIRED_WORKFLOWS=("Full Release CI" "Security Scanning")/' .github/workflows/deploy.yml
+          bash scripts/test-deploy-workflow.sh
+      - name: Upload complete deploy workflow
+        uses: actions/upload-artifact@v7
+        with:
+          name: deploy-gate-patch
+          path: .github/workflows/deploy.yml
+          if-no-files-found: error
+          retention-days: 1
