@@ -5,15 +5,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common.sh"
 
-check_registry_reachability() {
-  local url="$1"
-  local host_label="$2"
-  if ! curl -I -sS --max-time 15 "$url" >/dev/null; then
-    log_error "Registry endpoint is unreachable: $host_label ($url)"
-    return 1
-  fi
-}
-
 require_env_file() {
   if [ ! -f "$(project_root)/.env" ]; then
     log_error "Production .env file not found at $(project_root)/.env"
@@ -46,10 +37,32 @@ check_external_networks() {
   done <<<"$networks"
 }
 
+check_local_runtime_images() {
+  local images image missing=false
+  images="$(compose config --format json | jq -r '
+    .services | to_entries[]
+    | select((.value.build // null) == null and (.value.image // "") != "")
+    | .value.image
+  ' | sort -u)"
+
+  while IFS= read -r image; do
+    [ -z "$image" ] && continue
+    if ! docker image inspect "$image" >/dev/null 2>&1; then
+      log_error "Required runtime image is not available locally: $image"
+      missing=true
+    fi
+  done <<<"$images"
+
+  if [ "$missing" = "true" ]; then
+    log_error "Seed missing runtime images on the self-hosted runner before deployment"
+    return 1
+  fi
+}
+
 main() {
   require_command docker
   require_command jq
-  require_command curl
+  require_command python3
 
   if ! docker compose version >/dev/null 2>&1; then
     log_error "Docker Compose is not available"
@@ -60,13 +73,9 @@ main() {
   require_project_file "$COMPOSE_FILE"
   validate_compose
   check_external_networks
+  check_local_runtime_images
 
-  check_registry_reachability "https://registry-1.docker.io/v2/" "Docker Hub"
-  check_registry_reachability "https://ghcr.io/v2/" "GHCR"
-  check_registry_reachability "https://pypi.org/simple/uv/" "PyPI"
-
-  log_info "Production preflight completed successfully"
+  log_info "Offline production preflight completed successfully"
 }
 
 main "$@"
-
