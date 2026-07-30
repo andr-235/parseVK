@@ -7,7 +7,7 @@ on:
     paths:
       - .github/scripts/ai_review_inline.py
       - .github/scripts/ai_review_ui/**
-      - .github/scripts/test_ai_review_inline.py
+      - .github/scripts/test_ai_review_inline*.py
       - .github/workflows/ai-review-inline-publisher.yml
   workflow_run:
     workflows:
@@ -39,7 +39,7 @@ jobs:
         run: >-
           python -m unittest discover
           -s .github/scripts
-          -p 'test_ai_review_inline.py'
+          -p 'test_ai_review_inline*.py'
           -v
 
       - name: Run Ruff
@@ -47,7 +47,7 @@ jobs:
           uvx ruff check
           .github/scripts/ai_review_inline.py
           .github/scripts/ai_review_ui
-          .github/scripts/test_ai_review_inline.py
+          .github/scripts/test_ai_review_inline*.py
 
   publish:
     name: Publish inline review
