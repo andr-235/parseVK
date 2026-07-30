@@ -1,3 +1,10 @@
+## [0.85.1](https://github.com/andr-235/parseVK/compare/v0.85.0...v0.85.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* **ci:** restore full release validation ([#356](https://github.com/andr-235/parseVK/issues/356)) ([0b600a7](https://github.com/andr-235/parseVK/commit/0b600a719fed5c4c23637b8c0b56c6f3d258af23))
+
 # [0.85.0](https://github.com/andr-235/parseVK/compare/v0.84.0...v0.85.0) (2026-07-30)
 
 
