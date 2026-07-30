@@ -53,14 +53,35 @@ jobs:
             echo "skip_release=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Setup Node.js
+      - name: Verify source commit is current main
+        id: source_gate
         if: steps.release_commit.outputs.skip_release != 'true'
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ steps.release_commit.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+
+          CURRENT_MAIN="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          if [[ "$CURRENT_MAIN" != "$SOURCE_SHA" ]]; then
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+            echo "Skipping stale CI source $SOURCE_SHA; main is $CURRENT_MAIN"
+          else
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Node.js
+        if: >-
+          steps.release_commit.outputs.skip_release != 'true' &&
+          steps.source_gate.outputs.stale != 'true'
         uses: actions/setup-node@v6
         with:
           node-version: "20"
 
       - name: Install semantic-release
-        if: steps.release_commit.outputs.skip_release != 'true'
+        if: >-
+          steps.release_commit.outputs.skip_release != 'true' &&
+          steps.source_gate.outputs.stale != 'true'
         run: |
           npm install --no-save \
             semantic-release \
@@ -73,7 +94,9 @@ jobs:
             @semantic-release/github
 
       - name: Release
-        if: steps.release_commit.outputs.skip_release != 'true'
+        if: >-
+          steps.release_commit.outputs.skip_release != 'true' &&
+          steps.source_gate.outputs.stale != 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GIT_AUTHOR_NAME: github-actions[bot]
@@ -84,7 +107,9 @@ jobs:
 
       - name: Resolve semantic release commit
         id: resolved_release
-        if: steps.release_commit.outputs.skip_release != 'true'
+        if: >-
+          steps.release_commit.outputs.skip_release != 'true' &&
+          steps.source_gate.outputs.stale != 'true'
         shell: bash
         env:
           SOURCE_SHA: ${{ steps.release_commit.outputs.source_sha }}
@@ -148,3 +173,7 @@ jobs:
       - name: Release status
         if: steps.release_commit.outputs.skip_release == 'true'
         run: echo "Skipping Semantic Release for version commit with [skip ci]"
+
+      - name: Stale source status
+        if: steps.source_gate.outputs.stale == 'true'
+        run: echo "Skipping Semantic Release because a newer main commit exists"
