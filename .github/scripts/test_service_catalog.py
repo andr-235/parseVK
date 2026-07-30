@@ -23,12 +23,13 @@ _service_matrix = service_catalog._service_matrix
 
 def make_catalog(path: Path) -> Catalog:
     data = {
-        "schema_version": 1,
+        "schema_version": 2,
         "global_change_paths": {
             "pytest": ["libs/py/common/"],
             "audit": ["libs/py/common/"],
             "docker": [".dockerignore", "libs/py/common/"],
             "deploy": [".dockerignore", "libs/py/common/"],
+            "migration": ["libs/py/common/"],
         },
         "services": {
             "api": {
@@ -40,6 +41,10 @@ def make_catalog(path: Path) -> Catalog:
                 "dependency_audit": True,
                 "docker_scan": True,
                 "compose_build": ["api", "api-migrate"],
+                "migration": {
+                    "database_url_env": "API_DATABASE_URL",
+                    "compose_target": "api-migrate",
+                },
             },
             "frontend": {
                 "kind": "frontend",
@@ -50,6 +55,7 @@ def make_catalog(path: Path) -> Catalog:
                 "dependency_audit": False,
                 "docker_scan": True,
                 "compose_build": ["frontend"],
+                "migration": None,
             },
         },
     }
@@ -64,11 +70,23 @@ class CatalogTests(unittest.TestCase):
             selected = catalog.changed("pytest", ["services/api/app/main.py"])
             self.assertEqual([service.name for service in selected], ["api"])
 
-    def test_global_python_change_selects_all_python_services_only(self) -> None:
+    def test_migration_change_selects_db_service(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             catalog = make_catalog(Path(directory) / "catalog.yaml")
-            selected = catalog.changed("pytest", ["libs/py/common/runtime.py"])
+            selected = catalog.changed("migration", ["services/api/alembic/versions/001.py"])
             self.assertEqual([service.name for service in selected], ["api"])
+
+    def test_global_python_change_selects_quality_and_migrations(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            catalog = make_catalog(Path(directory) / "catalog.yaml")
+            self.assertEqual(
+                [service.name for service in catalog.changed("pytest", ["libs/py/common/runtime.py"])],
+                ["api"],
+            )
+            self.assertEqual(
+                [service.name for service in catalog.changed("migration", ["libs/py/common/runtime.py"])],
+                ["api"],
+            )
 
     def test_docker_global_change_selects_every_image(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -84,7 +102,7 @@ class CatalogTests(unittest.TestCase):
     def test_catalog_only_change_does_not_run_application_jobs(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             catalog = make_catalog(Path(directory) / "catalog.yaml")
-            for purpose in ("pytest", "docker", "deploy"):
+            for purpose in ("pytest", "docker", "deploy", "migration"):
                 with self.subTest(purpose=purpose):
                     self.assertEqual(catalog.changed(purpose, [".github/service-catalog.yaml"]), ())
 
@@ -100,6 +118,33 @@ class CatalogTests(unittest.TestCase):
             matrix = json.loads(_service_matrix(catalog.selected("docker"), "docker"))
             self.assertEqual(matrix["include"][0]["dockerfile"], "services/api/Dockerfile")
             self.assertEqual(matrix["include"][1]["image"], "parsevk-frontend:scan")
+
+    def test_migration_matrix_contains_database_env(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            catalog = make_catalog(Path(directory) / "catalog.yaml")
+            matrix = json.loads(_service_matrix(catalog.selected("migration"), "migration"))
+            self.assertEqual(
+                matrix,
+                {
+                    "include": [
+                        {
+                            "service": "api",
+                            "database_url_env": "API_DATABASE_URL",
+                        }
+                    ]
+                },
+            )
+
+    def test_invalid_migration_env_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory) / "base.yaml"
+            make_catalog(base)
+            data = json.loads(base.read_text(encoding="utf-8"))
+            data["services"]["api"]["migration"]["database_url_env"] = "api_database_url"
+            path = Path(directory) / "catalog.yaml"
+            path.write_text(json.dumps(data), encoding="utf-8")
+            with self.assertRaisesRegex(CatalogError, "uppercase env name"):
+                Catalog.load(path)
 
     def test_unknown_service_field_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
