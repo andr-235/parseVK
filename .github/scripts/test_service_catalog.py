@@ -17,6 +17,7 @@ spec.loader.exec_module(service_catalog)
 Catalog = service_catalog.Catalog
 CatalogError = service_catalog.CatalogError
 _deploy_targets = service_catalog._deploy_targets
+_path_matches = service_catalog._path_matches
 _service_matrix = service_catalog._service_matrix
 
 
@@ -74,6 +75,11 @@ class CatalogTests(unittest.TestCase):
             catalog = make_catalog(Path(directory) / "catalog.yaml")
             selected = catalog.changed("docker", [".dockerignore"])
             self.assertEqual([service.name for service in selected], ["api", "frontend"])
+
+    def test_file_change_path_requires_exact_match(self) -> None:
+        self.assertTrue(_path_matches(".dockerignore", [".dockerignore"]))
+        self.assertFalse(_path_matches(".dockerignore.backup", [".dockerignore"]))
+        self.assertTrue(_path_matches("services/api/app.py", ["services/api/"]))
 
     def test_catalog_only_change_does_not_run_application_jobs(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
