@@ -7,7 +7,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review, closed]
 
 concurrency:
-  group: ai-code-review-${{ github.event.pull_request.number }}
+  group: ai-code-review-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha || github.run_id }}
   cancel-in-progress: false
 
 permissions: {}
@@ -178,7 +178,6 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
-      pull-requests: read
     env:
       AI_REVIEW_DIR: ${{ github.workspace }}/.ai-review-runtime/${{ matrix.unit.index }}
     steps:
@@ -231,24 +230,8 @@ jobs:
           -p 'test_ai_review*.py'
           -v
 
-      - name: Check commit still belongs to Pull Request
-        id: eligible
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          REVIEWED_SHA: ${{ matrix.unit.head_sha }}
-        run: |
-          response="$(curl --fail --silent --show-error \
-            -H 'Accept: application/vnd.github+json' \
-            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/commits?per_page=100")"
-          found="$(REVIEWED_SHA="$REVIEWED_SHA" python -c 'import json,os,sys; expected=os.environ["REVIEWED_SHA"]; print("true" if any(item.get("sha")==expected for item in json.load(sys.stdin)) else "false")' <<<"$response")"
-          echo "current=$found" >> "$GITHUB_OUTPUT"
-
       - name: Build commit review scope
         id: scope
-        if: steps.eligible.outputs.current == 'true'
         continue-on-error: true
         env:
           BASE_SHA: ${{ matrix.unit.base_sha }}
@@ -339,7 +322,6 @@ jobs:
         if: always()
         env:
           HEAD_SHA: ${{ matrix.unit.head_sha }}
-          ELIGIBLE: ${{ steps.eligible.outputs.current }}
           TEST_OUTCOME: ${{ steps.self_test.outcome }}
           SCOPE_OUTCOME: ${{ steps.scope.outcome }}
           SCOPE_STATUS: ${{ steps.scope.outputs.status }}
@@ -347,13 +329,7 @@ jobs:
           OPENCODE_EXIT: ${{ steps.opencode.outputs.exit_code }}
         run: |
           mkdir -p "$AI_REVIEW_DIR"
-          if [[ "$ELIGIBLE" != "true" ]]; then
-            python "$AI_REVIEW_SCRIPT" fallback \
-              --head "$HEAD_SHA" \
-              --reason obsolete-commit \
-              --summary 'Commit больше не входит в актуальный Pull Request.' \
-              --output "$AI_REVIEW_DIR/review-result.json"
-          elif [[ "$TEST_OUTCOME" != "success" ]]; then
+          if [[ "$TEST_OUTCOME" != "success" ]]; then
             python "$AI_REVIEW_SCRIPT" fallback \
               --head "$HEAD_SHA" \
               --reason reviewer-self-test-failed \
@@ -438,6 +414,7 @@ jobs:
           path: .ai-review-runtime
 
       - name: Download validated commit results
+        if: needs.plan.outputs.count != '0'
         continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -449,6 +426,7 @@ jobs:
         env:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          mkdir -p .ai-review-runtime/commit-results
           if [[ -n "$AI_REVIEW_BATCH_SCRIPT" ]]; then
             PYTHONPATH="$TRUSTED_BATCH_DIR" python "$AI_REVIEW_BATCH_SCRIPT" aggregate \
               --plan .ai-review-runtime/commit-plan.json \
