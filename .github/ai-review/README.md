@@ -4,13 +4,14 @@ Reviewer анализирует Pull Request моделью `opencode/big-pickle
 
 ## Архитектура
 
-Контур разделён на пять частей:
+Контур разделён на шесть частей:
 
 1. `prepare` удаляет прежнюю реакцию бота и ставит `👀`.
 2. `review` имеет только `contents: read`, запускает OpenCode и сохраняет валидированный `review-result.json` как artifact.
 3. `verdict` скачивает artifact внутри исходного workflow и формирует только красный или зелёный check. У job нет прав записи в Pull Request и Issue.
-4. `AI Review Inline Publisher` запускается через `workflow_run`, читает artifact и является единственным владельцем финальных реакций и GitHub review.
-5. `cleanup` при закрытии Pull Request удаляет служебные реакции и оставшийся legacy-вывод.
+4. `finalize_progress` после завершения producer-run сверяет текущий `head_sha` и удаляет только временную реакцию `👀`. Финальный verdict этот job не публикует.
+5. `AI Review Inline Publisher` запускается через `workflow_run`, читает artifact и является единственным владельцем финальных реакций и GitHub review.
+6. `cleanup` при закрытии Pull Request удаляет служебные реакции и оставшийся legacy-вывод.
 
 Сырой JSON модели не публикуется и не попадает в уведомления GitHub.
 
@@ -62,7 +63,9 @@ Reviewer пропускает:
 - `findings`: ставит `😕` и публикует структурированный inline review, check остаётся зелёным;
 - `changes-required`: ставит `👎`, публикует inline review, source check красный;
 - `review-required`: ставит `😕`, публикует summary review, source check красный;
-- `unavailable`: удаляет `👀`, не публикует ложный verdict и не блокирует PR.
+- `unavailable`: финальная реакция и ложный verdict не публикуются, PR не блокируется.
+
+Временная реакция `👀` снимается producer-run независимо от результата artifact и publisher. Если run уже устарел относительно текущего HEAD, он не изменяет реакцию более нового запуска.
 
 Новые Issue по findings не создаются. Старые legacy-комментарии и связанные Issue закрываются во время миграционной очистки.
 
@@ -72,6 +75,7 @@ Reviewer пропускает:
 - fork и Dependabot не получают secrets;
 - model job не имеет прав записи;
 - verdict job имеет только `actions: read` и `contents: read`;
+- progress-cleanup имеет только `pull-requests: write`, сверяет текущий HEAD и удаляет исключительно `👀` своего бота;
 - финальный publisher берётся из default branch;
 - `GITHUB_TOKEN` не передаётся OpenCode;
 - проектный `opencode.json` отключён;
