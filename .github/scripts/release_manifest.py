@@ -9,6 +9,7 @@ from pathlib import Path
 from service_catalog_lib import Catalog, CatalogError
 
 DIGEST_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
+SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 REQUIRED_FIELDS = {
     "service",
     "repository",
@@ -21,6 +22,12 @@ REQUIRED_FIELDS = {
 
 def image_env_name(service: str) -> str:
     return f"{service.upper().replace('-', '_')}_IMAGE"
+
+
+def expected_repository(source_repository: str, service: str) -> str:
+    if source_repository.count("/") != 1:
+        raise ValueError("repository must use owner/name format")
+    return f"ghcr.io/{source_repository.lower()}-{service}"
 
 
 def load_records(directory: Path) -> dict[str, dict[str, str]]:
@@ -49,6 +56,8 @@ def build_manifest(
     commit_sha: str,
     created_at: str | None = None,
 ) -> dict[str, object]:
+    if not SHA_PATTERN.fullmatch(commit_sha):
+        raise ValueError("commit_sha must be a full lowercase commit SHA")
     catalog = Catalog.load(catalog_path)
     expected = tuple(service.name for service in catalog.selected("docker"))
     records = load_records(metadata_dir)
@@ -62,8 +71,14 @@ def build_manifest(
     images: dict[str, dict[str, str]] = {}
     for service in expected:
         record = records[service]
+        image_repository = expected_repository(repository, service)
+        expected_tag = f"{image_repository}:sha-{commit_sha}"
         if record["commit_sha"] != commit_sha:
             raise ValueError(f"{service}: image metadata commit does not match release")
+        if record["repository"] != image_repository:
+            raise ValueError(f"{service}: image repository must be {image_repository}")
+        if record["tag"] != expected_tag:
+            raise ValueError(f"{service}: image tag must be {expected_tag}")
         images[service] = {
             "env": image_env_name(service),
             "repository": record["repository"],
