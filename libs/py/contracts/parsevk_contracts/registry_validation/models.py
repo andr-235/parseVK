@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-
 SUPPORTED_CAUSATION_POLICIES = frozenset({"optional", "required", "forbidden"})
 SUPPORTED_COMPATIBILITY = frozenset({"backward"})
 

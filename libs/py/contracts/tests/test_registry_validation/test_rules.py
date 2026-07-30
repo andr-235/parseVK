@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from parsevk_contracts._base import ContractModel
 from parsevk_contracts.catalog import ContractCatalog, MessageContract, PartitionKeySpec
-from parsevk_contracts.registry_validation import RegistryViolation, validate_registry
+from parsevk_contracts.registry_validation import validate_registry
 
 
 class SamplePayload(ContractModel):

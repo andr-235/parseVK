@@ -6,7 +6,6 @@ from typing import Union, get_args, get_origin
 from pydantic.fields import FieldInfo
 
 from parsevk_contracts._base import ContractModel
-from parsevk_contracts.registry_validation.models import RegistryViolation
 
 
 def _find_field_by_alias(
@@ -14,7 +13,7 @@ def _find_field_by_alias(
     alias: str,
 ) -> FieldInfo | None:
     """Find a Pydantic model field by its wire-format camelCase alias."""
-    for field_name, field_info in model.model_fields.items():
+    for _field_name, field_info in model.model_fields.items():
         if field_info.alias == alias:
             return field_info
     return None

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from parsevk_contracts.compatibility import CompatibilityViolation, check_compatibility
+from parsevk_contracts.compatibility import check_compatibility
 
 BASELINE_MANIFEST: dict[str, object] = {
     "manifestVersion": 1,

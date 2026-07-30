@@ -35,7 +35,7 @@ def check_contract(
 
     if not contract.topic:
         violations.append(
-            RegistryViolation("empty_topic", mt, sv, "topic", f"topic must not be empty")
+            RegistryViolation("empty_topic", mt, sv, "topic", "topic must not be empty")
         )
 
     if not (isinstance(contract.payload_model, type) and issubclass(contract.payload_model, ContractModel)):
@@ -51,7 +51,7 @@ def check_contract(
         for producer in contract.producers:
             if not producer:
                 violations.append(
-                    RegistryViolation("empty_producer_name", mt, sv, "producers", f"producer name must not be empty")
+                    RegistryViolation("empty_producer_name", mt, sv, "producers", "producer name must not be empty")
                 )
 
     if not contract.consumers:
@@ -62,7 +62,7 @@ def check_contract(
         for consumer in contract.consumers:
             if not consumer:
                 violations.append(
-                    RegistryViolation("empty_consumer_name", mt, sv, "consumers", f"consumer name must not be empty")
+                    RegistryViolation("empty_consumer_name", mt, sv, "consumers", "consumer name must not be empty")
                 )
 
     if contract.compatibility not in SUPPORTED_COMPATIBILITY:
