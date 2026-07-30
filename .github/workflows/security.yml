@@ -159,7 +159,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          fetch-depth: ${{ github.event_name == 'workflow_dispatch' && 2 || 0 }}
 
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2

@@ -29,6 +29,8 @@ def resolve_services(
         return catalog.selected(args.purpose)
     if args.changed_file:
         return catalog.changed(args.purpose, args.changed_file)
+    if args.head and not args.base:
+        return catalog.selected(args.purpose)
     if not args.base or not args.head:
         raise CatalogError("provide --all, --changed-file, or both --base and --head")
     changed_files = git_changed_files(args.repo_root, args.base, args.head)
