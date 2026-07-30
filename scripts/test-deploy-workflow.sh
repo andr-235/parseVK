@@ -86,6 +86,8 @@ require_pattern "$DOCKER_SECURITY" 'aquasecurity/trivy-action@v0\.36\.0' \
   "Reusable Docker security lost Trivy"
 require_pattern "$DOCKER_SECURITY" 'github/codeql-action/upload-sarif@v4' \
   "Reusable Docker security lost SARIF upload"
+require_pattern "$DOCKER_SECURITY" 'build-args:.*inputs\.build_args' "Reusable Docker security lost build arguments"
+require_pattern "$SECURITY" 'build_args:.*matrix\.service.*frontend' "Frontend security scan lost production build arguments"
 require_pattern "$SECURITY" 'name: Security Gate' "Security Gate is missing"
 require_pattern "$CI" 'name: Release Gate' "Release Gate is missing"
 
