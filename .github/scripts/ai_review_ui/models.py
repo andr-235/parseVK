@@ -19,7 +19,11 @@ SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 
 class PublishError(RuntimeError):
-    """Expected inline publisher failure."""
+    """Unexpected final publisher failure."""
+
+
+class SkipPublication(PublishError):
+    """Expected stale or ineligible publication attempt."""
 
 
 def require_text(value: Any, name: str, *, limit: int = 4000) -> str:

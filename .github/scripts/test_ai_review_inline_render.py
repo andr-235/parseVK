@@ -29,13 +29,16 @@ def finding(
     )
 
 
-def result(*findings: Finding) -> ReviewResult:
+def result(
+    *findings: Finding,
+    verdict: str = "changes-required",
+) -> ReviewResult:
     return ReviewResult(
         head_sha="a" * 40,
         status="completed",
         reason="review-completed",
-        summary="summary",
-        verdict="changes-required",
+        summary="Сводка результата.",
+        verdict=verdict,
         findings=tuple(findings),
         blocking_count=len(findings),
     )
@@ -66,6 +69,17 @@ class RenderTests(unittest.TestCase):
         body = render_review_body(result(*findings), overflow)
         self.assertIn("Остальные замечания (2)", body)
         self.assertIn("> [!CAUTION]\n> **Итог ревью**", body)
+        self.assertIn("Сводка результата.", body)
         self.assertIn("Проверен commit", body)
         for item in overflow:
             self.assertIn(f"📄 `{item.file}` · строка {item.line}", body)
+
+    def test_manual_review_requirement_uses_important_alert(self) -> None:
+        body = render_review_body(result(verdict="review-required"), ())
+        self.assertIn("> [!IMPORTANT]\n> **Итог ревью**", body)
+        self.assertIn("Требуется ручное ревью", body)
+        self.assertIn("Замечания: нет", body)
+
+
+if __name__ == "__main__":
+    unittest.main()

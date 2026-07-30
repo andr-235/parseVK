@@ -30,7 +30,6 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-      issues: write
     steps:
       - name: Checkout trusted reviewer code
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -293,10 +292,8 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  publish:
-    name: Publish review verdict
-    env:
-      AI_REVIEW_DIR: ${{ github.workspace }}/.ai-review-runtime
+  verdict:
+    name: Evaluate review verdict
     needs: [prepare, review]
     if: >-
       always() &&
@@ -307,49 +304,187 @@ jobs:
       github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
-      pull-requests: write
-      issues: write
     steps:
-      - name: Checkout trusted publisher code
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          ref: ${{ github.event.pull_request.base.sha }}
-          persist-credentials: false
-          sparse-checkout: |
-            .github/scripts/ai_review.py
-          sparse-checkout-cone-mode: false
-
       - name: Download validated result
-        id: download
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ai-review-result-${{ github.run_id }}
+          path: ${{ github.workspace }}/.ai-review-runtime
+
+      - name: Evaluate validated verdict without publishing
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+          RESULT_PATH: ${{ github.workspace }}/.ai-review-runtime/review-result.json
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          result_path = Path(os.environ["RESULT_PATH"])
+          try:
+              payload = json.loads(result_path.read_text(encoding="utf-8"))
+          except (OSError, json.JSONDecodeError) as error:
+              print(f"::error::Cannot read validated AI review result: {error}")
+              raise SystemExit(2) from error
+
+          expected_head = os.environ["EXPECTED_HEAD"]
+          if payload.get("head_sha") != expected_head:
+              print("::error::Validated AI review result belongs to another HEAD.")
+              raise SystemExit(2)
+
+          verdict = payload.get("verdict")
+          allowed = {
+              "approved",
+              "changes-required",
+              "findings",
+              "review-required",
+              "unavailable",
+          }
+          if verdict not in allowed:
+              print(f"::error::Unsupported AI review verdict: {verdict!r}")
+              raise SystemExit(2)
+
+          summary = str(payload.get("summary") or "AI review produced no summary.")
+          blocking = int(payload.get("blocking_count") or 0)
+          findings = payload.get("findings")
+          finding_count = len(findings) if isinstance(findings, list) else 0
+          print(f"AI Review verdict: {verdict}")
+          print(f"Findings: {finding_count}; blocking: {blocking}")
+          print(summary)
+
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary_path:
+              with open(summary_path, "a", encoding="utf-8") as stream:
+                  stream.write("## AI Code Review verdict\n\n")
+                  stream.write(f"- Verdict: `{verdict}`\n")
+                  stream.write(f"- Findings: {finding_count}\n")
+                  stream.write(f"- Blocking: {blocking}\n\n")
+                  stream.write(f"{summary}\n")
+
+          if verdict in {"changes-required", "review-required"}:
+              print(f"::error::AI Review verdict blocks this Pull Request: {verdict}")
+              raise SystemExit(1)
+          if verdict == "unavailable":
+              print(f"::warning::{summary}")
+          PY
+
+  status:
+    name: Publish review status
+    needs: [prepare, review, verdict]
+    if: >-
+      always() &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == github.repository_owner &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      pull-requests: write
+    steps:
+      - name: Download validated result
+        id: result
         continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: ai-review-result-${{ github.run_id }}
           path: ${{ github.workspace }}/.ai-review-runtime
 
-      - name: Create fallback when the review artifact is unavailable
-        if: steps.download.outcome != 'success'
+      - name: Replace processing reaction with validated status
         env:
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          mkdir -p "$AI_REVIEW_DIR"
-          python "$AI_REVIEW_SCRIPT" fallback \
-            --head "$HEAD_SHA" \
-            --reason missing-review-artifact \
-            --summary 'Артефакт AI-ревью отсутствует.' \
-            --output "$AI_REVIEW_DIR/review-result.json"
-
-      - name: Publish reactions and findings
-        env:
+          DOWNLOAD_OUTCOME: ${{ steps.result.outcome }}
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
+          RESULT_PATH: ${{ github.workspace }}/.ai-review-runtime/review-result.json
         run: |
-          python "$AI_REVIEW_SCRIPT" publish \
-            --pr "$PR_NUMBER" \
-            --title "$PR_TITLE" \
-            --result "$AI_REVIEW_DIR/review-result.json"
+          python - <<'PY'
+          import json
+          import os
+          import urllib.request
+          from pathlib import Path
+
+          api_url = os.environ.get("GITHUB_API_URL", "https://api.github.com").rstrip("/")
+          repository = os.environ["GITHUB_REPOSITORY"]
+          pr_number = os.environ["PR_NUMBER"]
+          expected_head = os.environ["EXPECTED_HEAD"]
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "parsevk-ai-review-status",
+          }
+
+          def request(method: str, path: str, body=None):
+              data = None if body is None else json.dumps(body).encode("utf-8")
+              value = urllib.request.Request(
+                  f"{api_url}{path}",
+                  data=data,
+                  headers=headers,
+                  method=method,
+              )
+              with urllib.request.urlopen(value, timeout=30) as response:
+                  payload = response.read()
+              return json.loads(payload) if payload else None
+
+          pull_request = request("GET", f"/repos/{repository}/pulls/{pr_number}")
+          current_head = str((pull_request or {}).get("head", {}).get("sha") or "")
+          if current_head != expected_head:
+              print("::notice::Obsolete AI review run cannot update current PR status.")
+              raise SystemExit(0)
+
+          verdict = "unavailable"
+          result_path = Path(os.environ["RESULT_PATH"])
+          if os.environ.get("DOWNLOAD_OUTCOME") == "success" and result_path.is_file():
+              try:
+                  payload = json.loads(result_path.read_text(encoding="utf-8"))
+              except (OSError, json.JSONDecodeError) as error:
+                  print(f"::warning::Cannot read AI review status artifact: {error}")
+              else:
+                  if payload.get("head_sha") == expected_head:
+                      candidate = payload.get("verdict")
+                      if candidate in {
+                          "approved",
+                          "changes-required",
+                          "findings",
+                          "review-required",
+                          "unavailable",
+                      }:
+                          verdict = candidate
+
+          reaction_by_verdict = {
+              "approved": "+1",
+              "changes-required": "-1",
+              "findings": "confused",
+              "review-required": "confused",
+              "unavailable": "confused",
+          }
+          reactions = request(
+              "GET",
+              f"/repos/{repository}/issues/{pr_number}/reactions?per_page=100",
+          )
+          for reaction in reactions or []:
+              user = reaction.get("user") or {}
+              if user.get("login") != "github-actions[bot]":
+                  continue
+              request(
+                  "DELETE",
+                  f"/repos/{repository}/issues/{pr_number}/reactions/{reaction['id']}",
+              )
+
+          final_reaction = reaction_by_verdict[verdict]
+          request(
+              "POST",
+              f"/repos/{repository}/issues/{pr_number}/reactions",
+              {"content": final_reaction},
+          )
+          print(f"Published AI review status: {verdict}")
+          PY
 
   cleanup:
     name: Clean up closed Pull Request
