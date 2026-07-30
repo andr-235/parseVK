@@ -8,6 +8,8 @@ from typing import Any
 
 from .legacy import cleanup_legacy_output
 from .models import Finding, PublishError
+from .reactions import remove_reactions as remove_bot_reactions
+from .reactions import set_reaction as replace_bot_reaction
 from .render import REVIEW_MARKER, render_inline_finding
 
 
@@ -118,6 +120,12 @@ class GitHubApi:
                 "comments": comments,
             },
         )
+
+    def set_reaction(self, number: int, content: str) -> None:
+        replace_bot_reaction(self, number, content)
+
+    def remove_reactions(self, number: int) -> None:
+        remove_bot_reactions(self, number)
 
     def cleanup_legacy_output(self, number: int) -> None:
         cleanup_legacy_output(self, number)
