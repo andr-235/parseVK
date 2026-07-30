@@ -15,6 +15,55 @@ permissions:
   security-events: write
 
 jobs:
+  catalog:
+    name: Build Security Matrices
+    runs-on: ubuntu-latest
+    outputs:
+      audit_matrix: ${{ steps.audit.outputs.value }}
+      docker_matrix: ${{ steps.docker.outputs.value }}
+      docker_changed: ${{ steps.docker.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Build Python audit matrix
+        id: audit
+        run: |
+          python3 .github/scripts/service_catalog.py matrix \
+            --purpose audit \
+            --all \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Build changed Docker image matrix
+        id: docker
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+            python3 .github/scripts/service_catalog.py matrix \
+              --purpose docker \
+              --base "$BASE_SHA" \
+              --head "$HEAD_SHA" \
+              --github-output "$GITHUB_OUTPUT"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+            python3 .github/scripts/service_catalog.py matrix \
+              --purpose docker \
+              --base "$BASE_SHA" \
+              --head "$HEAD_SHA" \
+              --github-output "$GITHUB_OUTPUT"
+          else
+            python3 .github/scripts/service_catalog.py matrix \
+              --purpose docker \
+              --all \
+              --github-output "$GITHUB_OUTPUT"
+          fi
+
   dependency-review:
     name: Dependency Review
     runs-on: ubuntu-latest
@@ -28,7 +77,7 @@ jobs:
           fail-on-severity: high
 
   dependency-scan:
-    name: Scan Dependencies
+    name: Scan Frontend Dependencies
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -82,26 +131,20 @@ jobs:
           exit 1
 
   python-dependency-scan:
-    name: Scan Python Dependencies
+    name: Audit ${{ matrix.service }} Dependencies
     runs-on: ubuntu-latest
+    needs: catalog
     strategy:
       fail-fast: false
+      max-parallel: 4
       matrix:
-        service:
-          - api-gateway
-          - identity-service
-          - tasks-service
-          - vk-service
-          - content-service
-          - moderation-service
-          - telegram-service
-          - im-service
+        service: ${{ fromJSON(needs.catalog.outputs.audit_matrix) }}
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - name: Audit Python dependencies (${{ matrix.service }})
+      - name: Audit Python dependencies
         working-directory: services/${{ matrix.service }}
         run: |
           set -euo pipefail
@@ -111,75 +154,49 @@ jobs:
           fi
 
   docker-scan:
-    name: Scan Docker Images
+    name: Scan ${{ matrix.service }} Image
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    needs: catalog
+    if: needs.catalog.outputs.docker_changed == 'true'
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.catalog.outputs.docker_matrix) }}
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Detect changed files
-        id: detect-changes
-        run: |
-          set -euo pipefail
-
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE_SHA="${{ github.event.pull_request.base.sha }}"
-            HEAD_SHA="${{ github.sha }}"
-          else
-            BASE_SHA="${{ github.event.before }}"
-            HEAD_SHA="${{ github.sha }}"
-          fi
-
-          FRONTEND_CHANGED=false
-
-          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
-            FRONTEND_CHANGED=true
-          else
-            CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
-            if echo "$CHANGED_FILES" | grep -qE '^front/|^docker/frontend\.Dockerfile|^docker/frontend-entrypoint\.sh|^docker/frontend\.nginx\.conf'; then
-              FRONTEND_CHANGED=true
-            fi
-          fi
-
-          echo "frontend_changed=$FRONTEND_CHANGED" >> "$GITHUB_OUTPUT"
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Build Frontend image for scanning
-        id: build-frontend
-        if: steps.detect-changes.outputs.frontend_changed == 'true'
+      - name: Build image for scanning
+        id: build-image
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: docker/frontend.Dockerfile
+          file: ${{ matrix.dockerfile }}
           push: false
           load: true
-          tags: parsevk-frontend:scan
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            VITE_APP_TITLE=Центр аналитики
-            VITE_API_URL=/api
-            VITE_API_WS_URL=auto
-            VITE_DEV_MODE=false
+          tags: ${{ matrix.image }}
+          cache-from: type=gha,scope=security-${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=security-${{ matrix.service }}
+          build-args: ${{ matrix.service == 'frontend' && 'VITE_APP_TITLE=Центр аналитики\nVITE_API_URL=/api\nVITE_API_WS_URL=auto\nVITE_DEV_MODE=false' || '' }}
 
-      - name: Run Trivy vulnerability scanner on Frontend image
-        if: steps.build-frontend.outcome == 'success'
+      - name: Run Trivy vulnerability scanner
+        if: steps.build-image.outcome == 'success'
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: parsevk-frontend:scan
+          image-ref: ${{ matrix.image }}
           format: "sarif"
-          output: "trivy-frontend-results.sarif"
+          output: "trivy-${{ matrix.service }}-results.sarif"
           severity: "CRITICAL,HIGH"
 
-      - name: Upload Trivy results to GitHub Security (Frontend)
-        if: always() && steps.build-frontend.outcome == 'success'
+      - name: Upload Trivy results to GitHub Security
+        if: always() && steps.build-image.outcome == 'success'
         uses: github/codeql-action/upload-sarif@v4
         with:
-          sarif_file: "trivy-frontend-results.sarif"
+          sarif_file: "trivy-${{ matrix.service }}-results.sarif"
           wait-for-processing: false
 
   secret-scan:
@@ -205,6 +222,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs:
+      - catalog
       - dependency-review
       - dependency-scan
       - python-dependency-scan
@@ -215,6 +233,8 @@ jobs:
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
+          DOCKER_CHANGED: ${{ needs.catalog.outputs.docker_changed }}
+          CATALOG_RESULT: ${{ needs.catalog.result }}
           DEPENDENCY_REVIEW_RESULT: ${{ needs.dependency-review.result }}
           DEPENDENCY_SCAN_RESULT: ${{ needs.dependency-scan.result }}
           PYTHON_SCAN_RESULT: ${{ needs.python-dependency-scan.result }}
@@ -233,6 +253,20 @@ jobs:
             fi
           }
 
+          require_conditional() {
+            local name="$1"
+            local expected="$2"
+            local result="$3"
+            if [ "$expected" = "true" ]; then
+              require_success "$name" "$result"
+            elif [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
+              echo "::error::${name} завершён со статусом ${result}"
+              failures=$((failures + 1))
+            fi
+          }
+
+          require_success "Build Security Matrices" "$CATALOG_RESULT"
+
           if [ "$EVENT_NAME" = "pull_request" ]; then
             require_success "Dependency Review" "$DEPENDENCY_REVIEW_RESULT"
           elif [ "$DEPENDENCY_REVIEW_RESULT" != "skipped" ]; then
@@ -242,7 +276,7 @@ jobs:
 
           require_success "Frontend dependency scan" "$DEPENDENCY_SCAN_RESULT"
           require_success "Python dependency scan" "$PYTHON_SCAN_RESULT"
-          require_success "Docker image scan" "$DOCKER_SCAN_RESULT"
+          require_conditional "Docker image scan" "$DOCKER_CHANGED" "$DOCKER_SCAN_RESULT"
           require_success "Secret scan" "$SECRET_SCAN_RESULT"
 
           if (( failures > 0 )); then
