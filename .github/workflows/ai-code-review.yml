@@ -72,6 +72,7 @@ jobs:
             .github/scripts/ai_review_batch.py
             .github/scripts/ai_review_batch_lib
             .github/scripts/test_ai_review_batch.py
+            .github/scripts/test_ai_review_batch_plan_edges.py
           sparse-checkout-cone-mode: false
 
       - name: Isolate trusted commit planner
@@ -84,9 +85,10 @@ jobs:
             cp -R .github/scripts/ai_review_batch_lib "$trusted_dir/ai_review_batch_lib"
             batch_script="$trusted_dir/ai_review_batch.py"
           fi
-          if [[ -f .github/scripts/test_ai_review_batch.py ]]; then
-            cp .github/scripts/test_ai_review_batch.py "$trusted_dir/test_ai_review_batch.py"
-          fi
+          shopt -s nullglob
+          for test_file in .github/scripts/test_ai_review_batch*.py; do
+            cp "$test_file" "$trusted_dir/${test_file##*/}"
+          done
           {
             echo "TRUSTED_BATCH_DIR=$trusted_dir"
             echo "AI_REVIEW_BATCH_SCRIPT=$batch_script"
@@ -98,7 +100,7 @@ jobs:
           PYTHONPATH="$TRUSTED_BATCH_DIR"
           python -m unittest discover
           -s "$TRUSTED_BATCH_DIR"
-          -p 'test_ai_review_batch.py'
+          -p 'test_ai_review_batch*.py'
           -v
 
       - name: Checkout Pull Request history
@@ -143,6 +145,7 @@ jobs:
               "reason": "bootstrap-single-commit",
               "units": [unit],
               "commit_count": 1,
+              "new_commit_count": 1,
           }
           Path(".ai-review-runtime/commit-plan.json").write_text(
               json.dumps(plan, indent=2) + "\n",
@@ -156,7 +159,7 @@ jobs:
           fi
 
       - name: Upload commit review plan
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: ai-review-plan-${{ github.run_id }}
           path: .ai-review-runtime/commit-plan.json
@@ -319,6 +322,7 @@ jobs:
           echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
 
       - name: Build validated commit result
+        id: result
         if: always()
         env:
           HEAD_SHA: ${{ matrix.unit.head_sha }}
@@ -328,42 +332,82 @@ jobs:
           INSTALL_OUTCOME: ${{ steps.install.outcome }}
           OPENCODE_EXIT: ${{ steps.opencode.outputs.exit_code }}
         run: |
-          mkdir -p "$AI_REVIEW_DIR"
+          result_path="$AI_REVIEW_DIR/review-result.json"
+          artifact_dir="$RUNNER_TEMP/ai-review-artifact"
+          artifact_path="$artifact_dir/${HEAD_SHA}.json"
+          mkdir -p "$AI_REVIEW_DIR" "$artifact_dir"
+
+          set +e
           if [[ "$TEST_OUTCOME" != "success" ]]; then
             python "$AI_REVIEW_SCRIPT" fallback \
               --head "$HEAD_SHA" \
               --reason reviewer-self-test-failed \
               --summary 'Внутренние тесты reviewer завершились ошибкой.' \
-              --output "$AI_REVIEW_DIR/review-result.json"
+              --output "$result_path"
           elif [[ "$SCOPE_OUTCOME" != "success" ]]; then
             python "$AI_REVIEW_SCRIPT" fallback \
               --head "$HEAD_SHA" \
               --reason scope-failed \
               --summary 'Не удалось подготовить commit scope.' \
-              --output "$AI_REVIEW_DIR/review-result.json"
+              --output "$result_path"
           elif [[ "$SCOPE_STATUS" == "review" && "$INSTALL_OUTCOME" != "success" ]]; then
             python "$AI_REVIEW_SCRIPT" fallback \
               --head "$HEAD_SHA" \
               --reason opencode-install-failed \
               --summary 'Не удалось установить закреплённую версию OpenCode CLI.' \
-              --output "$AI_REVIEW_DIR/review-result.json"
+              --output "$result_path"
           else
             python "$AI_REVIEW_SCRIPT" finalize \
               --scope "$AI_REVIEW_DIR/scope.json" \
               --events "$AI_REVIEW_DIR" \
               --exit-code "${OPENCODE_EXIT:-0}" \
-              --output "$AI_REVIEW_DIR/review-result.json"
+              --output "$result_path"
           fi
-          mkdir -p .ai-review-artifact
-          cp "$AI_REVIEW_DIR/review-result.json" \
-            ".ai-review-artifact/${HEAD_SHA}.json"
+          result_exit=$?
+          set -e
+
+          if (( result_exit != 0 )) || [[ ! -s "$result_path" ]]; then
+            python "$AI_REVIEW_SCRIPT" fallback \
+              --head "$HEAD_SHA" \
+              --reason result-generation-failed \
+              --summary 'Reviewer не смог сформировать результат commit-review.' \
+              --output "$result_path" || true
+          fi
+          if [[ ! -s "$result_path" ]]; then
+            python - "$HEAD_SHA" "$result_path" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          head, output = sys.argv[1:]
+          value = {
+              "schema_version": 1,
+              "status": "technical-error",
+              "reason": "emergency-fallback",
+              "head_sha": head,
+              "summary": "Reviewer не смог сформировать результат commit-review.",
+              "findings": [],
+              "dropped_findings": 0,
+              "verdict": "unavailable",
+              "reaction": "confused",
+              "blocking_count": 0,
+          }
+          Path(output).write_text(
+              json.dumps(value, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+          fi
+
+          cp "$result_path" "$artifact_path"
+          echo "path=$artifact_path" >> "$GITHUB_OUTPUT"
 
       - name: Upload validated commit result
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always() && steps.result.outputs.path != ''
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: ai-review-commit-${{ github.run_id }}-${{ matrix.unit.index }}
-          path: .ai-review-artifact/*.json
+          path: ${{ steps.result.outputs.path }}
           if-no-files-found: error
           retention-days: 1
 
@@ -408,7 +452,7 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Download commit review plan
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: ai-review-plan-${{ github.run_id }}
           path: .ai-review-runtime
@@ -416,7 +460,7 @@ jobs:
       - name: Download validated commit results
         if: needs.plan.outputs.count != '0'
         continue-on-error: true
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           pattern: ai-review-commit-${{ github.run_id }}-*
           path: .ai-review-runtime/commit-results
@@ -465,7 +509,7 @@ jobs:
 
       - name: Upload validated result
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: ai-review-result-${{ github.run_id }}
           path: |
@@ -511,7 +555,7 @@ jobs:
       - name: Download validated result
         id: result
         continue-on-error: true
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: ai-review-result-${{ github.run_id }}
           path: .ai-review-runtime
