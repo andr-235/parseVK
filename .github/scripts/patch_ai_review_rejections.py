@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# One-shot patch: log metadata only, never unaccepted scenario/impact/fix text.
 path = Path(".github/scripts/ai_review.py")
 text = path.read_text(encoding="utf-8")
 old = '''def filter_findings(findings: Sequence[Finding], scope: Scope) -> tuple[tuple[Finding, ...], int]:
