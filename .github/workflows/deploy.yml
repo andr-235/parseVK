@@ -316,6 +316,7 @@ jobs:
           fi
 
       - name: Snapshot local release images
+        id: release_snapshot
         if: steps.deployment_context.outputs.skip_deploy != 'true'
         working-directory: /opt/parseVK
         run: |
@@ -362,6 +363,29 @@ jobs:
           PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
             bash "$PRODUCTION_SCRIPTS_DIR/metadata.sh" write "$CURRENT_COMMIT" "$CURRENT_TIME"
 
+      - name: Restore previous local release after failed deployment
+        if: >-
+          failure() &&
+          steps.release_snapshot.outcome == 'success' &&
+          steps.deployment_metadata.outputs.last_successful_commit != ''
+        working-directory: /opt/parseVK
+        timeout-minutes: 15
+        env:
+          PREVIOUS_RELEASE: ${{ steps.deployment_metadata.outputs.last_successful_commit }}
+        run: |
+          set -euo pipefail
+
+          echo "Deployment failed; restoring previous local release $PREVIOUS_RELEASE"
+          git fetch --no-tags origin "$PREVIOUS_RELEASE"
+          git checkout -f "$PREVIOUS_RELEASE"
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" COMPOSE_PROJECT_NAME="$COMPOSE_PROJECT_NAME" \
+            SERVICE_CATALOG_CLI="$PROJECT_ROOT/.github/scripts/service_catalog.py" \
+            bash "$LOCAL_RELEASE_SCRIPT" activate "$PREVIOUS_RELEASE"
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" PULL_POLICY="$PULL_POLICY" \
+            UP_ARGS="-d --no-build" bash "$PRODUCTION_SCRIPTS_DIR/release.sh"
+          COMPOSE_FILE="$COMPOSE_FILE" FULL_DEPLOY="true" MAX_ATTEMPTS="30" \
+            bash "${{ github.workspace }}/.github/scripts/health-check.sh"
+
       - name: Deployment status
         if: always()
         run: |
@@ -372,6 +396,6 @@ jobs:
             echo "✅ Local release deployed successfully and is healthy"
             echo "Commit: $(cd /opt/parseVK && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
           else
-            echo "❌ Deployment failed or health checks did not pass"
+            echo "❌ Deployment failed; previous local release restoration was attempted"
             echo "Commit: $(cd /opt/parseVK && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
           fi
