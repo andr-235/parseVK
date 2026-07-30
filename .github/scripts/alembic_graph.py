@@ -36,9 +36,13 @@ def read_revision(path: Path) -> Revision:
         parents: tuple[str, ...] = ()
     elif isinstance(down_revision, str):
         parents = (down_revision,)
-    elif isinstance(down_revision, (tuple, list)) and all(
-        isinstance(parent, str) and parent for parent in down_revision
-    ):
+    elif isinstance(down_revision, (tuple, list)):
+        if not down_revision or not all(
+            isinstance(parent, str) and parent for parent in down_revision
+        ):
+            raise ValueError(
+                "down_revision must be None, a string, or a non-empty string sequence"
+            )
         parents = tuple(down_revision)
     else:
         raise ValueError(
