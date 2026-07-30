@@ -1,21 +1,34 @@
 # AI Code Review
 
-Reviewer анализирует Pull Request моделью `opencode/big-pickle`, но модель не имеет прав публиковать что-либо в GitHub.
+Reviewer анализирует новые commits Pull Request моделью `opencode/big-pickle`. Модель не имеет прав публиковать что-либо в GitHub.
 
 ## Архитектура
 
-Контур разделён на шесть частей:
+Контур разделён на семь частей:
 
 1. `prepare` удаляет прежнюю реакцию бота и ставит `👀`.
-2. `review` имеет только `contents: read`, запускает OpenCode и сохраняет валидированный `review-result.json` как artifact.
-3. `verdict` скачивает artifact внутри исходного workflow и формирует только красный или зелёный check. У job нет прав записи в Pull Request и Issue.
-4. `status` сверяет текущий `head_sha` и заменяет `👀` на реакцию валидированного verdict: `👍`, `😕` или `👎`.
-5. `AI Review Inline Publisher` запускается через `workflow_run`, читает artifact и является единственным владельцем GitHub review и inline-комментариев.
-6. `cleanup` при закрытии Pull Request удаляет служебные реакции и оставшийся legacy-вывод.
+2. `plan` определяет commits текущего события и формирует matrix с парами `parent_sha → commit_sha`.
+3. `review` запускается отдельно для каждого commit, строит только его diff и сохраняет валидированный JSON.
+4. `verdict` агрегирует результаты commits текущего запуска и формирует красный или зелёный check.
+5. `status` сверяет текущий HEAD и заменяет `👀` на итоговую реакцию batch: `👍`, `😕` или `👎`.
+6. `AI Review Inline Publisher` запускается через `workflow_run` и публикует отдельный GitHub review для каждого проверенного commit.
+7. `cleanup` при закрытии Pull Request удаляет служебные реакции и оставшийся legacy-вывод.
 
 Сырой JSON модели не публикуется и не попадает в уведомления GitHub.
 
-## Область анализа
+## Выбор commits
+
+Reviewer не пересматривает весь накопленный PR при каждом push:
+
+- `opened`, `reopened`, `ready_for_review`: проверяет commits, достижимые из HEAD, но не достижимые из актуального `base`;
+- `synchronize`: если прежний HEAD является предком нового, проверяет только новые commits, одновременно исключая commits актуальной базовой ветки;
+- force-push: игнорирует старую цепочку и заново строит актуальный список относительно `base`;
+- каждый обычный commit анализируется как diff его первого родителя к самому commit;
+- если весь PR содержит больше 50 собственных commits, любой следующий запуск сохраняет `review-required`, пока история не будет сокращена.
+
+Быстрый следующий push не отменяет уже начатое commit-review. Старый batch может опубликовать результат, если проверенный commit по-прежнему входит в PR. Commit, удалённый force-push, не публикуется.
+
+## Область анализа commit
 
 Reviewer пропускает:
 
@@ -25,53 +38,68 @@ Reviewer пропускает:
 - `.github/ai-review/**`;
 - `.github/scripts/ai_review*`, которые проверяются unit-тестами.
 
-Анализ делится максимум на четыре chunk. На один chunk допускается до 20 файлов и 2000 изменённых строк. Весь PR ограничен 80 файлами и 8000 изменённых строк. Более крупный PR получает verdict `review-required` и требует ручного ревью.
+Один commit делится максимум на четыре chunk. На chunk допускается до 20 файлов и 2000 изменённых строк. Один commit ограничен 80 файлами и 8000 изменённых строк. Превышение требует ручного ревью только этого commit.
+
+До четырёх commit-review jobs выполняются параллельно. Каждый job получает отдельный scope, отдельный набор prompt-файлов и отдельный вызов модели.
 
 ## Инструкции AGENTS.md
 
-Перед запуском OpenCode доверенный helper загружает применимые `AGENTS.md` только из `base`-коммита:
+Перед запуском OpenCode доверенный helper загружает применимые `AGENTS.md` только из `base`-коммита Pull Request:
 
 - корневой файл действует на весь репозиторий;
 - вложенный файл действует на своё поддерево;
 - более глубокие инструкции имеют приоритет;
 - версия из `head` PR не используется.
 
-Инструкции не могут расширить diff, включить запрещённые инструменты или изменить JSON-контракт reviewer.
+Инструкции не могут расширить commit diff, включить запрещённые инструменты или изменить JSON-контракт reviewer.
 
 ## Проверка findings
 
 Детерминированный Python-код проверяет:
 
-- JSON-схему и точный `head_sha`;
+- JSON-схему и точный SHA проверяемого commit;
 - severity и confidence;
-- принадлежность файла текущему diff;
+- принадлежность файла diff этого commit;
 - привязку строки к изменённому hunk;
 - допустимость file-level finding;
 - длину и безопасность текста.
 
 Пороги:
 
-- `blocker`: `confidence >= 0.90`, блокирует PR;
-- `major`: `confidence >= 0.85`, блокирует PR;
+- `blocker`: `confidence >= 0.90`, блокирует batch;
+- `major`: `confidence >= 0.85`, блокирует batch;
 - `minor`: `confidence >= 0.90`, check остаётся зелёным.
 
-## Статус и публикация
+## Итог batch
 
-Producer-workflow публикует реакцию сразу после валидации результата:
+Результаты commits агрегируются по приоритету:
 
-- `approved`: `👍`, review не создаётся;
+1. `changes-required`;
+2. `review-required`;
+3. `findings`;
+4. `unavailable`;
+5. `approved`.
+
+Producer-workflow публикует одну реакцию для текущего HEAD:
+
+- `approved`: `👍`;
 - `findings`: `😕`, check остаётся зелёным;
-- `changes-required`: `👎`, source check красный;
-- `review-required`: `😕`, source check красный;
-- `unavailable`: `😕`, это техническая недоступность анализа, а не замечание к коду; PR не блокируется.
+- `changes-required`: `👎`, check красный;
+- `review-required`: `😕`, check красный;
+- `unavailable`: `😕`, техническая недоступность не блокирует PR.
 
-Status-job работает только для текущего `head_sha`, удаляет предыдущие реакции `github-actions[bot]` и ставит ровно одну итоговую реакцию.
+Status-job не меняет реакцию, если за время анализа HEAD уже обновился.
 
-Default-branch publisher работает идемпотентно по `head_sha` и публикует только review-контент:
+## Публикация review
 
-- для `findings` и `changes-required` создаёт структурированные inline-комментарии;
-- для `review-required` создаёт summary review без выдуманных findings;
-- для `approved` и `unavailable` review не создаёт.
+Default-branch publisher работает идемпотентно по SHA каждого commit:
+
+- `findings` и `changes-required`: отдельный review с inline-комментариями;
+- `review-required`: отдельный summary review без выдуманных findings;
+- `approved` и `unavailable`: review-комментарий не создаётся;
+- тело review явно содержит `Проверен commit <sha>`;
+- commit, которого больше нет в PR, безопасно пропускается;
+- повторный workflow не создаёт второй review для того же SHA.
 
 Новые Issue по findings не создаются. Старые legacy-комментарии и связанные Issue закрываются во время миграционной очистки.
 
@@ -80,9 +108,13 @@ Default-branch publisher работает идемпотентно по `head_sh
 - reviewer запускается только для PR владельца репозитория;
 - fork и Dependabot не получают secrets;
 - model job не имеет прав записи;
+- commit planner и aggregator берутся из доверенного `base`;
 - verdict job имеет только `actions: read` и `contents: read`;
-- status job имеет только `actions: read` и `pull-requests: write`, сверяет текущий HEAD и изменяет только реакции своего бота;
+- status job изменяет только реакции `github-actions[bot]` и проверяет текущий HEAD;
 - review publisher берётся из default branch;
+- publisher перед публикацией получает полный пагинированный список commits PR;
+- commit artifacts создаются в `$RUNNER_TEMP`, а не в скрытом каталоге workspace;
+- `upload-artifact@v6` и `download-artifact@v7` закреплены по SHA и работают на Node.js 24;
 - `GITHUB_TOKEN` не передаётся OpenCode;
 - проектный `opencode.json` отключён;
 - shell, edit, task, todo, LSP и внешний интернет модели запрещены;
@@ -95,4 +127,4 @@ PYTHONPATH=.github/scripts \
 python -m unittest discover -s .github/scripts -p 'test_ai_review*.py' -v
 ```
 
-Inline publisher дополнительно проверяется Ruff и статическими contract-тестами обоих workflow.
+Publisher и batch helpers дополнительно проверяются Ruff и статическими contract-тестами обоих workflow.

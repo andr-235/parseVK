@@ -6,6 +6,9 @@ from pathlib import Path
 SOURCE_WORKFLOW = Path(".github/workflows/ai-code-review.yml")
 PUBLISHER_WORKFLOW = Path(".github/workflows/ai-review-inline-publisher.yml")
 
+UPLOAD_V6_SHA = "b7c566a772e6b6bfb58ed0dc250532a479d7789f"
+DOWNLOAD_V7_SHA = "37930b1c2abaa49bbe596cd826c3c89aef350131"
+
 
 class WorkflowContractTests(unittest.TestCase):
     @classmethod
@@ -13,33 +16,64 @@ class WorkflowContractTests(unittest.TestCase):
         cls.source = SOURCE_WORKFLOW.read_text(encoding="utf-8")
         cls.publisher = PUBLISHER_WORKFLOW.read_text(encoding="utf-8")
 
-    def test_source_workflow_evaluates_without_publishing_review(self) -> None:
-        self.assertIn("name: Evaluate review verdict", self.source)
-        self.assertIn("Evaluate validated verdict without publishing", self.source)
-        self.assertNotIn("name: Publish review verdict", self.source)
-        self.assertNotIn('python "$AI_REVIEW_SCRIPT" publish', self.source)
+    def test_source_plans_commit_scoped_reviews(self) -> None:
+        self.assertIn("name: Plan commit reviews", self.source)
+        self.assertIn("BEFORE_SHA: ${{ github.event.before }}", self.source)
+        self.assertIn("matrix:", self.source)
+        self.assertIn("unit: ${{ fromJSON(needs.plan.outputs.matrix) }}", self.source)
+        self.assertIn("${{ matrix.unit.base_sha }}", self.source)
+        self.assertIn("${{ matrix.unit.head_sha }}", self.source)
+        self.assertIn("test_ai_review_batch_plan_edges.py", self.source)
 
-    def test_verdict_job_has_no_github_write_permissions(self) -> None:
+    def test_rapid_pushes_do_not_cancel_previous_commit_review(self) -> None:
+        self.assertIn(
+            "github.event.pull_request.head.sha || github.run_id",
+            self.source,
+        )
+        self.assertIn("cancel-in-progress: false", self.source)
+        self.assertIn("max-parallel: 4", self.source)
+        self.assertNotIn("Check commit still belongs to Pull Request", self.source)
+        self.assertNotIn("obsolete-commit", self.source)
+        self.assertIn("github.event.workflow_run.id || github.run_id", self.publisher)
+        self.assertIn("cancel-in-progress: false", self.publisher)
+
+    def test_each_commit_uploads_exact_non_hidden_result(self) -> None:
+        self.assertIn("ai-review-commit-${{ github.run_id }}-", self.source)
+        self.assertIn('artifact_dir="$RUNNER_TEMP/ai-review-artifact"', self.source)
+        self.assertIn("path: ${{ steps.result.outputs.path }}", self.source)
+        self.assertIn("reason\": \"emergency-fallback", self.source)
+        self.assertNotIn(".ai-review-artifact/*.json", self.source)
+        self.assertIn("pattern: ai-review-commit-${{ github.run_id }}-*", self.source)
+        self.assertIn("name: ai-review-result-${{ github.run_id }}", self.source)
+
+    def test_artifact_actions_use_node24_releases(self) -> None:
+        self.assertIn(f"actions/upload-artifact@{UPLOAD_V6_SHA} # v6", self.source)
+        self.assertIn(f"actions/download-artifact@{DOWNLOAD_V7_SHA} # v7", self.source)
+        self.assertIn(f"actions/download-artifact@{DOWNLOAD_V7_SHA} # v7", self.publisher)
+        self.assertNotIn("actions/upload-artifact@ea165f8d", self.source)
+        self.assertNotIn("actions/download-artifact@d3f86a106", self.source)
+        self.assertNotIn("actions/download-artifact@d3f86a106", self.publisher)
+
+    def test_verdict_aggregates_without_publishing_reviews(self) -> None:
         verdict = self.source.split("  verdict:\n", 1)[1].split("  status:\n", 1)[0]
-        self.assertIn("actions: read", verdict)
-        self.assertNotIn("issues: write", verdict)
+        self.assertIn("name: Evaluate review verdict", verdict)
+        self.assertIn("Aggregate commit review results", verdict)
         self.assertNotIn("pull-requests: write", verdict)
+        self.assertNotIn("issues: write", verdict)
+        self.assertNotIn("create_review", verdict)
 
-    def test_source_owns_head_guarded_status_reactions(self) -> None:
+    def test_source_owns_only_head_guarded_status_reaction(self) -> None:
         status = self.source.split("  status:\n", 1)[1].split("  cleanup:\n", 1)[0]
         self.assertIn("name: Publish review status", status)
-        self.assertIn("actions: read", status)
-        self.assertIn("pull-requests: write", status)
         self.assertIn("current_head != expected_head", status)
         self.assertIn('"approved": "+1"', status)
         self.assertIn('"changes-required": "-1"', status)
-        self.assertIn('"findings": "confused"', status)
         self.assertIn('"unavailable": "confused"', status)
-        self.assertIn('user.get("login") != "github-actions[bot]"', status)
 
-    def test_default_branch_publisher_owns_review_comments(self) -> None:
+    def test_default_branch_publisher_owns_commit_reviews(self) -> None:
         self.assertIn("workflow_run:", self.publisher)
-        self.assertIn("Publish final reactions and Pull Request review", self.publisher)
+        self.assertIn("Publish commit-scoped Pull Request reviews", self.publisher)
+        self.assertIn("ai_review_batch_publisher.py", self.publisher)
         self.assertIn("pull-requests: write", self.publisher)
         self.assertIn("ai-review-final-", self.publisher)
 
@@ -47,7 +81,6 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("Clear processing reaction when artifact is missing", self.publisher)
         self.assertIn("clear-processing", self.publisher)
         self.assertIn("github.event.workflow_run.head_sha", self.publisher)
-        self.assertIn('--expected-head "$EXPECTED_HEAD"', self.publisher)
 
 
 if __name__ == "__main__":
