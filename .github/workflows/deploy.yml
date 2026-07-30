@@ -32,12 +32,13 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (
         github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.event == 'workflow_dispatch' &&
         github.event.workflow_run.head_branch == 'main'
       )
     outputs:
       target_sha: ${{ steps.target.outputs.target_sha }}
       deploy: ${{ steps.quality.outputs.deploy }}
+      gate_event: ${{ steps.target.outputs.gate_event }}
     steps:
       - name: Determine target commit
         id: target
@@ -45,6 +46,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EVENT_NAME: ${{ github.event_name }}
           WORKFLOW_RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          WORKFLOW_RUN_EVENT: ${{ github.event.workflow_run.event }}
           MANUAL_REF: ${{ github.ref }}
           MANUAL_SHA: ${{ github.sha }}
           MANUAL_DEPLOYMENT: ${{ inputs.deployment }}
@@ -53,6 +55,7 @@ jobs:
 
           if [ "$EVENT_NAME" = "workflow_run" ]; then
             TARGET_SHA="$WORKFLOW_RUN_SHA"
+            GATE_EVENT="$WORKFLOW_RUN_EVENT"
           else
             if [ "$MANUAL_DEPLOYMENT" != "current-main" ]; then
               echo "::error::Неизвестный режим ручного production deploy: $MANUAL_DEPLOYMENT"
@@ -63,6 +66,12 @@ jobs:
               exit 1
             fi
             TARGET_SHA="$MANUAL_SHA"
+            COMMIT_MESSAGE="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${TARGET_SHA}" --jq '.commit.message')"
+            if printf '%s' "$COMMIT_MESSAGE" | grep -qF '[skip ci]'; then
+              GATE_EVENT="workflow_dispatch"
+            else
+              GATE_EVENT="push"
+            fi
           fi
 
           MAIN_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
@@ -73,6 +82,7 @@ jobs:
           fi
 
           echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+          echo "gate_event=$GATE_EVENT" >> "$GITHUB_OUTPUT"
           echo "obsolete=$OBSOLETE" >> "$GITHUB_OUTPUT"
 
       - name: Wait for required workflow results
@@ -80,6 +90,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TARGET_SHA: ${{ steps.target.outputs.target_sha }}
+          GATE_EVENT: ${{ steps.target.outputs.gate_event }}
           OBSOLETE: ${{ steps.target.outputs.obsolete }}
         run: |
           set -euo pipefail
@@ -98,7 +109,7 @@ jobs:
               --method GET \
               "repos/${GITHUB_REPOSITORY}/actions/runs" \
               -f head_sha="$TARGET_SHA" \
-              -f event=push \
+              -f event="$GATE_EVENT" \
               -f branch=main \
               -f per_page=100)"
 
@@ -117,7 +128,7 @@ jobs:
                   end
               ' <<<"$RUNS_JSON")"
 
-              echo "${workflow}: ${result}"
+              echo "${workflow} (${GATE_EVENT}): ${result}"
               case "$result" in
                 success)
                   ;;
@@ -159,10 +170,14 @@ jobs:
       DOCKER_BUILDKIT: 1
       COMPOSE_DOCKER_CLI_BUILD: 1
       COMPOSE_FILE: docker-compose.yml
+      COMPOSE_PROJECT_NAME: parsevk
       PROJECT_ROOT: /opt/parseVK
       PRODUCTION_SCRIPTS_DIR: ${{ github.workspace }}/.github/scripts/production
       SERVICE_CATALOG_CLI: ${{ github.workspace }}/.github/scripts/service_catalog.py
+      LOCAL_RELEASE_SCRIPT: ${{ github.workspace }}/.github/scripts/production/local-release.sh
       TARGET_SHA: ${{ needs.gate.outputs.target_sha }}
+      ALLOW_IMAGE_PULLS: "false"
+      PULL_POLICY: never
 
     steps:
       - name: Checkout validated code
@@ -196,15 +211,11 @@ jobs:
             exit 1
           fi
 
-          COMMIT_MESSAGE="$(git log -1 --format=%B FETCH_HEAD)"
           LAST_SUCCESSFUL="${{ steps.deployment_metadata.outputs.last_successful_commit }}"
           SKIP_DEPLOY=false
           SKIP_REASON=""
 
-          if printf '%s' "$COMMIT_MESSAGE" | grep -qF '[skip ci]'; then
-            SKIP_DEPLOY=true
-            SKIP_REASON="commit contains [skip ci]"
-          elif [ -n "$LAST_SUCCESSFUL" ] && [ "$LAST_SUCCESSFUL" = "$TARGET_SHA" ]; then
+          if [ -n "$LAST_SUCCESSFUL" ] && [ "$LAST_SUCCESSFUL" = "$TARGET_SHA" ]; then
             SKIP_DEPLOY=true
             SKIP_REASON="commit is already deployed"
           fi
@@ -212,7 +223,7 @@ jobs:
           echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
           echo "skip_deploy=$SKIP_DEPLOY" >> "$GITHUB_OUTPUT"
           echo "skip_reason=$SKIP_REASON" >> "$GITHUB_OUTPUT"
-          echo "Selected validated commit: $TARGET_SHA"
+          echo "Selected validated release commit: $TARGET_SHA"
 
       - name: Update code
         if: steps.deployment_context.outputs.skip_deploy != 'true'
@@ -261,7 +272,7 @@ jobs:
             --head "$CURRENT_COMMIT" \
             --github-output "$GITHUB_OUTPUT"
 
-      - name: Build and start containers
+      - name: Build local application images
         if: steps.deployment_context.outputs.skip_deploy != 'true'
         working-directory: /opt/parseVK
         timeout-minutes: 30
@@ -272,18 +283,30 @@ jobs:
 
           if [ -n "$SERVICES_TO_BUILD" ]; then
             read -r -a BUILD_TARGETS <<< "$SERVICES_TO_BUILD"
-            PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
+            PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" ALLOW_IMAGE_PULLS="$ALLOW_IMAGE_PULLS" \
               bash "$PRODUCTION_SCRIPTS_DIR/images.sh" prepare "${BUILD_TARGETS[@]}"
             PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
               bash "$PRODUCTION_SCRIPTS_DIR/images.sh" build "${BUILD_TARGETS[@]}"
-            UP_ARGS="-d"
           else
             echo "No application images changed since the last successful deployment"
-            UP_ARGS="-d --no-build"
           fi
 
-          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" UP_ARGS="$UP_ARGS" \
-            bash "$PRODUCTION_SCRIPTS_DIR/release.sh"
+      - name: Snapshot local release images
+        if: steps.deployment_context.outputs.skip_deploy != 'true'
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" COMPOSE_PROJECT_NAME="$COMPOSE_PROJECT_NAME" \
+            SERVICE_CATALOG_CLI="$SERVICE_CATALOG_CLI" bash "$LOCAL_RELEASE_SCRIPT" snapshot "$TARGET_SHA"
+
+      - name: Start release containers
+        if: steps.deployment_context.outputs.skip_deploy != 'true'
+        working-directory: /opt/parseVK
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" PULL_POLICY="$PULL_POLICY" \
+            UP_ARGS="-d --no-build" bash "$PRODUCTION_SCRIPTS_DIR/release.sh"
 
       - name: Verify container health
         if: steps.deployment_context.outputs.skip_deploy != 'true'
@@ -296,6 +319,14 @@ jobs:
           set -euo pipefail
           COMPOSE_FILE="$COMPOSE_FILE" FULL_DEPLOY="$FULL_DEPLOY" MAX_ATTEMPTS="$MAX_ATTEMPTS" \
             bash "${{ github.workspace }}/.github/scripts/health-check.sh"
+
+      - name: Promote local release
+        if: success() && steps.deployment_context.outputs.skip_deploy != 'true'
+        working-directory: /opt/parseVK
+        run: |
+          set -euo pipefail
+          PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" COMPOSE_PROJECT_NAME="$COMPOSE_PROJECT_NAME" \
+            SERVICE_CATALOG_CLI="$SERVICE_CATALOG_CLI" bash "$LOCAL_RELEASE_SCRIPT" promote "$TARGET_SHA"
 
       - name: Update deployment metadata
         if: success() && steps.deployment_context.outputs.skip_deploy != 'true'
@@ -314,7 +345,7 @@ jobs:
             echo "⏭️ Deployment skipped: ${{ steps.deployment_context.outputs.skip_reason }}"
             echo "Commit: $TARGET_SHA"
           elif [ "${{ job.status }}" = "success" ]; then
-            echo "✅ Deployment successful and healthy"
+            echo "✅ Local release deployed successfully and is healthy"
             echo "Commit: $(cd /opt/parseVK && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
           else
             echo "❌ Deployment failed or health checks did not pass"
