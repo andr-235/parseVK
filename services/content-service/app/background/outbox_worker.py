@@ -8,7 +8,6 @@ which creates a fresh producer.
 import asyncio
 import logging
 
-from aiokafka import AIOKafkaProducer
 from common.runtime import WorkerHealth
 
 from app.core.config import settings
@@ -25,6 +24,8 @@ logger = logging.getLogger(__name__)
 
 async def publish_outbox_forever(health: WorkerHealth) -> None:
     """Background worker: create producer once, publish outbox events every 2s."""
+    from aiokafka import AIOKafkaProducer
+
     producer = AIOKafkaProducer(bootstrap_servers=settings.kafka_bootstrap_servers)
     try:
         await producer.start()

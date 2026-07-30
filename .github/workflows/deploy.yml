@@ -2,7 +2,7 @@ name: Deploy to Production Server
 
 on:
   workflow_run:
-    workflows: ["CI"]
+    workflows: ["Full Release CI"]
     types:
       - completed
   workflow_dispatch:
@@ -55,7 +55,6 @@ jobs:
 
           if [ "$EVENT_NAME" = "workflow_run" ]; then
             TARGET_SHA="$WORKFLOW_RUN_SHA"
-            GATE_EVENT="$WORKFLOW_RUN_EVENT"
           else
             if [ "$MANUAL_DEPLOYMENT" != "current-main" ]; then
               echo "::error::Неизвестный режим ручного production deploy: $MANUAL_DEPLOYMENT"
@@ -66,13 +65,19 @@ jobs:
               exit 1
             fi
             TARGET_SHA="$MANUAL_SHA"
-            COMMIT_MESSAGE="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${TARGET_SHA}" --jq '.commit.message')"
-            if printf '%s' "$COMMIT_MESSAGE" | grep -qF '[skip ci]'; then
-              GATE_EVENT="workflow_dispatch"
-            else
-              GATE_EVENT="push"
-            fi
           fi
+
+          COMMIT_MESSAGE="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${TARGET_SHA}" --jq '.commit.message')"
+          RELEASE_SUBJECT="${COMMIT_MESSAGE%%$'\n'*}"
+          [[ "$RELEASE_SUBJECT" == chore\(release\):* ]] || {
+            echo "::error::Production deploy accepts only semantic-release commits: $RELEASE_SUBJECT"
+            exit 1
+          }
+          printf '%s' "$COMMIT_MESSAGE" | grep -qF '[skip ci]' || {
+            echo "::error::Production release commit is missing [skip ci]"
+            exit 1
+          }
+          GATE_EVENT="workflow_dispatch"
 
           MAIN_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
           OBSOLETE=false
@@ -100,7 +105,7 @@ jobs:
             exit 0
           fi
 
-          REQUIRED_WORKFLOWS=("CI" "Security Scanning")
+          REQUIRED_WORKFLOWS=("Full Release CI" "Security Scanning")
           MAX_ATTEMPTS=60
           SLEEP_SECONDS=20
 

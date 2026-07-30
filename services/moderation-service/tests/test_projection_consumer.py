@@ -10,9 +10,10 @@ from _service_path import use_service_path
 
 use_service_path()
 
+from common.events import VkEvent
+
 from app.db.models import ModerationComment, ProcessedEvent
 from app.modules.keywords.matcher import build_keyword_candidates
-from common.events import VkEvent
 from app.modules.moderation.service import ModerationService
 
 
@@ -151,6 +152,7 @@ async def test_handle_duplicate_event_is_skipped():
 @pytest.mark.anyio
 async def test_handle_processing_failure_sends_to_dlq_on_malformed_msg_moderation():
     from unittest.mock import AsyncMock, patch
+
     from app.modules.moderation.consumer import ProjectionConsumer
 
     consumer = ProjectionConsumer()
@@ -168,11 +170,12 @@ async def test_handle_processing_failure_sends_to_dlq_on_malformed_msg_moderatio
 
 
 @pytest.mark.anyio
-async def test_skip_due_to_retry_backoff_commits_offset_when_in_backoff_moderation():
-    from unittest.mock import AsyncMock, patch
-    from json import dumps
-    from uuid import uuid4
+async def test_skip_due_to_retry_backoff_preserves_offset_when_in_backoff_moderation():
     from datetime import UTC, datetime, timedelta
+    from json import dumps
+    from unittest.mock import AsyncMock
+    from uuid import uuid4
+
     from app.modules.moderation.consumer import ProjectionConsumer
 
     consumer = ProjectionConsumer()
@@ -196,7 +199,7 @@ async def test_skip_due_to_retry_backoff_commits_offset_when_in_backoff_moderati
     result = await consumer._skip_due_to_retry_backoff(raw_value)
 
     assert result is True
-    consumer._consumer.commit.assert_awaited_once()
+    consumer._consumer.commit.assert_not_awaited()
 
 
 @pytest.mark.anyio

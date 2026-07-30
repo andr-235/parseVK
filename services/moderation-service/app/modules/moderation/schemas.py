@@ -11,7 +11,7 @@ class CommentModerationState(BaseModel):
     date: datetime | None
     author_vk_id: int | None
     is_read: bool
-    status: str
+    status: str | None
     source: str
     matched_keywords: list[str]
 
@@ -41,4 +41,3 @@ class CommentModerationCursorList(BaseModel):
     total: int
     read_count: int
     unread_count: int
-

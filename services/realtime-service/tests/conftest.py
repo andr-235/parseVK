@@ -38,7 +38,7 @@ def event_loop():
     loop.close()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def anyio_backend():
     return "asyncio"
 
@@ -68,12 +68,13 @@ async def setup_test_database():
     session_module.engine = original_engine
     session_module.SessionLocal = original_session_local
 
-    db_file = Path("test_realtime_service.db")
-    if db_file.exists():
-        try:
-            db_file.unlink()
-        except Exception:
-            pass
+    try:
+        await asyncio.to_thread(
+            Path("test_realtime_service.db").unlink,
+            missing_ok=True,
+        )
+    except OSError:
+        pass
 
 
 @pytest.fixture

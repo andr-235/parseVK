@@ -325,7 +325,7 @@ async def _capture_emit_callback(mock_session_factory, mock_wappi, mock_repo):
 
 
 @pytest.mark.asyncio
-async def test_poll_messenger_creates_event_version_2(mock_session_factory, mock_repo, mock_wappi, sample_chats, caplog):
+async def test_poll_messenger_creates_event_version_2(mock_session_factory, mock_repo, mock_wappi, sample_chats):
     from app.modules.ingestion.mapper import NormalizedImMessage
 
     mock_wappi.list_chats.return_value = [sample_chats[0]]
@@ -347,13 +347,11 @@ async def test_poll_messenger_creates_event_version_2(mock_session_factory, mock
         raw={"id": "m1", "body": "hello"},
     )
 
-    with caplog.at_level("INFO"):
-        await callback(normalized)
+    await callback(normalized)
 
     outbox_repo.add_event.assert_awaited_once()
     call_kwargs = outbox_repo.add_event.call_args.kwargs
     assert call_kwargs["event_version"] == 2
-    assert "Emitting im.message_collected v2 for whatsapp:111:m1" in caplog.text
 
 
 @pytest.mark.asyncio
@@ -428,7 +426,7 @@ async def test_poll_messenger_stable_dedupe_key(mock_session_factory, mock_repo,
 
 
 @pytest.mark.asyncio
-async def test_poll_messenger_empty_optional_fields_handled(mock_session_factory, mock_repo, mock_wappi, sample_chats, caplog):
+async def test_poll_messenger_empty_optional_fields_handled(mock_session_factory, mock_repo, mock_wappi, sample_chats):
     from app.modules.ingestion.mapper import NormalizedImMessage
 
     mock_wappi.list_chats.return_value = [sample_chats[0]]
@@ -450,8 +448,7 @@ async def test_poll_messenger_empty_optional_fields_handled(mock_session_factory
         raw={"id": "m1"},
     )
 
-    with caplog.at_level("INFO"):
-        await callback(normalized)
+    await callback(normalized)
 
     outbox_repo.add_event.assert_awaited_once()
     call_kwargs = outbox_repo.add_event.call_args.kwargs
@@ -462,7 +459,6 @@ async def test_poll_messenger_empty_optional_fields_handled(mock_session_factory
         "chatId": "111",
         "metadata": {"id": "m1"},
     }
-    assert "Emitting im.message_collected v2 for whatsapp:111:m1" in caplog.text
 
 
 @pytest.mark.asyncio

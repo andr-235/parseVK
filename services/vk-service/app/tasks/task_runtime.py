@@ -1,7 +1,7 @@
 from common.runtime import WorkerHealth
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.bootstrap import get_ingestion_service, get_tasks_client
+from app.bootstrap import get_ingestion_service
 from app.core.config import settings
 from app.tasks.lease_store import TaskLeaseStore
 from app.tasks.task_executor import TaskExecutor
@@ -20,7 +20,6 @@ def build_task_worker(
             lease_store=lease_store,
             session_factory=session_factory,
             ingestion_factory=get_ingestion_service,
-            tasks_client=get_tasks_client(),
             lease_seconds=settings.task_lease_seconds,
             heartbeat_seconds=settings.task_heartbeat_seconds,
             timeout_seconds=settings.task_timeout_seconds,

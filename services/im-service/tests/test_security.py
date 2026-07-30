@@ -1,14 +1,25 @@
 import pytest
-from app.db.session import get_session
 from httpx import ASGITransport, AsyncClient
+
+from app.db.session import get_session
 
 
 @pytest.fixture
 def app(mock_db_session):
     from app.main import create_app
+
     app = create_app()
     app.dependency_overrides[get_session] = lambda: mock_db_session
     return app
+
+
+def group_payload():
+    return {
+        "name": "Group",
+        "chatId": "chat-1",
+        "messenger": "whatsapp",
+        "category": "work",
+    }
 
 
 @pytest.mark.asyncio
@@ -17,15 +28,14 @@ async def test_health_returns_up(app):
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.get("/health")
         assert resp.status_code == 200
-        data = resp.json()
-        assert data["status"] == "UP"
+        assert resp.json()["status"] == "UP"
 
 
 @pytest.mark.asyncio
 async def test_internal_endpoint_rejects_missing_headers(app):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/internal/keywords")
+        resp = await client.post("/internal/monitoring/groups", json=group_payload())
         assert resp.status_code == 400
 
 
@@ -33,12 +43,10 @@ async def test_internal_endpoint_rejects_missing_headers(app):
 async def test_internal_endpoint_rejects_wrong_token(app):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get(
-            "/internal/keywords",
-            headers={
-                "X-Internal-Service-Token": "wrong-token",
-                "X-User-ID": "user-1",
-            },
+        resp = await client.post(
+            "/internal/monitoring/groups",
+            json=group_payload(),
+            headers={"X-Internal-Service-Token": "wrong-token", "X-User-ID": "user-1"},
         )
         assert resp.status_code == 403
 
@@ -47,8 +55,9 @@ async def test_internal_endpoint_rejects_wrong_token(app):
 async def test_internal_endpoint_requires_x_user_id(app):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get(
-            "/internal/keywords",
+        resp = await client.post(
+            "/internal/monitoring/groups",
+            json=group_payload(),
             headers={"X-Internal-Service-Token": "dev-internal-token"},
         )
         assert resp.status_code == 400

@@ -1,15 +1,25 @@
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
+from typing import Any
 
 from common.schemas import CamelModel
 
 
-class TelegramJobStatus(str, Enum):
-    PENDING = "PENDING"
-    RUNNING = "RUNNING"
-    DONE = "DONE"
-    FAILED = "FAILED"
-    CANCELLED = "CANCELLED"
+class TelegramJobStatus(StrEnum):
+    PENDING = "pending"
+    RUNNING = "running"
+    DONE = "done"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+    @classmethod
+    def _missing_(cls, value: Any) -> "TelegramJobStatus | None":
+        if isinstance(value, str):
+            normalized = value.lower()
+            for member in cls:
+                if member.value == normalized:
+                    return member
+        return None
 
 
 class TelegramExportStartResponse(CamelModel):
