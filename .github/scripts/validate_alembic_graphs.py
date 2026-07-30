@@ -90,22 +90,16 @@ def _find_cycle(revisions: dict[str, Revision]) -> tuple[str, ...] | None:
     return None
 
 
-def _reachable_from(base: str, revisions: dict[str, Revision]) -> set[str]:
-    children: dict[str, set[str]] = {revision: set() for revision in revisions}
-    for revision in revisions.values():
-        for parent in revision.parents:
-            if parent in children:
-                children[parent].add(revision.revision)
-
-    reachable: set[str] = set()
-    pending = [base]
+def _ancestors_of(head: str, revisions: dict[str, Revision]) -> set[str]:
+    ancestors: set[str] = set()
+    pending = [head]
     while pending:
         current = pending.pop()
-        if current in reachable:
+        if current in ancestors:
             continue
-        reachable.add(current)
-        pending.extend(children[current] - reachable)
-    return reachable
+        ancestors.add(current)
+        pending.extend(parent for parent in revisions[current].parents if parent in revisions)
+    return ancestors
 
 
 def validate_versions_dir(service: str, versions_dir: Path) -> tuple[list[str], str | None]:
@@ -150,8 +144,8 @@ def validate_versions_dir(service: str, versions_dir: Path) -> tuple[list[str], 
         errors.append(f"{service}: missing parent revisions: {', '.join(missing)}")
 
     bases = sorted(revision.revision for revision in revisions.values() if not revision.parents)
-    if len(bases) != 1:
-        errors.append(f"{service}: expected exactly one base, found {bases}")
+    if not bases:
+        errors.append(f"{service}: expected at least one base revision")
 
     heads = sorted(revisions.keys() - referenced)
     if len(heads) != 1:
@@ -161,12 +155,12 @@ def validate_versions_dir(service: str, versions_dir: Path) -> tuple[list[str], 
     if cycle is not None:
         errors.append(f"{service}: revision cycle detected: {' -> '.join(cycle)}")
 
-    if len(bases) == 1 and cycle is None and not missing:
-        reachable = _reachable_from(bases[0], revisions)
-        disconnected = sorted(revisions.keys() - reachable)
+    if len(heads) == 1 and cycle is None and not missing:
+        connected = _ancestors_of(heads[0], revisions)
+        disconnected = sorted(revisions.keys() - connected)
         if disconnected:
             errors.append(
-                f"{service}: revisions are disconnected from base {bases[0]!r}: "
+                f"{service}: revisions do not converge into head {heads[0]!r}: "
                 f"{', '.join(disconnected)}"
             )
 
