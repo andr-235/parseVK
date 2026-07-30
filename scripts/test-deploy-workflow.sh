@@ -6,17 +6,26 @@ DEPLOY_WORKFLOW="$ROOT_DIR/.github/workflows/deploy.yml"
 ROLLBACK_WORKFLOW="$ROOT_DIR/.github/workflows/rollback.yml"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/ci.yml"
 SECURITY_WORKFLOW="$ROOT_DIR/.github/workflows/security.yml"
+SERVICE_CATALOG="$ROOT_DIR/.github/service-catalog.yaml"
+SERVICE_CATALOG_CLI="$ROOT_DIR/.github/scripts/service_catalog.py"
+IMAGES_SCRIPT="$ROOT_DIR/.github/scripts/production/images.sh"
 
-for workflow in "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" "$CI_WORKFLOW" "$SECURITY_WORKFLOW"; do
-  if [ ! -f "$workflow" ]; then
-    echo "Workflow not found: $workflow"
+for file in \
+  "$DEPLOY_WORKFLOW" \
+  "$ROLLBACK_WORKFLOW" \
+  "$CI_WORKFLOW" \
+  "$SECURITY_WORKFLOW" \
+  "$SERVICE_CATALOG" \
+  "$SERVICE_CATALOG_CLI"
+do
+  if [ ! -f "$file" ]; then
+    echo "Required CI/CD file not found: $file"
     exit 1
   fi
 done
 
 if grep -En 'steps\.detect\.outputs\.(frontend_changed|python_changed)' "$CI_WORKFLOW" >/dev/null; then
   echo "Regression: CI outputs reference the non-existent steps.detect id"
-  grep -En 'steps\.detect\.outputs\.(frontend_changed|python_changed)' "$CI_WORKFLOW"
   exit 1
 fi
 
@@ -26,13 +35,29 @@ if ! grep -En 'steps\.filter\.outputs\.frontend_changed' "$CI_WORKFLOW" >/dev/nu
   exit 1
 fi
 
-if ! grep -En 'name: Release Gate' "$CI_WORKFLOW" >/dev/null; then
-  echo "Regression: CI does not expose a stable Release Gate"
+if ! grep -En 'service_matrix:.*steps\.services\.outputs\.value' "$CI_WORKFLOW" >/dev/null || \
+   ! grep -En 'fromJSON\(needs\.changes\.outputs\.service_matrix\)' "$CI_WORKFLOW" >/dev/null; then
+  echo "Regression: Python service tests are not generated from the service catalog"
   exit 1
 fi
 
-if ! grep -En 'name: Validate Production Release' "$CI_WORKFLOW" >/dev/null; then
-  echo "Regression: CI does not validate production release configuration"
+if ! grep -En 'name: Validate Service Catalog' "$CI_WORKFLOW" >/dev/null || \
+   ! grep -En 'service_catalog\.py validate' "$CI_WORKFLOW" >/dev/null; then
+  echo "Regression: CI does not validate service catalog coverage"
+  exit 1
+fi
+
+if ! grep -En 'audit_matrix:.*steps\.audit\.outputs\.value' "$SECURITY_WORKFLOW" >/dev/null || \
+   ! grep -En 'docker_matrix:.*steps\.docker\.outputs\.value' "$SECURITY_WORKFLOW" >/dev/null || \
+   ! grep -En 'fromJSON\(needs\.catalog\.outputs\.audit_matrix\)' "$SECURITY_WORKFLOW" >/dev/null || \
+   ! grep -En 'fromJSON\(needs\.catalog\.outputs\.docker_matrix\)' "$SECURITY_WORKFLOW" >/dev/null; then
+  echo "Regression: Security matrices are not generated from the service catalog"
+  exit 1
+fi
+
+if ! grep -En 'name: Release Gate' "$CI_WORKFLOW" >/dev/null || \
+   ! grep -En 'name: Validate Production Release' "$CI_WORKFLOW" >/dev/null; then
+  echo "Regression: CI release gates are missing"
   exit 1
 fi
 
@@ -65,6 +90,18 @@ if ! grep -En 'needs: gate' "$DEPLOY_WORKFLOW" >/dev/null || \
   exit 1
 fi
 
+if ! grep -En 'service_catalog\.py|SERVICE_CATALOG_CLI' "$DEPLOY_WORKFLOW" >/dev/null || \
+   ! grep -En -- '--purpose deploy' "$DEPLOY_WORKFLOW" >/dev/null || \
+   ! grep -En 'SERVICES_TO_BUILD:.*steps\.changed_services\.outputs\.value' "$DEPLOY_WORKFLOW" >/dev/null; then
+  echo "Regression: production build targets are not resolved through the service catalog"
+  exit 1
+fi
+
+if grep -En 'BUILD_(FRONTEND|API_GATEWAY|IDENTITY_SERVICE|TASKS_SERVICE|VK_SERVICE|CONTENT_SERVICE|LISTINGS_SERVICE|MODERATION_SERVICE|REALTIME_SERVICE|TELEGRAM_SERVICE|IM_SERVICE)' "$DEPLOY_WORKFLOW" >/dev/null; then
+  echo "Regression: deploy restored hard-coded per-service build flags"
+  exit 1
+fi
+
 if ! grep -En 'Verify container health' "$DEPLOY_WORKFLOW" >/dev/null; then
   echo "Regression: deploy does not require post-release health verification"
   exit 1
@@ -77,17 +114,11 @@ if [ -z "$health_line" ] || [ -z "$metadata_line" ] || (( health_line >= metadat
   exit 1
 fi
 
-if grep -En 'docker compose .* run .*--no-build' "$DEPLOY_WORKFLOW" >/dev/null; then
-  echo "Regression: deploy workflow uses unsupported --no-build flag with docker compose run"
-  grep -En 'docker compose .* run .*--no-build' "$DEPLOY_WORKFLOW"
-  exit 1
-fi
-
 for script in \
   "$ROOT_DIR/.github/scripts/production/common.sh" \
   "$ROOT_DIR/.github/scripts/production/metadata.sh" \
   "$ROOT_DIR/.github/scripts/production/preflight.sh" \
-  "$ROOT_DIR/.github/scripts/production/images.sh" \
+  "$IMAGES_SCRIPT" \
   "$ROOT_DIR/.github/scripts/production/migrations.sh" \
   "$ROOT_DIR/.github/scripts/production/release.sh"
 do
@@ -97,36 +128,17 @@ do
   fi
 done
 
-if ! grep -En 'PRODUCTION_SCRIPTS_DIR/preflight\.sh|preflight\.sh' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" >/dev/null; then
-  echo "Regression: workflows do not call shared production preflight"
+if ! grep -En 'PRODUCTION_SCRIPTS_DIR/preflight\.sh|preflight\.sh' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" >/dev/null || \
+   ! grep -En 'PRODUCTION_SCRIPTS_DIR/release\.sh|release\.sh' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" >/dev/null || \
+   ! grep -En 'PRODUCTION_SCRIPTS_DIR/metadata\.sh|metadata\.sh' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" >/dev/null; then
+  echo "Regression: workflows do not call shared production helpers"
   exit 1
 fi
 
-if ! grep -En 'PRODUCTION_SCRIPTS_DIR/release\.sh|release\.sh' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" >/dev/null; then
-  echo "Regression: workflows do not call shared production release helper"
-  exit 1
-fi
-
-if ! grep -En 'PRODUCTION_SCRIPTS_DIR/metadata\.sh|metadata\.sh' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" >/dev/null; then
-  echo "Regression: workflows do not call shared production metadata helper"
-  exit 1
-fi
-
-if grep -En 'jq --arg commit .*last_successful_commit' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" >/dev/null; then
-  echo "Regression: workflows still mutate deployment metadata inline"
-  grep -En 'jq --arg commit .*last_successful_commit' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW"
-  exit 1
-fi
-
-if grep -En 'docker compose -f "\$COMPOSE_FILE" build --progress plain' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" >/dev/null; then
-  echo "Regression: workflows still perform inline docker compose build"
-  grep -En 'docker compose -f "\$COMPOSE_FILE" build --progress plain' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW"
-  exit 1
-fi
-
-if grep -En 'docker compose -f "\$COMPOSE_FILE" up ' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" >/dev/null; then
-  echo "Regression: workflows still perform inline docker compose up"
-  grep -En 'docker compose -f "\$COMPOSE_FILE" up ' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW"
+if grep -En 'jq --arg commit .*last_successful_commit' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" >/dev/null || \
+   grep -En 'docker compose -f "\$COMPOSE_FILE" build --progress plain' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" >/dev/null || \
+   grep -En 'docker compose -f "\$COMPOSE_FILE" up ' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" >/dev/null; then
+  echo "Regression: production lifecycle logic leaked back into workflow YAML"
   exit 1
 fi
 
@@ -135,4 +147,22 @@ if grep -En 'images\.sh" prepare .*prometheus|images\.sh" prepare .*node-exporte
   exit 1
 fi
 
-echo "Production workflows are gated by CI, security, static validation and health checks"
+missing_catalog_output=""
+if missing_catalog_output="$(
+  PROJECT_ROOT="$ROOT_DIR" \
+  COMPOSE_FILE="$ROOT_DIR/docker-compose.yml" \
+  SERVICE_CATALOG_CLI="$ROOT_DIR/.github/scripts/does-not-exist.py" \
+    bash "$IMAGES_SCRIPT" prepare 2>&1
+)"; then
+  echo "Regression: image preparation succeeded without the service catalog CLI"
+  exit 1
+fi
+if ! grep -q 'Failed to resolve image preparation targets' <<< "$missing_catalog_output"; then
+  echo "Regression: image preparation failure does not explain catalog resolution error"
+  printf '%s\n' "$missing_catalog_output"
+  exit 1
+fi
+
+python3 "$ROOT_DIR/.github/scripts/test_service_catalog.py" -v
+
+echo "Production workflows use catalog-driven service coverage, CI/security gates and health checks"

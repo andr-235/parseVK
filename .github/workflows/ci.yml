@@ -24,7 +24,8 @@ jobs:
       frontend_changed: ${{ steps.filter.outputs.frontend_changed }}
       python_changed: ${{ steps.filter.outputs.python_changed }}
       common_changed: ${{ steps.filter.outputs.common_changed }}
-      services_changed: ${{ steps.filter.outputs.services_changed }}
+      services_changed: ${{ steps.services.outputs.changed }}
+      service_matrix: ${{ steps.services.outputs.value }}
       contracts_changed: ${{ steps.filter.outputs.contracts_changed }}
     steps:
       - uses: actions/checkout@v6
@@ -40,15 +41,17 @@ jobs:
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             BASE_SHA="${{ github.event.pull_request.base.sha }}"
             HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-          else
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
             BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+          else
+            BASE_SHA=""
             HEAD_SHA="${{ github.sha }}"
           fi
 
           FRONTEND_CHANGED=false
           PYTHON_CHANGED=false
           COMMON_CHANGED=false
-          SERVICES_CHANGED=false
           CONTRACTS_CHANGED=false
 
           if [[ -z "$BASE_SHA" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
@@ -56,7 +59,6 @@ jobs:
             FRONTEND_CHANGED=true
             PYTHON_CHANGED=true
             COMMON_CHANGED=true
-            SERVICES_CHANGED=true
             CONTRACTS_CHANGED=true
           else
             CHANGED_FILES="$(git diff --name-only --diff-filter=ACMRT "$BASE_SHA" "$HEAD_SHA")"
@@ -71,7 +73,7 @@ jobs:
               FRONTEND_CHANGED=true
             fi
 
-            if grep -qE '\.py$|(^|/)pyproject\.toml$|^\.github/workflows/ci\.yml$' <<<"$CHANGED_FILES"; then
+            if grep -qE '\.py$|(^|/)pyproject\.toml$|^\.github/workflows/ci\.yml$|^\.github/scripts/service_catalog\.py$|^\.github/service-catalog\.yaml$' <<<"$CHANGED_FILES"; then
               PYTHON_CHANGED=true
             fi
 
@@ -79,18 +81,12 @@ jobs:
               COMMON_CHANGED=true
             fi
 
-            if grep -qE '^services/' <<<"$CHANGED_FILES"; then
-              SERVICES_CHANGED=true
-            fi
-
             if grep -qE '^libs/py/contracts/|^\.github/scripts/validate_contract_examples\.py$|^\.github/workflows/ci\.yml$' <<<"$CHANGED_FILES"; then
               CONTRACTS_CHANGED=true
             fi
 
-            # Root Python configuration can affect every Python package.
             if grep -qE '^pyproject\.toml$' <<<"$CHANGED_FILES"; then
               COMMON_CHANGED=true
-              SERVICES_CHANGED=true
               CONTRACTS_CHANGED=true
             fi
           fi
@@ -99,9 +95,31 @@ jobs:
             echo "frontend_changed=$FRONTEND_CHANGED"
             echo "python_changed=$PYTHON_CHANGED"
             echo "common_changed=$COMMON_CHANGED"
-            echo "services_changed=$SERVICES_CHANGED"
             echo "contracts_changed=$CONTRACTS_CHANGED"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Build Python service test matrix
+        id: services
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+          else
+            BASE_SHA=""
+            HEAD_SHA="${{ github.sha }}"
+          fi
+
+          python3 .github/scripts/service_catalog.py matrix \
+            --purpose pytest \
+            --base "$BASE_SHA" \
+            --head "$HEAD_SHA" \
+            --github-output "$GITHUB_OUTPUT"
 
   lint:
     name: Lint Frontend
@@ -155,17 +173,24 @@ jobs:
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             BASE_SHA="${{ github.event.pull_request.base.sha }}"
             HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-          else
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
             BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+          else
+            BASE_SHA=""
             HEAD_SHA="${{ github.sha }}"
           fi
 
-          mapfile -t PYTHON_FILES < <(
-            git diff --name-only --diff-filter=ACMRT "$BASE_SHA" "$HEAD_SHA" -- '*.py' \
-              | while IFS= read -r path; do
-                  [[ -f "$path" ]] && printf '%s\n' "$path"
-                done
-          )
+          if [[ -z "$BASE_SHA" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            mapfile -t PYTHON_FILES < <(git ls-files '*.py')
+          else
+            mapfile -t PYTHON_FILES < <(
+              git diff --name-only --diff-filter=ACMRT "$BASE_SHA" "$HEAD_SHA" -- '*.py' \
+                | while IFS= read -r path; do
+                    [[ -f "$path" ]] && printf '%s\n' "$path"
+                  done
+            )
+          fi
 
           if (( ${#PYTHON_FILES[@]} == 0 )); then
             echo "No changed Python files to lint."
@@ -175,6 +200,16 @@ jobs:
           printf 'Ruff files:\n'
           printf '  %s\n' "${PYTHON_FILES[@]}"
           uvx ruff check --output-format=github "${PYTHON_FILES[@]}"
+
+  catalog-validation:
+    name: Validate Service Catalog
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Test catalog CLI
+        run: python3 .github/scripts/test_service_catalog.py -v
+      - name: Validate repository and Compose coverage
+        run: python3 .github/scripts/service_catalog.py validate --compose-file docker-compose.yml
 
   alembic-graphs:
     name: Validate Alembic graphs
@@ -242,17 +277,9 @@ jobs:
     if: needs.changes.outputs.services_changed == 'true'
     strategy:
       fail-fast: false
+      max-parallel: 4
       matrix:
-        service:
-          - api-gateway
-          - identity-service
-          - tasks-service
-          - vk-service
-          - content-service
-          - telegram-service
-          - listings-service
-          - moderation-service
-          - im-service
+        service: ${{ fromJSON(needs.changes.outputs.service_matrix) }}
     env:
       PYTHONPATH: ${{ github.workspace }}/libs/py/common
     steps:
@@ -329,6 +356,7 @@ jobs:
       - lint
       - typecheck
       - ruff
+      - catalog-validation
       - alembic-graphs
       - production-validation
       - frontend-tests
@@ -349,6 +377,7 @@ jobs:
           LINT_RESULT: ${{ needs.lint.result }}
           TYPECHECK_RESULT: ${{ needs.typecheck.result }}
           RUFF_RESULT: ${{ needs.ruff.result }}
+          CATALOG_RESULT: ${{ needs.catalog-validation.result }}
           ALEMBIC_RESULT: ${{ needs.alembic-graphs.result }}
           PRODUCTION_RESULT: ${{ needs.production-validation.result }}
           FRONTEND_TESTS_RESULT: ${{ needs.frontend-tests.result }}
@@ -391,13 +420,13 @@ jobs:
           }
 
           require_success "Detect changes" "$CHANGES_RESULT"
+          require_success "Validate Service Catalog" "$CATALOG_RESULT"
           require_success "Validate Alembic graphs" "$ALEMBIC_RESULT"
           require_success "Validate Production Release" "$PRODUCTION_RESULT"
 
           require_conditional "Lint Frontend" "$FRONTEND_CHANGED" "$LINT_RESULT"
           require_conditional "Typecheck Frontend" "$FRONTEND_CHANGED" "$TYPECHECK_RESULT"
           require_conditional "Test Frontend" "$FRONTEND_CHANGED" "$FRONTEND_TESTS_RESULT"
-
           require_conditional "Ruff changed Python files" "$PYTHON_CHANGED" "$RUFF_RESULT"
           require_conditional "Test common lib" "$COMMON_CHANGED" "$PYTEST_LIBS_RESULT"
           require_conditional "Test Python services" "$SERVICES_CHANGED" "$PYTEST_SERVICES_RESULT"

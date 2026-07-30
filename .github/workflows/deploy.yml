@@ -54,9 +54,6 @@ jobs:
           if [ "$EVENT_NAME" = "workflow_run" ]; then
             TARGET_SHA="$WORKFLOW_RUN_SHA"
           else
-            # Manual production deploy is intentionally limited to the current
-            # main commit. Previous releases belong to rollback.yml; arbitrary
-            # branches must never bypass push CI and Security Scanning.
             if [ "$MANUAL_DEPLOYMENT" != "current-main" ]; then
               echo "::error::Неизвестный режим ручного production deploy: $MANUAL_DEPLOYMENT"
               exit 1
@@ -164,6 +161,7 @@ jobs:
       COMPOSE_FILE: docker-compose.yml
       PROJECT_ROOT: /opt/parseVK
       PRODUCTION_SCRIPTS_DIR: ${{ github.workspace }}/.github/scripts/production
+      SERVICE_CATALOG_CLI: ${{ github.workspace }}/.github/scripts/service_catalog.py
       TARGET_SHA: ${{ needs.gate.outputs.target_sha }}
 
     steps:
@@ -245,7 +243,7 @@ jobs:
           PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
             bash "$PRODUCTION_SCRIPTS_DIR/preflight.sh"
 
-      - name: Detect changed services
+      - name: Detect changed services from catalog
         id: changed_services
         if: steps.deployment_context.outputs.skip_deploy != 'true'
         working-directory: /opt/parseVK
@@ -253,88 +251,34 @@ jobs:
           set -euo pipefail
 
           PREV_COMMIT="${{ steps.deployment_metadata.outputs.last_successful_commit }}"
-          CURRENT_COMMIT=$(git rev-parse HEAD)
+          CURRENT_COMMIT="$(git rev-parse HEAD)"
 
-          BUILD_FRONTEND=false
-          BUILD_IDENTITY_SERVICE=false
-          BUILD_TASKS_SERVICE=false
-          BUILD_VK_SERVICE=false
-          BUILD_CONTENT_SERVICE=false
-          BUILD_MODERATION_SERVICE=false
-          BUILD_TELEGRAM_SERVICE=false
-          BUILD_API_GATEWAY=false
-          BUILD_IM_SERVICE=false
-
-          if [ -z "$PREV_COMMIT" ] || ! git cat-file -e "${PREV_COMMIT}^{commit}" 2>/dev/null; then
-            BUILD_FRONTEND=true
-            BUILD_IDENTITY_SERVICE=true
-            BUILD_TASKS_SERVICE=true
-            BUILD_VK_SERVICE=true
-            BUILD_CONTENT_SERVICE=true
-            BUILD_MODERATION_SERVICE=true
-            BUILD_TELEGRAM_SERVICE=true
-            BUILD_API_GATEWAY=true
-            BUILD_IM_SERVICE=true
-            echo "No previous deployed commit found, building all local images"
-          else
-            CHANGED_FILES=$(git diff --name-only "$PREV_COMMIT" "$CURRENT_COMMIT")
-            echo "Changed files since last successful deploy:"
-            printf '%s\n' "$CHANGED_FILES"
-
-            LIBS_CHANGED=false
-            if printf '%s\n' "$CHANGED_FILES" | grep -qE '^libs/py/common/'; then
-              LIBS_CHANGED=true
-            fi
-
-            if printf '%s\n' "$CHANGED_FILES" | grep -qE '^(front/|docker/frontend\.Dockerfile|docker/frontend\.nginx\.conf|docker/frontend-entrypoint\.sh|\.dockerignore)'; then
-              BUILD_FRONTEND=true
-            fi
-
-            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/api-gateway/'; then BUILD_API_GATEWAY=true; fi
-            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/identity-service/'; then BUILD_IDENTITY_SERVICE=true; fi
-            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/tasks-service/'; then BUILD_TASKS_SERVICE=true; fi
-            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/vk-service/'; then BUILD_VK_SERVICE=true; fi
-            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/content-service/'; then BUILD_CONTENT_SERVICE=true; fi
-            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/moderation-service/'; then BUILD_MODERATION_SERVICE=true; fi
-            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/telegram-service/'; then BUILD_TELEGRAM_SERVICE=true; fi
-            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/im-service/'; then BUILD_IM_SERVICE=true; fi
-          fi
-
-          echo "build_frontend=$BUILD_FRONTEND" >> "$GITHUB_OUTPUT"
-          echo "build_identity_service=$BUILD_IDENTITY_SERVICE" >> "$GITHUB_OUTPUT"
-          echo "build_tasks_service=$BUILD_TASKS_SERVICE" >> "$GITHUB_OUTPUT"
-          echo "build_vk_service=$BUILD_VK_SERVICE" >> "$GITHUB_OUTPUT"
-          echo "build_content_service=$BUILD_CONTENT_SERVICE" >> "$GITHUB_OUTPUT"
-          echo "build_moderation_service=$BUILD_MODERATION_SERVICE" >> "$GITHUB_OUTPUT"
-          echo "build_telegram_service=$BUILD_TELEGRAM_SERVICE" >> "$GITHUB_OUTPUT"
-          echo "build_api_gateway=$BUILD_API_GATEWAY" >> "$GITHUB_OUTPUT"
-          echo "build_im_service=$BUILD_IM_SERVICE" >> "$GITHUB_OUTPUT"
+          python3 "$SERVICE_CATALOG_CLI" \
+            --repo-root "$PROJECT_ROOT" \
+            changed \
+            --purpose deploy \
+            --base "$PREV_COMMIT" \
+            --head "$CURRENT_COMMIT" \
+            --github-output "$GITHUB_OUTPUT"
 
       - name: Build and start containers
         if: steps.deployment_context.outputs.skip_deploy != 'true'
         working-directory: /opt/parseVK
         timeout-minutes: 30
+        env:
+          SERVICES_TO_BUILD: ${{ steps.changed_services.outputs.value }}
         run: |
           set -euo pipefail
-          SERVICES_TO_BUILD=""
-
-          if [ "${{ steps.changed_services.outputs.build_frontend }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD frontend"; fi
-          if [ "${{ steps.changed_services.outputs.build_api_gateway }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD api-gateway"; fi
-          if [ "${{ steps.changed_services.outputs.build_identity_service }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD identity-service identity-migrate identity-seed-admin"; fi
-          if [ "${{ steps.changed_services.outputs.build_tasks_service }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD tasks-service tasks-migrate"; fi
-          if [ "${{ steps.changed_services.outputs.build_vk_service }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD vk-service vk-migrate"; fi
-          if [ "${{ steps.changed_services.outputs.build_content_service }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD content-service content-migrate"; fi
-          if [ "${{ steps.changed_services.outputs.build_moderation_service }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD moderation-service moderation-migrate"; fi
-          if [ "${{ steps.changed_services.outputs.build_telegram_service }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD telegram-service"; fi
-          if [ "${{ steps.changed_services.outputs.build_im_service }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD im-service im-migrate"; fi
 
           if [ -n "$SERVICES_TO_BUILD" ]; then
+            read -r -a BUILD_TARGETS <<< "$SERVICES_TO_BUILD"
             PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
-              bash "$PRODUCTION_SCRIPTS_DIR/images.sh" prepare $SERVICES_TO_BUILD
+              bash "$PRODUCTION_SCRIPTS_DIR/images.sh" prepare "${BUILD_TARGETS[@]}"
             PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
-              bash "$PRODUCTION_SCRIPTS_DIR/images.sh" build $SERVICES_TO_BUILD
+              bash "$PRODUCTION_SCRIPTS_DIR/images.sh" build "${BUILD_TARGETS[@]}"
             UP_ARGS="-d"
           else
+            echo "No application images changed since the last successful deployment"
             UP_ARGS="-d --no-build"
           fi
 
@@ -358,8 +302,8 @@ jobs:
         working-directory: /opt/parseVK
         run: |
           set -euo pipefail
-          CURRENT_COMMIT=$(git rev-parse HEAD)
-          CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          CURRENT_COMMIT="$(git rev-parse HEAD)"
+          CURRENT_TIME="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
           PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
             bash "$PRODUCTION_SCRIPTS_DIR/metadata.sh" write "$CURRENT_COMMIT" "$CURRENT_TIME"
 

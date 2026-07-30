@@ -5,117 +5,87 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common.sh"
 
+SERVICE_CATALOG_CLI="${SERVICE_CATALOG_CLI:-$PROJECT_ROOT/.github/scripts/service_catalog.py}"
+declare -A PULLED_IMAGES=()
+
 pull_image() {
   local image="$1"
+  if [ -n "${PULLED_IMAGES[$image]:-}" ]; then
+    return 0
+  fi
+  PULLED_IMAGES[$image]=1
   log_info "Pulling image: $image"
   retry_with_backoff 3 5 "timeout 300s docker pull $image"
 }
 
-should_include_service() {
-  local service_name="$1"
-  shift || true
-
-  if [ "$#" -eq 0 ]; then
+resolve_services() {
+  if [ "$#" -gt 0 ]; then
+    printf '%s\n' "$@"
     return 0
   fi
 
-  local requested
-  for requested in "$@"; do
-    if [ "$requested" = "$service_name" ]; then
+  if [ ! -f "$SERVICE_CATALOG_CLI" ]; then
+    log_error "Service catalog CLI not found: $SERVICE_CATALOG_CLI"
+    return 1
+  fi
+
+  local targets
+  targets="$(python3 "$SERVICE_CATALOG_CLI" --repo-root "$PROJECT_ROOT" changed --purpose deploy --all)"
+  read -r -a target_array <<< "$targets"
+  printf '%s\n' "${target_array[@]}"
+  printf '%s\n' prometheus node-exporter grafana
+}
+
+contains_service() {
+  local expected="$1"
+  shift
+  local service
+  for service in "$@"; do
+    if [ "$service" = "$expected" ]; then
       return 0
     fi
   done
-
   return 1
 }
 
-pull_runtime_images_for_services() {
-  if should_include_service frontend "$@"; then
-    pull_image "nginx:alpine"
+prepare_images() {
+  local resolved
+  if ! resolved="$(resolve_services "$@")"; then
+    log_error "Failed to resolve image preparation targets"
+    return 1
+  fi
+  if [ -z "$resolved" ]; then
+    log_info "No image preparation targets resolved"
+    return 0
   fi
 
-  if should_include_service prometheus "$@"; then
-    pull_image "prom/prometheus:v3.11.3"
-  fi
+  local -a services
+  mapfile -t services <<< "$resolved"
 
-  if should_include_service node-exporter "$@"; then
-    pull_image "prom/node-exporter:v1.11.1"
-  fi
-
-  if should_include_service grafana "$@"; then
-    pull_image "grafana/grafana:13.0.1-security-01"
-  fi
-
-  if should_include_service identity-service "$@"; then
-    pull_image "python:3.12.13-slim"
-  fi
-
-  if should_include_service tasks-service "$@"; then
-    pull_image "python:3.12.13-slim"
-  fi
-
-  if should_include_service vk-service "$@"; then
-    pull_image "python:3.12.13-slim"
-  fi
-
-  if should_include_service content-service "$@"; then
-    pull_image "python:3.12.13-slim"
-  fi
-
-  if should_include_service api-gateway "$@"; then
-    pull_image "python:3.12.13-slim"
-  fi
-
-  if should_include_service moderation-service "$@"; then
-    pull_image "python:3.12.13-slim"
-  fi
-
-  if should_include_service telegram-service "$@"; then
-    pull_image "python:3.12.13-slim"
-  fi
-
-  if should_include_service im-service "$@"; then
-    pull_image "python:3.12.13-slim"
-  fi
-}
-
-pull_build_base_images_for_services() {
-  if should_include_service frontend "$@"; then
+  if contains_service frontend "${services[@]}"; then
     pull_image "oven/bun:1-alpine"
     pull_image "nginx:alpine"
   fi
 
-  if should_include_service identity-service "$@"; then
-    pull_image "python:3.12.13-slim"
+  if contains_service prometheus "${services[@]}"; then
+    pull_image "prom/prometheus:v3.11.3"
+  fi
+  if contains_service node-exporter "${services[@]}"; then
+    pull_image "prom/node-exporter:v1.11.1"
+  fi
+  if contains_service grafana "${services[@]}"; then
+    pull_image "grafana/grafana:13.0.1-security-01"
   fi
 
-  if should_include_service tasks-service "$@"; then
-    pull_image "python:3.12.13-slim"
-  fi
-
-  if should_include_service vk-service "$@"; then
-    pull_image "python:3.12.13-slim"
-  fi
-
-  if should_include_service content-service "$@"; then
-    pull_image "python:3.12.13-slim"
-  fi
-
-  if should_include_service api-gateway "$@"; then
-    pull_image "python:3.12.13-slim"
-  fi
-
-  if should_include_service moderation-service "$@"; then
-    pull_image "python:3.12.13-slim"
-  fi
-
-  if should_include_service telegram-service "$@"; then
-    pull_image "python:3.12.13-slim"
-  fi
-
-  if should_include_service im-service "$@"; then
-    pull_image "python:3.12.13-slim"
-  fi
+  local service
+  for service in "${services[@]}"; do
+    case "$service" in
+      api-gateway|*-service)
+        pull_image "python:3.12.13-slim"
+        break
+        ;;
+    esac
+  done
 }
 
 build_services() {
@@ -131,8 +101,7 @@ build_services() {
 case "${1:-}" in
   prepare)
     shift || true
-    pull_runtime_images_for_services "$@"
-    pull_build_base_images_for_services "$@"
+    prepare_images "$@"
     ;;
   build)
     shift
