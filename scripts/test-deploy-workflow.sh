@@ -24,6 +24,7 @@ required=(
   "$ROOT_DIR/.github/scripts/alembic_graph.py"
   "$ROOT_DIR/.github/scripts/service_catalog_lib/__init__.py"
   "$LOCAL_RELEASE" "$ROOT_DIR/scripts/test-local-release.sh"
+  "$ROOT_DIR/scripts/test-deployment-metadata.sh"
 )
 for file in "${required[@]}"; do
   [[ -f "$file" ]] || { echo "Required CI/CD file not found: $file"; exit 1; }
@@ -73,7 +74,7 @@ reject_pattern "$CI" 'working-directory: services/\$\{\{ matrix\.service \}\}' \
 require_pattern "$QUALITY" 'uv sync --extra test --frozen' \
   "Reusable quality workflow does not install frozen test dependencies"
 require_pattern "$QUALITY" 'uv run pytest -v' \
-  "Reusable quality workflow does not execute tests"
+  "Reusable Python quality workflow does not execute tests"
 require_pattern "$ALEMBIC" 'image: postgres:16\.14' \
   "Alembic workflow does not use PostgreSQL 16.14"
 require_pattern "$ALEMBIC" 'uv run alembic upgrade head' \
@@ -197,4 +198,5 @@ done
 python3 "$ROOT_DIR/.github/scripts/test_service_catalog.py" -v
 python3 "$ROOT_DIR/.github/scripts/test_validate_alembic_graphs.py" -v
 bash "$ROOT_DIR/scripts/test-local-release.sh"
+bash "$ROOT_DIR/scripts/test-deployment-metadata.sh"
 echo "CI/CD reusable workflows, offline production releases and migration gates are valid"
