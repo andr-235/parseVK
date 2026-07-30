@@ -49,10 +49,11 @@ jobs:
           from uuid import UUID, uuid4
 
           import pytest
+          from httpx import ASGITransport, AsyncClient
+
           from app.main import app as telegram_app
           from app.modules.telegram_service.router import get_service
           from app.modules.telegram_service.service import TelegramServiceService
-          from httpx import ASGITransport, AsyncClient
 
 
           class InMemoryTelegramRepository:
@@ -205,6 +206,9 @@ jobs:
       - name: Run targeted tests and Ruff
         run: |
           set -euo pipefail
+          uvx ruff check --fix \
+            services/tasks-service/tests/test_execution_consumer.py \
+            services/telegram-service/tests/test_telegram_service.py
           uvx ruff check \
             services/tasks-service/tests/test_execution_consumer.py \
             services/telegram-service/tests/test_telegram_service.py
