@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -17,6 +18,7 @@ spec.loader.exec_module(service_catalog)
 Catalog = service_catalog.Catalog
 CatalogError = service_catalog.CatalogError
 _deploy_targets = service_catalog._deploy_targets
+_git_changed_files = service_catalog._git_changed_files
 _path_matches = service_catalog._path_matches
 _service_matrix = service_catalog._service_matrix
 
@@ -63,6 +65,17 @@ def make_catalog(path: Path) -> Catalog:
     return Catalog.load(path)
 
 
+def run_git(repo: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=repo,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    return result.stdout.strip()
+
+
 class CatalogTests(unittest.TestCase):
     def test_service_specific_change_selects_one_service(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -93,6 +106,33 @@ class CatalogTests(unittest.TestCase):
             catalog = make_catalog(Path(directory) / "catalog.yaml")
             selected = catalog.changed("docker", [".dockerignore"])
             self.assertEqual([service.name for service in selected], ["api", "frontend"])
+
+    def test_git_changed_files_ignores_base_only_commits(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            run_git(repo, "init", "-b", "main")
+            run_git(repo, "config", "user.email", "ci@example.test")
+            run_git(repo, "config", "user.name", "CI Test")
+            (repo / "shared.txt").write_text("base\n", encoding="utf-8")
+            run_git(repo, "add", "shared.txt")
+            run_git(repo, "commit", "-m", "base")
+
+            run_git(repo, "switch", "-c", "feature")
+            (repo / "feature.txt").write_text("feature\n", encoding="utf-8")
+            run_git(repo, "add", "feature.txt")
+            run_git(repo, "commit", "-m", "feature")
+            feature_sha = run_git(repo, "rev-parse", "HEAD")
+
+            run_git(repo, "switch", "main")
+            (repo / "base-only.txt").write_text("release\n", encoding="utf-8")
+            run_git(repo, "add", "base-only.txt")
+            run_git(repo, "commit", "-m", "base advanced")
+            advanced_base_sha = run_git(repo, "rev-parse", "HEAD")
+
+            self.assertEqual(
+                _git_changed_files(repo, advanced_base_sha, feature_sha),
+                ["feature.txt"],
+            )
 
     def test_file_change_path_requires_exact_match(self) -> None:
         self.assertTrue(_path_matches(".dockerignore", [".dockerignore"]))
