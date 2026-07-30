@@ -29,17 +29,8 @@ def _load(path: Path) -> Mapping[str, Any]:
     return value
 
 
-def _validate_pull_request(
-    api: GitHubApi,
-    number: int,
-    expected_head: str,
-) -> set[str]:
+def _pull_request_commits(api: GitHubApi, number: int) -> set[str]:
     pull_request = api.pull_request(number)
-    current_head = str(nested(pull_request, "head", "sha") or "")
-    if current_head != expected_head:
-        raise SkipPublication(
-            f"obsolete batch: expected {expected_head}, current {current_head}"
-        )
     if bool(pull_request.get("draft")):
         raise SkipPublication("draft Pull Request is not eligible for publication")
     if nested(pull_request, "head", "repo", "full_name") != api.repository:
@@ -76,8 +67,7 @@ def _publish_one(api: GitHubApi, number: int, result: ReviewResult) -> str:
 
 def publish_batch(api: GitHubApi, number: int, path: Path) -> str:
     batch = _load(path)
-    expected_head = str(batch.get("head_sha") or "")
-    commit_shas = _validate_pull_request(api, number, expected_head)
+    commit_shas = _pull_request_commits(api, number)
     raw_results = batch.get("commit_results")
     if not isinstance(raw_results, list):
         raw_results = []
@@ -88,15 +78,18 @@ def publish_batch(api: GitHubApi, number: int, path: Path) -> str:
 
     outcomes = []
     skipped = 0
+    review_comments = 0
     for result in results:
         if result.head_sha not in commit_shas:
             skipped += 1
             continue
         outcomes.append(_publish_one(api, number, result))
+        if result.verdict in PUBLISHABLE:
+            review_comments += 1
 
     cleanup_legacy_best_effort(api, number, "Commit review batch published")
     return (
-        f"published={len(outcomes)} skipped={skipped}; "
+        f"handled={len(outcomes)} reviews={review_comments} skipped={skipped}; "
         + ("; ".join(outcomes) if outcomes else "no review comments")
     )
 
