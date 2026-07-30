@@ -9,6 +9,7 @@ from pathlib import Path
 
 from parsevk_contracts.compatibility import CompatibilityCheckError, check_compatibility
 from parsevk_contracts.generation import generate_all
+from parsevk_contracts.registry_validation import validate_registry
 from parsevk_contracts.vk.commands import CATALOG
 
 
@@ -106,6 +107,31 @@ def run_compatibility(args: argparse.Namespace) -> int:
     return 1
 
 
+def run_validate_registry(args: argparse.Namespace) -> int:
+    """Validate registry metadata completeness."""
+    try:
+        violations = validate_registry(CATALOG)
+    except Exception as exc:
+        print(f"ERROR: registry validation failed: {exc}", file=sys.stderr)
+        return 2
+
+    if not violations:
+        print("Registry metadata is valid.")
+        return 0
+
+    for v in violations:
+        ident = f"{v.message_type} v{v.schema_version}" if v.schema_version else v.message_type
+        print(f"VIOLATION [{v.code}] {ident}", file=sys.stderr)
+        print(f"  Field: {v.field}", file=sys.stderr)
+        print(f"  Detail: {v.detail}", file=sys.stderr)
+        print(file=sys.stderr)
+
+    count = len(violations)
+    suffix = "s" if count != 1 else ""
+    print(f"FAIL: {count} registry violation{suffix} found.", file=sys.stderr)
+    return 1
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="parseVK contract generation CLI")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -139,6 +165,11 @@ def main() -> None:
         help="Path to current generated/ directory (default: generated)",
     )
 
+    sub.add_parser(
+        "validate-registry",
+        help="Validate registry metadata completeness",
+    )
+
     args = parser.parse_args()
 
     if args.command == "check":
@@ -151,6 +182,9 @@ def main() -> None:
 
     if args.command == "compatibility":
         sys.exit(run_compatibility(args))
+
+    if args.command == "validate-registry":
+        sys.exit(run_validate_registry(args))
 
 
 if __name__ == "__main__":
