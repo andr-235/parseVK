@@ -2,14 +2,14 @@
 """Read and validate the parseVK service catalog without third-party packages.
 
 The catalog is stored as JSON-compatible YAML 1.2. JSON is a strict subset of
-YAML, so the file remains valid YAML while the CLI can use Python's standard
-library on GitHub-hosted and self-hosted runners.
+YAML, so the CLI can use Python's standard library on every GitHub runner.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -24,11 +24,48 @@ PURPOSE_FIELDS = {
     "audit": "dependency_audit",
     "docker": "docker_scan",
 }
-PURPOSES = ("pytest", "audit", "docker", "deploy")
+PURPOSES = ("pytest", "audit", "docker", "deploy", "migration")
+ENV_NAME_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")
 
 
 class CatalogError(RuntimeError):
     """Raised when the service catalog or repository contract is invalid."""
+
+
+@dataclass(frozen=True)
+class Migration:
+    database_url_env: str
+    compose_target: str
+
+    @classmethod
+    def from_value(cls, service_name: str, value: Any) -> Migration | None:
+        if value is None:
+            return None
+        if not isinstance(value, dict):
+            raise CatalogError(f"service {service_name!r} field 'migration' must be null or an object")
+        required = {"database_url_env", "compose_target"}
+        missing = sorted(required - value.keys())
+        unknown = sorted(value.keys() - required)
+        if missing:
+            raise CatalogError(
+                f"service {service_name!r} migration is missing fields: {', '.join(missing)}"
+            )
+        if unknown:
+            raise CatalogError(
+                f"service {service_name!r} migration has unknown fields: {', '.join(unknown)}"
+            )
+
+        database_url_env = value["database_url_env"]
+        compose_target = value["compose_target"]
+        if not isinstance(database_url_env, str) or not ENV_NAME_PATTERN.fullmatch(database_url_env):
+            raise CatalogError(
+                f"service {service_name!r} migration database_url_env must be an uppercase env name"
+            )
+        if not isinstance(compose_target, str) or not compose_target:
+            raise CatalogError(
+                f"service {service_name!r} migration compose_target must be a non-empty string"
+            )
+        return cls(database_url_env=database_url_env, compose_target=compose_target)
 
 
 @dataclass(frozen=True)
@@ -42,6 +79,7 @@ class Service:
     dependency_audit: bool
     docker_scan: bool
     compose_build: tuple[str, ...]
+    migration: Migration | None
 
     @classmethod
     def from_mapping(cls, name: str, value: Mapping[str, Any]) -> Service:
@@ -54,6 +92,7 @@ class Service:
             "dependency_audit",
             "docker_scan",
             "compose_build",
+            "migration",
         }
         missing = sorted(required - value.keys())
         unknown = sorted(value.keys() - required)
@@ -84,6 +123,10 @@ class Service:
             if not isinstance(value[field], str) or not value[field]:
                 raise CatalogError(f"service {name!r} field {field!r} must be a non-empty string")
 
+        migration = Migration.from_value(name, value["migration"])
+        if migration is not None and kind != "python":
+            raise CatalogError(f"service {name!r} cannot define migrations for kind {kind!r}")
+
         return cls(
             name=name,
             kind=kind,
@@ -91,6 +134,7 @@ class Service:
             dockerfile=value["dockerfile"],
             change_paths=change_paths,
             compose_build=compose_build,
+            migration=migration,
             **booleans,
         )
 
@@ -118,7 +162,7 @@ class Catalog:
             raise CatalogError(
                 "catalog root fields must be exactly: schema_version, global_change_paths, services"
             )
-        if raw["schema_version"] != 1:
+        if raw["schema_version"] != 2:
             raise CatalogError(f"unsupported catalog schema version: {raw['schema_version']!r}")
 
         global_paths = _purpose_paths(raw["global_change_paths"])
@@ -131,11 +175,13 @@ class Catalog:
             for name, value in sorted(services_raw.items())
             if _require_mapping(name, value)
         )
-        return cls(1, global_paths, services)
+        return cls(2, global_paths, services)
 
     def selected(self, purpose: str) -> tuple[Service, ...]:
         if purpose == "deploy":
             return self.services
+        if purpose == "migration":
+            return tuple(service for service in self.services if service.migration is not None)
         field = PURPOSE_FIELDS.get(purpose)
         if field is None:
             raise CatalogError(f"unsupported purpose: {purpose}")
@@ -240,6 +286,15 @@ def _discover_python_services(repo_root: Path) -> set[str]:
     }
 
 
+def _discover_migration_services(repo_root: Path) -> set[str]:
+    services_root = repo_root / "services"
+    return {
+        path.parent.name
+        for path in services_root.glob("*/alembic.ini")
+        if path.is_file()
+    }
+
+
 def _compose_model(repo_root: Path, compose_file: Path) -> Mapping[str, Any]:
     docker = _executable("docker")
     result = subprocess.run(  # noqa: S603 - executable resolved from trusted PATH
@@ -261,6 +316,15 @@ def _compose_model(repo_root: Path, compose_file: Path) -> Mapping[str, Any]:
     return model
 
 
+def _command_text(config: Mapping[str, Any]) -> str:
+    command = config.get("command")
+    if isinstance(command, str):
+        return command
+    if isinstance(command, list) and all(isinstance(item, str) for item in command):
+        return " ".join(command)
+    return ""
+
+
 def validate_repository(catalog: Catalog, repo_root: Path, compose_file: Path) -> None:
     errors: list[str] = []
     names = [service.name for service in catalog.services]
@@ -273,15 +337,31 @@ def validate_repository(catalog: Catalog, repo_root: Path, compose_file: Path) -
                 errors.append(f"global {purpose} change path does not exist: {configured}")
 
     python_catalog = {service.name for service in catalog.services if service.kind == "python"}
-    discovered = _discover_python_services(repo_root)
-    missing = sorted(discovered - python_catalog)
-    stale = sorted(python_catalog - discovered)
-    if missing:
-        errors.append(f"Python services missing from catalog: {', '.join(missing)}")
-    if stale:
-        errors.append(f"Catalog Python services missing from repository: {', '.join(stale)}")
+    discovered_python = _discover_python_services(repo_root)
+    missing_python = sorted(discovered_python - python_catalog)
+    stale_python = sorted(python_catalog - discovered_python)
+    if missing_python:
+        errors.append(f"Python services missing from catalog: {', '.join(missing_python)}")
+    if stale_python:
+        errors.append(f"Catalog Python services missing from repository: {', '.join(stale_python)}")
+
+    migration_catalog = {
+        service.name for service in catalog.services if service.migration is not None
+    }
+    discovered_migrations = _discover_migration_services(repo_root)
+    missing_migrations = sorted(discovered_migrations - migration_catalog)
+    stale_migrations = sorted(migration_catalog - discovered_migrations)
+    if missing_migrations:
+        errors.append(
+            f"Migration services missing migration metadata: {', '.join(missing_migrations)}"
+        )
+    if stale_migrations:
+        errors.append(
+            f"Catalog migration services missing alembic.ini: {', '.join(stale_migrations)}"
+        )
 
     build_targets: list[str] = []
+    migration_targets: list[str] = []
     for service in catalog.services:
         path = repo_root / service.path
         dockerfile = repo_root / service.dockerfile
@@ -298,15 +378,63 @@ def validate_repository(catalog: Catalog, repo_root: Path, compose_file: Path) -
                 errors.append(f"{service.name}: change path does not exist: {configured}")
         build_targets.extend(service.compose_build)
 
+        declared_migrate_targets = [
+            target for target in service.compose_build if target.endswith("-migrate")
+        ]
+        if service.migration is None:
+            if declared_migrate_targets:
+                errors.append(
+                    f"{service.name}: compose migration target exists without migration metadata: "
+                    f"{', '.join(declared_migrate_targets)}"
+                )
+            continue
+
+        migration = service.migration
+        migration_targets.append(migration.compose_target)
+        if migration.compose_target not in service.compose_build:
+            errors.append(
+                f"{service.name}: migration compose target {migration.compose_target!r} "
+                "is not present in compose_build"
+            )
+        if declared_migrate_targets != [migration.compose_target]:
+            errors.append(
+                f"{service.name}: expected exactly migration target {migration.compose_target!r}, "
+                f"found {declared_migrate_targets}"
+            )
+
+        alembic_ini = path / "alembic.ini"
+        env_py = path / "alembic" / "env.py"
+        versions_dir = path / "alembic" / "versions"
+        if not alembic_ini.is_file():
+            errors.append(f"{service.name}: alembic.ini does not exist")
+        if not env_py.is_file():
+            errors.append(f"{service.name}: alembic/env.py does not exist")
+        if not versions_dir.is_dir():
+            errors.append(f"{service.name}: alembic/versions does not exist")
+        elif not any(
+            migration_file.is_file() and migration_file.name != "__init__.py"
+            for migration_file in versions_dir.glob("*.py")
+        ):
+            errors.append(f"{service.name}: alembic/versions contains no revisions")
+
     duplicate_targets = sorted({name for name in build_targets if build_targets.count(name) > 1})
     if duplicate_targets:
         errors.append(f"Compose build targets assigned more than once: {', '.join(duplicate_targets)}")
+    duplicate_migration_targets = sorted(
+        {name for name in migration_targets if migration_targets.count(name) > 1}
+    )
+    if duplicate_migration_targets:
+        errors.append(
+            "Migration compose targets assigned more than once: "
+            + ", ".join(duplicate_migration_targets)
+        )
 
     model = _compose_model(repo_root, compose_file)
     compose_services = model.get("services")
     if not isinstance(compose_services, dict):
         errors.append("Compose model does not contain a services object")
         compose_services = {}
+
     configured_targets = set(build_targets)
     missing_targets = sorted(configured_targets - compose_services.keys())
     if missing_targets:
@@ -319,6 +447,24 @@ def validate_repository(catalog: Catalog, repo_root: Path, compose_file: Path) -
     uncatalogued = sorted(buildable - configured_targets)
     if uncatalogued:
         errors.append(f"Buildable Compose services missing from catalog: {', '.join(uncatalogued)}")
+
+    for service in catalog.selected("migration"):
+        assert service.migration is not None
+        target = service.migration.compose_target
+        config = compose_services.get(target)
+        if not isinstance(config, dict):
+            continue
+        command = _command_text(config)
+        if "alembic" not in command or "upgrade" not in command:
+            errors.append(
+                f"{service.name}: Compose migration target {target!r} must run alembic upgrade"
+            )
+        environment = config.get("environment")
+        if not isinstance(environment, dict) or service.migration.database_url_env not in environment:
+            errors.append(
+                f"{service.name}: Compose migration target {target!r} does not expose "
+                f"{service.migration.database_url_env}"
+            )
 
     if errors:
         raise CatalogError("service catalog validation failed:\n- " + "\n- ".join(errors))
@@ -337,6 +483,20 @@ def _service_matrix(services: Sequence[Service], purpose: str) -> str:
                         "image": f"parsevk-{service.name}:scan",
                     }
                     for service in services
+                ]
+            },
+            separators=(",", ":"),
+        )
+    if purpose == "migration":
+        return json.dumps(
+            {
+                "include": [
+                    {
+                        "service": service.name,
+                        "database_url_env": service.migration.database_url_env,
+                    }
+                    for service in services
+                    if service.migration is not None
                 ]
             },
             separators=(",", ":"),
@@ -402,7 +562,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             if not compose_file.is_absolute():
                 compose_file = args.repo_root / compose_file
             validate_repository(catalog, args.repo_root, compose_file)
-            print(f"Service catalog is valid: {len(catalog.services)} services")
+            migration_count = len(catalog.selected("migration"))
+            print(
+                f"Service catalog is valid: {len(catalog.services)} services, "
+                f"{migration_count} migration services"
+            )
             return 0
 
         services = _resolve_services(args, catalog)
