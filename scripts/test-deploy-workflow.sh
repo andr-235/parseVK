@@ -6,10 +6,19 @@ DEPLOY_WORKFLOW="$ROOT_DIR/.github/workflows/deploy.yml"
 ROLLBACK_WORKFLOW="$ROOT_DIR/.github/workflows/rollback.yml"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/ci.yml"
 SECURITY_WORKFLOW="$ROOT_DIR/.github/workflows/security.yml"
+SERVICE_CATALOG="$ROOT_DIR/.github/service-catalog.yaml"
+SERVICE_CATALOG_CLI="$ROOT_DIR/.github/scripts/service_catalog.py"
 
-for workflow in "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" "$CI_WORKFLOW" "$SECURITY_WORKFLOW"; do
-  if [ ! -f "$workflow" ]; then
-    echo "Workflow not found: $workflow"
+for file in \
+  "$DEPLOY_WORKFLOW" \
+  "$ROLLBACK_WORKFLOW" \
+  "$CI_WORKFLOW" \
+  "$SECURITY_WORKFLOW" \
+  "$SERVICE_CATALOG" \
+  "$SERVICE_CATALOG_CLI"
+do
+  if [ ! -f "$file" ]; then
+    echo "Required CI/CD file not found: $file"
     exit 1
   fi
 done
@@ -23,6 +32,26 @@ fi
 if ! grep -En 'steps\.filter\.outputs\.frontend_changed' "$CI_WORKFLOW" >/dev/null || \
    ! grep -En 'steps\.filter\.outputs\.python_changed' "$CI_WORKFLOW" >/dev/null; then
   echo "Regression: CI change outputs are not wired to steps.filter"
+  exit 1
+fi
+
+if ! grep -En 'service_matrix:.*steps\.services\.outputs\.value' "$CI_WORKFLOW" >/dev/null || \
+   ! grep -En 'fromJSON\(needs\.changes\.outputs\.service_matrix\)' "$CI_WORKFLOW" >/dev/null; then
+  echo "Regression: Python service tests are not generated from the service catalog"
+  exit 1
+fi
+
+if ! grep -En 'name: Validate Service Catalog' "$CI_WORKFLOW" >/dev/null || \
+   ! grep -En 'service_catalog\.py validate' "$CI_WORKFLOW" >/dev/null; then
+  echo "Regression: CI does not validate service catalog coverage"
+  exit 1
+fi
+
+if ! grep -En 'audit_matrix:.*steps\.audit\.outputs\.value' "$SECURITY_WORKFLOW" >/dev/null || \
+   ! grep -En 'docker_matrix:.*steps\.docker\.outputs\.value' "$SECURITY_WORKFLOW" >/dev/null || \
+   ! grep -En 'fromJSON\(needs\.catalog\.outputs\.audit_matrix\)' "$SECURITY_WORKFLOW" >/dev/null || \
+   ! grep -En 'fromJSON\(needs\.catalog\.outputs\.docker_matrix\)' "$SECURITY_WORKFLOW" >/dev/null; then
+  echo "Regression: Security matrices are not generated from the service catalog"
   exit 1
 fi
 
@@ -65,6 +94,18 @@ if ! grep -En 'needs: gate' "$DEPLOY_WORKFLOW" >/dev/null || \
   exit 1
 fi
 
+if ! grep -En 'service_catalog\.py|SERVICE_CATALOG_CLI' "$DEPLOY_WORKFLOW" >/dev/null || \
+   ! grep -En -- '--purpose deploy' "$DEPLOY_WORKFLOW" >/dev/null || \
+   ! grep -En 'SERVICES_TO_BUILD:.*steps\.changed_services\.outputs\.value' "$DEPLOY_WORKFLOW" >/dev/null; then
+  echo "Regression: production build targets are not resolved through the service catalog"
+  exit 1
+fi
+
+if grep -En 'BUILD_(FRONTEND|API_GATEWAY|IDENTITY_SERVICE|TASKS_SERVICE|VK_SERVICE|CONTENT_SERVICE|LISTINGS_SERVICE|MODERATION_SERVICE|REALTIME_SERVICE|TELEGRAM_SERVICE|IM_SERVICE)' "$DEPLOY_WORKFLOW" >/dev/null; then
+  echo "Regression: deploy restored hard-coded per-service build flags"
+  exit 1
+fi
+
 if ! grep -En 'Verify container health' "$DEPLOY_WORKFLOW" >/dev/null; then
   echo "Regression: deploy does not require post-release health verification"
   exit 1
@@ -79,7 +120,6 @@ fi
 
 if grep -En 'docker compose .* run .*--no-build' "$DEPLOY_WORKFLOW" >/dev/null; then
   echo "Regression: deploy workflow uses unsupported --no-build flag with docker compose run"
-  grep -En 'docker compose .* run .*--no-build' "$DEPLOY_WORKFLOW"
   exit 1
 fi
 
@@ -114,19 +154,16 @@ fi
 
 if grep -En 'jq --arg commit .*last_successful_commit' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" >/dev/null; then
   echo "Regression: workflows still mutate deployment metadata inline"
-  grep -En 'jq --arg commit .*last_successful_commit' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW"
   exit 1
 fi
 
 if grep -En 'docker compose -f "\$COMPOSE_FILE" build --progress plain' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" >/dev/null; then
   echo "Regression: workflows still perform inline docker compose build"
-  grep -En 'docker compose -f "\$COMPOSE_FILE" build --progress plain' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW"
   exit 1
 fi
 
 if grep -En 'docker compose -f "\$COMPOSE_FILE" up ' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW" >/dev/null; then
   echo "Regression: workflows still perform inline docker compose up"
-  grep -En 'docker compose -f "\$COMPOSE_FILE" up ' "$DEPLOY_WORKFLOW" "$ROLLBACK_WORKFLOW"
   exit 1
 fi
 
@@ -135,4 +172,6 @@ if grep -En 'images\.sh" prepare .*prometheus|images\.sh" prepare .*node-exporte
   exit 1
 fi
 
-echo "Production workflows are gated by CI, security, static validation and health checks"
+python3 -m unittest -v "$ROOT_DIR/.github/scripts/test_service_catalog.py"
+
+echo "Production workflows use catalog-driven service coverage, CI/security gates and health checks"
