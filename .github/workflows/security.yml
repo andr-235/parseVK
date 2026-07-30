@@ -131,73 +131,34 @@ jobs:
           exit 1
 
   python-dependency-scan:
-    name: Audit ${{ matrix.service }} Dependencies
-    runs-on: ubuntu-latest
+    name: Audit Python service dependencies
     needs: catalog
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
         service: ${{ fromJSON(needs.catalog.outputs.audit_matrix) }}
-    steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-      - name: Audit Python dependencies
-        working-directory: services/${{ matrix.service }}
-        run: |
-          set -euo pipefail
-          uv sync --frozen
-          if ! uv audit --frozen --no-dev; then
-            echo "::warning::Python dependency findings detected in ${{ matrix.service }}; currently advisory until the existing backlog is fixed."
-          fi
+    uses: ./.github/workflows/reusable-python-security.yml
+    with:
+      service: ${{ matrix.service }}
 
   docker-scan:
-    name: Scan ${{ matrix.service }} Image
-    runs-on: ubuntu-latest
+    name: Scan changed Docker images
     needs: catalog
     if: needs.catalog.outputs.docker_changed == 'true'
     strategy:
       fail-fast: false
       max-parallel: 3
       matrix: ${{ fromJSON(needs.catalog.outputs.docker_matrix) }}
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Build image for scanning
-        id: build-image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ${{ matrix.dockerfile }}
-          push: false
-          load: true
-          tags: ${{ matrix.image }}
-          cache-from: type=gha,scope=security-${{ matrix.service }}
-          cache-to: type=gha,mode=max,scope=security-${{ matrix.service }}
-          build-args: ${{ matrix.service == 'frontend' && 'VITE_APP_TITLE=Центр аналитики\nVITE_API_URL=/api\nVITE_API_WS_URL=auto\nVITE_DEV_MODE=false' || '' }}
-
-      - name: Run Trivy vulnerability scanner
-        if: steps.build-image.outcome == 'success'
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ${{ matrix.image }}
-          format: "sarif"
-          output: "trivy-${{ matrix.service }}-results.sarif"
-          severity: "CRITICAL,HIGH"
-
-      - name: Upload Trivy results to GitHub Security
-        if: always() && steps.build-image.outcome == 'success'
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: "trivy-${{ matrix.service }}-results.sarif"
-          wait-for-processing: false
+    permissions:
+      contents: read
+      security-events: write
+    uses: ./.github/workflows/reusable-docker-security.yml
+    with:
+      service: ${{ matrix.service }}
+      dockerfile: ${{ matrix.dockerfile }}
+      image: ${{ matrix.image }}
+      build_args: ${{ matrix.service == 'frontend' && 'VITE_APP_TITLE=Центр аналитики\nVITE_API_URL=/api\nVITE_API_WS_URL=auto\nVITE_DEV_MODE=false' || '' }}
 
   secret-scan:
     name: Scan for Secrets
