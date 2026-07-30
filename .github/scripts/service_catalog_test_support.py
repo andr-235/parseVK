@@ -17,7 +17,11 @@ def make_catalog(path: Path) -> Catalog:
             "audit": ["libs/py/common/"],
             "docker": [".dockerignore", "libs/py/common/"],
             "deploy": [".dockerignore", "libs/py/common/"],
-            "migration": ["libs/py/common/"],
+            "migration": [
+                ".github/service-catalog.yaml",
+                "docker-compose.yml",
+                "libs/py/common/",
+            ],
         },
         "services": {
             "api": {
