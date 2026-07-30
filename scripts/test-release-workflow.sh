@@ -25,7 +25,6 @@ reject_pattern() {
   if grep -Eq -- "$pattern" "$file"; then echo "$message"; exit 1; fi
 }
 
-require_pattern "$PUBLISH" 'workflows:[[:space:]]*$' "Release workflow has no workflow_run source"
 require_pattern "$PUBLISH" 'Security Scanning' "Release workflow is not gated by Security"
 require_pattern "$PUBLISH" "workflow_run\.conclusion == 'success'" "Failed Security run can publish images"
 require_pattern "$PUBLISH" "workflow_run\.event == 'push'" "Non-push Security run can publish images"
@@ -36,19 +35,21 @@ require_pattern "$PUBLISH" 'cancel-in-progress: true' "A newer main commit does 
 require_pattern "$PUBLISH" '--purpose docker' "Release image matrix is not catalog-driven"
 require_pattern "$PUBLISH" 'uses: \./\.github/workflows/reusable-publish-image\.yml' \
   "Release workflow does not call reusable image publisher"
-require_pattern "$PUBLISH" 'needs:[[:space:]]*$' "Manifest is not dependent on publish jobs"
-require_pattern "$PUBLISH" 'release_manifest\.py' "Release workflow does not validate manifest"
-require_pattern "$PUBLISH" 'release-manifest-.*commit_sha' "Release artifact is not commit-addressed"
+require_pattern "$PUBLISH" 'merge-multiple: true' "Digest metadata is not flattened for aggregation"
+require_pattern "$PUBLISH" '--commit-sha' "Manifest is not bound to the validated commit"
+require_pattern "$PUBLISH" 'release-manifest-.*target_sha' "Release artifact is not commit-addressed"
 reject_pattern "$PUBLISH" 'workflow_dispatch:' "Release workflow accepts manual arbitrary execution"
 
 require_pattern "$REUSABLE" 'packages: write' "Reusable publisher cannot push to GHCR"
+require_pattern "$REUSABLE" 'attestations: write' "Reusable publisher cannot write attestations"
 require_pattern "$REUSABLE" 'push: true' "Reusable publisher does not push images"
-require_pattern "$REUSABLE" 'tags:.*commit_sha' "Published image is not tagged by commit SHA"
+require_pattern "$REUSABLE" 'tags:.*target_sha' "Published image is not tagged by commit SHA"
 require_pattern "$REUSABLE" 'sbom: true' "Published image does not include SBOM"
 require_pattern "$REUSABLE" 'provenance: mode=max' "Published image does not include provenance"
+require_pattern "$REUSABLE" 'git ls-remote origin refs/heads/main' "Reusable publisher accepts stale main"
 require_pattern "$REUSABLE" 'sha256:\[0-9a-f\].*64' "Image digest is not validated"
 require_pattern "$REUSABLE" 'imagetools inspect' "Published digest is not checked in GHCR"
-require_pattern "$REUSABLE" 'release-image-.*service' "Per-service digest metadata is not uploaded"
+require_pattern "$REUSABLE" 'published-image-.*service' "Per-service digest metadata is not uploaded"
 
 for file in "$MANIFEST" "$MANIFEST_TEST"; do
   lines="$(wc -l < "$file")"
