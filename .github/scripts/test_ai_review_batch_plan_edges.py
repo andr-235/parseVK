@@ -29,18 +29,18 @@ class CommitPlanEdgeTests(unittest.TestCase):
         run_git(self.repo, "init", capture_output=True)
         run_git(self.repo, "config", "user.email", "review@example.com")
         run_git(self.repo, "config", "user.name", "Reviewer")
-        self.base = self._commit("base")
+        self.base = self._commit("value.txt", "base")
 
-    def _commit(self, value: str) -> str:
-        path = self.repo / "value.txt"
+    def _commit(self, filename: str, value: str) -> str:
+        path = self.repo / filename
         previous = path.read_text(encoding="utf-8") if path.exists() else ""
         path.write_text(previous + value + "\n", encoding="utf-8")
-        run_git(self.repo, "add", "value.txt")
+        run_git(self.repo, "add", filename)
         run_git(self.repo, "commit", "-m", value, capture_output=True)
         return git_output(self.repo, "rev-parse", "HEAD")
 
     def test_oversized_pr_stays_blocked_after_small_synchronize(self) -> None:
-        commits = [self._commit(str(index)) for index in range(3)]
+        commits = [self._commit("value.txt", str(index)) for index in range(3)]
         with patch.object(plan_module, "MAX_COMMITS_PER_RUN", 2):
             value = plan_module.build_plan(
                 action="synchronize",
@@ -55,9 +55,9 @@ class CommitPlanEdgeTests(unittest.TestCase):
 
     def test_synchronize_excludes_commits_reachable_from_base(self) -> None:
         run_git(self.repo, "checkout", "-b", "feature", capture_output=True)
-        feature_commit = self._commit("feature")
+        feature_commit = self._commit("feature.txt", "feature")
         run_git(self.repo, "checkout", "master", capture_output=True)
-        updated_base = self._commit("base-update")
+        updated_base = self._commit("base.txt", "base-update")
         run_git(self.repo, "checkout", "feature", capture_output=True)
         run_git(
             self.repo,
