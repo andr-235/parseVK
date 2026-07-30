@@ -15,11 +15,6 @@ on:
         description: Local image tag for scanning
         required: true
         type: string
-      build_args:
-        description: Optional multiline Docker build arguments
-        required: false
-        default: ""
-        type: string
 
 permissions:
   contents: read
@@ -49,7 +44,6 @@ jobs:
           tags: ${{ inputs.image }}
           cache-from: type=gha,scope=security-${{ inputs.service }}
           cache-to: type=gha,mode=max,scope=security-${{ inputs.service }}
-          build-args: ${{ inputs.build_args }}
 
       - name: Run Trivy vulnerability scanner
         if: steps.build-image.outcome == 'success'
