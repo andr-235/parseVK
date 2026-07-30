@@ -191,7 +191,7 @@ jobs:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_sha || github.sha }}
 
       - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
