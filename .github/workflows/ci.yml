@@ -72,8 +72,9 @@ jobs:
               PYTHON_CHANGED=true
             fi
 
-            if echo "$CHANGED_FILES" | grep -qE '^(\.github/workflows/ci\.yml|\.github/scripts/validate_contract_examples\.py)$'; then
+            if echo "$CHANGED_FILES" | grep -qE '^\.github/scripts/validate_contract_examples\.py$'; then
               CONTRACTS_CHANGED=true
+              PYTHON_CHANGED=true
             fi
           fi
 

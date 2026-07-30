@@ -59,6 +59,7 @@ def main() -> int:
         print("No invalid contract examples found", file=sys.stderr)
         return 1
 
+    # valid-* : schema accept + boundary accept
     for example in valid_examples:
         with open(example, encoding="utf-8") as fh:
             instance = json.load(fh)
@@ -68,11 +69,6 @@ def main() -> int:
             print(f"  FAIL {example.name}: {exc.message}", file=sys.stderr)
             failures += 1
             continue
-        print(f"  PASS {example.name}")
-
-    for example in consume_examples:
-        with open(example, encoding="utf-8") as fh:
-            instance = json.load(fh)
         try:
             parse_for_consume(
                 VK_CATALOG,
@@ -81,11 +77,36 @@ def main() -> int:
                 value=json.dumps(instance).encode("utf-8"),
             )
         except ContractError as exc:
-            print(f"  FAIL {example.name}: {exc}", file=sys.stderr)
+            print(f"  FAIL {example.name}: valid example rejected by contract: {exc}", file=sys.stderr)
             failures += 1
             continue
         print(f"  PASS {example.name}")
 
+    # consume-* : schema reject + boundary accept
+    for example in consume_examples:
+        with open(example, encoding="utf-8") as fh:
+            instance = json.load(fh)
+        try:
+            validator.validate(instance)
+            print(f"  FAIL {example.name}: expected schema rejection but got none", file=sys.stderr)
+            failures += 1
+            continue
+        except jsonschema.ValidationError:
+            pass
+        try:
+            parse_for_consume(
+                VK_CATALOG,
+                consumer="vk-service",
+                topic="parsevk.vk.commands",
+                value=json.dumps(instance).encode("utf-8"),
+            )
+        except ContractError as exc:
+            print(f"  FAIL {example.name}: consume example rejected by contract: {exc}", file=sys.stderr)
+            failures += 1
+            continue
+        print(f"  PASS {example.name}")
+
+    # invalid-schema-* : schema reject
     for example in invalid_schema_examples:
         with open(example, encoding="utf-8") as fh:
             instance = json.load(fh)
@@ -96,25 +117,16 @@ def main() -> int:
         except jsonschema.ValidationError:
             print(f"  PASS {example.name} (expectedly rejected by schema)")
 
-    # Cross-validate: schema-only rejects must also pass contract check
-    # to ensure the schema + contract stay in sync on envelope-level constraints
-    for example in invalid_schema_examples:
-        with open(example, encoding="utf-8") as fh:
-            instance = json.load(fh)
-        try:
-            parse_for_consume(
-                VK_CATALOG,
-                consumer="vk-service",
-                topic="parsevk.vk.commands",
-                value=json.dumps(instance).encode("utf-8"),
-            )
-            print(f"  INFO {example.name}: passes contract (schema-only rejection)")
-        except ContractError:
-            print(f"  INFO {example.name}: also rejected by contract (consistent)")
-
+    # invalid-contract-* : schema accept + boundary reject
     for example in invalid_contract_examples:
         with open(example, encoding="utf-8") as fh:
             instance = json.load(fh)
+        try:
+            validator.validate(instance)
+        except jsonschema.ValidationError as exc:
+            print(f"  FAIL {example.name}: expected schema acceptance but got: {exc.message}", file=sys.stderr)
+            failures += 1
+            continue
         try:
             parse_for_consume(
                 VK_CATALOG,

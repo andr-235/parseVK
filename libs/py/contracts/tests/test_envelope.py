@@ -134,14 +134,15 @@ class TestMessageEnvelope:
 
     def test_wire_json_zulu(self) -> None:
         """Wire JSON with Z offset is parsed and normalized to UTC."""
-        payload = SamplePayload(event="wire", value=0)
-        envelope = MessageEnvelope[SamplePayload](
-            message_id=uuid4(),
-            message_type="test.wire",
-            schema_version=1,
-            occurred_at=datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC),
-            producer="svc",
-            payload=payload,
+        raw = (
+            '{"messageId":"00000000-0000-0000-0000-000000000001",'
+            '"messageType":"test.wire",'
+            '"schemaVersion":1,'
+            '"occurredAt":"2026-01-01T12:00:00Z",'
+            '"producer":"svc",'
+            '"payload":{"event":"zulu","value":0}}'
         )
-        wire = envelope.to_wire_json()
-        assert "2026-01-01T12:00:00Z" in wire or "+00:00" in wire
+        restored = MessageEnvelope[SamplePayload].model_validate_json(
+            raw, strict=True,
+        )
+        assert restored.occurred_at.tzinfo is UTC

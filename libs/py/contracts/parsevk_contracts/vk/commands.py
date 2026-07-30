@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated, Literal, Self
 from uuid import UUID
 
-from pydantic import Field, StringConstraints, model_validator
+from pydantic import Field, StringConstraints, field_validator, model_validator
 
 from parsevk_contracts._base import ContractModel
 from parsevk_contracts.catalog import ContractCatalog, MessageContract, PartitionKeySpec
@@ -58,6 +58,13 @@ class CommentSelection(ContractModel):
 
     mode: Literal["all"]
     include_thread_replies: Literal[True]
+
+    @field_validator("include_thread_replies", mode="before")
+    @classmethod
+    def require_actual_true(cls, value: object) -> object:
+        if value is not True:
+            raise ValueError("includeThreadReplies must be true")
+        return value
 
 
 class VkExecutionRequested(ContractModel):

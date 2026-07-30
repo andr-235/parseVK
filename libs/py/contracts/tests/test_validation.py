@@ -68,7 +68,7 @@ def make_prepare_kwargs(**overrides: object) -> dict[str, object]:
         "occurred_at": datetime.now(UTC),
         "correlation_id": uuid4(),
         "causation_id": None,
-        "payload": {"entityId": "abc", "value": 1},
+        "payload": {"entity_id": "abc", "value": 1},
     }
     base.update(overrides)
     return base
@@ -112,7 +112,7 @@ class TestPrepareForPublish:
             prepare_for_publish(catalog, **kwargs)  # type: ignore[arg-type]
 
     def test_rejects_extra_nested_field(self, catalog: ContractCatalog) -> None:
-        payload: dict[str, object] = {"entityId": "abc", "value": 1, "extraField": "x"}
+        payload: dict[str, object] = {"entity_id": "abc", "value": 1, "extraField": "x"}
         kwargs = make_prepare_kwargs(payload=payload)
         with pytest.raises(ContractValidationError):
             prepare_for_publish(catalog, **kwargs)  # type: ignore[arg-type]
@@ -160,7 +160,7 @@ class TestPrepareForPublish:
         kwargs = make_prepare_kwargs(
             message_type="test.corr-path",
             producer="svc",
-            payload={"entityId": "abc", "value": 1},
+            payload={"entity_id": "abc", "value": 1},
             correlation_id=corr_id,
         )
         kwargs["occurred_at"] = datetime.now(UTC)
@@ -431,7 +431,7 @@ class TestStrictMode:
                 producer="svc",
                 message_id=uuid4(),
                 occurred_at=datetime.now(UTC),
-                payload={"entityId": "abc", "value": "1"},
+                payload={"entity_id": "abc", "value": "1"},
             )
 
     def test_producer_accepts_correct_types(self) -> None:
@@ -451,6 +451,48 @@ class TestStrictMode:
             producer="svc",
             message_id=uuid4(),
             occurred_at=datetime.now(UTC),
-            payload={"entityId": "abc", "value": 1},
+            payload={"entity_id": "abc", "value": 1},
         )
         assert isinstance(result, PreparedMessage)
+
+
+class TestSnakeCaseArrayRejection:
+    """Snake_case rejection recurses into array elements."""
+
+    class ArrayItem(ContractModel):
+        demand_id: str
+
+    class ArrayPayload(ContractModel):
+        items: tuple[ArrayItem, ...]
+
+    @pytest.fixture
+    def catalog(self) -> ContractCatalog:
+        c = MessageContract(
+            message_type="test.array",
+            schema_version=1,
+            payload_model=self.ArrayPayload,
+            topic="test.topic",
+            producers=frozenset({"svc"}),
+            consumers=frozenset({"svc"}),
+        )
+        return ContractCatalog.from_contracts((c,))
+
+    def test_array_element_snake_field(self, catalog: ContractCatalog) -> None:
+        from json import dumps
+        raw = {
+            "messageId": str(uuid4()),
+            "messageType": "test.array",
+            "schemaVersion": 1,
+            "occurredAt": datetime.now(UTC).isoformat(),
+            "producer": "svc",
+            "payload": {
+                "items": [
+                    {"demandId": "abc", "demand_id": "abc"},
+                ],
+            },
+        }
+        with pytest.raises(ContractValidationError):
+            parse_for_consume(
+                catalog, consumer="svc", topic="test.topic",
+                value=dumps(raw).encode("utf-8"),
+            )

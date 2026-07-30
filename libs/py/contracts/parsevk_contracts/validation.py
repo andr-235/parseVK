@@ -87,17 +87,6 @@ def _resolve_contract_model(ann: object) -> type[ContractModel] | None:
     return None
 
 
-def _flatten_payload_field_names(model: type[ContractModel]) -> set[str]:
-    """Recursively collect all Python field names from a payload model tree."""
-    names: set[str] = set()
-    for field_name, field_info in model.model_fields.items():
-        names.add(field_name)
-        nested = _resolve_contract_model(field_info.annotation)
-        if nested is not None:
-            names.update(_flatten_payload_field_names(nested))
-    return names
-
-
 def _reject_known_python_field_names(
     raw: dict[str, object],
     model: type[ContractModel],
@@ -126,6 +115,12 @@ def _reject_known_python_field_names(
                 nested_model = _resolve_contract_model(field_info.annotation)
                 if nested_model is not None:
                     _reject_known_python_field_names(nested_value, nested_model, error_type, skip_recursion)
+            elif isinstance(nested_value, (list, tuple)):
+                nested_model = _resolve_contract_model(field_info.annotation)
+                if nested_model is not None:
+                    for item in nested_value:
+                        if isinstance(item, dict):
+                            _reject_known_python_field_names(item, nested_model, error_type, skip_recursion)
 
 
 def prepare_for_publish(
@@ -155,13 +150,10 @@ def prepare_for_publish(
             f"Service '{producer}' is not allowed to publish '{message_type}'"
         )
 
-    _reject_known_python_field_names(
-        payload, contract.payload_model, ContractValidationError,
-    )
-
     try:
         payload_model = contract.payload_model.model_validate(
             payload, strict=True, extra="forbid",
+            by_alias=False, by_name=True,
         )
     except ValidationError as exc:
         raise ContractValidationError(

@@ -63,8 +63,10 @@ CATALOG = ContractCatalog.from_contracts((MY_CONTRACT,))
 
 ### Publishing a message
 
-The producer API expects **Python-native types** — pass ``UUID`` objects,
-``int``, ``bool``, etc. directly, not their string representations.
+The producer API expects **Python-native types** with **snake_case keys**
+— pass ``UUID`` objects, ``int``, ``bool``, etc. directly, not their
+string representations. The payload dict uses Python field names, not
+wire-format camelCase; serialization to camelCase happens automatically.
 
 ```python
 from uuid import uuid4
@@ -80,11 +82,21 @@ prepared = prepare_for_publish(
     occurred_at=datetime.now(timezone.utc),
     correlation_id=execution_id,
     causation_id=None,
-    payload={"executionId": execution_id, "taskRunId": task_run_id, ...},
+    payload={
+        "task_id": task_id,
+        "task_run_id": task_run_id,
+        "execution_id": execution_id,
+        "demands": demands,
+        "post_selection": post_selection_dict,
+        "comment_selection": comment_selection_dict,
+        "task_revision": 1,
+        "source_set_revision": 1,
+        "snapshot_sha256": sha256_hex,
+    },
 )
 # prepared.topic      → "parsevk.vk.commands"
 # prepared.partition_key → str(execution_id)
-# prepared.value      → JSON bytes for Kafka
+# prepared.value      → JSON bytes for Kafka (camelCase)
 # prepared.headers    → tuple of (key, bytes) pairs
 ```
 

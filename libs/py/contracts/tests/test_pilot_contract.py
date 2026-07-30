@@ -245,3 +245,276 @@ class TestEnvelopeWithPilotContract:
         assert wire["schemaVersion"] == 1
         assert "payload" in wire
         assert wire["payload"]["executionId"] == str(payload.execution_id)
+
+
+class TestPilotProducer:
+    """Real-world producer boundary tests for vk.execution.requested."""
+
+    def make_payload_dict(
+        self,
+        task_run_id: object = None,
+        execution_id: object = None,
+    ) -> dict[str, object]:
+        uid1, uid2, uid3 = uuid4(), uuid4(), uuid4()
+        return {
+            "task_id": 1,
+            "task_run_id": task_run_id or uid1,
+            "execution_id": execution_id or uid2,
+            "demands": (
+                {
+                    "demand_id": uid3,
+                    "source": {
+                        "source_id": uuid4(),
+                        "provider": "vk",
+                        "source_type": "community",
+                        "external_id": "123",
+                        "owner_id": -123,
+                    },
+                },
+            ),
+            "post_selection": {
+                "strategy": "latestByPublishedAt",
+                "limit_per_source": 100,
+            },
+            "comment_selection": {
+                "mode": "all",
+                "include_thread_replies": True,
+            },
+            "task_revision": 1,
+            "source_set_revision": 1,
+            "snapshot_sha256": "a" * 64,
+        }
+
+    def test_snake_case_uuid_tuple_accept(self) -> None:
+        """snake_case + UUID objects + tuple → accepted."""
+        from parsevk_contracts.validation import prepare_for_publish
+
+        execution_id = uuid4()
+        payload = self.make_payload_dict(execution_id=execution_id)
+        result = prepare_for_publish(
+            CATALOG,
+            message_type="vk.execution.requested",
+            schema_version=1,
+            producer="tasks-service",
+            message_id=uuid4(),
+            occurred_at=datetime.now(UTC),
+            correlation_id=execution_id,
+            causation_id=None,
+            payload=payload,
+        )
+        assert isinstance(result.envelope.payload, VkExecutionRequested)
+
+    def test_camel_case_payload_rejected(self) -> None:
+        """camelCase keys in producer payload → rejected."""
+        from parsevk_contracts.errors import ContractValidationError
+        from parsevk_contracts.validation import prepare_for_publish
+
+        payload: dict[str, object] = {
+            "taskId": 1,
+            "taskRunId": uuid4(),
+            "executionId": uuid4(),
+            "demands": (),
+            "postSelection": {"strategy": "latestByPublishedAt", "limitPerSource": 100},
+            "commentSelection": {"mode": "all", "includeThreadReplies": True},
+            "taskRevision": 1,
+            "sourceSetRevision": 1,
+            "snapshotSha256": "a" * 64,
+        }
+        with pytest.raises(ContractValidationError):
+            prepare_for_publish(
+                CATALOG,
+                message_type="vk.execution.requested",
+                schema_version=1,
+                producer="tasks-service",
+                message_id=uuid4(),
+                occurred_at=datetime.now(UTC),
+                correlation_id=uuid4(),
+                causation_id=None,
+                payload=payload,
+            )
+
+    def test_uuid_string_rejected(self) -> None:
+        """UUID as string in producer payload → rejected (strict)."""
+        from parsevk_contracts.errors import ContractValidationError
+        from parsevk_contracts.validation import prepare_for_publish
+
+        payload = self.make_payload_dict(
+            task_run_id=str(uuid4()),
+            execution_id=str(uuid4()),
+        )
+        with pytest.raises(ContractValidationError):
+            prepare_for_publish(
+                CATALOG,
+                message_type="vk.execution.requested",
+                schema_version=1,
+                producer="tasks-service",
+                message_id=uuid4(),
+                occurred_at=datetime.now(UTC),
+                correlation_id=uuid4(),
+                causation_id=None,
+                payload=payload,
+            )
+
+    def test_demands_list_rejected(self) -> None:
+        """demands as list (not tuple) → rejected (strict)."""
+        from parsevk_contracts.errors import ContractValidationError
+        from parsevk_contracts.validation import prepare_for_publish
+
+        payload = self.make_payload_dict()
+        payload["demands"] = list(payload["demands"])  # tuple → list
+        with pytest.raises(ContractValidationError):
+            prepare_for_publish(
+                CATALOG,
+                message_type="vk.execution.requested",
+                schema_version=1,
+                producer="tasks-service",
+                message_id=uuid4(),
+                occurred_at=datetime.now(UTC),
+                correlation_id=uuid4(),
+                causation_id=None,
+                payload=payload,
+            )
+
+
+class TestCommentSelectionValidation:
+    """include_thread_replies must be true (not 1, not 1.0)."""
+
+    def make_wire(self, include_thread_replies: object) -> bytes:
+        import json
+        data = {
+            "messageId": str(uuid4()),
+            "messageType": "vk.execution.requested",
+            "schemaVersion": 1,
+            "occurredAt": datetime.now(UTC).isoformat(),
+            "producer": "tasks-service",
+            "causationId": None,
+            "payload": {
+                "taskId": 1,
+                "taskRunId": str(uuid4()),
+                "executionId": str(uuid4()),
+                "demands": [],
+                "postSelection": {"strategy": "latestByPublishedAt", "limitPerSource": 100},
+                "commentSelection": {"mode": "all", "includeThreadReplies": include_thread_replies},
+                "taskRevision": 1,
+                "sourceSetRevision": 1,
+                "snapshotSha256": "a" * 64,
+            },
+        }
+        return json.dumps(data).encode("utf-8")
+
+    def fix_wire(self, data: dict[str, object], exec_id: UUID) -> bytes:
+        import json
+        data["correlationId"] = str(exec_id)
+        data["payload"]["executionId"] = str(exec_id)
+        data["payload"]["demands"] = [{
+            "demandId": str(uuid4()),
+            "source": {
+                "sourceId": str(uuid4()),
+                "provider": "vk",
+                "sourceType": "community",
+                "externalId": "123",
+                "ownerId": -123,
+            },
+        }]
+        return json.dumps(data).encode("utf-8")
+
+    def test_consumer_true_accept(self) -> None:
+        from json import loads
+
+        from parsevk_contracts.validation import parse_for_consume
+        exec_id = uuid4()
+        raw = loads(self.make_wire(True))
+        result = parse_for_consume(
+            CATALOG, consumer="vk-service", topic="parsevk.vk.commands",
+            value=self.fix_wire(raw, exec_id),
+        )
+        assert result.envelope.payload.comment_selection.include_thread_replies is True
+
+    def test_consumer_one_rejected(self) -> None:
+        from json import loads
+
+        from parsevk_contracts.errors import ContractError
+        from parsevk_contracts.validation import parse_for_consume
+        exec_id = uuid4()
+        with pytest.raises(ContractError):
+            parse_for_consume(
+                CATALOG, consumer="vk-service", topic="parsevk.vk.commands",
+                value=self.fix_wire(loads(self.make_wire(1)), exec_id),
+            )
+
+    def test_consumer_one_point_zero_rejected(self) -> None:
+        from json import loads
+
+        from parsevk_contracts.errors import ContractError
+        from parsevk_contracts.validation import parse_for_consume
+        exec_id = uuid4()
+        with pytest.raises(ContractError):
+            parse_for_consume(
+                CATALOG, consumer="vk-service", topic="parsevk.vk.commands",
+                value=self.fix_wire(loads(self.make_wire(1.0)), exec_id),
+            )
+
+    def test_producer_true_accept(self) -> None:
+        from parsevk_contracts.validation import prepare_for_publish
+        execution_id = uuid4()
+        uid1, uid2 = uuid4(), uuid4()
+        payload: dict[str, object] = {
+            "task_id": 1,
+            "task_run_id": uid1,
+            "execution_id": execution_id,
+            "demands": ({
+                "demand_id": uid2,
+                "source": {
+                    "source_id": uuid4(),
+                    "provider": "vk",
+                    "source_type": "community",
+                    "external_id": "123",
+                    "owner_id": -123,
+                },
+            },),
+            "post_selection": {"strategy": "latestByPublishedAt", "limit_per_source": 100},
+            "comment_selection": {"mode": "all", "include_thread_replies": True},
+            "task_revision": 1,
+            "source_set_revision": 1,
+            "snapshot_sha256": "a" * 64,
+        }
+        result = prepare_for_publish(
+            CATALOG,
+            message_type="vk.execution.requested",
+            schema_version=1,
+            producer="tasks-service",
+            message_id=uuid4(),
+            occurred_at=datetime.now(UTC),
+            correlation_id=execution_id,
+            causation_id=None,
+            payload=payload,
+        )
+        assert result.envelope.payload.comment_selection.include_thread_replies is True
+
+    def test_producer_one_rejected(self) -> None:
+        from parsevk_contracts.errors import ContractValidationError
+        from parsevk_contracts.validation import prepare_for_publish
+        execution_id = uuid4()
+        payload: dict[str, object] = {
+            "task_id": 1,
+            "task_run_id": uuid4(),
+            "execution_id": execution_id,
+            "demands": (),
+            "post_selection": {"strategy": "latestByPublishedAt", "limit_per_source": 100},
+            "comment_selection": {"mode": "all", "include_thread_replies": 1},
+            "task_revision": 1,
+            "source_set_revision": 1,
+            "snapshot_sha256": "a" * 64,
+        }
+        with pytest.raises(ContractValidationError):
+            prepare_for_publish(
+                CATALOG,
+                message_type="vk.execution.requested",
+                schema_version=1,
+                producer="tasks-service",
+                message_id=uuid4(),
+                occurred_at=datetime.now(UTC),
+                correlation_id=execution_id,
+                causation_id=None,
+                payload=payload,
+            )
