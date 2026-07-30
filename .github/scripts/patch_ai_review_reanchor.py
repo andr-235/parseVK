@@ -1,14 +1,13 @@
 from pathlib import Path
 
+# One-shot patch: snap only nearby model coordinates to real changed lines.
 reviewer = Path(".github/scripts/ai_review.py")
 text = reviewer.read_text(encoding="utf-8")
-
 constant_old = "CONTEXT_RADIUS = 3\n"
 constant_new = "CONTEXT_RADIUS = 3\nREANCHOR_RADIUS = 5\n"
 if text.count(constant_old) != 1:
     raise RuntimeError("expected one CONTEXT_RADIUS declaration")
 text = text.replace(constant_old, constant_new, 1)
-
 filter_old = '''def line_is_changed(path: str, line: int | None, line_map: Mapping[str, Sequence[int]]) -> bool:
     if line is None:
         return file_level_allowed(path)
@@ -117,7 +116,6 @@ def filter_findings(findings: Sequence[Finding], scope: Scope) -> tuple[tuple[Fi
 if text.count(filter_old) != 1:
     raise RuntimeError(f"expected one filter block, found {text.count(filter_old)}")
 reviewer.write_text(text.replace(filter_old, filter_new, 1), encoding="utf-8")
-
 tests = Path(".github/scripts/test_ai_review.py")
 test_text = tests.read_text(encoding="utf-8")
 needle = '''        self.assertEqual(result.summary, "Подтверждённых замечаний нет.")
