@@ -4,6 +4,7 @@ import re
 from collections import Counter
 from collections.abc import Sequence
 
+from .markdown import render_alert, render_confidence, render_finding_sections
 from .models import Finding, ReviewResult
 
 MAX_INLINE_COMMENTS = 12
@@ -42,28 +43,28 @@ def compact_title(finding: Finding) -> str:
 
 def render_inline_finding(finding: Finding) -> str:
     icon, label = SEVERITY_STYLE[finding.severity]
-    confidence = round(finding.confidence * 100)
-    return (
-        f"{INLINE_MARKER}\n"
-        f"**{icon} {label} · {compact_title(finding)}**\n\n"
-        f"{finding.scenario}\n\n"
-        f"> **Последствия:** {finding.impact}\n\n"
-        f"**Исправление:** {finding.fix}\n\n"
-        f"<sub>Уверенность: {confidence}% · анализ Big Pickle, "
-        "проверка diff-фильтрами parseVK</sub>"
+    return "\n\n".join(
+        (
+            INLINE_MARKER,
+            f"### {icon} {label} · {compact_title(finding)}",
+            *render_finding_sections(finding),
+            render_confidence(finding),
+        )
     )
 
 
 def render_file_finding(finding: Finding, index: int) -> str:
     icon, label = SEVERITY_STYLE[finding.severity]
-    confidence = round(finding.confidence * 100)
-    return (
-        f"#### {index}. {icon} {label} · `{finding.file}`\n\n"
-        f"**{compact_title(finding)}**\n\n"
-        f"{finding.scenario}\n\n"
-        f"- **Последствия:** {finding.impact}\n"
-        f"- **Исправление:** {finding.fix}\n"
-        f"- **Уверенность:** {confidence}%\n"
+    location = f"`{finding.file}`"
+    if finding.line is not None:
+        location += f" · строка {finding.line}"
+    return "\n\n".join(
+        (
+            f"#### {index}. {icon} {label} · {compact_title(finding)}",
+            f"<sub>📄 {location}</sub>",
+            *render_finding_sections(finding),
+            render_confidence(finding),
+        )
     )
 
 
@@ -83,6 +84,12 @@ def verdict_text(result: ReviewResult) -> str:
     return "🟡 Есть неблокирующие замечания"
 
 
+def verdict_alert_kind(result: ReviewResult) -> str:
+    if result.verdict == "changes-required":
+        return "CAUTION"
+    return "WARNING"
+
+
 def split_findings(
     result: ReviewResult,
 ) -> tuple[tuple[Finding, ...], tuple[Finding, ...]]:
@@ -100,13 +107,18 @@ def render_review_body(
     result: ReviewResult,
     overflow: Sequence[Finding],
 ) -> str:
+    summary = "\n\n".join(
+        (
+            verdict_text(result),
+            f"Проверен commit `{result.head_sha[:10]}`",
+            f"Замечания: {count_summary(result.findings)}",
+        )
+    )
     sections = [
         REVIEW_MARKER.format(head_sha=result.head_sha),
         "### 🔍 parseVK AI Review",
         "",
-        f"**Итог:** {verdict_text(result)}  ",
-        f"**Проверен commit:** `{result.head_sha[:10]}`  ",
-        f"**Замечания:** {count_summary(result.findings)}",
+        render_alert(verdict_alert_kind(result), "Итог ревью", summary),
     ]
     if overflow:
         sections.extend(
