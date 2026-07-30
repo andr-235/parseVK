@@ -58,15 +58,24 @@ class AlembicGraphTests(unittest.TestCase):
             errors, _ = validate_versions_dir("demo", versions)
             self.assertTrue(any("missing parent revisions" in error for error in errors))
 
-    def test_multiple_bases_are_rejected(self) -> None:
+    def test_multiple_bases_are_allowed_when_they_merge(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             versions = Path(directory)
             write_revision(versions, "001.py", "001", None)
             write_revision(versions, "other.py", "other", None)
             write_revision(versions, "merge.py", "merge", ("001", "other"))
             errors, head = validate_versions_dir("demo", versions)
-            self.assertTrue(any("expected exactly one base" in error for error in errors))
+            self.assertEqual(errors, [])
             self.assertEqual(head, "merge")
+
+    def test_unmerged_bases_are_rejected_as_multiple_heads(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            versions = Path(directory)
+            write_revision(versions, "001.py", "001", None)
+            write_revision(versions, "other.py", "other", None)
+            errors, head = validate_versions_dir("demo", versions)
+            self.assertTrue(any("expected exactly one head" in error for error in errors))
+            self.assertIsNone(head)
 
     def test_cycle_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
