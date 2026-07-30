@@ -27,7 +27,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: publish-release-images-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'main' }}
+  group: publish-release-images-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || (github.event_name == 'workflow_run' && github.event.workflow_run.event != 'workflow_dispatch') && format('ignored-{0}', github.run_id) || 'main' }}
   cancel-in-progress: true
 
 jobs:
