@@ -1,3 +1,10 @@
+# [0.82.0](https://github.com/andr-235/parseVK/compare/v0.81.1...v0.82.0) (2026-07-30)
+
+
+### Features
+
+* **ai-review:** улучшить оформление inline-комментариев ([#333](https://github.com/andr-235/parseVK/issues/333)) ([3900c84](https://github.com/andr-235/parseVK/commit/3900c84a5399d7bbc81e7f6860aa19a38be20e4c))
+
 ## [0.81.1](https://github.com/andr-235/parseVK/compare/v0.81.0...v0.81.1) (2026-07-30)
 
 

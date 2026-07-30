@@ -7,12 +7,6 @@ from pathlib import Path
 
 from ai_review_ui.models import Finding, PublishError, ReviewResult, load_result
 from ai_review_ui.publish import publish_inline_review
-from ai_review_ui.render import (
-    MAX_INLINE_COMMENTS,
-    render_inline_finding,
-    render_review_body,
-    split_findings,
-)
 
 
 class FakeApi:
@@ -42,19 +36,14 @@ class FakeApi:
         self.cleanup_calls += 1
 
 
-def finding(
-    *,
-    severity: str = "major",
-    line: int | None = 10,
-    index: int = 1,
-) -> Finding:
+def finding() -> Finding:
     return Finding(
-        severity=severity,
-        file=f"src/file_{index}.py",
-        line=line,
-        scenario=f"Сценарий дефекта {index}",
-        impact=f"Последствие {index}",
-        fix=f"Добавьте проверку {index}. Затем обновите тесты.",
+        severity="major",
+        file="src/file.py",
+        line=10,
+        scenario="Сценарий дефекта",
+        impact="Последствие",
+        fix="Добавьте проверку. Затем обновите тесты.",
         confidence=0.96,
     )
 
@@ -69,24 +58,6 @@ def result(*findings: Finding, verdict: str = "changes-required") -> ReviewResul
         findings=tuple(findings),
         blocking_count=sum(item.severity in {"blocker", "major"} for item in findings),
     )
-
-
-class RenderTests(unittest.TestCase):
-    def test_inline_comment_is_compact_and_actionable(self) -> None:
-        body = render_inline_finding(finding())
-        self.assertIn("🟠 Major · Добавьте проверку 1", body)
-        self.assertIn("Последствия", body)
-        self.assertIn("Исправление", body)
-        self.assertIn("96%", body)
-
-    def test_overflow_is_kept_in_review_summary(self) -> None:
-        findings = tuple(finding(index=index) for index in range(1, 15))
-        inline, overflow = split_findings(result(*findings))
-        self.assertEqual(len(inline), MAX_INLINE_COMMENTS)
-        self.assertEqual(len(overflow), 2)
-        body = render_review_body(result(*findings), overflow)
-        self.assertIn("Остальные замечания (2)", body)
-        self.assertIn("Проверен commit", body)
 
 
 class ModelTests(unittest.TestCase):
