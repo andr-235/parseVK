@@ -1,3 +1,10 @@
+## [0.83.2](https://github.com/andr-235/parseVK/compare/v0.83.1...v0.83.2) (2026-07-30)
+
+
+### Bug Fixes
+
+* **release:** make dispatched CI and Security gates executable ([#341](https://github.com/andr-235/parseVK/issues/341)) ([06e8b0e](https://github.com/andr-235/parseVK/commit/06e8b0e274572557960dbe8e6458e1b8f7d1057e))
+
 ## [0.83.1](https://github.com/andr-235/parseVK/compare/v0.83.0...v0.83.1) (2026-07-30)
 
 
