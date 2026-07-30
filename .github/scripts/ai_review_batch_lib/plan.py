@@ -35,15 +35,34 @@ def _merge_base(base: str, head: str, cwd: Path) -> str:
     return _git(["merge-base", base, head], cwd)
 
 
-def _start_sha(action: str, base: str, before: str, head: str, cwd: Path) -> str:
+def _commit_list(head: str, excluded: list[str], cwd: Path) -> list[str]:
+    output = _git(
+        ["rev-list", "--reverse", "--topo-order", head, "--not", *excluded],
+        cwd,
+    )
+    return [line for line in output.splitlines() if line]
+
+
+def _all_pr_commits(base: str, head: str, cwd: Path) -> list[str]:
+    return _commit_list(head, [base], cwd)
+
+
+def _new_pr_commits(
+    action: str,
+    base: str,
+    before: str,
+    head: str,
+    all_commits: list[str],
+    cwd: Path,
+) -> tuple[str, list[str]]:
     if (
         action == "synchronize"
         and before
         and before != ZERO_SHA
         and _is_ancestor(before, head, cwd)
     ):
-        return before
-    return _merge_base(base, head, cwd)
+        return before, _commit_list(head, [before, base], cwd)
+    return _merge_base(base, head, cwd), all_commits
 
 
 def build_plan(
@@ -54,21 +73,25 @@ def build_plan(
     head_sha: str,
     cwd: Path,
 ) -> dict[str, Any]:
-    start_sha = _start_sha(action, base_sha, before_sha, head_sha, cwd)
-    output = _git(
-        ["rev-list", "--reverse", "--topo-order", f"{start_sha}..{head_sha}"],
+    all_commits = _all_pr_commits(base_sha, head_sha, cwd)
+    start_sha, commits = _new_pr_commits(
+        action,
+        base_sha,
+        before_sha,
+        head_sha,
+        all_commits,
         cwd,
     )
-    commits = [line for line in output.splitlines() if line]
-    if len(commits) > MAX_COMMITS_PER_RUN:
+    if len(all_commits) > MAX_COMMITS_PER_RUN:
         return {
             "schema_version": 1,
             "run_head_sha": head_sha,
             "start_sha": start_sha,
             "status": "oversized",
-            "reason": "too-many-commits",
+            "reason": "too-many-pr-commits",
             "units": [],
-            "commit_count": len(commits),
+            "commit_count": len(all_commits),
+            "new_commit_count": len(commits),
         }
 
     units = []
@@ -88,7 +111,8 @@ def build_plan(
         "status": "review" if units else "empty",
         "reason": "commit-review-required" if units else "no-new-commits",
         "units": units,
-        "commit_count": len(units),
+        "commit_count": len(all_commits),
+        "new_commit_count": len(units),
     }
 
 
