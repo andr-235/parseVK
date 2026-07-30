@@ -57,7 +57,7 @@ jobs:
       github.event.pull_request.user.login == github.repository_owner &&
       github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:
@@ -168,16 +168,36 @@ jobs:
             {"read":{"*":"allow",".github/workflows/ai-code-review.yml":"deny","*.md":"deny","**/*.md":"deny","README*":"deny","**/README*":"deny","docs/**":"deny",".github/ai-review/**":"deny",".github/scripts/ai_review*":"deny"},"bash":"deny","edit":"deny","task":"deny","todowrite":"deny","skill":"deny","lsp":"deny","webfetch":"deny","websearch":"deny","external_directory":"deny","doom_loop":"deny"}
         run: |
           set +e
-          opencode run \
-            --format json \
-            --model opencode/big-pickle \
-            --agent plan \
-            --no-share \
-            --file "$AI_REVIEW_DIR/review.diff" \
-            < "$AI_REVIEW_DIR/prompt.txt" \
-            > "$AI_REVIEW_DIR/opencode-events.jsonl" \
-            2> "$AI_REVIEW_DIR/opencode.stderr"
-          exit_code=$?
+          exit_code=0
+          shopt -s nullglob
+          prompts=("$AI_REVIEW_DIR"/prompt-*.txt)
+          if (( ${#prompts[@]} == 0 )); then
+            echo "::error::Reviewer scope did not produce any prompt chunks."
+            exit_code=2
+          else
+            for prompt in "${prompts[@]}"; do
+              suffix="${prompt##*/prompt-}"
+              suffix="${suffix%.txt}"
+              diff="$AI_REVIEW_DIR/review-${suffix}.diff"
+              events="$AI_REVIEW_DIR/opencode-events-${suffix}.jsonl"
+              stderr="$AI_REVIEW_DIR/opencode-${suffix}.stderr"
+              echo "Running AI review chunk ${suffix} of ${#prompts[@]}."
+              opencode run \
+                --format json \
+                --model opencode/big-pickle \
+                --agent plan \
+                --no-share \
+                --file "$diff" \
+                < "$prompt" \
+                > "$events" \
+                2> "$stderr"
+              chunk_exit=$?
+              if (( chunk_exit != 0 )); then
+                exit_code=$chunk_exit
+                break
+              fi
+            done
+          fi
           set -e
           echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
           if (( exit_code != 0 )); then
@@ -224,7 +244,7 @@ jobs:
           else
             python "$AI_REVIEW_SCRIPT" finalize \
               --scope "$AI_REVIEW_DIR/scope.json" \
-              --events "$AI_REVIEW_DIR/opencode-events.jsonl" \
+              --events "$AI_REVIEW_DIR" \
               --exit-code "${OPENCODE_EXIT:-0}" \
               --output "$AI_REVIEW_DIR/review-result.json"
           fi

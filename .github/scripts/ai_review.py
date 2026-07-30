@@ -19,12 +19,16 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path, PurePosixPath
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any
 
 SCHEMA_VERSION = 1
-MAX_REVIEW_FILES = 25
-MAX_CHANGED_LINES = 1500
+MAX_CHUNK_FILES = 20
+MAX_CHUNK_CHANGED_LINES = 2000
+MAX_REVIEW_CHUNKS = 4
+MAX_REVIEW_FILES = MAX_CHUNK_FILES * MAX_REVIEW_CHUNKS
+MAX_CHANGED_LINES = MAX_CHUNK_CHANGED_LINES * MAX_REVIEW_CHUNKS
 MAX_FINDINGS = 20
 CONTEXT_RADIUS = 3
 
@@ -70,7 +74,7 @@ class Finding:
     confidence: float
 
     @classmethod
-    def from_mapping(cls, value: Mapping[str, Any]) -> "Finding":
+    def from_mapping(cls, value: Mapping[str, Any]) -> Finding:
         required = {"severity", "file", "line", "scenario", "impact", "fix", "confidence"}
         missing = required.difference(value)
         if missing:
@@ -120,6 +124,7 @@ class Scope:
     reviewable_files: tuple[str, ...]
     changed_lines: int
     line_map: Mapping[str, tuple[int, ...]]
+    chunks: tuple[tuple[str, ...], ...] = ()
 
     @property
     def review_required(self) -> bool:
@@ -135,10 +140,11 @@ class Scope:
             "reviewable_files": list(self.reviewable_files),
             "changed_lines": self.changed_lines,
             "line_map": {key: list(value) for key, value in self.line_map.items()},
+            "chunks": [list(chunk) for chunk in self.chunks],
         }
 
     @classmethod
-    def from_file(cls, path: Path) -> "Scope":
+    def from_file(cls, path: Path) -> Scope:
         value = load_json(path)
         return cls(
             schema_version=int(value["schema_version"]),
@@ -149,6 +155,7 @@ class Scope:
             reviewable_files=tuple(str(item) for item in value["reviewable_files"]),
             changed_lines=int(value["changed_lines"]),
             line_map={str(key): tuple(int(line) for line in lines) for key, lines in value["line_map"].items()},
+            chunks=tuple(tuple(str(path) for path in chunk) for chunk in value.get("chunks", [])),
         )
 
 
@@ -180,7 +187,7 @@ class FinalResult:
         }
 
     @classmethod
-    def from_file(cls, path: Path) -> "FinalResult":
+    def from_file(cls, path: Path) -> FinalResult:
         value = load_json(path)
         return cls(
             schema_version=int(value["schema_version"]),
@@ -226,13 +233,12 @@ def is_reviewable_path(path: str) -> bool:
 
 
 def run_git(args: Sequence[str], *, cwd: Path) -> str:
-    completed = subprocess.run(
-        ["git", *args],
+    completed = subprocess.run(  # noqa: S603 -- fixed executable with validated internal arguments
+        ["/usr/bin/git", *args],
         cwd=cwd,
         check=True,
         text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
     )
     return completed.stdout
 
@@ -255,6 +261,40 @@ def changed_line_count(base_sha: str, head_sha: str, paths: Sequence[str], *, cw
             return MAX_CHANGED_LINES + 1
         total += int(added) + int(deleted)
     return total
+
+
+def partition_by_limits(
+    paths: Sequence[str], line_counts: Mapping[str, int]
+) -> tuple[tuple[str, ...], ...]:
+    chunks: list[tuple[str, ...]] = []
+    current: list[str] = []
+    current_lines = 0
+
+    for path in paths:
+        path_lines = max(0, int(line_counts.get(path, 0)))
+        if current and (
+            len(current) >= MAX_CHUNK_FILES
+            or current_lines + path_lines > MAX_CHUNK_CHANGED_LINES
+        ):
+            chunks.append(tuple(current))
+            current = []
+            current_lines = 0
+        current.append(path)
+        current_lines += path_lines
+
+    if current:
+        chunks.append(tuple(current))
+    return tuple(chunks)
+
+
+def partition_review_files(
+    base_sha: str, head_sha: str, paths: Sequence[str], *, cwd: Path
+) -> tuple[tuple[str, ...], ...]:
+    line_counts = {
+        path: changed_line_count(base_sha, head_sha, [path], cwd=cwd)
+        for path in paths
+    }
+    return partition_by_limits(paths, line_counts)
 
 
 HUNK_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
@@ -299,29 +339,42 @@ def parse_changed_lines(diff_text: str) -> dict[str, tuple[int, ...]]:
 
 def build_scope(base_sha: str, head_sha: str, *, cwd: Path, output_dir: Path) -> Scope:
     output_dir.mkdir(parents=True, exist_ok=True)
+    for pattern in ("review-*.diff", "prompt-*.txt", "opencode-events-*.jsonl", "opencode-*.stderr"):
+        for stale in output_dir.glob(pattern):
+            stale.unlink(missing_ok=True)
+
     all_files = changed_files(base_sha, head_sha, cwd=cwd)
     reviewable = [path for path in all_files if is_reviewable_path(path)]
     count = changed_line_count(base_sha, head_sha, reviewable, cwd=cwd)
+    chunks: tuple[tuple[str, ...], ...] = ()
 
     if not reviewable:
         status = "skipped"
         reason = "no-reviewable-files"
-        diff_text = ""
         line_map: dict[str, tuple[int, ...]] = {}
     elif len(reviewable) > MAX_REVIEW_FILES or count > MAX_CHANGED_LINES:
-        status = "unavailable"
+        status = "oversized"
         reason = "pr-too-large"
-        diff_text = ""
         line_map = {}
     else:
-        status = "review"
-        reason = "review-required"
-        diff_text = run_git(["diff", "--unified=3", base_sha, head_sha, "--", *reviewable], cwd=cwd)
-        zero_context = run_git(["diff", "--unified=0", base_sha, head_sha, "--", *reviewable], cwd=cwd)
-        line_map = parse_changed_lines(zero_context)
-
-    (output_dir / "review.diff").write_text(diff_text, encoding="utf-8")
-    (output_dir / "prompt.txt").write_text(render_prompt(head_sha, reviewable), encoding="utf-8")
+        chunks = partition_review_files(base_sha, head_sha, reviewable, cwd=cwd)
+        if len(chunks) > MAX_REVIEW_CHUNKS:
+            status = "oversized"
+            reason = "too-many-review-chunks"
+            line_map = {}
+            chunks = ()
+        else:
+            status = "review"
+            reason = "review-required"
+            zero_context = run_git(["diff", "--unified=0", base_sha, head_sha, "--", *reviewable], cwd=cwd)
+            line_map = parse_changed_lines(zero_context)
+            for index, chunk in enumerate(chunks, start=1):
+                suffix = f"{index:03d}"
+                diff_text = run_git(["diff", "--unified=3", base_sha, head_sha, "--", *chunk], cwd=cwd)
+                (output_dir / f"review-{suffix}.diff").write_text(diff_text, encoding="utf-8")
+                (output_dir / f"prompt-{suffix}.txt").write_text(
+                    render_prompt(head_sha, chunk), encoding="utf-8"
+                )
 
     scope = Scope(
         schema_version=SCHEMA_VERSION,
@@ -332,6 +385,7 @@ def build_scope(base_sha: str, head_sha: str, *, cwd: Path, output_dir: Path) ->
         reviewable_files=tuple(reviewable),
         changed_lines=count,
         line_map=line_map,
+        chunks=chunks,
     )
     write_json(output_dir / "scope.json", scope.to_dict())
     return scope
@@ -499,7 +553,27 @@ def unavailable_result(head_sha: str, reason: str, summary: str) -> FinalResult:
         findings=(),
         dropped_findings=0,
         verdict="unavailable",
-        reaction="confused",
+        reaction="",
+        blocking_count=0,
+    )
+
+
+def oversized_result(scope: Scope) -> FinalResult:
+    return FinalResult(
+        schema_version=SCHEMA_VERSION,
+        status="blocked",
+        reason=scope.reason,
+        head_sha=scope.head_sha,
+        summary=sanitize(
+            f"AI-ревью не выполнено: PR превышает предел {MAX_REVIEW_FILES} файлов "
+            f"или {MAX_CHANGED_LINES} изменённых строк "
+            f"({len(scope.reviewable_files)} файлов, {scope.changed_lines} строк).",
+            600,
+        ),
+        findings=(),
+        dropped_findings=0,
+        verdict="review-required",
+        reaction="",
         blocking_count=0,
     )
 
@@ -519,27 +593,52 @@ def skipped_result(scope: Scope) -> FinalResult:
     )
 
 
+def event_paths(events_path: Path | None) -> tuple[Path, ...]:
+    if events_path is None or not events_path.exists():
+        return ()
+    if events_path.is_file():
+        return (events_path,)
+    return tuple(sorted(events_path.glob("opencode-events-*.jsonl")))
+
+
 def finalize_result(scope: Scope, events_path: Path | None, exit_code: int) -> FinalResult:
     if scope.status == "skipped":
         return skipped_result(scope)
-    if scope.status == "unavailable":
-        return unavailable_result(
-            scope.head_sha,
-            scope.reason,
-            f"PR превышает лимит reviewer: {len(scope.reviewable_files)} файлов, {scope.changed_lines} изменённых строк.",
-        )
+    if scope.status == "oversized":
+        return oversized_result(scope)
     if exit_code != 0:
         return unavailable_result(scope.head_sha, "opencode-failed", f"OpenCode завершился с кодом {exit_code}.")
-    if events_path is None or not events_path.exists():
-        return unavailable_result(scope.head_sha, "missing-events", "Файл событий OpenCode отсутствует.")
+
+    paths = event_paths(events_path)
+    if not paths:
+        return unavailable_result(scope.head_sha, "missing-events", "Файлы событий OpenCode отсутствуют.")
 
     try:
-        text = extract_text_events(events_path)
-        raw = extract_json_object(text)
-        status, summary, findings = validate_model_result(raw, scope.head_sha)
-        if status == "technical-error":
-            return unavailable_result(scope.head_sha, "model-technical-error", summary)
-        accepted, dropped = filter_findings(findings, scope)
+        summaries: list[str] = []
+        model_findings: list[Finding] = []
+        for path in paths:
+            text = extract_text_events(path)
+            raw = extract_json_object(text)
+            status, summary, findings = validate_model_result(raw, scope.head_sha)
+            if status == "technical-error":
+                return unavailable_result(scope.head_sha, "model-technical-error", summary)
+            summaries.append(summary)
+            model_findings.extend(findings)
+
+        unique: dict[tuple[Any, ...], Finding] = {}
+        for finding in model_findings:
+            key = (
+                finding.severity,
+                finding.file,
+                finding.line,
+                finding.scenario,
+                finding.impact,
+                finding.fix,
+            )
+            unique.setdefault(key, finding)
+        accepted, dropped = filter_findings(tuple(unique.values()), scope)
+        dropped += len(model_findings) - len(unique)
+        summary = " | ".join(summaries)
     except ReviewError as error:
         return unavailable_result(scope.head_sha, "invalid-model-result", str(error))
 
@@ -720,9 +819,20 @@ def publish_result(api: GitHubApi, pr_number: int, pr_title: str, result: FinalR
     api.remove_review_comments(pr_number)
 
     if result.verdict == "unavailable":
-        api.set_reaction(pr_number, "confused")
+        api.remove_reactions(pr_number)
         print(f"::warning::{result.summary}")
         return 0
+
+    if result.verdict == "review-required":
+        api.remove_reactions(pr_number)
+        api.create_comment(
+            pr_number,
+            "<!-- ai-review:canonical -->\n## AI Code Review не выполнено\n\n"
+            f"{result.summary}\n\n"
+            "Разделите Pull Request на меньшие части или выполните отдельное ручное ревью.",
+        )
+        print(f"::error::{result.summary}")
+        return 1
 
     if result.verdict == "approved":
         api.close_review_issue(pr_number)
