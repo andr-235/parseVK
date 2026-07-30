@@ -6,6 +6,7 @@ from collections.abc import Sequence
 
 from .markdown import render_alert, render_confidence, render_finding_sections
 from .models import Finding, ReviewResult
+from .verdict import verdict_alert_kind, verdict_text
 
 MAX_INLINE_COMMENTS = 12
 SEVERITY_ORDER = {"blocker": 0, "major": 1, "minor": 2}
@@ -75,19 +76,7 @@ def count_summary(findings: Sequence[Finding]) -> str:
         if counts[severity]:
             icon, label = SEVERITY_STYLE[severity]
             parts.append(f"{icon} {counts[severity]} {label.lower()}")
-    return " · ".join(parts)
-
-
-def verdict_text(result: ReviewResult) -> str:
-    if result.verdict == "changes-required":
-        return "🔴 Требуются изменения"
-    return "🟡 Есть неблокирующие замечания"
-
-
-def verdict_alert_kind(result: ReviewResult) -> str:
-    if result.verdict == "changes-required":
-        return "CAUTION"
-    return "WARNING"
+    return " · ".join(parts) or "нет"
 
 
 def split_findings(
@@ -110,6 +99,7 @@ def render_review_body(
     summary = "\n\n".join(
         (
             verdict_text(result),
+            result.summary,
             f"Проверен commit `{result.head_sha[:10]}`",
             f"Замечания: {count_summary(result.findings)}",
         )
