@@ -100,7 +100,8 @@ class RenderTests(unittest.TestCase):
         self.assertIn("Остальные замечания (2)", body)
         self.assertIn("> [!CAUTION]\n> **Итог ревью**", body)
         self.assertIn("Проверен commit", body)
-        self.assertIn("📄 `src/file_13.py` · строка 10", body)
+        for item in overflow:
+            self.assertIn(f"📄 `{item.file}` · строка {item.line}", body)
 
 
 class ModelTests(unittest.TestCase):
