@@ -20,11 +20,11 @@ Reviewer анализирует новые commits Pull Request моделью `
 
 Reviewer не пересматривает весь накопленный PR при каждом push:
 
-- `opened`, `reopened`, `ready_for_review`: проверяет текущую цепочку commits после merge-base с `base`;
-- `synchronize`: если прежний HEAD является предком нового, проверяет только commits из диапазона `before..head`;
-- force-push: игнорирует старую цепочку и заново строит актуальный список от текущего merge-base;
-- каждый commit анализируется как diff его первого родителя к самому commit;
-- один запуск ограничен 50 commits; более крупный batch получает `review-required`.
+- `opened`, `reopened`, `ready_for_review`: проверяет commits, достижимые из HEAD, но не достижимые из актуального `base`;
+- `synchronize`: если прежний HEAD является предком нового, проверяет только новые commits, одновременно исключая commits актуальной базовой ветки;
+- force-push: игнорирует старую цепочку и заново строит актуальный список относительно `base`;
+- каждый обычный commit анализируется как diff его первого родителя к самому commit;
+- если весь PR содержит больше 50 собственных commits, любой следующий запуск сохраняет `review-required`, пока история не будет сокращена.
 
 Быстрый следующий push не отменяет уже начатое commit-review. Старый batch может опубликовать результат, если проверенный commit по-прежнему входит в PR. Commit, удалённый force-push, не публикуется.
 
@@ -113,6 +113,8 @@ Default-branch publisher работает идемпотентно по SHA ка
 - status job изменяет только реакции `github-actions[bot]` и проверяет текущий HEAD;
 - review publisher берётся из default branch;
 - publisher перед публикацией получает полный пагинированный список commits PR;
+- commit artifacts создаются в `$RUNNER_TEMP`, а не в скрытом каталоге workspace;
+- `upload-artifact@v6` и `download-artifact@v7` закреплены по SHA и работают на Node.js 24;
 - `GITHUB_TOKEN` не передаётся OpenCode;
 - проектный `opencode.json` отключён;
 - shell, edit, task, todo, LSP и внешний интернет модели запрещены;
