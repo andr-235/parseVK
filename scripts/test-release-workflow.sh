@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}\")/.." && pwd)"
 CI="$ROOT_DIR/.github/workflows/ci.yml"
 RELEASE="$ROOT_DIR/.github/workflows/release.yml"
 RELEASE_CONFIG="$ROOT_DIR/.releaserc.json"
 PUBLISH="$ROOT_DIR/.github/workflows/publish-release-images.yml"
 REUSABLE="$ROOT_DIR/.github/workflows/reusable-publish-image.yml"
 SECURITY="$ROOT_DIR/.github/workflows/security.yml"
+SERVICE_CATALOG="$ROOT_DIR/.github/scripts/service_catalog.py"
+SERVICE_CATALOG_TEST="$ROOT_DIR/.github/scripts/test_service_catalog.py"
 MANIFEST="$ROOT_DIR/.github/scripts/release_manifest.py"
 MANIFEST_TEST="$ROOT_DIR/.github/scripts/test_release_manifest.py"
 
-for file in "$CI" "$RELEASE" "$RELEASE_CONFIG" "$PUBLISH" "$REUSABLE" "$SECURITY" "$MANIFEST" "$MANIFEST_TEST"; do
+for file in "$CI" "$RELEASE" "$RELEASE_CONFIG" "$PUBLISH" "$REUSABLE" "$SECURITY" "$SERVICE_CATALOG" "$SERVICE_CATALOG_TEST" "$MANIFEST" "$MANIFEST_TEST"; do
   [[ -f "$file" ]] || { echo "Required immutable release file not found: $file"; exit 1; }
 done
 
@@ -30,12 +32,16 @@ reject_pattern() {
 }
 
 require_pattern "$CI" 'workflow_dispatch:' "CI cannot be dispatched for semantic release commits"
+require_pattern "$SERVICE_CATALOG" 'args\.head and not args\.base' \
+  "CI dispatch without a comparison base does not select the full service matrix"
 require_pattern "$SECURITY" 'workflow_dispatch:' "Security cannot be dispatched for semantic release commits"
 require_pattern "$SECURITY" 'if \[\[.*github\.event_name.*pull_request' \
   "Security workflow does not keep PR Docker scans incremental"
 require_pattern "$SECURITY" 'else' "Security workflow has no full-release branch"
 require_pattern "$SECURITY" '--purpose docker' "Security workflow does not build a Docker matrix"
 require_pattern "$SECURITY" '--all' "Dispatched Security does not scan the complete release matrix"
+require_pattern "$SECURITY" "fetch-depth:.*github\.event_name == 'workflow_dispatch'.*&& 2" \
+  "Release secret scan is not bounded to the release commit and its parent"
 reject_pattern "$SECURITY" 'github\.event_name.*push.*BASE_SHA' \
   "Main Security still scans only changed Docker images"
 
@@ -95,11 +101,12 @@ require_pattern "$REUSABLE" 'sha256:\[0-9a-f\].*64' "Image digest is not validat
 require_pattern "$REUSABLE" 'imagetools inspect' "Published digest is not checked in GHCR"
 require_pattern "$REUSABLE" 'published-image-.*service' "Per-service digest metadata is not uploaded"
 
-for file in "$MANIFEST" "$MANIFEST_TEST"; do
+for file in "$SERVICE_CATALOG" "$MANIFEST" "$MANIFEST_TEST"; do
   lines="$(wc -l < "$file")"
   (( lines <= 150 )) || { echo "Python module exceeds 150 lines: $file ($lines)"; exit 1; }
 done
 
+PYTHONPATH="$ROOT_DIR/.github/scripts" python3 "$SERVICE_CATALOG_TEST" -v
 PYTHONPATH="$ROOT_DIR/.github/scripts" python3 "$MANIFEST_TEST" -v
-python3 -m py_compile "$MANIFEST" "$MANIFEST_TEST"
+python3 -m py_compile "$SERVICE_CATALOG" "$MANIFEST" "$MANIFEST_TEST"
 echo "Semantic release gates and immutable GHCR publication contracts are valid"
