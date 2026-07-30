@@ -4,7 +4,7 @@
   "schemaVersion": 1,
   "occurredAt": "2026-07-29T12:00:00Z",
   "producer": "tasks-service",
-  "correlationId": "00000000-0000-0000-0000-000000000002",
+  "correlationId": "b8c9d0e1-f2a3-4567-1234-678901234567",
   "payload": {
     "taskId": 43,
     "taskRunId": "a7b8c9d0-e1f2-3456-0123-567890123456",
