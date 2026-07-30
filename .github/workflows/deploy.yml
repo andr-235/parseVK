@@ -6,18 +6,28 @@ on:
     types:
       - completed
   workflow_dispatch:
+    inputs:
+      deployment:
+        description: "Повторно развернуть текущий проверенный commit ветки main"
+        required: true
+        type: choice
+        options:
+          - current-main
+        default: current-main
+
+permissions:
+  contents: read
+  actions: read
 
 concurrency:
   group: production-deployment
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Deploy to Debian Server
-    runs-on: [self-hosted]
-    timeout-minutes: 90
-    permissions:
-      contents: read
+  gate:
+    name: Verify Release Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (
@@ -25,6 +35,128 @@ jobs:
         github.event.workflow_run.event == 'push' &&
         github.event.workflow_run.head_branch == 'main'
       )
+    outputs:
+      target_sha: ${{ steps.target.outputs.target_sha }}
+      deploy: ${{ steps.quality.outputs.deploy }}
+    steps:
+      - name: Determine target commit
+        id: target
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          MANUAL_REF: ${{ github.ref }}
+          MANUAL_SHA: ${{ github.sha }}
+          MANUAL_DEPLOYMENT: ${{ inputs.deployment }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            TARGET_SHA="$WORKFLOW_RUN_SHA"
+          else
+            # Manual production deploy is intentionally limited to the current
+            # main commit. Previous releases belong to rollback.yml; arbitrary
+            # branches must never bypass push CI and Security Scanning.
+            if [ "$MANUAL_DEPLOYMENT" != "current-main" ]; then
+              echo "::error::Неизвестный режим ручного production deploy: $MANUAL_DEPLOYMENT"
+              exit 1
+            fi
+            if [ "$MANUAL_REF" != "refs/heads/main" ]; then
+              echo "::error::Ручной production deploy разрешён только из ветки main. Выбрано: $MANUAL_REF"
+              exit 1
+            fi
+            TARGET_SHA="$MANUAL_SHA"
+          fi
+
+          MAIN_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          OBSOLETE=false
+          if [ "$TARGET_SHA" != "$MAIN_SHA" ]; then
+            OBSOLETE=true
+            echo "Deployment candidate $TARGET_SHA is obsolete; current main is $MAIN_SHA"
+          fi
+
+          echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+          echo "obsolete=$OBSOLETE" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for required workflow results
+        id: quality
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_SHA: ${{ steps.target.outputs.target_sha }}
+          OBSOLETE: ${{ steps.target.outputs.obsolete }}
+        run: |
+          set -euo pipefail
+
+          if [ "$OBSOLETE" = "true" ]; then
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          REQUIRED_WORKFLOWS=("CI" "Security Scanning")
+          MAX_ATTEMPTS=60
+          SLEEP_SECONDS=20
+
+          for ((attempt=1; attempt<=MAX_ATTEMPTS; attempt++)); do
+            RUNS_JSON="$(gh api \
+              --method GET \
+              "repos/${GITHUB_REPOSITORY}/actions/runs" \
+              -f head_sha="$TARGET_SHA" \
+              -f event=push \
+              -f branch=main \
+              -f per_page=100)"
+
+            pending=false
+            for workflow in "${REQUIRED_WORKFLOWS[@]}"; do
+              result="$(jq -r --arg workflow "$workflow" '
+                [.workflow_runs[] | select(.name == $workflow)]
+                | sort_by(.run_number)
+                | last
+                | if . == null then
+                    "missing"
+                  elif .status != "completed" then
+                    .status
+                  else
+                    (.conclusion // "unknown")
+                  end
+              ' <<<"$RUNS_JSON")"
+
+              echo "${workflow}: ${result}"
+              case "$result" in
+                success)
+                  ;;
+                missing|queued|in_progress|requested|waiting|pending)
+                  pending=true
+                  ;;
+                *)
+                  echo "::error::${workflow} не прошёл для commit ${TARGET_SHA}: ${result}"
+                  exit 1
+                  ;;
+              esac
+            done
+
+            if [ "$pending" = "false" ]; then
+              echo "deploy=true" >> "$GITHUB_OUTPUT"
+              echo "Все release gates пройдены для ${TARGET_SHA}"
+              exit 0
+            fi
+
+            if (( attempt == MAX_ATTEMPTS )); then
+              echo "::error::Истекло время ожидания release gates для ${TARGET_SHA}"
+              exit 1
+            fi
+
+            echo "Ожидание обязательных проверок: попытка ${attempt}/${MAX_ATTEMPTS}"
+            sleep "$SLEEP_SECONDS"
+          done
+
+  deploy:
+    name: Deploy to Debian Server
+    needs: gate
+    if: needs.gate.outputs.deploy == 'true'
+    runs-on: [self-hosted]
+    timeout-minutes: 90
+    permissions:
+      contents: read
 
     env:
       DOCKER_BUILDKIT: 1
@@ -32,13 +164,15 @@ jobs:
       COMPOSE_FILE: docker-compose.yml
       PROJECT_ROOT: /opt/parseVK
       PRODUCTION_SCRIPTS_DIR: ${{ github.workspace }}/.github/scripts/production
+      TARGET_SHA: ${{ needs.gate.outputs.target_sha }}
 
     steps:
-      - name: Checkout code
+      - name: Checkout validated code
         uses: actions/checkout@v6
         with:
           fetch-depth: 1
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
+          ref: ${{ needs.gate.outputs.target_sha }}
+          persist-credentials: false
 
       - name: Load deployment metadata
         id: deployment_metadata
@@ -59,31 +193,28 @@ jobs:
             exit 1
           fi
 
-          if [ "${{ github.event_name }}" = "workflow_run" ]; then
-            TARGET_SHA="${{ github.event.workflow_run.head_sha }}"
-            if ! git fetch --no-tags origin "$TARGET_SHA"; then
-              echo "Error: Failed to fetch target commit $TARGET_SHA"
-              exit 1
-            fi
-
-            COMMIT_MESSAGE=$(git log -1 --format=%B FETCH_HEAD)
-            if printf '%s' "$COMMIT_MESSAGE" | grep -qF '[skip ci]'; then
-              echo "skip_deploy=true" >> $GITHUB_OUTPUT
-            else
-              echo "skip_deploy=false" >> $GITHUB_OUTPUT
-            fi
-          else
-            if ! git fetch origin main; then
-              echo "Error: Failed to fetch origin/main"
-              exit 1
-            fi
-
-            TARGET_SHA=$(git rev-parse origin/main)
-            echo "skip_deploy=false" >> $GITHUB_OUTPUT
+          if ! git fetch --no-tags origin "$TARGET_SHA"; then
+            echo "Error: Failed to fetch target commit $TARGET_SHA"
+            exit 1
           fi
 
-          echo "target_sha=$TARGET_SHA" >> $GITHUB_OUTPUT
-          echo "Selected target commit: $TARGET_SHA"
+          COMMIT_MESSAGE="$(git log -1 --format=%B FETCH_HEAD)"
+          LAST_SUCCESSFUL="${{ steps.deployment_metadata.outputs.last_successful_commit }}"
+          SKIP_DEPLOY=false
+          SKIP_REASON=""
+
+          if printf '%s' "$COMMIT_MESSAGE" | grep -qF '[skip ci]'; then
+            SKIP_DEPLOY=true
+            SKIP_REASON="commit contains [skip ci]"
+          elif [ -n "$LAST_SUCCESSFUL" ] && [ "$LAST_SUCCESSFUL" = "$TARGET_SHA" ]; then
+            SKIP_DEPLOY=true
+            SKIP_REASON="commit is already deployed"
+          fi
+
+          echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+          echo "skip_deploy=$SKIP_DEPLOY" >> "$GITHUB_OUTPUT"
+          echo "skip_reason=$SKIP_REASON" >> "$GITHUB_OUTPUT"
+          echo "Selected validated commit: $TARGET_SHA"
 
       - name: Update code
         if: steps.deployment_context.outputs.skip_deploy != 'true'
@@ -93,8 +224,6 @@ jobs:
           set -euo pipefail
 
           echo "=== Updating code ==="
-          TARGET_SHA="${{ steps.deployment_context.outputs.target_sha }}"
-
           if ! git fetch --no-tags origin "$TARGET_SHA"; then
             echo "Error: Failed to fetch target commit $TARGET_SHA"
             exit 1
@@ -106,7 +235,6 @@ jobs:
           fi
 
           git branch -f deployed "$TARGET_SHA"
-
           echo "Updated to commit: $(git rev-parse HEAD)"
 
       - name: Production preflight
@@ -127,15 +255,15 @@ jobs:
           PREV_COMMIT="${{ steps.deployment_metadata.outputs.last_successful_commit }}"
           CURRENT_COMMIT=$(git rev-parse HEAD)
 
-            BUILD_FRONTEND=false
-            BUILD_IDENTITY_SERVICE=false
-            BUILD_TASKS_SERVICE=false
-            BUILD_VK_SERVICE=false
-            BUILD_CONTENT_SERVICE=false
-            BUILD_MODERATION_SERVICE=false
-            BUILD_TELEGRAM_SERVICE=false
-            BUILD_API_GATEWAY=false
-            BUILD_IM_SERVICE=false
+          BUILD_FRONTEND=false
+          BUILD_IDENTITY_SERVICE=false
+          BUILD_TASKS_SERVICE=false
+          BUILD_VK_SERVICE=false
+          BUILD_CONTENT_SERVICE=false
+          BUILD_MODERATION_SERVICE=false
+          BUILD_TELEGRAM_SERVICE=false
+          BUILD_API_GATEWAY=false
+          BUILD_IM_SERVICE=false
 
           if [ -z "$PREV_COMMIT" ] || ! git cat-file -e "${PREV_COMMIT}^{commit}" 2>/dev/null; then
             BUILD_FRONTEND=true
@@ -149,11 +277,10 @@ jobs:
             BUILD_IM_SERVICE=true
             echo "No previous deployed commit found, building all local images"
           else
-            CHANGED_FILES=$(git diff --name-only "$PREV_COMMIT" "$CURRENT_COMMIT" || true)
+            CHANGED_FILES=$(git diff --name-only "$PREV_COMMIT" "$CURRENT_COMMIT")
             echo "Changed files since last successful deploy:"
             printf '%s\n' "$CHANGED_FILES"
 
-            # Shared libs change triggers all services
             LIBS_CHANGED=false
             if printf '%s\n' "$CHANGED_FILES" | grep -qE '^libs/py/common/'; then
               LIBS_CHANGED=true
@@ -163,37 +290,14 @@ jobs:
               BUILD_FRONTEND=true
             fi
 
-            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/api-gateway/'; then
-              BUILD_API_GATEWAY=true
-            fi
-
-            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/identity-service/'; then
-              BUILD_IDENTITY_SERVICE=true
-            fi
-
-            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/tasks-service/'; then
-              BUILD_TASKS_SERVICE=true
-            fi
-
-            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/vk-service/'; then
-              BUILD_VK_SERVICE=true
-            fi
-
-            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/content-service/'; then
-              BUILD_CONTENT_SERVICE=true
-            fi
-
-            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/moderation-service/'; then
-              BUILD_MODERATION_SERVICE=true
-            fi
-
-            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/telegram-service/'; then
-              BUILD_TELEGRAM_SERVICE=true
-            fi
-
-            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/im-service/'; then
-              BUILD_IM_SERVICE=true
-            fi
+            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/api-gateway/'; then BUILD_API_GATEWAY=true; fi
+            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/identity-service/'; then BUILD_IDENTITY_SERVICE=true; fi
+            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/tasks-service/'; then BUILD_TASKS_SERVICE=true; fi
+            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/vk-service/'; then BUILD_VK_SERVICE=true; fi
+            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/content-service/'; then BUILD_CONTENT_SERVICE=true; fi
+            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/moderation-service/'; then BUILD_MODERATION_SERVICE=true; fi
+            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/telegram-service/'; then BUILD_TELEGRAM_SERVICE=true; fi
+            if [ "$LIBS_CHANGED" = "true" ] || printf '%s\n' "$CHANGED_FILES" | grep -qE '^services/im-service/'; then BUILD_IM_SERVICE=true; fi
           fi
 
           echo "build_frontend=$BUILD_FRONTEND" >> "$GITHUB_OUTPUT"
@@ -214,41 +318,15 @@ jobs:
           set -euo pipefail
           SERVICES_TO_BUILD=""
 
-          if [ "${{ steps.changed_services.outputs.build_frontend }}" = "true" ]; then
-            SERVICES_TO_BUILD="$SERVICES_TO_BUILD frontend"
-          fi
-
-          if [ "${{ steps.changed_services.outputs.build_api_gateway }}" = "true" ]; then
-            SERVICES_TO_BUILD="$SERVICES_TO_BUILD api-gateway"
-          fi
-
-          if [ "${{ steps.changed_services.outputs.build_identity_service }}" = "true" ]; then
-            SERVICES_TO_BUILD="$SERVICES_TO_BUILD identity-service identity-migrate identity-seed-admin"
-          fi
-
-          if [ "${{ steps.changed_services.outputs.build_tasks_service }}" = "true" ]; then
-            SERVICES_TO_BUILD="$SERVICES_TO_BUILD tasks-service tasks-migrate"
-          fi
-
-          if [ "${{ steps.changed_services.outputs.build_vk_service }}" = "true" ]; then
-            SERVICES_TO_BUILD="$SERVICES_TO_BUILD vk-service vk-migrate"
-          fi
-
-          if [ "${{ steps.changed_services.outputs.build_content_service }}" = "true" ]; then
-            SERVICES_TO_BUILD="$SERVICES_TO_BUILD content-service content-migrate"
-          fi
-
-          if [ "${{ steps.changed_services.outputs.build_moderation_service }}" = "true" ]; then
-            SERVICES_TO_BUILD="$SERVICES_TO_BUILD moderation-service moderation-migrate"
-          fi
-
-          if [ "${{ steps.changed_services.outputs.build_telegram_service }}" = "true" ]; then
-            SERVICES_TO_BUILD="$SERVICES_TO_BUILD telegram-service"
-          fi
-
-          if [ "${{ steps.changed_services.outputs.build_im_service }}" = "true" ]; then
-            SERVICES_TO_BUILD="$SERVICES_TO_BUILD im-service im-migrate"
-          fi
+          if [ "${{ steps.changed_services.outputs.build_frontend }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD frontend"; fi
+          if [ "${{ steps.changed_services.outputs.build_api_gateway }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD api-gateway"; fi
+          if [ "${{ steps.changed_services.outputs.build_identity_service }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD identity-service identity-migrate identity-seed-admin"; fi
+          if [ "${{ steps.changed_services.outputs.build_tasks_service }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD tasks-service tasks-migrate"; fi
+          if [ "${{ steps.changed_services.outputs.build_vk_service }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD vk-service vk-migrate"; fi
+          if [ "${{ steps.changed_services.outputs.build_content_service }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD content-service content-migrate"; fi
+          if [ "${{ steps.changed_services.outputs.build_moderation_service }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD moderation-service moderation-migrate"; fi
+          if [ "${{ steps.changed_services.outputs.build_telegram_service }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD telegram-service"; fi
+          if [ "${{ steps.changed_services.outputs.build_im_service }}" = "true" ]; then SERVICES_TO_BUILD="$SERVICES_TO_BUILD im-service im-migrate"; fi
 
           if [ -n "$SERVICES_TO_BUILD" ]; then
             PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
@@ -263,28 +341,38 @@ jobs:
           PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" UP_ARGS="$UP_ARGS" \
             bash "$PRODUCTION_SCRIPTS_DIR/release.sh"
 
+      - name: Verify container health
+        if: steps.deployment_context.outputs.skip_deploy != 'true'
+        working-directory: /opt/parseVK
+        timeout-minutes: 7
+        env:
+          FULL_DEPLOY: "true"
+          MAX_ATTEMPTS: "30"
+        run: |
+          set -euo pipefail
+          COMPOSE_FILE="$COMPOSE_FILE" FULL_DEPLOY="$FULL_DEPLOY" MAX_ATTEMPTS="$MAX_ATTEMPTS" \
+            bash "${{ github.workspace }}/.github/scripts/health-check.sh"
+
       - name: Update deployment metadata
         if: success() && steps.deployment_context.outputs.skip_deploy != 'true'
         working-directory: /opt/parseVK
         run: |
           set -euo pipefail
-
           CURRENT_COMMIT=$(git rev-parse HEAD)
           CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
           PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
             bash "$PRODUCTION_SCRIPTS_DIR/metadata.sh" write "$CURRENT_COMMIT" "$CURRENT_TIME"
 
       - name: Deployment status
         if: always()
         run: |
-          if [ "${{ steps.deployment_context.outputs.skip_deploy }}" == "true" ]; then
-            echo "⏭️ Deployment skipped for release commit"
-            echo "Commit: ${{ steps.deployment_context.outputs.target_sha }}"
-          elif [ "${{ job.status }}" == "success" ]; then
-            echo "✅ Deployment successful!"
+          if [ "${{ steps.deployment_context.outputs.skip_deploy }}" = "true" ]; then
+            echo "⏭️ Deployment skipped: ${{ steps.deployment_context.outputs.skip_reason }}"
+            echo "Commit: $TARGET_SHA"
+          elif [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Deployment successful and healthy"
             echo "Commit: $(cd /opt/parseVK && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
           else
-            echo "❌ Deployment failed!"
+            echo "❌ Deployment failed or health checks did not pass"
             echo "Commit: $(cd /opt/parseVK && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
           fi

@@ -9,6 +9,9 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -17,10 +20,9 @@ jobs:
   changes:
     name: Detect changes
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'pull_request' || !contains(github.event.head_commit.message, '[skip ci]') }}
     outputs:
-      frontend_changed: ${{ steps.detect.outputs.frontend_changed }}
-      python_changed: ${{ steps.detect.outputs.python_changed }}
+      frontend_changed: ${{ steps.filter.outputs.frontend_changed }}
+      python_changed: ${{ steps.filter.outputs.python_changed }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -48,7 +50,7 @@ jobs:
             FRONTEND_CHANGED=true
             PYTHON_CHANGED=true
           else
-            CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" || true)
+            CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
             if [ -z "$CHANGED_FILES" ]; then
               echo "No changed files detected"
             else
@@ -65,8 +67,8 @@ jobs:
             fi
           fi
 
-          echo "frontend_changed=$FRONTEND_CHANGED" >> $GITHUB_OUTPUT
-          echo "python_changed=$PYTHON_CHANGED" >> $GITHUB_OUTPUT
+          echo "frontend_changed=$FRONTEND_CHANGED" >> "$GITHUB_OUTPUT"
+          echo "python_changed=$PYTHON_CHANGED" >> "$GITHUB_OUTPUT"
 
   lint:
     name: Lint Frontend
@@ -120,6 +122,24 @@ jobs:
       - uses: actions/checkout@v6
       - name: Validate Alembic revision graphs
         run: python3 .github/scripts/validate_alembic_graphs.py
+
+  production-validation:
+    name: Validate Production Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Validate deploy workflow contracts
+        run: bash scripts/test-deploy-workflow.sh
+      - name: Validate production shell syntax
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' script; do
+            bash -n "$script"
+          done < <(find .github/scripts/production -type f -name '*.sh' -print0)
+          bash -n .github/scripts/health-check.sh
+          bash -n .github/scripts/http-health-check.sh
+      - name: Validate Docker Compose configuration
+        run: docker compose -f docker-compose.yml config --quiet
 
   frontend-tests:
     name: Test Frontend
@@ -185,3 +205,85 @@ jobs:
       - name: Run tests
         working-directory: services/${{ matrix.service }}
         run: uv run pytest -v
+
+  release-gate:
+    name: Release Gate
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - changes
+      - lint
+      - typecheck
+      - ruff
+      - alembic-graphs
+      - production-validation
+      - frontend-tests
+      - pytest-libs
+      - pytest-services
+    steps:
+      - name: Enforce required checks
+        shell: bash
+        env:
+          FRONTEND_CHANGED: ${{ needs.changes.outputs.frontend_changed }}
+          PYTHON_CHANGED: ${{ needs.changes.outputs.python_changed }}
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          LINT_RESULT: ${{ needs.lint.result }}
+          TYPECHECK_RESULT: ${{ needs.typecheck.result }}
+          RUFF_RESULT: ${{ needs.ruff.result }}
+          ALEMBIC_RESULT: ${{ needs.alembic-graphs.result }}
+          PRODUCTION_RESULT: ${{ needs.production-validation.result }}
+          FRONTEND_TESTS_RESULT: ${{ needs.frontend-tests.result }}
+          PYTEST_LIBS_RESULT: ${{ needs.pytest-libs.result }}
+          PYTEST_SERVICES_RESULT: ${{ needs.pytest-services.result }}
+        run: |
+          set -euo pipefail
+          failures=0
+
+          require_success() {
+            local name="$1"
+            local result="$2"
+            if [ "$result" != "success" ]; then
+              echo "::error::${name} завершён со статусом ${result}"
+              failures=$((failures + 1))
+            fi
+          }
+
+          require_conditional() {
+            local name="$1"
+            local expected="$2"
+            local result="$3"
+            case "$expected" in
+              true)
+                require_success "$name" "$result"
+                ;;
+              false)
+                if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
+                  echo "::error::${name} завершён со статусом ${result}"
+                  failures=$((failures + 1))
+                fi
+                ;;
+              *)
+                echo "::error::Некорректный output change detector для ${name}: '${expected}'"
+                failures=$((failures + 1))
+                ;;
+            esac
+          }
+
+          require_success "Detect changes" "$CHANGES_RESULT"
+          require_success "Validate Alembic graphs" "$ALEMBIC_RESULT"
+          require_success "Validate Production Release" "$PRODUCTION_RESULT"
+
+          require_conditional "Lint Frontend" "$FRONTEND_CHANGED" "$LINT_RESULT"
+          require_conditional "Typecheck Frontend" "$FRONTEND_CHANGED" "$TYPECHECK_RESULT"
+          require_conditional "Test Frontend" "$FRONTEND_CHANGED" "$FRONTEND_TESTS_RESULT"
+
+          require_conditional "Ruff lint" "$PYTHON_CHANGED" "$RUFF_RESULT"
+          require_conditional "Test common lib" "$PYTHON_CHANGED" "$PYTEST_LIBS_RESULT"
+          require_conditional "Test Python services" "$PYTHON_CHANGED" "$PYTEST_SERVICES_RESULT"
+
+          if (( failures > 0 )); then
+            echo "::error::Release Gate заблокирован: ${failures} обязательных проверок не пройдены."
+            exit 1
+          fi
+
+          echo "Release Gate пройден для commit ${{ github.sha }}"
