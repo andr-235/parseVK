@@ -49,6 +49,14 @@ class AlembicGraphTests(unittest.TestCase):
             errors, _ = validate_versions_dir("demo", versions)
             self.assertTrue(any("missing parent revisions" in error for error in errors))
 
+    def test_empty_parent_string_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            versions = Path(directory)
+            write_revision(versions, "001.py", "001", "")
+            errors, head = validate_versions_dir("demo", versions)
+            self.assertTrue(any("non-empty string" in error for error in errors))
+            self.assertIsNone(head)
+
     def test_empty_parent_sequence_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             versions = Path(directory)
