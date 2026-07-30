@@ -41,6 +41,10 @@ reject_pattern "$SECURITY" 'github\.event_name.*push.*BASE_SHA' \
 
 require_pattern "$RELEASE" 'actions: write' "Release workflow cannot dispatch validation workflows"
 require_pattern "$RELEASE" 'group: semantic-release-main' "Semantic Release executions are not serialized"
+require_pattern "$RELEASE" 'Verify source commit is current main' "Stale CI sources can run Semantic Release"
+require_pattern "$RELEASE" 'CURRENT_MAIN.*SOURCE_SHA' "Source commit is not compared with current main"
+require_pattern "$RELEASE" "source_gate\.outputs\.stale != 'true'" \
+  "Semantic Release steps do not honor the stale source gate"
 require_pattern "$RELEASE" 'RELEASE_PARENT=.*RELEASE_SHA' "Release workflow does not inspect release parent"
 require_pattern "$RELEASE" 'RELEASE_PARENT.*SOURCE_SHA' "Release parent is not bound to validated source"
 require_pattern "$RELEASE" 'RELEASE_SUBJECT.*chore\\\(release\\\)' \
