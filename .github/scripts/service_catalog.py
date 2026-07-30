@@ -184,8 +184,19 @@ def _purpose_paths(raw: Any) -> dict[str, tuple[str, ...]]:
     }
 
 
-def _path_matches(path: str, prefixes: Iterable[str]) -> bool:
-    return any(path == prefix.rstrip("/") or path.startswith(prefix) for prefix in prefixes)
+def _path_matches(path: str, configured_paths: Iterable[str]) -> bool:
+    for configured in configured_paths:
+        if configured.endswith("/"):
+            if path.startswith(configured):
+                return True
+        elif path == configured:
+            return True
+    return False
+
+
+def _configured_path_exists(repo_root: Path, configured: str) -> bool:
+    candidate = repo_root / configured.rstrip("/")
+    return candidate.is_dir() if configured.endswith("/") else candidate.exists()
 
 
 def _executable(name: str) -> str:
@@ -256,6 +267,11 @@ def validate_repository(catalog: Catalog, repo_root: Path, compose_file: Path) -
     if len(names) != len(set(names)):
         errors.append("catalog contains duplicate service names")
 
+    for purpose, configured_paths in catalog.global_change_paths.items():
+        for configured in configured_paths:
+            if not _configured_path_exists(repo_root, configured):
+                errors.append(f"global {purpose} change path does not exist: {configured}")
+
     python_catalog = {service.name for service in catalog.services if service.kind == "python"}
     discovered = _discover_python_services(repo_root)
     missing = sorted(discovered - python_catalog)
@@ -277,6 +293,9 @@ def validate_repository(catalog: Catalog, repo_root: Path, compose_file: Path) -
             errors.append(f"{service.name}: Python service has no pyproject.toml")
         if service.kind == "frontend" and not (path / "package.json").is_file():
             errors.append(f"{service.name}: frontend service has no package.json")
+        for configured in service.change_paths:
+            if not _configured_path_exists(repo_root, configured):
+                errors.append(f"{service.name}: change path does not exist: {configured}")
         build_targets.extend(service.compose_build)
 
     duplicate_targets = sorted({name for name in build_targets if build_targets.count(name) > 1})
