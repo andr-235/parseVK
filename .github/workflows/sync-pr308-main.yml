@@ -1,0 +1,36 @@
+name: One-shot sync PR 308 with main
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: >-
+      github.event.pull_request.head.ref == 'feature/pr01-contract-exit-gates' &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: feature/pr01-contract-exit-gates
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Merge current main and remove this workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git merge --no-commit --no-ff origin/main
+          git rm .github/workflows/sync-pr308-main.yml
+          git commit -m 'merge: sync PR01 exit gates with current main'
+          git push origin HEAD:feature/pr01-contract-exit-gates
