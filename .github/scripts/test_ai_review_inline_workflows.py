@@ -13,33 +13,46 @@ class WorkflowContractTests(unittest.TestCase):
         cls.source = SOURCE_WORKFLOW.read_text(encoding="utf-8")
         cls.publisher = PUBLISHER_WORKFLOW.read_text(encoding="utf-8")
 
-    def test_source_workflow_evaluates_without_publishing_review(self) -> None:
-        self.assertIn("name: Evaluate review verdict", self.source)
-        self.assertIn("Evaluate validated verdict without publishing", self.source)
-        self.assertNotIn("name: Publish review verdict", self.source)
-        self.assertNotIn('python "$AI_REVIEW_SCRIPT" publish', self.source)
+    def test_source_plans_commit_scoped_reviews(self) -> None:
+        self.assertIn("name: Plan commit reviews", self.source)
+        self.assertIn("BEFORE_SHA: ${{ github.event.before }}", self.source)
+        self.assertIn("matrix:", self.source)
+        self.assertIn("unit: ${{ fromJSON(needs.plan.outputs.matrix) }}", self.source)
+        self.assertIn("${{ matrix.unit.base_sha }}", self.source)
+        self.assertIn("${{ matrix.unit.head_sha }}", self.source)
 
-    def test_verdict_job_has_no_github_write_permissions(self) -> None:
+    def test_rapid_pushes_do_not_cancel_previous_commit_review(self) -> None:
+        self.assertIn("cancel-in-progress: false", self.source)
+        self.assertIn("max-parallel: 4", self.source)
+        self.assertIn("Check commit still belongs to Pull Request", self.source)
+        self.assertIn("obsolete-commit", self.source)
+
+    def test_each_commit_uploads_unique_validated_result(self) -> None:
+        self.assertIn("ai-review-commit-${{ github.run_id }}-", self.source)
+        self.assertIn('".ai-review-artifact/${HEAD_SHA}.json"', self.source)
+        self.assertIn("pattern: ai-review-commit-${{ github.run_id }}-*", self.source)
+        self.assertIn("name: ai-review-result-${{ github.run_id }}", self.source)
+
+    def test_verdict_aggregates_without_publishing_reviews(self) -> None:
         verdict = self.source.split("  verdict:\n", 1)[1].split("  status:\n", 1)[0]
-        self.assertIn("actions: read", verdict)
-        self.assertNotIn("issues: write", verdict)
+        self.assertIn("name: Evaluate review verdict", verdict)
+        self.assertIn("Aggregate commit review results", verdict)
         self.assertNotIn("pull-requests: write", verdict)
+        self.assertNotIn("issues: write", verdict)
+        self.assertNotIn("create_review", verdict)
 
-    def test_source_owns_head_guarded_status_reactions(self) -> None:
+    def test_source_owns_only_head_guarded_status_reaction(self) -> None:
         status = self.source.split("  status:\n", 1)[1].split("  cleanup:\n", 1)[0]
         self.assertIn("name: Publish review status", status)
-        self.assertIn("actions: read", status)
-        self.assertIn("pull-requests: write", status)
         self.assertIn("current_head != expected_head", status)
         self.assertIn('"approved": "+1"', status)
         self.assertIn('"changes-required": "-1"', status)
-        self.assertIn('"findings": "confused"', status)
         self.assertIn('"unavailable": "confused"', status)
-        self.assertIn('user.get("login") != "github-actions[bot]"', status)
 
-    def test_default_branch_publisher_owns_review_comments(self) -> None:
+    def test_default_branch_publisher_owns_commit_reviews(self) -> None:
         self.assertIn("workflow_run:", self.publisher)
-        self.assertIn("Publish final reactions and Pull Request review", self.publisher)
+        self.assertIn("Publish commit-scoped Pull Request reviews", self.publisher)
+        self.assertIn("ai_review_batch_publisher.py", self.publisher)
         self.assertIn("pull-requests: write", self.publisher)
         self.assertIn("ai-review-final-", self.publisher)
 
@@ -47,7 +60,6 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("Clear processing reaction when artifact is missing", self.publisher)
         self.assertIn("clear-processing", self.publisher)
         self.assertIn("github.event.workflow_run.head_sha", self.publisher)
-        self.assertIn('--expected-head "$EXPECTED_HEAD"', self.publisher)
 
 
 if __name__ == "__main__":
