@@ -462,7 +462,7 @@ jobs:
               "changes-required": "-1",
               "findings": "confused",
               "review-required": "confused",
-              "unavailable": None,
+              "unavailable": "confused",
           }
           reactions = request(
               "GET",
@@ -478,12 +478,11 @@ jobs:
               )
 
           final_reaction = reaction_by_verdict[verdict]
-          if final_reaction is not None:
-              request(
-                  "POST",
-                  f"/repos/{repository}/issues/{pr_number}/reactions",
-                  {"content": final_reaction},
-              )
+          request(
+              "POST",
+              f"/repos/{repository}/issues/{pr_number}/reactions",
+              {"content": final_reaction},
+          )
           print(f"Published AI review status: {verdict}")
           PY
 
