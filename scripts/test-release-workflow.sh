@@ -31,6 +31,8 @@ require_pattern "$PUBLISH" "workflow_run\.event == 'push'" "Non-push Security ru
 require_pattern "$PUBLISH" "workflow_run\.head_branch == 'main'" "Non-main commit can publish images"
 require_pattern "$PUBLISH" 'actions/workflows/ci\.yml/runs' "Release workflow does not verify CI"
 require_pattern "$PUBLISH" 'git ls-remote origin refs/heads/main' "Release workflow does not reject stale main"
+require_pattern "$PUBLISH" "format\('pr-\{0\}'" "PR checks share production release concurrency"
+require_pattern "$PUBLISH" "\|\| 'main'" "Production release concurrency group is missing"
 require_pattern "$PUBLISH" 'cancel-in-progress: true' "A newer main commit does not cancel stale publishing"
 require_pattern "$PUBLISH" '--purpose docker' "Release image matrix is not catalog-driven"
 require_pattern "$PUBLISH" 'uses: \./\.github/workflows/reusable-publish-image\.yml' \
