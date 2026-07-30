@@ -1,73 +1,19 @@
 from __future__ import annotations
 
 import json
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
+import service_catalog_git_tests
 from service_catalog_lib import (
     Catalog,
     CatalogError,
     deploy_targets,
-    executable,
-    git_changed_files,
     path_matches,
     service_matrix,
 )
-
-
-def make_catalog(path: Path) -> Catalog:
-    data = {
-        "schema_version": 2,
-        "global_change_paths": {
-            "pytest": ["libs/py/common/"],
-            "audit": ["libs/py/common/"],
-            "docker": [".dockerignore", "libs/py/common/"],
-            "deploy": [".dockerignore", "libs/py/common/"],
-            "migration": ["libs/py/common/"],
-        },
-        "services": {
-            "api": {
-                "kind": "python",
-                "path": "services/api",
-                "dockerfile": "services/api/Dockerfile",
-                "change_paths": ["services/api/"],
-                "pytest": True,
-                "dependency_audit": True,
-                "docker_scan": True,
-                "compose_build": ["api", "api-migrate"],
-                "migration": {
-                    "database_url_env": "API_DATABASE_URL",
-                    "compose_target": "api-migrate",
-                },
-            },
-            "frontend": {
-                "kind": "frontend",
-                "path": "front",
-                "dockerfile": "docker/frontend.Dockerfile",
-                "change_paths": ["front/", "docker/frontend.Dockerfile"],
-                "pytest": False,
-                "dependency_audit": False,
-                "docker_scan": True,
-                "compose_build": ["frontend"],
-                "migration": None,
-            },
-        },
-    }
-    path.write_text(json.dumps(data), encoding="utf-8")
-    return Catalog.load(path)
-
-
-def run_git(repo: Path, *args: str) -> str:
-    result = subprocess.run(  # noqa: S603 - controlled git command in test
-        [executable("git"), *args],
-        cwd=repo,
-        text=True,
-        capture_output=True,
-        check=True,
-    )
-    return result.stdout.strip()
+from service_catalog_test_support import make_catalog
 
 
 class CatalogTests(unittest.TestCase):
@@ -103,27 +49,6 @@ class CatalogTests(unittest.TestCase):
             catalog = make_catalog(Path(directory) / "catalog.yaml")
             selected = catalog.changed("docker", [".dockerignore"])
             self.assertEqual([service.name for service in selected], ["api", "frontend"])
-
-    def test_git_diff_ignores_base_only_commits(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            repo = Path(directory)
-            run_git(repo, "init", "-b", "main")
-            run_git(repo, "config", "user.email", "ci@example.test")
-            run_git(repo, "config", "user.name", "CI Test")
-            (repo / "shared.txt").write_text("base\n", encoding="utf-8")
-            run_git(repo, "add", "shared.txt")
-            run_git(repo, "commit", "-m", "base")
-            run_git(repo, "switch", "-c", "feature")
-            (repo / "feature.txt").write_text("feature\n", encoding="utf-8")
-            run_git(repo, "add", "feature.txt")
-            run_git(repo, "commit", "-m", "feature")
-            feature_sha = run_git(repo, "rev-parse", "HEAD")
-            run_git(repo, "switch", "main")
-            (repo / "base-only.txt").write_text("release\n", encoding="utf-8")
-            run_git(repo, "add", "base-only.txt")
-            run_git(repo, "commit", "-m", "base advanced")
-            base_sha = run_git(repo, "rev-parse", "HEAD")
-            self.assertEqual(git_changed_files(repo, base_sha, feature_sha), ["feature.txt"])
 
     def test_file_path_requires_exact_match(self) -> None:
         self.assertTrue(path_matches(".dockerignore", [".dockerignore"]))
@@ -195,6 +120,15 @@ class CatalogTests(unittest.TestCase):
             path.write_text(json.dumps(data), encoding="utf-8")
             with self.assertRaisesRegex(CatalogError, "unknown fields"):
                 Catalog.load(path)
+
+
+def load_tests(
+    loader: unittest.TestLoader,
+    tests: unittest.TestSuite,
+    _pattern: str | None,
+) -> unittest.TestSuite:
+    tests.addTests(loader.loadTestsFromModule(service_catalog_git_tests))
+    return tests
 
 
 if __name__ == "__main__":
