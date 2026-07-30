@@ -11,6 +11,9 @@ on:
       - .github/workflows/publish-release-images.yml
       - .github/workflows/reusable-publish-image.yml
       - scripts/test-release-workflow.sh
+  push:
+    branches:
+      - main
   workflow_run:
     workflows:
       - Security Scanning
@@ -144,6 +147,18 @@ jobs:
         with:
           ref: ${{ needs.gate.outputs.target_sha }}
           persist-credentials: false
+
+      - name: Recheck current main before manifest
+        shell: bash
+        env:
+          TARGET_SHA: ${{ needs.gate.outputs.target_sha }}
+        run: |
+          set -euo pipefail
+          MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          if [[ "$MAIN_SHA" != "$TARGET_SHA" ]]; then
+            echo "::error::Refusing manifest for stale release $TARGET_SHA; main is $MAIN_SHA"
+            exit 1
+          fi
 
       - name: Download image metadata
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
