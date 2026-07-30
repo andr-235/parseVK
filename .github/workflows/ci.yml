@@ -207,7 +207,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Test catalog CLI
-        run: python3 -m unittest -v .github/scripts/test_service_catalog.py
+        run: python3 .github/scripts/test_service_catalog.py -v
       - name: Validate repository and Compose coverage
         run: python3 .github/scripts/service_catalog.py validate --compose-file docker-compose.yml
 
