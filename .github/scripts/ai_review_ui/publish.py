@@ -25,16 +25,16 @@ def nested(value: Mapping[str, Any], *keys: str) -> Any:
     return current
 
 
-def validate_pull_request(
+def validate_pull_request_head(
     api: GitHubApi,
     number: int,
-    result: ReviewResult,
+    expected_head: str,
 ) -> Mapping[str, Any]:
     pull_request = api.pull_request(number)
     current_head = str(nested(pull_request, "head", "sha") or "")
-    if current_head != result.head_sha:
+    if current_head != expected_head:
         raise SkipPublication(
-            f"obsolete result: expected {result.head_sha}, current {current_head}"
+            f"obsolete result: expected {expected_head}, current {current_head}"
         )
     if bool(pull_request.get("draft")):
         raise SkipPublication("draft Pull Request is not eligible for publication")
@@ -43,6 +43,14 @@ def validate_pull_request(
     if nested(pull_request, "user", "login") != api.owner:
         raise SkipPublication("Pull Request author is not the repository owner")
     return pull_request
+
+
+def validate_pull_request(
+    api: GitHubApi,
+    number: int,
+    result: ReviewResult,
+) -> Mapping[str, Any]:
+    return validate_pull_request_head(api, number, result.head_sha)
 
 
 def cleanup_legacy_best_effort(api: GitHubApi, number: int, context: str) -> None:
@@ -59,6 +67,16 @@ def ensure_review(api: GitHubApi, number: int, result: ReviewResult) -> str:
     body = render_review_body(result, overflow)
     api.create_review(number, result.head_sha, body, inline)
     return f"published {len(inline)} inline and {len(overflow)} summary findings"
+
+
+def clear_processing_reaction(
+    api: GitHubApi,
+    number: int,
+    expected_head: str,
+) -> str:
+    validate_pull_request_head(api, number, expected_head)
+    api.remove_reactions(number)
+    return "processing reaction cleared for missing artifact"
 
 
 def publish_review_result(
