@@ -43,8 +43,6 @@ def load_records(directory: Path) -> dict[str, dict[str, str]]:
             raise ValueError(f"duplicate image metadata for service: {service}")
         if not DIGEST_PATTERN.fullmatch(raw["digest"]):
             raise ValueError(f"{path.name}: invalid image digest")
-        if raw["reference"] != f'{raw["repository"]}@{raw["digest"]}':
-            raise ValueError(f"{path.name}: image reference does not match digest")
         records[service] = raw
     return records
 
@@ -79,6 +77,8 @@ def build_manifest(
             raise ValueError(f"{service}: image repository must be {image_repository}")
         if record["tag"] != expected_tag:
             raise ValueError(f"{service}: image tag must be {expected_tag}")
+        if record["reference"] != f'{record["repository"]}@{record["digest"]}':
+            raise ValueError(f"{service}: image reference does not match digest")
         images[service] = {
             "env": image_env_name(service),
             "repository": record["repository"],
