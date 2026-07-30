@@ -308,13 +308,13 @@ jobs:
           fi
 
           if [[ -z "$BASE_SHA" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
-            echo "No valid base SHA found; skipping compatibility check."
-            exit 0
+            echo "::error::Unable to resolve contract baseline SHA"
+            exit 2
           fi
 
           if ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
-            echo "Base commit ${BASE_SHA} not found in history; skipping compatibility check."
-            exit 0
+            echo "::error::Baseline commit is unavailable: ${BASE_SHA}"
+            exit 2
           fi
 
           BASELINE_DIR="${RUNNER_TEMP}/contracts-baseline"
@@ -326,10 +326,11 @@ jobs:
         shell: bash
         working-directory: libs/py/contracts
         run: |
-          if [[ -z "${BASELINE_DIR:-}" ]]; then
-            echo "No baseline extracted; skipping compatibility check."
-            exit 0
-          fi
+          set -euo pipefail
+          test -n "${BASELINE_DIR:-}" || {
+            echo "::error::Contract baseline was not extracted"
+            exit 2
+          }
           uv run python -m parsevk_contracts.generation.cli compatibility \
             --baseline "$BASELINE_DIR/libs/py/contracts/generated" \
             --current generated
