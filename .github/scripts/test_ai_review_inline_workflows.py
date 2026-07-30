@@ -32,6 +32,12 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("pull-requests: write", self.publisher)
         self.assertIn("ai-review-final-", self.publisher)
 
+    def test_missing_artifact_recovery_is_head_guarded(self) -> None:
+        self.assertIn("Clear processing reaction when artifact is missing", self.publisher)
+        self.assertIn("clear-processing", self.publisher)
+        self.assertIn("github.event.workflow_run.head_sha", self.publisher)
+        self.assertIn('--expected-head "$EXPECTED_HEAD"', self.publisher)
+
 
 if __name__ == "__main__":
     unittest.main()
