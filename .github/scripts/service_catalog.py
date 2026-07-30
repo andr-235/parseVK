@@ -10,11 +10,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import subprocess
 import sys
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any
 
 CATALOG_PATH = Path(".github/service-catalog.yaml")
 PURPOSE_FIELDS = {
@@ -22,6 +24,7 @@ PURPOSE_FIELDS = {
     "audit": "dependency_audit",
     "docker": "docker_scan",
 }
+PURPOSES = ("pytest", "audit", "docker", "deploy")
 
 
 class CatalogError(RuntimeError):
@@ -41,7 +44,7 @@ class Service:
     compose_build: tuple[str, ...]
 
     @classmethod
-    def from_mapping(cls, name: str, value: Mapping[str, Any]) -> "Service":
+    def from_mapping(cls, name: str, value: Mapping[str, Any]) -> Service:
         required = {
             "kind",
             "path",
@@ -95,11 +98,11 @@ class Service:
 @dataclass(frozen=True)
 class Catalog:
     schema_version: int
-    global_change_paths: tuple[str, ...]
+    global_change_paths: Mapping[str, tuple[str, ...]]
     services: tuple[Service, ...]
 
     @classmethod
-    def load(cls, path: Path) -> "Catalog":
+    def load(cls, path: Path) -> Catalog:
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
         except FileNotFoundError as exc:
@@ -118,7 +121,7 @@ class Catalog:
         if raw["schema_version"] != 1:
             raise CatalogError(f"unsupported catalog schema version: {raw['schema_version']!r}")
 
-        global_paths = _string_tuple("catalog", "global_change_paths", raw["global_change_paths"])
+        global_paths = _purpose_paths(raw["global_change_paths"])
         services_raw = raw["services"]
         if not isinstance(services_raw, dict) or not services_raw:
             raise CatalogError("catalog services must be a non-empty object")
@@ -140,7 +143,10 @@ class Catalog:
 
     def changed(self, purpose: str, changed_files: Sequence[str]) -> tuple[Service, ...]:
         candidates = self.selected(purpose)
-        if any(_path_matches(path, self.global_change_paths) for path in changed_files):
+        global_paths = self.global_change_paths.get(purpose)
+        if global_paths is None:
+            raise CatalogError(f"global change paths are not configured for purpose: {purpose}")
+        if any(_path_matches(path, global_paths) for path in changed_files):
             if purpose in {"pytest", "audit"}:
                 return tuple(service for service in candidates if service.kind == "python")
             return candidates
@@ -167,15 +173,34 @@ def _string_tuple(owner: str, field: str, raw: Any) -> tuple[str, ...]:
     return tuple(raw)
 
 
+def _purpose_paths(raw: Any) -> dict[str, tuple[str, ...]]:
+    if not isinstance(raw, dict):
+        raise CatalogError("global_change_paths must be an object keyed by purpose")
+    if set(raw) != set(PURPOSES):
+        raise CatalogError(f"global_change_paths keys must be exactly: {', '.join(PURPOSES)}")
+    return {
+        purpose: _string_tuple("global_change_paths", purpose, raw[purpose])
+        for purpose in PURPOSES
+    }
+
+
 def _path_matches(path: str, prefixes: Iterable[str]) -> bool:
     return any(path == prefix.rstrip("/") or path.startswith(prefix) for prefix in prefixes)
+
+
+def _executable(name: str) -> str:
+    executable = shutil.which(name)
+    if executable is None:
+        raise CatalogError(f"required executable is not available: {name}")
+    return executable
 
 
 def _git_changed_files(repo_root: Path, base: str, head: str) -> list[str] | None:
     if not base or base == "0" * 40:
         return None
-    verify = subprocess.run(
-        ["git", "cat-file", "-e", f"{base}^{{commit}}"],
+    git = _executable("git")
+    verify = subprocess.run(  # noqa: S603 - executable resolved from trusted PATH
+        [git, "cat-file", "-e", f"{base}^{{commit}}"],
         cwd=repo_root,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -183,8 +208,8 @@ def _git_changed_files(repo_root: Path, base: str, head: str) -> list[str] | Non
     )
     if verify.returncode != 0:
         return None
-    result = subprocess.run(
-        ["git", "diff", "--name-only", "--diff-filter=ACMRT", base, head],
+    result = subprocess.run(  # noqa: S603 - fixed git arguments, SHAs are separate argv items
+        [git, "diff", "--name-only", "--diff-filter=ACMRT", base, head],
         cwd=repo_root,
         text=True,
         capture_output=True,
@@ -205,8 +230,9 @@ def _discover_python_services(repo_root: Path) -> set[str]:
 
 
 def _compose_model(repo_root: Path, compose_file: Path) -> Mapping[str, Any]:
-    result = subprocess.run(
-        ["docker", "compose", "-f", str(compose_file), "config", "--format", "json"],
+    docker = _executable("docker")
+    result = subprocess.run(  # noqa: S603 - executable resolved from trusted PATH
+        [docker, "compose", "-f", str(compose_file), "config", "--format", "json"],
         cwd=repo_root,
         text=True,
         capture_output=True,
@@ -317,7 +343,6 @@ def _resolve_services(args: argparse.Namespace, catalog: Catalog) -> tuple[Servi
         raise CatalogError("provide --all, --changed-file, or both --base and --head")
     changed_files = _git_changed_files(args.repo_root, args.base, args.head)
     if changed_files is None:
-        # Missing/unreachable base is intentionally fail-safe: run/build everything.
         return catalog.selected(args.purpose)
     return catalog.changed(args.purpose, changed_files)
 
@@ -333,11 +358,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     for command in ("matrix", "changed"):
         child = subparsers.add_parser(command)
-        child.add_argument(
-            "--purpose",
-            required=True,
-            choices=["pytest", "audit", "docker", "deploy"],
-        )
+        child.add_argument("--purpose", required=True, choices=PURPOSES)
         child.add_argument("--all", action="store_true")
         child.add_argument("--base")
         child.add_argument("--head")
