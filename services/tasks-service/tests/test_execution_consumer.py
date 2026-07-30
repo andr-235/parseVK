@@ -432,7 +432,10 @@ async def test_apply_started_from_pending_emits_state_changed():
 
 @pytest.mark.anyio
 async def test_apply_started_from_running_does_not_emit():
-    session = _mock_session_with_task_row(_make_task_row(status="running"), include_duplicate_check=False)
+    session = _mock_session_with_task_row(
+        _make_task_row(status="running", last_seq=1),
+        include_duplicate_check=False,
+    )
     service = ExecutionEventService(session)
 
     ok = await service.apply_started(42, "run-42", 2, "user-1")
