@@ -1,0 +1,31 @@
+name: Reusable Python Service Quality
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        description: Python service directory name under services/
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Quality ${{ inputs.service }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: ${{ github.workspace }}/libs/py/common
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        working-directory: services/${{ inputs.service }}
+        run: uv sync --extra test --frozen
+      - name: Run tests
+        working-directory: services/${{ inputs.service }}
+        run: uv run pytest -v
