@@ -11,6 +11,10 @@ PY_SECURITY="$ROOT_DIR/.github/workflows/reusable-python-security.yml"
 DOCKER_SECURITY="$ROOT_DIR/.github/workflows/reusable-docker-security.yml"
 ALEMBIC="$ROOT_DIR/.github/workflows/reusable-alembic-migration.yml"
 IMAGES="$ROOT_DIR/.github/scripts/production/images.sh"
+PREFLIGHT="$ROOT_DIR/.github/scripts/production/preflight.sh"
+RELEASE="$ROOT_DIR/.github/scripts/production/release.sh"
+LOCAL_RELEASE="$ROOT_DIR/.github/scripts/production/local-release.sh"
+METADATA="$ROOT_DIR/.github/scripts/production/metadata.sh"
 
 required=(
   "$DEPLOY" "$ROLLBACK" "$CI" "$SECURITY" "$QUALITY" "$PY_SECURITY"
@@ -19,6 +23,7 @@ required=(
   "$ROOT_DIR/.github/scripts/validate_alembic_graphs.py"
   "$ROOT_DIR/.github/scripts/alembic_graph.py"
   "$ROOT_DIR/.github/scripts/service_catalog_lib/__init__.py"
+  "$LOCAL_RELEASE" "$ROOT_DIR/scripts/test-local-release.sh"
 )
 for file in "${required[@]}"; do
   [[ -f "$file" ]] || { echo "Required CI/CD file not found: $file"; exit 1; }
@@ -93,22 +98,62 @@ require_pattern "$CI" 'name: Release Gate' "Release Gate is missing"
 
 require_pattern "$DEPLOY" 'REQUIRED_WORKFLOWS=\("CI" "Security Scanning"\)' \
   "Deploy does not wait for CI and Security"
+require_pattern "$DEPLOY" "github\.event\.workflow_run\.event == 'workflow_dispatch'" \
+  "Automatic deploy is not tied to the validated semantic release commit"
 require_pattern "$DEPLOY" 'needs\.gate\.outputs\.deploy == .true.' \
   "Deploy is not gated"
 require_pattern "$DEPLOY" '--purpose deploy' \
   "Deploy targets are not catalog-driven"
+require_pattern "$DEPLOY" 'local-release\.sh.*snapshot|LOCAL_RELEASE_SCRIPT.*snapshot' \
+  "Deploy does not snapshot a complete local release"
+require_pattern "$DEPLOY" 'local-release\.sh.*promote|LOCAL_RELEASE_SCRIPT.*promote' \
+  "Deploy does not promote the healthy local release"
 reject_pattern "$DEPLOY" 'workflow_dispatch\.inputs.*ref|inputs\.ref|TARGET_REF' \
   "Manual deploy accepts arbitrary refs"
+reject_pattern "$DEPLOY" 'commit contains \[skip ci\]' \
+  "Deploy still rejects semantic release commits"
 reject_pattern "$DEPLOY" 'BUILD_(FRONTEND|API_GATEWAY|IDENTITY_SERVICE|TASKS_SERVICE)' \
   "Hard-coded service build flags returned"
 
 health_line="$(grep -n 'Verify container health' "$DEPLOY" | head -n1 | cut -d: -f1)"
+promote_line="$(grep -n 'Promote local release' "$DEPLOY" | head -n1 | cut -d: -f1)"
 metadata_line="$(grep -n 'Update deployment metadata' "$DEPLOY" | head -n1 | cut -d: -f1)"
-[[ -n "$health_line" && -n "$metadata_line" && "$health_line" -lt "$metadata_line" ]] || {
-  echo "Deployment metadata can be written before health verification"; exit 1;
+[[ -n "$health_line" && -n "$promote_line" && -n "$metadata_line" \
+  && "$health_line" -lt "$promote_line" && "$promote_line" -lt "$metadata_line" ]] || {
+  echo "Local release can be promoted or recorded before health verification"; exit 1;
 }
 
-for helper in common metadata preflight images migrations release; do
+require_pattern "$ROLLBACK" 'previous_successful_commit' \
+  "Rollback default does not select the previous successful release"
+require_pattern "$ROLLBACK" 'LOCAL_RELEASE_SCRIPT.*activate|local-release\.sh.*activate' \
+  "Rollback does not activate local immutable images"
+require_pattern "$ROLLBACK" 'PULL_POLICY: never' \
+  "Rollback does not prohibit registry pulls"
+require_pattern "$ROLLBACK" 'group: production-deployment' \
+  "Deploy and rollback are not serialized together"
+reject_pattern "$ROLLBACK" 'docker login|ghcr\.io|images\.sh.*build' \
+  "Rollback still depends on registry access or image rebuild"
+
+require_pattern "$PREFLIGHT" 'check_local_runtime_images' \
+  "Production preflight does not verify local runtime images"
+reject_pattern "$PREFLIGHT" 'https?://|check_registry_reachability' \
+  "Production preflight still requires external registry access"
+require_pattern "$IMAGES" 'ALLOW_IMAGE_PULLS.*false' \
+  "Image preparation does not default to local-only mode"
+require_pattern "$IMAGES" 'docker image inspect' \
+  "Image preparation does not verify the local cache"
+require_pattern "$RELEASE" '--pull "\$PULL_POLICY"' \
+  "Compose release does not enforce an explicit pull policy"
+require_pattern "$LOCAL_RELEASE" 'parsevk-release' \
+  "Local immutable image namespace is missing"
+require_pattern "$LOCAL_RELEASE" 'status:"candidate"' \
+  "Local release is not created as a candidate"
+require_pattern "$LOCAL_RELEASE" 'status = "successful"' \
+  "Local release is not promoted after health checks"
+require_pattern "$METADATA" 'previous_successful_commit' \
+  "Deployment metadata does not retain the previous release"
+
+for helper in common metadata preflight images migrations release local-release; do
   [[ -f "$ROOT_DIR/.github/scripts/production/$helper.sh" ]] || {
     echo "Missing production helper: $helper.sh"; exit 1;
   }
@@ -143,4 +188,5 @@ done
 
 python3 "$ROOT_DIR/.github/scripts/test_service_catalog.py" -v
 python3 "$ROOT_DIR/.github/scripts/test_validate_alembic_graphs.py" -v
-echo "CI/CD reusable workflows, migration gates and production contracts are valid"
+bash "$ROOT_DIR/scripts/test-local-release.sh"
+echo "CI/CD reusable workflows, offline production releases and migration gates are valid"
