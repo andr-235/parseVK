@@ -1,3 +1,10 @@
+# [0.83.0](https://github.com/andr-235/parseVK/compare/v0.82.0...v0.83.0) (2026-07-30)
+
+
+### Features
+
+* **ci:** publish immutable GHCR release images ([#336](https://github.com/andr-235/parseVK/issues/336)) ([30e7991](https://github.com/andr-235/parseVK/commit/30e79915234f868327ab31913ea8b459b5b4c5dd)), closes [#7](https://github.com/andr-235/parseVK/issues/7) [#1006](https://github.com/andr-235/parseVK/issues/1006) [#791](https://github.com/andr-235/parseVK/issues/791)
+
 # [0.82.0](https://github.com/andr-235/parseVK/compare/v0.81.1...v0.82.0) (2026-07-30)
 
 
