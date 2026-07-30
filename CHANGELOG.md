@@ -1,3 +1,10 @@
+# [0.84.0](https://github.com/andr-235/parseVK/compare/v0.83.2...v0.84.0) (2026-07-30)
+
+
+### Features
+
+* **deploy:** add local immutable production releases ([#344](https://github.com/andr-235/parseVK/issues/344)) ([4d18e30](https://github.com/andr-235/parseVK/commit/4d18e30c266cd35fa897f1f557ac1376a4075935)), closes [#343](https://github.com/andr-235/parseVK/issues/343)
+
 ## [0.83.2](https://github.com/andr-235/parseVK/compare/v0.83.1...v0.83.2) (2026-07-30)
 
 
