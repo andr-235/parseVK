@@ -1,0 +1,79 @@
+name: Reusable Alembic Migration Gate
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        description: Migration-enabled service name
+        required: true
+        type: string
+      database_url_env:
+        description: Environment variable read by service settings
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  migration:
+    name: Migrate ${{ inputs.service }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: ${{ github.workspace }}/libs/py/common
+      VK_SERVICE_VK_TOKEN: ci-migration-placeholder
+    services:
+      postgres:
+        image: postgres:16.14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: parsevk_migration
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d parsevk_migration"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Configure service database URL
+        shell: bash
+        env:
+          DATABASE_URL_ENV: ${{ inputs.database_url_env }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$DATABASE_URL_ENV" =~ ^[A-Z][A-Z0-9_]*$ ]]; then
+            echo "::error::Invalid database URL environment name: $DATABASE_URL_ENV"
+            exit 1
+          fi
+          DATABASE_URL="postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/parsevk_migration"
+          printf '%s=%s\n' "$DATABASE_URL_ENV" "$DATABASE_URL" >> "$GITHUB_ENV"
+
+      - name: Install service dependencies
+        working-directory: services/${{ inputs.service }}
+        run: uv sync --frozen
+
+      - name: Validate declared revision graph
+        run: python3 .github/scripts/validate_alembic_graphs.py --service "${{ inputs.service }}"
+
+      - name: Resolve Alembic history
+        working-directory: services/${{ inputs.service }}
+        run: |
+          set -euo pipefail
+          uv run alembic heads --verbose
+          uv run alembic history --verbose
+
+      - name: Apply migrations on clean PostgreSQL
+        working-directory: services/${{ inputs.service }}
+        run: |
+          set -euo pipefail
+          uv run alembic upgrade head
+          uv run alembic current --verbose
+          uv run alembic upgrade head
