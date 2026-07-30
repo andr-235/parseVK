@@ -13,12 +13,14 @@
     ],
     "docker": [
       ".dockerignore",
+      "docker-compose.yml",
       "pyproject.toml",
       "libs/py/common/",
       "libs/py/contracts/"
     ],
     "deploy": [
       ".dockerignore",
+      "docker-compose.yml",
       "pyproject.toml",
       "libs/py/common/",
       "libs/py/contracts/"
