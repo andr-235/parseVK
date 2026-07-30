@@ -14,16 +14,13 @@ class CommitPlanTests(unittest.TestCase):
     def setUp(self) -> None:
         self.repo = Path(tempfile.mkdtemp())
         subprocess.run(["git", "init"], cwd=self.repo, check=True, capture_output=True)
-        subprocess.run(
-            ["git", "config", "user.email", "review@example.com"],
-            cwd=self.repo,
-            check=True,
-        )
-        subprocess.run(
-            ["git", "config", "user.name", "Reviewer"],
-            cwd=self.repo,
-            check=True,
-        )
+        for key, value in (
+            ("user.email", "review@example.com"),
+            ("user.name", "Reviewer"),
+        ):
+            subprocess.run(
+                ["git", "config", key, value], cwd=self.repo, check=True
+            )
         self.commits = [self._commit(str(index)) for index in range(4)]
 
     def _commit(self, value: str) -> str:
@@ -38,9 +35,7 @@ class CommitPlanTests(unittest.TestCase):
             capture_output=True,
         )
         return subprocess.check_output(
-            ["git", "rev-parse", "HEAD"],
-            cwd=self.repo,
-            text=True,
+            ["git", "rev-parse", "HEAD"], cwd=self.repo, text=True
         ).strip()
 
     def test_opened_reviews_every_commit_after_base(self) -> None:
@@ -52,8 +47,7 @@ class CommitPlanTests(unittest.TestCase):
             cwd=self.repo,
         )
         self.assertEqual(
-            [unit["head_sha"] for unit in plan["units"]],
-            self.commits[1:],
+            [unit["head_sha"] for unit in plan["units"]], self.commits[1:]
         )
 
     def test_synchronize_reviews_only_new_commits(self) -> None:
@@ -65,8 +59,7 @@ class CommitPlanTests(unittest.TestCase):
             cwd=self.repo,
         )
         self.assertEqual(
-            [unit["head_sha"] for unit in plan["units"]],
-            self.commits[2:],
+            [unit["head_sha"] for unit in plan["units"]], self.commits[2:]
         )
         self.assertEqual(plan["units"][0]["base_sha"], self.commits[1])
 
@@ -87,8 +80,7 @@ class CommitPlanTests(unittest.TestCase):
             cwd=self.repo,
         )
         self.assertEqual(
-            [unit["head_sha"] for unit in plan["units"]],
-            rewritten,
+            [unit["head_sha"] for unit in plan["units"]], rewritten
         )
         self.assertEqual(plan["start_sha"], self.commits[0])
 
@@ -105,11 +97,7 @@ class AggregateTests(unittest.TestCase):
         (directory / f"{'2' * 40}.json").write_text(json.dumps(approved))
         (directory / f"{'3' * 40}.json").write_text(json.dumps(blocked))
         batch = build_batch(
-            {
-                "run_head_sha": "3" * 40,
-                "status": "review",
-                "units": units,
-            },
+            {"run_head_sha": "3" * 40, "status": "review", "units": units},
             directory,
         )
         self.assertEqual(batch["verdict"], "changes-required")
