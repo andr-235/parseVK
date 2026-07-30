@@ -3,7 +3,9 @@ from __future__ import annotations
 import ast
 from dataclasses import dataclass
 from pathlib import Path
+
 MAX_REVISION_LENGTH = 32
+
 
 @dataclass(frozen=True)
 class Revision:
@@ -52,6 +54,7 @@ def read_revision(path: Path) -> Revision:
 def find_cycle(revisions: dict[str, Revision]) -> tuple[str, ...] | None:
     state: dict[str, int] = {}
     stack: list[str] = []
+
     def visit(revision: str) -> tuple[str, ...] | None:
         marker = state.get(revision, 0)
         if marker == 2:
@@ -69,6 +72,7 @@ def find_cycle(revisions: dict[str, Revision]) -> tuple[str, ...] | None:
         stack.pop()
         state[revision] = 2
         return None
+
     for revision in revisions:
         cycle = visit(revision)
         if cycle is not None:
