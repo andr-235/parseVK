@@ -34,6 +34,13 @@ def write_record(
     )
 
 
+def mutate_record(directory: Path, service: str, **changes: str) -> None:
+    path = directory / f"{service}.json"
+    record = json.loads(path.read_text(encoding="utf-8"))
+    record.update(changes)
+    path.write_text(json.dumps(record), encoding="utf-8")
+
+
 class ReleaseManifestTests(unittest.TestCase):
     def test_builds_complete_digest_manifest_and_env(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -102,6 +109,30 @@ class ReleaseManifestTests(unittest.TestCase):
             write_record(metadata, "api", DIGEST_A, "2" * 40)
             write_record(metadata, "frontend", DIGEST_B)
             with self.assertRaisesRegex(ValueError, "commit does not match"):
+                build_manifest(catalog, metadata, "example/parsevk", COMMIT)
+
+    def test_unexpected_repository_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            catalog = root / "catalog.yaml"
+            metadata = root / "metadata"
+            make_catalog(catalog)
+            write_record(metadata, "api", DIGEST_A)
+            write_record(metadata, "frontend", DIGEST_B)
+            mutate_record(metadata, "api", repository="ghcr.io/other/api")
+            with self.assertRaisesRegex(ValueError, "image repository must be"):
+                build_manifest(catalog, metadata, "example/parsevk", COMMIT)
+
+    def test_unexpected_tag_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            catalog = root / "catalog.yaml"
+            metadata = root / "metadata"
+            make_catalog(catalog)
+            write_record(metadata, "api", DIGEST_A)
+            write_record(metadata, "frontend", DIGEST_B)
+            mutate_record(metadata, "api", tag="ghcr.io/example/parsevk-api:latest")
+            with self.assertRaisesRegex(ValueError, "image tag must be"):
                 build_manifest(catalog, metadata, "example/parsevk", COMMIT)
 
 
