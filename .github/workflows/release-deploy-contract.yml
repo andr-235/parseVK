@@ -10,6 +10,8 @@ on:
       - .github/workflows/security.yml
       - .github/workflows/deploy.yml
       - .github/workflows/release-deploy-coordinator.yml
+      - .github/workflows/publish-release-images.yml
+      - .github/workflows/reusable-publish-image.yml
       - .github/workflows/release-deploy-contract.yml
   push:
     branches: [main]
@@ -20,6 +22,8 @@ on:
       - .github/workflows/security.yml
       - .github/workflows/deploy.yml
       - .github/workflows/release-deploy-coordinator.yml
+      - .github/workflows/publish-release-images.yml
+      - .github/workflows/reusable-publish-image.yml
       - .github/workflows/release-deploy-contract.yml
 
 permissions:
