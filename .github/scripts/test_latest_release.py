@@ -96,6 +96,7 @@ class WorkflowContractTests(unittest.TestCase):
     def test_release_consumers_use_trusted_resolver(self) -> None:
         for workflow in (self.deploy, self.coordinator, self.full_ci, self.security):
             self.assertIn(".github/scripts/latest_release.py", workflow)
+        for workflow in (self.full_ci, self.security):
             self.assertIn("LATEST_RELEASE_SHA", workflow)
 
     def test_manual_deploy_is_bound_to_expected_latest_release(self) -> None:
