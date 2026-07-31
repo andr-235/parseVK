@@ -36,7 +36,11 @@ jobs:
       - name: Run resolver and workflow contract tests
         env:
           PYTHONPATH: .github/scripts
-        run: python3 -m unittest .github/scripts/test_latest_release.py -v
+        run: >-
+          python3 -m unittest discover
+          -s .github/scripts
+          -p 'test_latest_release.py'
+          -v
 
       - name: Compile release resolver
         run: python3 -m py_compile .github/scripts/latest_release.py .github/scripts/test_latest_release.py
