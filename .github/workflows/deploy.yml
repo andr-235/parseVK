@@ -1,28 +1,25 @@
 name: Deploy to Production Server
 
 on:
-  workflow_run:
-    workflows: ["Full Release CI"]
-    types:
-      - completed
   workflow_dispatch:
     inputs:
       deployment:
-        description: "Повторно развернуть последний проверенный semantic release из main"
+        description: "Развернуть последний проверенный semantic release из main"
         required: true
         type: choice
         options:
           - latest-release
         default: latest-release
       expected_release_sha:
-        description: "Ожидаемый release SHA для coordinator; ручной запуск оставляет поле пустым"
+        description: "Ожидаемый release SHA от coordinator; ручной запуск может оставить поле пустым"
         required: false
         type: string
         default: ""
 
 permissions:
-  contents: read
   actions: read
+  contents: read
+  statuses: read
 
 concurrency:
   group: production-deployment
@@ -32,18 +29,10 @@ jobs:
   gate:
     name: Verify Release Gates
     runs-on: ubuntu-latest
-    timeout-minutes: 25
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (
-        github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.event == 'workflow_dispatch' &&
-        github.event.workflow_run.head_branch == 'main'
-      )
+    timeout-minutes: 10
     outputs:
       target_sha: ${{ steps.target.outputs.target_sha }}
       deploy: ${{ steps.quality.outputs.deploy }}
-      gate_event: ${{ steps.target.outputs.gate_event }}
     steps:
       - name: Checkout release history and resolver
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -58,31 +47,23 @@ jobs:
       - name: Determine target commit
         id: target
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          WORKFLOW_RUN_SHA: ${{ github.event.workflow_run.head_sha }}
           MANUAL_REF: ${{ github.ref }}
           MANUAL_DEPLOYMENT: ${{ inputs.deployment }}
           EXPECTED_RELEASE_SHA: ${{ inputs.expected_release_sha }}
         run: |
           set -euo pipefail
 
-          RELEASE_JSON="$(python .github/scripts/latest_release.py --ref HEAD)"
-          LATEST_RELEASE_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
-
-          if [ "$EVENT_NAME" = "workflow_run" ]; then
-            TARGET_SHA="$WORKFLOW_RUN_SHA"
-          else
-            if [ "$MANUAL_DEPLOYMENT" != "latest-release" ]; then
-              echo "::error::Неизвестный режим ручного production deploy: $MANUAL_DEPLOYMENT"
-              exit 1
-            fi
-            if [ "$MANUAL_REF" != "refs/heads/main" ]; then
-              echo "::error::Ручной production deploy разрешён только из ветки main. Выбрано: $MANUAL_REF"
-              exit 1
-            fi
-            TARGET_SHA="$LATEST_RELEASE_SHA"
+          if [ "$MANUAL_DEPLOYMENT" != "latest-release" ]; then
+            echo "::error::Неизвестный режим production deploy: $MANUAL_DEPLOYMENT"
+            exit 1
+          fi
+          if [ "$MANUAL_REF" != "refs/heads/main" ]; then
+            echo "::error::Production deploy разрешён только из ветки main. Выбрано: $MANUAL_REF"
+            exit 1
           fi
 
+          RELEASE_JSON="$(python .github/scripts/latest_release.py --ref HEAD)"
+          TARGET_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
           if [ -n "$EXPECTED_RELEASE_SHA" ] && [ "$TARGET_SHA" != "$EXPECTED_RELEASE_SHA" ]; then
             echo "::error::Coordinator ожидал release $EXPECTED_RELEASE_SHA, но latest release равен $TARGET_SHA"
             exit 1
@@ -98,89 +79,41 @@ jobs:
             echo "::error::Production release commit is missing [skip ci]"
             exit 1
           }
-          GATE_EVENT="workflow_dispatch"
-
-          OBSOLETE=false
-          if [ "$TARGET_SHA" != "$LATEST_RELEASE_SHA" ]; then
-            OBSOLETE=true
-            echo "Deployment candidate $TARGET_SHA is obsolete; latest release is $LATEST_RELEASE_SHA"
-          fi
 
           echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
-          echo "gate_event=$GATE_EVENT" >> "$GITHUB_OUTPUT"
-          echo "obsolete=$OBSOLETE" >> "$GITHUB_OUTPUT"
 
-      - name: Wait for required workflow results
+      - name: Verify immutable release statuses
         id: quality
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TARGET_SHA: ${{ steps.target.outputs.target_sha }}
-          GATE_EVENT: ${{ steps.target.outputs.gate_event }}
-          OBSOLETE: ${{ steps.target.outputs.obsolete }}
         run: |
           set -euo pipefail
 
-          if [ "$OBSOLETE" = "true" ]; then
-            echo "deploy=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+          STATUSES="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/commits/${TARGET_SHA}/statuses?per_page=100")"
 
-          REQUIRED_WORKFLOWS=("Full Release CI" "Security Scanning")
-          MAX_ATTEMPTS=60
-          SLEEP_SECONDS=20
+          latest_state() {
+            local context="$1"
+            jq -r --arg context "$context" '
+              [.[] | select(.context == $context)]
+              | sort_by(.created_at)
+              | last
+              | if . == null then "missing" else (.state // "unknown") end
+            ' <<<"$STATUSES"
+          }
 
-          for ((attempt=1; attempt<=MAX_ATTEMPTS; attempt++)); do
-            RUNS_JSON="$(gh api \
-              --method GET \
-              "repos/${GITHUB_REPOSITORY}/actions/runs" \
-              -f head_sha="$TARGET_SHA" \
-              -f event="$GATE_EVENT" \
-              -f branch=main \
-              -f per_page=100)"
-
-            pending=false
-            for workflow in "${REQUIRED_WORKFLOWS[@]}"; do
-              result="$(jq -r --arg workflow "$workflow" '
-                [.workflow_runs[] | select(.name == $workflow)]
-                | sort_by(.run_number)
-                | last
-                | if . == null then
-                    "missing"
-                  elif .status != "completed" then
-                    .status
-                  else
-                    (.conclusion // "unknown")
-                  end
-              ' <<<"$RUNS_JSON")"
-
-              echo "${workflow} (${GATE_EVENT}): ${result}"
-              case "$result" in
-                success)
-                  ;;
-                missing|queued|in_progress|requested|waiting|pending)
-                  pending=true
-                  ;;
-                *)
-                  echo "::error::${workflow} не прошёл для commit ${TARGET_SHA}: ${result}"
-                  exit 1
-                  ;;
-              esac
-            done
-
-            if [ "$pending" = "false" ]; then
-              echo "deploy=true" >> "$GITHUB_OUTPUT"
-              echo "Все release gates пройдены для ${TARGET_SHA}"
-              exit 0
-            fi
-
-            if (( attempt == MAX_ATTEMPTS )); then
-              echo "::error::Истекло время ожидания release gates для ${TARGET_SHA}"
+          for context in release/full-ci release/security release/immutable-ghcr; do
+            result="$(latest_state "$context")"
+            echo "$context=$result"
+            [[ "$result" == "success" ]] || {
+              echo "::error::$context did not pass for $TARGET_SHA: $result"
               exit 1
-            fi
-
-            echo "Ожидание обязательных проверок: попытка ${attempt}/${MAX_ATTEMPTS}"
-            sleep "$SLEEP_SECONDS"
+            }
           done
+
+          echo "deploy=true" >> "$GITHUB_OUTPUT"
+          echo "Все release gates и immutable publication пройдены для $TARGET_SHA"
 
   deploy:
     name: Deploy to Debian Server

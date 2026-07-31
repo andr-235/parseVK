@@ -112,20 +112,24 @@ require_pattern "$DOCKER_SECURITY" 'build-args:.*inputs\.build_args' "Reusable D
 require_pattern "$SECURITY" 'build_args:.*matrix\.service.*frontend' "Frontend security scan lost production build arguments"
 require_pattern "$SECURITY" 'name: Security Gate' "Security Gate is missing"
 
-require_pattern "$DEPLOY" 'workflows: \["Full Release CI"\]' \
-  "Automatic deploy is not triggered by Full Release CI"
-require_pattern "$DEPLOY" 'REQUIRED_WORKFLOWS=\("Full Release CI" "Security Scanning"\)' \
-  "Deploy does not wait for Full Release CI and Security"
-require_pattern "$DEPLOY" "github\.event\.workflow_run\.event == 'workflow_dispatch'" \
-  "Automatic deploy is not tied to the validated semantic release commit"
+require_pattern "$DEPLOY" 'workflow_dispatch:' \
+  "Production deploy cannot be explicitly dispatched"
+reject_pattern "$DEPLOY" '^  workflow_run:' \
+  "Production deploy still bypasses the coordinator through Full Release CI"
+require_pattern "$DEPLOY" 'expected_release_sha:' \
+  "Production deploy is not bound to the coordinator release SHA"
+require_pattern "$DEPLOY" 'EXPECTED_RELEASE_SHA' \
+  "Production deploy does not validate the coordinator release SHA"
+require_pattern "$DEPLOY" 'release/full-ci' \
+  "Deploy does not recheck Full Release CI status"
+require_pattern "$DEPLOY" 'release/security' \
+  "Deploy does not recheck Security status"
+require_pattern "$DEPLOY" 'release/immutable-ghcr' \
+  "Deploy can start before immutable images and manifest are published"
 require_pattern "$DEPLOY" 'RELEASE_SUBJECT.*chore\\\(release\\\)' \
   "Deploy does not reject non-release commits"
 require_pattern "$DEPLOY" "grep -qF '\[skip ci\]'" \
   "Deploy does not validate the semantic-release marker"
-require_pattern "$DEPLOY" 'GATE_EVENT="workflow_dispatch"' \
-  "Deploy does not require explicitly dispatched full release gates"
-reject_pattern "$DEPLOY" 'GATE_EVENT="push"' \
-  "Deploy can fall back to incremental push checks"
 require_pattern "$DEPLOY" 'needs\.gate\.outputs\.deploy == .true.' \
   "Deploy is not gated"
 require_pattern "$DEPLOY" '--purpose deploy' \
@@ -232,4 +236,4 @@ python3 "$ROOT_DIR/.github/scripts/test_service_catalog.py" -v
 python3 "$ROOT_DIR/.github/scripts/test_validate_alembic_graphs.py" -v
 bash "$ROOT_DIR/scripts/test-local-release.sh"
 bash "$ROOT_DIR/scripts/test-deployment-metadata.sh"
-echo "Incremental CI, full release validation, offline production releases and migration gates are valid"
+echo "Incremental CI, full release validation, single-path production releases and migration gates are valid"

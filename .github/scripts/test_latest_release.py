@@ -113,7 +113,8 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn('deployment: "latest-release"', self.coordinator)
         self.assertIn("expected_release_sha", self.coordinator)
         self.assertIn("EXPECTED_RELEASE_SHA", self.deploy)
-        self.assertIn('TARGET_SHA="$LATEST_RELEASE_SHA"', self.deploy)
+        self.assertIn("release/immutable-ghcr", self.deploy)
+        self.assertNotIn("workflow_run:", self.deploy)
 
     def test_non_release_main_tip_does_not_invalidate_pipeline(self) -> None:
         for workflow in (self.full_ci, self.security):
