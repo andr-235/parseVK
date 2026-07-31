@@ -90,23 +90,48 @@ bash "$SCRIPT" promote "$commit_three"
 [ ! -e "$RELEASES_DIR/$commit_two" ]
 [ -f "$RELEASES_DIR/$commit_three/release.json" ]
 
-failed_commit="4234567890abcdef1234567890abcdef12345678"
-printf 'sha256:failed-frontend\n' >"$TMP_DIR/docker-state/parsevk-frontend_latest"
-printf 'sha256:failed-gateway\n' >"$TMP_DIR/docker-state/parsevk-api-gateway_latest"
-bash "$SCRIPT" snapshot "$failed_commit"
-failed_manifest="$RELEASES_DIR/$failed_commit/release.json"
-[ -f "$failed_manifest" ]
-bash "$SCRIPT" discard "$failed_commit"
-[ -f "$failed_manifest" ]
-[ "$(jq -r '.status' "$failed_manifest")" = "failed" ]
-[ -n "$(jq -r '.failed_at // empty' "$failed_manifest")" ]
-[ -e "$TMP_DIR/docker-state/parsevk-release_frontend_sha-$failed_commit" ]
-[ -e "$TMP_DIR/docker-state/parsevk-release_api-gateway_sha-$failed_commit" ]
+export FAILED_RELEASE_RETENTION=1
+failed_one="4234567890abcdef1234567890abcdef12345678"
+printf 'sha256:failed-one-frontend\n' >"$TMP_DIR/docker-state/parsevk-frontend_latest"
+printf 'sha256:failed-one-gateway\n' >"$TMP_DIR/docker-state/parsevk-api-gateway_latest"
+bash "$SCRIPT" snapshot "$failed_one"
+bash "$SCRIPT" mark-failed "$failed_one"
+failed_one_manifest="$RELEASES_DIR/$failed_one/release.json"
+[ -f "$failed_one_manifest" ]
+[ "$(jq -r '.status' "$failed_one_manifest")" = "failed" ]
+[ -n "$(jq -r '.failed_at // empty' "$failed_one_manifest")" ]
+[ -e "$TMP_DIR/docker-state/parsevk-release_frontend_sha-$failed_one" ]
+[ -e "$TMP_DIR/docker-state/parsevk-release_api-gateway_sha-$failed_one" ]
 
-if bash "$SCRIPT" discard "$commit_three" >/dev/null 2>&1; then
-  echo "Successful release was incorrectly discarded"
+sleep 1
+failed_two="5234567890abcdef1234567890abcdef12345678"
+printf 'sha256:failed-two-frontend\n' >"$TMP_DIR/docker-state/parsevk-frontend_latest"
+printf 'sha256:failed-two-gateway\n' >"$TMP_DIR/docker-state/parsevk-api-gateway_latest"
+bash "$SCRIPT" snapshot "$failed_two"
+bash "$SCRIPT" mark-failed "$failed_two"
+failed_two_manifest="$RELEASES_DIR/$failed_two/release.json"
+
+[ ! -e "$RELEASES_DIR/$failed_one" ]
+[ ! -e "$TMP_DIR/docker-state/parsevk-release_frontend_sha-$failed_one" ]
+[ ! -e "$TMP_DIR/docker-state/parsevk-release_api-gateway_sha-$failed_one" ]
+[ -f "$failed_two_manifest" ]
+[ "$(jq -r '.status' "$failed_two_manifest")" = "failed" ]
+[ -e "$TMP_DIR/docker-state/parsevk-release_frontend_sha-$failed_two" ]
+[ -e "$TMP_DIR/docker-state/parsevk-release_api-gateway_sha-$failed_two" ]
+
+bash "$SCRIPT" purge "$failed_two"
+[ ! -e "$RELEASES_DIR/$failed_two" ]
+[ ! -e "$TMP_DIR/docker-state/parsevk-release_frontend_sha-$failed_two" ]
+[ ! -e "$TMP_DIR/docker-state/parsevk-release_api-gateway_sha-$failed_two" ]
+
+if bash "$SCRIPT" mark-failed "$commit_three" >/dev/null 2>&1; then
+  echo "Successful release was incorrectly marked failed"
+  exit 1
+fi
+if bash "$SCRIPT" purge "$commit_three" >/dev/null 2>&1; then
+  echo "Successful release was incorrectly purged"
   exit 1
 fi
 
 [ -f "$RELEASES_DIR/$commit_three/release.json" ]
-echo "Local immutable release lifecycle, protected retention and failed-candidate recovery are valid"
+echo "Local immutable release lifecycle, protected retention and bounded failed-candidate recovery are valid"
