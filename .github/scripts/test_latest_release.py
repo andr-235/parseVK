@@ -85,21 +85,30 @@ class WorkflowContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         root = Path(__file__).resolve().parents[2]
-        cls.deploy = (root / ".github/workflows/deploy.yml").read_text(encoding="utf-8")
-        cls.coordinator = (
-            root / ".github/workflows/release-deploy-coordinator.yml"
-        ).read_text(encoding="utf-8")
+        workflows = root / ".github/workflows"
+        cls.deploy = (workflows / "deploy.yml").read_text(encoding="utf-8")
+        cls.coordinator = (workflows / "release-deploy-coordinator.yml").read_text(
+            encoding="utf-8"
+        )
+        cls.full_ci = (workflows / "ci.yml").read_text(encoding="utf-8")
+        cls.security = (workflows / "security.yml").read_text(encoding="utf-8")
 
-    def test_both_workflows_use_trusted_release_resolver(self) -> None:
-        for workflow in (self.deploy, self.coordinator):
+    def test_release_consumers_use_trusted_resolver(self) -> None:
+        for workflow in (self.deploy, self.coordinator, self.full_ci, self.security):
             self.assertIn(".github/scripts/latest_release.py", workflow)
-            self.assertIn("fetch-depth: 0", workflow)
+            self.assertIn("LATEST_RELEASE_SHA", workflow)
 
     def test_manual_deploy_is_bound_to_expected_latest_release(self) -> None:
         self.assertIn("deployment: \"latest-release\"", self.coordinator)
         self.assertIn("expected_release_sha", self.coordinator)
         self.assertIn("EXPECTED_RELEASE_SHA", self.deploy)
         self.assertIn('TARGET_SHA="$LATEST_RELEASE_SHA"', self.deploy)
+
+    def test_non_release_main_tip_does_not_invalidate_release_gates(self) -> None:
+        for workflow in (self.full_ci, self.security):
+            self.assertIn('--ref "$CURRENT_MAIN"', workflow)
+            self.assertIn('LATEST_RELEASE_SHA" == "$TARGET_SHA', workflow)
+            self.assertNotIn('CURRENT_MAIN" == "$TARGET_SHA', workflow)
 
     def test_main_tip_is_not_treated_as_release_identity(self) -> None:
         self.assertNotIn('TARGET_SHA="$MANUAL_SHA"', self.deploy)
