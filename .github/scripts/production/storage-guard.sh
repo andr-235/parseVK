@@ -4,11 +4,25 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common.sh"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/storage-integrity.sh"
 
-METADATA_FILE="${DEPLOYMENT_METADATA_FILE:-$(project_root)/.deployment-metadata.json}"
-LOCAL_RELEASE_SCRIPT="${LOCAL_RELEASE_SCRIPT:-$SCRIPT_DIR/local-release.sh}"
-MIN_FREE_PROJECT_GB="${MIN_FREE_PROJECT_GB:-10}"
-MIN_FREE_DOCKER_GB="${MIN_FREE_DOCKER_GB:-15}"
+read_server_setting() {
+  local key="$1" env_file="$(project_root)/.env"
+  [ -f "$env_file" ] || return 0
+  awk -F= -v key="$key" '
+    $1 == key { value = substr($0, index($0, "=") + 1) }
+    END { if (value != "") print value }
+  ' "$env_file"
+}
+
+threshold() {
+  local direct="$1" key="$2" fallback="$3" value
+  value="$direct"
+  [ -n "$value" ] || value="${!key:-}"
+  [ -n "$value" ] || value="$(read_server_setting "$key")"
+  printf '%s\n' "${value:-$fallback}"
+}
 
 validate_threshold() {
   local name="$1" value="$2"
@@ -19,17 +33,12 @@ validate_threshold() {
 }
 
 available_kb() {
-  local path="$1"
-  df -Pk "$path" | awk 'NR == 2 {print $4}'
+  df -Pk "$1" | awk 'NR == 2 {print $4}'
 }
 
 check_space() {
-  local label="$1" path="$2" minimum_gb="$3"
-  local available required
-  [ -d "$path" ] || {
-    log_error "$label path does not exist: $path"
-    return 1
-  }
+  local label="$1" path="$2" minimum_gb="$3" available required
+  [ -d "$path" ] || { log_error "$label path does not exist: $path"; return 1; }
   available="$(available_kb "$path")"
   [[ "$available" =~ ^[0-9]+$ ]] || {
     log_error "Cannot determine free space for $label: $path"
@@ -37,67 +46,46 @@ check_space() {
   }
   required=$((minimum_gb * 1024 * 1024))
   log_info "$label free space: $((available / 1024 / 1024)) GiB; required: ${minimum_gb} GiB"
-  if (( available < required )); then
+  (( available >= required )) || {
     log_error "$label has insufficient free space: $path"
     return 1
-  fi
-}
-
-metadata_commit() {
-  local key="$1"
-  jq -r ".${key} // empty" "$METADATA_FILE"
-}
-
-validate_metadata() {
-  [ -f "$METADATA_FILE" ] || {
-    log_info "Deployment metadata is absent; first local release is allowed"
-    return 0
-  }
-  jq -e '
-    type == "object"
-    and ((.last_successful_commit // "") | type == "string")
-    and ((.previous_successful_commit // "") | type == "string")
-    and ((.last_successful_commit // "") | test("^$|^[0-9a-f]{7,40}$"))
-    and ((.previous_successful_commit // "") | test("^$|^[0-9a-f]{7,40}$"))
-  ' "$METADATA_FILE" >/dev/null || {
-    log_error "Deployment metadata is invalid: $METADATA_FILE"
-    return 1
   }
 }
 
-verify_release_set() {
-  [ -f "$METADATA_FILE" ] || return 0
-  local current previous commit verified_commit=""
-  current="$(metadata_commit last_successful_commit)"
-  previous="$(metadata_commit previous_successful_commit)"
-  for commit in "$current" "$previous"; do
-    [ -n "$commit" ] || continue
-    [ "$commit" != "$verified_commit" ] || continue
-    PROJECT_ROOT="$(project_root)" \
-      DEPLOYMENT_METADATA_FILE="$METADATA_FILE" \
-      bash "$LOCAL_RELEASE_SCRIPT" verify "$commit"
-    verified_commit="$commit"
-  done
-}
-
-main() {
+require_integrity_commands() {
   require_command docker
   require_command jq
+  require_command python3
+}
+
+check_deploy_integrity() {
+  require_integrity_commands
   require_command df
   require_command awk
-  validate_threshold MIN_FREE_PROJECT_GB "$MIN_FREE_PROJECT_GB"
-  validate_threshold MIN_FREE_DOCKER_GB "$MIN_FREE_DOCKER_GB"
-
-  local docker_root
+  local project_gb docker_gb docker_root
+  project_gb="$(threshold "${MIN_FREE_PROJECT_GB:-}" PRODUCTION_MIN_FREE_PROJECT_GB 10)"
+  docker_gb="$(threshold "${MIN_FREE_DOCKER_GB:-}" PRODUCTION_MIN_FREE_DOCKER_GB 15)"
+  validate_threshold PRODUCTION_MIN_FREE_PROJECT_GB "$project_gb"
+  validate_threshold PRODUCTION_MIN_FREE_DOCKER_GB "$docker_gb"
   docker_root="$(docker info --format '{{.DockerRootDir}}')"
-  check_space "Project filesystem" "$(project_root)" "$MIN_FREE_PROJECT_GB"
-  check_space "Docker filesystem" "$docker_root" "$MIN_FREE_DOCKER_GB"
+  check_space "Project filesystem" "$(project_root)" "$project_gb"
+  check_space "Docker filesystem" "$docker_root" "$docker_gb"
   validate_metadata
-  verify_release_set
+  verify_metadata_releases
   log_info "Production storage and rollback integrity check passed"
 }
 
+check_rollback_integrity() {
+  require_integrity_commands
+  local commit
+  commit="${ROLLBACK_TARGET_COMMIT:-$(git -C "$(project_root)" rev-parse HEAD)}"
+  validate_metadata
+  verify_release "$commit"
+  log_info "Rollback release integrity check passed: $commit"
+}
+
 case "${1:-}" in
-  check) main ;;
-  *) log_error "Usage: storage-guard.sh check"; exit 2 ;;
+  check) check_deploy_integrity ;;
+  rollback) check_rollback_integrity ;;
+  *) log_error "Usage: storage-guard.sh check|rollback"; exit 2 ;;
 esac
