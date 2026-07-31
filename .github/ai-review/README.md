@@ -21,12 +21,12 @@ Reviewer анализирует новые commits Pull Request моделью `
 Reviewer не пересматривает весь накопленный PR при каждом push:
 
 - `opened`, `reopened`, `ready_for_review`: проверяет commits, достижимые из HEAD, но не достижимые из актуального `base`;
-- `synchronize`: если прежний HEAD является предком нового, проверяет только новые commits, одновременно исключая commits актуальной базовой ветки;
-- force-push: игнорирует старую цепочку и заново строит актуальный список относительно `base`;
+- `synchronize`: проверяет только новые commits и исключает commits актуальной базовой ветки;
+- force-push: заново строит актуальный список относительно `base`;
 - каждый обычный commit анализируется как diff его первого родителя к самому commit;
-- если весь PR содержит больше 50 собственных commits, любой следующий запуск сохраняет `review-required`, пока история не будет сокращена.
+- PR с более чем 50 собственными commits сохраняет `review-required` до сокращения истории.
 
-Быстрый следующий push не отменяет уже начатое commit-review. Старый batch может опубликовать результат, если проверенный commit по-прежнему входит в PR. Commit, удалённый force-push, не публикуется.
+Быстрый следующий push не отменяет уже начатое commit-review. Commit, удалённый force-push, не публикуется.
 
 ## Область анализа commit
 
@@ -52,9 +52,12 @@ Reviewer пропускает Markdown, README, `docs/**`, изображени�
 - проверяет только исходные файлы, изменённые текущим commit;
 - создаёт `major` finding с `confidence=1.0`, фактическим числом строк, лимитом и источником правила;
 - привязывает finding к изменённой строке и блокирует batch;
-- не создаёт выдуманный лимит, если распознаваемого правила нет.
+- не создаёт выдуманный лимит, если распознаваемого правила нет;
+- сохраняет все нарушения в пределах общего scope до 80 файлов, без среза первых двадцати.
 
-Детерминированные findings используют тот же JSON-контракт и тот же валидатор, что и findings модели. Prompt запрещает модели дублировать уже выполненную проверку размера файла.
+Enforcer записывает отдельный `agents-findings.json`. Trusted installer сохраняет исходный `ai_review.py` как core и устанавливает wrapper на прежний путь. Wrapper сначала выполняет обычный `finalize` или `fallback`, затем всегда объединяет обязательные findings с результатом. Поэтому сбой установки модели, ненулевой exit code или malformed output не могут скрыть нарушение `AGENTS.md`.
+
+Детерминированные findings используют тот же JSON-контракт и тот же publisher, что и findings модели. Prompt запрещает модели дублировать уже выполненную проверку размера файла.
 
 Инструкции не могут расширить commit diff, включить запрещённые инструменты или изменить JSON-контракт reviewer.
 
@@ -91,7 +94,7 @@ Default-branch publisher работает идемпотентно по SHA ка
 - reviewer запускается только для PR владельца репозитория;
 - fork и Dependabot не получают secrets;
 - model job не имеет прав записи;
-- commit planner, AGENTS helper и enforcer берутся из доверенного `base`;
+- commit planner, AGENTS helper, enforcer, installer, wrapper и merger берутся из доверенного `base`;
 - review publisher берётся из default branch;
 - `GITHUB_TOKEN` не передаётся OpenCode;
 - проектный `opencode.json` отключён;
@@ -106,4 +109,4 @@ PYTHONPATH=.github/scripts \
 python -m unittest discover -s .github/scripts -p 'test_ai_review*.py' -v
 ```
 
-Publisher, AGENTS enforcer и batch helpers дополнительно проверяются Ruff.
+Publisher, AGENTS runtime и batch helpers дополнительно проверяются Ruff. Runtime-тест исполняет wrapper с недоступным core и подтверждает блокирующее объединение обязательных findings.
