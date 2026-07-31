@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from ai_review_agents_install import install
+from ai_review_agents_install import install, install_bash_env
 
 SCRIPTS = Path(__file__).resolve().parent
 
@@ -99,6 +99,36 @@ class RuntimeTests(unittest.TestCase):
             bash_env = directory / "ai-review-bash-env.sh"
             self.assertIn("opencode()", bash_env.read_text(encoding="utf-8"))
             self.assertIn(f"BASH_ENV={bash_env}", github_env.read_text(encoding="utf-8"))
+
+    def test_opencode_wrapper_activates_after_installer_cleanup(self) -> None:
+        with tempfile.TemporaryDirectory() as value:
+            directory = Path(value)
+            workspace = directory / "workspace"
+            installer = workspace / ".opencode-installer"
+            installer.mkdir(parents=True)
+            home = directory / "home"
+            binary = home / ".opencode/bin/opencode"
+            binary.parent.mkdir(parents=True)
+            binary.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+            binary.chmod(0o755)
+            (directory / "ai_review_opencode.py").write_text("", encoding="utf-8")
+            with patch.dict(os.environ, {}, clear=False):
+                install_bash_env(directory)
+            env = os.environ | {
+                "BASH_ENV": str(directory / "ai-review-bash-env.sh"),
+                "GITHUB_WORKSPACE": str(workspace),
+                "HOME": str(home),
+            }
+            command = ["/usr/bin/bash", "-c", "type -t opencode || true"]
+            during = subprocess.run(  # noqa: S603 -- controlled test shell
+                command, text=True, capture_output=True, check=False, env=env
+            )
+            self.assertEqual(during.stdout.strip(), "")
+            installer.rmdir()
+            after = subprocess.run(  # noqa: S603 -- controlled test shell
+                command, text=True, capture_output=True, check=False, env=env
+            )
+            self.assertEqual(after.stdout.strip(), "function")
 
 
 if __name__ == "__main__":
