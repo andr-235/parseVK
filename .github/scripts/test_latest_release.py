@@ -15,18 +15,26 @@ class LatestReleaseTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.repo = Path(self.temp.name)
-        subprocess.run([GIT, "init", "-q", "-b", "main"], cwd=self.repo, check=True)
-        subprocess.run(
+        subprocess.run(  # noqa: S603 -- fixed executable with test-owned arguments
+            [GIT, "init", "-q", "-b", "main"], cwd=self.repo, check=True
+        )
+        subprocess.run(  # noqa: S603 -- fixed executable with test-owned arguments
             [GIT, "config", "user.email", "test@example.com"], cwd=self.repo, check=True
         )
-        subprocess.run([GIT, "config", "user.name", "Test"], cwd=self.repo, check=True)
+        subprocess.run(  # noqa: S603 -- fixed executable with test-owned arguments
+            [GIT, "config", "user.name", "Test"], cwd=self.repo, check=True
+        )
 
     def commit(self, message: str) -> str:
         marker = self.repo / "state.txt"
         marker.write_text(message + "\n", encoding="utf-8")
-        subprocess.run([GIT, "add", "state.txt"], cwd=self.repo, check=True)
-        subprocess.run([GIT, "commit", "-q", "-m", message], cwd=self.repo, check=True)
-        return subprocess.run(
+        subprocess.run(  # noqa: S603 -- fixed executable with test-owned arguments
+            [GIT, "add", "state.txt"], cwd=self.repo, check=True
+        )
+        subprocess.run(  # noqa: S603 -- fixed executable with test-owned arguments
+            [GIT, "commit", "-q", "-m", message], cwd=self.repo, check=True
+        )
+        return subprocess.run(  # noqa: S603 -- fixed executable with test-owned arguments
             [GIT, "rev-parse", "HEAD"],
             cwd=self.repo,
             check=True,
