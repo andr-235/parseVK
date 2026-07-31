@@ -89,6 +89,10 @@ class RuntimeTests(unittest.TestCase):
                 (directory / "ai_review.py").read_text(), "print('wrapper')\n"
             )
             self.assertEqual(
+                (directory / "ai_review_agents_merge.py").read_text(),
+                "print('merger')\n",
+            )
+            self.assertEqual(
                 (directory / "ai_review_opencode.py").read_text(),
                 "print('opencode')\n",
             )
