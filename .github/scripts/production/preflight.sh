@@ -22,12 +22,22 @@ validate_compose() {
   fi
 }
 
+integrity_mode() {
+  if [ -n "${PREFLIGHT_MODE:-}" ]; then
+    printf '%s\n' "$PREFLIGHT_MODE"
+  elif [ "${GITHUB_WORKFLOW:-}" = "Rollback Deployment" ]; then
+    printf 'rollback\n'
+  else
+    printf 'check\n'
+  fi
+}
+
 check_storage_integrity() {
   [ -f "$STORAGE_GUARD_SCRIPT" ] || {
     log_error "Production storage guard not found: $STORAGE_GUARD_SCRIPT"
     return 1
   }
-  bash "$STORAGE_GUARD_SCRIPT" check
+  bash "$STORAGE_GUARD_SCRIPT" "$(integrity_mode)"
 }
 
 check_external_networks() {
