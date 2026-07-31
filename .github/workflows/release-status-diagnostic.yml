@@ -6,7 +6,7 @@ on:
       - diagnostics/release-0.85.1
 
 permissions:
-  actions: read
+  actions: write
   contents: write
 
 jobs:
@@ -18,7 +18,7 @@ jobs:
           ref: diagnostics/release-0.85.1
           fetch-depth: 1
 
-      - name: Query workflow registration
+      - name: Dispatch protected production deploy
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_SHA: e786ff4db76707a500e3f3935f54400465af7191
@@ -26,33 +26,41 @@ jobs:
           set -euo pipefail
           mkdir -p diagnostics
 
-          gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml" > /tmp/deploy-workflow.json
-          gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/publish-release-images.yml" > /tmp/publish-workflow.json
-          gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs" -f per_page=20 > /tmp/deploy-runs.json
-          gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/workflows/publish-release-images.yml/runs" -f per_page=20 > /tmp/publish-runs.json
-          gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs" -f per_page=20 > /tmp/ci-runs.json
+          latest_run_id() {
+            gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs" \
+              -f branch=main \
+              -f event=workflow_dispatch \
+              -f per_page=20 \
+              --jq --arg sha "$RELEASE_SHA" '[.workflow_runs[] | select(.head_sha == $sha)] | sort_by(.created_at) | last | .id // empty'
+          }
 
-          jq -n \
-            --arg release_sha "$RELEASE_SHA" \
-            --slurpfile deploy_workflow /tmp/deploy-workflow.json \
-            --slurpfile publish_workflow /tmp/publish-workflow.json \
-            --slurpfile deploy_runs /tmp/deploy-runs.json \
-            --slurpfile publish_runs /tmp/publish-runs.json \
-            --slurpfile ci_runs /tmp/ci-runs.json \
-            '{
-              release_sha: $release_sha,
-              deploy_workflow: ($deploy_workflow[0] | {id,name,path,state,created_at,updated_at,html_url}),
-              publish_workflow: ($publish_workflow[0] | {id,name,path,state,created_at,updated_at,html_url}),
-              deploy_runs: [$deploy_runs[0].workflow_runs[] | {id,name,event,status,conclusion,head_sha,head_branch,html_url,created_at,updated_at}],
-              publish_runs: [$publish_runs[0].workflow_runs[] | {id,name,event,status,conclusion,head_sha,head_branch,html_url,created_at,updated_at}],
-              full_ci_runs: [$ci_runs[0].workflow_runs[] | {id,name,event,status,conclusion,head_sha,head_branch,html_url,created_at,updated_at}]
-            }' > diagnostics/release-0.85.2-workflow-registration.json
+          PRE_RUN_ID="$(latest_run_id)"
+          jq -nc '{ref:"main",inputs:{deployment:"current-main"}}' |
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/dispatches" --input -
+
+          RUN_ID=""
+          for attempt in $(seq 1 20); do
+            RUN_ID="$(latest_run_id)"
+            if [[ -n "$RUN_ID" && "$RUN_ID" != "$PRE_RUN_ID" ]]; then
+              break
+            fi
+            sleep 2
+          done
+
+          [[ -n "$RUN_ID" && "$RUN_ID" != "$PRE_RUN_ID" ]] || {
+            echo "::error::GitHub did not create a new production deploy run"
+            exit 1
+          }
+
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" \
+            --jq '{release_sha: env.RELEASE_SHA, deploy: {id,name,event,status,conclusion,head_sha,head_branch,html_url,created_at,updated_at}}' \
+            > diagnostics/release-0.85.2-manual-deploy.json
 
       - name: Commit diagnostic result
         run: |
           set -euo pipefail
           git config user.name github-actions[bot]
           git config user.email github-actions[bot]@users.noreply.github.com
-          git add diagnostics/release-0.85.2-workflow-registration.json
-          git commit -m "chore(diagnostics): record workflow registration"
+          git add diagnostics/release-0.85.2-manual-deploy.json
+          git commit -m "chore(diagnostics): record production deploy run"
           git push origin HEAD:diagnostics/release-0.85.1
