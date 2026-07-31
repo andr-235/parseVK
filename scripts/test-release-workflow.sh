@@ -153,4 +153,42 @@ done
 PYTHONPATH="$ROOT_DIR/.github/scripts" python3 "$SERVICE_CATALOG_TEST" -v
 PYTHONPATH="$ROOT_DIR/.github/scripts" python3 "$MANIFEST_TEST" -v
 python3 -m py_compile "$SERVICE_CATALOG" "$MANIFEST" "$MANIFEST_TEST"
+
+require_pattern "$CI" 'path: trusted-release-resolver' \
+  "Full Release CI trusted resolver checkout is not isolated"
+require_pattern "$CI" 'cp trusted-release-resolver/\.github/scripts/latest_release\.py' \
+  "Full Release CI stages resolver from the isolated checkout"
+require_pattern "$SECURITY" 'path: trusted-release-resolver' \
+  "Security trusted resolver checkout is not isolated"
+require_pattern "$SECURITY" 'cp trusted-release-resolver/\.github/scripts/latest_release\.py' \
+  "Security stages resolver from the isolated checkout"
+
+publish_resolver_paths="$(grep -c 'path: trusted-release-resolver' "$PUBLISH")"
+publish_resolver_stages="$(grep -c 'cp trusted-release-resolver/\.github/scripts/latest_release\.py' "$PUBLISH")"
+[[ "$publish_resolver_paths" -eq 2 ]] || {
+  echo "Publisher must isolate both trusted resolver checkouts"; exit 1;
+}
+[[ "$publish_resolver_stages" -eq 2 ]] || {
+  echo "Publisher must stage both resolvers from isolated checkouts"; exit 1;
+}
+
+python3 - "$RELEASE_CONFIG" <<'PY_RELEASE_RULES'
+import json
+import sys
+
+config = json.load(open(sys.argv[1], encoding="utf-8"))
+analyzer = next(
+    plugin for plugin in config["plugins"]
+    if isinstance(plugin, list) and plugin[0] == "@semantic-release/commit-analyzer"
+)
+rules = {
+    rule.get("scope"): rule.get("release")
+    for rule in analyzer[1].get("releaseRules", [])
+}
+expected = {"ai-review": False, "ci": False, "deploy": False}
+if any(rules.get(scope) is not release for scope, release in expected.items()):
+    raise SystemExit(f"Missing non-product release rules: expected={expected}, actual={rules}")
+PY_RELEASE_RULES
+
+echo "Release resolver checkout isolation and non-product release scopes are valid"
 echo "Incremental CI, confirmed exact full release gates and immutable publication contracts are valid"
