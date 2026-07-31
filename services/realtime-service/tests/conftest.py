@@ -44,7 +44,7 @@ def anyio_backend():
 
 
 @pytest.fixture(scope="session", autouse=True)
-async def setup_test_database():
+async def setup_test_database(anyio_backend):
     """Replace the service engine with a SQLite async engine for tests."""
     original_engine = session_module.engine
     original_session_local = session_module.SessionLocal
