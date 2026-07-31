@@ -32,7 +32,21 @@ jobs:
       service_matrix: ${{ steps.services.outputs.value }}
       migration_matrix: ${{ steps.migrations.outputs.value }}
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout trusted release resolver
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.workflow_sha }}
+          sparse-checkout: |
+            .github/scripts/latest_release.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Stage trusted release resolver
+        shell: bash
+        run: cp .github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"
+
+      - name: Checkout validated release commit
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.target_sha }}
           fetch-depth: 0
@@ -58,7 +72,7 @@ jobs:
           }
 
           git fetch --no-tags origin "$CURRENT_MAIN"
-          RELEASE_JSON="$(python3 .github/scripts/latest_release.py --ref "$CURRENT_MAIN")"
+          RELEASE_JSON="$(python3 "$RUNNER_TEMP/latest_release.py" --ref "$CURRENT_MAIN")"
           LATEST_RELEASE_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
           [[ "$LATEST_RELEASE_SHA" == "$TARGET_SHA" ]] || {
             echo "::error::Release target is stale: target=$TARGET_SHA latest_release=$LATEST_RELEASE_SHA main=$CURRENT_MAIN"
@@ -219,8 +233,7 @@ jobs:
     strategy:
       fail-fast: false
       max-parallel: 3
-      matrix:
-        service: ${{ fromJSON(needs.prepare.outputs.migration_matrix) }}
+      matrix: ${{ fromJSON(needs.prepare.outputs.migration_matrix) }}
     uses: ./.github/workflows/reusable-alembic-migration.yml
     with:
       service: ${{ matrix.service }}
