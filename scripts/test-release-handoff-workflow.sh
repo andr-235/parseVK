@@ -43,8 +43,8 @@ require_pattern "$CI" 'path: trusted-release-resolver' \
   "Full Release CI trusted resolver checkout is not isolated"
 require_pattern "$SECURITY" 'path: trusted-release-resolver' \
   "Security trusted resolver checkout is not isolated"
-publish_paths="$(grep -c 'path: trusted-release-resolver' "$PUBLISH")"
-publish_stages="$(grep -c 'cp trusted-release-resolver/\.github/scripts/latest_release\.py' "$PUBLISH")"
+publish_paths="$(grep -c 'path: trusted-release-resolver' "$PUBLISH" || true)"
+publish_stages="$(grep -c 'cp trusted-release-resolver/\.github/scripts/latest_release\.py' "$PUBLISH" || true)"
 [[ "$publish_paths" -eq 2 && "$publish_stages" -eq 2 ]] || {
   echo "Publisher must isolate and stage both trusted resolver checkouts"; exit 1;
 }
