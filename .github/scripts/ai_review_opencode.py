@@ -111,11 +111,11 @@ def run(arguments: list[str], prompt: bytes) -> int:
 
     for number, seconds in enumerate(budgets, start=1):
         code, stdout, stderr, elapsed = call(binary, arguments, prompt, seconds)
-        events = directory / f"opencode-events-{suffix}-attempt-{number}.jsonl"
+        diagnostic = directory / f"opencode-attempt-{suffix}-{number}.stdout.jsonl"
         errors = directory / f"opencode-{suffix}-attempt-{number}.stderr"
-        events.write_bytes(stdout)
+        diagnostic.write_bytes(stdout)
         errors.write_bytes(stderr)
-        code, reason = result_reason(events, head, code)
+        code, reason = result_reason(diagnostic, head, code)
         records.append(
             {
                 "attempt": number,
