@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
-"""Inject and enforce trusted AGENTS.md instructions for AI review."""
 from __future__ import annotations
+
 import argparse
 import json
 import re
