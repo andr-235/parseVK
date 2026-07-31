@@ -62,9 +62,12 @@ validate_manifest() {
     and ((.images | length) > 0)
     and all(.images[];
       type == "object"
-      and ((.active_ref | type) == "string" and length > 0)
-      and ((.release_ref | type) == "string" and length > 0)
-      and ((.image_id | type) == "string" and length > 0))
+      and ((.active_ref | type) == "string")
+      and ((.active_ref | length) > 0)
+      and ((.release_ref | type) == "string")
+      and ((.release_ref | length) > 0)
+      and ((.image_id | type) == "string")
+      and ((.image_id | length) > 0))
   ' "$manifest" >/dev/null || {
     log_error "Release manifest schema is invalid: $manifest"
     return 1
