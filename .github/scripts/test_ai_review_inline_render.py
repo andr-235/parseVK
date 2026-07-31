@@ -17,14 +17,16 @@ def finding(
     line: int | None = 10,
     index: int = 1,
     scenario: str | None = None,
+    impact: str | None = None,
+    fix: str | None = None,
 ) -> Finding:
     return Finding(
         severity=severity,
         file=f"src/file_{index}.py",
         line=line,
         scenario=scenario or f"Сценарий дефекта {index}",
-        impact=f"Последствие {index}",
-        fix=f"Добавьте проверку {index}. Затем обновите тесты.",
+        impact=impact or f"Последствие {index}",
+        fix=fix or f"Добавьте проверку {index}. Затем обновите тесты.",
         confidence=0.96,
     )
 
@@ -54,6 +56,35 @@ class RenderTests(unittest.TestCase):
         self.assertIn("📈 Уверенность: 96%", body)
         self.assertIn("🧠 Big Pickle", body)
         self.assertIn("🛡️ diff-фильтры parseVK", body)
+
+    def test_long_fix_uses_semantic_title_without_ellipsis(self) -> None:
+        long_fix = (
+            "Добавить в этот же PR реализацию модуля ai_review_agents_enforce.py "
+            "с функциями разбора правил, проверки файлов и сохранения результата"
+        )
+        body = render_inline_finding(
+            finding(
+                scenario="Импортируемый модуль отсутствует в проверяемом дереве.",
+                fix=long_fix,
+            )
+        )
+        heading = next(line for line in body.splitlines() if line.startswith("### "))
+        self.assertEqual(heading, "### 🟠 Major · Полнота реализации")
+        self.assertNotIn("…", heading)
+        self.assertIn(f"> {long_fix}", body)
+
+    def test_long_unknown_finding_uses_neutral_title(self) -> None:
+        body = render_inline_finding(
+            finding(
+                severity="minor",
+                scenario="Необычное поведение " * 20,
+                impact="Непредсказуемый результат " * 10,
+                fix="Пересмотрите этот участок и уточните ожидаемое поведение " * 10,
+            )
+        )
+        heading = next(line for line in body.splitlines() if line.startswith("### "))
+        self.assertEqual(heading, "### 🟡 Minor · Требуется исправление")
+        self.assertNotIn("…", heading)
 
     def test_multiline_model_text_stays_inside_alert(self) -> None:
         body = render_inline_finding(
