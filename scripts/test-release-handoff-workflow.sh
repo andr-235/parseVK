@@ -6,9 +6,10 @@ CI="$ROOT_DIR/.github/workflows/ci.yml"
 SECURITY="$ROOT_DIR/.github/workflows/security.yml"
 PUBLISH="$ROOT_DIR/.github/workflows/publish-release-images.yml"
 COORDINATOR="$ROOT_DIR/.github/workflows/release-deploy-coordinator.yml"
+DEPLOY="$ROOT_DIR/.github/workflows/deploy.yml"
 RELEASE_CONFIG="$ROOT_DIR/.releaserc.json"
 
-for file in "$CI" "$SECURITY" "$PUBLISH" "$COORDINATOR" "$RELEASE_CONFIG"; do
+for file in "$CI" "$SECURITY" "$PUBLISH" "$COORDINATOR" "$DEPLOY" "$RELEASE_CONFIG"; do
   [[ -f "$file" ]] || { echo "Required release handoff file not found: $file"; exit 1; }
 done
 
@@ -62,6 +63,12 @@ require_pattern "$PUBLISH" 'release/full-ci' "Publisher does not require Full Re
 require_pattern "$PUBLISH" 'release/security' "Publisher does not require Security status"
 require_pattern "$PUBLISH" 'release/immutable-ghcr' "Publisher does not publish immutable release status"
 require_pattern "$PUBLISH" 'state=pending' "Publisher does not invalidate stale publication success"
+require_pattern "$PUBLISH" 'Finalize immutable release status' \
+  "Publisher does not finalize immutable status on every terminal path"
+require_pattern "$PUBLISH" 'needs\.manifest\.result' \
+  "Publisher terminal status does not inspect manifest result"
+require_pattern "$PUBLISH" 'state=failure' \
+  "Publisher does not mark failed publication"
 reject_pattern "$PUBLISH" 'workflow_run\.head_sha' \
   "Publisher still treats workflow_run.head_sha as the release SHA"
 
@@ -73,6 +80,10 @@ require_pattern "$COORDINATOR" 'coordinator_run_id' \
   "Coordinator does not bind publisher authorization to its run"
 require_pattern "$COORDINATOR" 'Wait for immutable publication' \
   "Coordinator does not wait for immutable image publication"
+require_pattern "$COORDINATOR" 'seq 1 720' \
+  "Coordinator publication wait is shorter than the publisher workload budget"
+require_pattern "$COORDINATOR" 'timeout-minutes: 350' \
+  "Coordinator timeout cannot cover publication and deployment"
 require_pattern "$COORDINATOR" 'release/immutable-ghcr' \
   "Coordinator does not verify immutable release status"
 require_pattern "$COORDINATOR" 'actions/workflows/deploy\.yml/dispatches' \
@@ -81,6 +92,16 @@ require_pattern "$COORDINATOR" 'Wait for production deploy' \
   "Coordinator does not wait for production completion"
 reject_pattern "$COORDINATOR" 'head_sha=.*RELEASE_SHA' \
   "Coordinator still discovers release gates by workflow head SHA"
+
+require_pattern "$DEPLOY" 'workflow_dispatch:' "Production deploy cannot be explicitly dispatched"
+reject_pattern "$DEPLOY" '^  workflow_run:' \
+  "Production deploy still bypasses the coordinator through workflow_run"
+require_pattern "$DEPLOY" 'expected_release_sha:' \
+  "Production deploy is not bound to the coordinator release SHA"
+require_pattern "$DEPLOY" 'release/full-ci' "Production deploy does not recheck Full Release CI"
+require_pattern "$DEPLOY" 'release/security' "Production deploy does not recheck Security"
+require_pattern "$DEPLOY" 'release/immutable-ghcr' \
+  "Production deploy does not require immutable publication"
 
 python3 - "$RELEASE_CONFIG" <<'PY'
 import json
@@ -97,4 +118,4 @@ if any(rules.get(scope) is not release for scope, release in expected.items()):
     raise SystemExit(f"Invalid non-product release rules: {rules}")
 PY
 
-echo "Explicit release publication and production handoff contracts are valid"
+echo "Explicit release publication and single-path production handoff contracts are valid"
