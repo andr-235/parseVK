@@ -42,8 +42,9 @@ require_pattern "$CI" 'target_sha:' "Full Release CI is not bound to an exact ta
 require_pattern "$CI" 'base_sha:' "Full Release CI is missing the validated source SHA"
 require_pattern "$CI" 'full_validation:' "Full Release CI does not require explicit full validation"
 require_pattern "$CI" 'Verify exact release target' "Full Release CI does not verify its exact checkout"
-require_pattern "$CI" 'RELEASE_SUBJECT.*chore\\\(release\\\)' \
-  "Full Release CI does not restrict validation to semantic-release commits"
+grep -Fq '[[ "$RELEASE_SUBJECT" == chore\(release\):* ]]' "$CI" || {
+  echo "Full Release CI does not restrict validation to semantic-release commits"; exit 1;
+}
 require_pattern "$CI" "grep -qF '\[skip ci\]'" \
   "Full Release CI does not validate the semantic-release marker"
 require_pattern "$CI" 'RELEASE_PARENT.*BASE_SHA' \
@@ -74,15 +75,30 @@ require_pattern "$RELEASE" "source_gate\.outputs\.stale != 'true'" \
   "Semantic Release steps do not honor the stale source gate"
 require_pattern "$RELEASE" 'RELEASE_PARENT=.*RELEASE_SHA' "Release workflow does not inspect release parent"
 require_pattern "$RELEASE" 'RELEASE_PARENT.*SOURCE_SHA' "Release parent is not bound to validated source"
-require_pattern "$RELEASE" 'RELEASE_SUBJECT.*chore\\\(release\\\)' \
-  "Release commit subject is not validated"
+grep -Fq '[[ "$RELEASE_SUBJECT" == chore\(release\):* ]]' "$RELEASE" || {
+  echo "Release commit subject is not validated"; exit 1;
+}
 require_pattern "$RELEASE" "grep -qF '\[skip ci\]'" "Release commit marker is not validated"
-require_pattern "$RELEASE" 'gh workflow run ci\.yml --ref main' "Release workflow does not dispatch Full Release CI"
-require_pattern "$RELEASE" 'gh workflow run security\.yml --ref main' "Release workflow does not dispatch Security"
-require_pattern "$RELEASE" 'target_sha=.*RELEASE_SHA' "Release does not pass the exact release SHA to gates"
-require_pattern "$RELEASE" 'base_sha=.*SOURCE_SHA' "Release does not pass the validated source SHA to Full Release CI"
-require_pattern "$RELEASE" 'full_validation=true' "Release does not request full CI validation"
+require_pattern "$RELEASE" 'actions/workflows/ci\.yml/dispatches' \
+  "Release workflow does not dispatch Full Release CI through the Actions API"
+require_pattern "$RELEASE" 'actions/workflows/security\.yml/dispatches' \
+  "Release workflow does not dispatch Security through the Actions API"
+require_pattern "$RELEASE" 'full_validation: true' "Release does not request full CI validation"
+require_pattern "$RELEASE" 'PRE_CI_RUN_ID' "Release does not snapshot the previous Full Release CI run"
+require_pattern "$RELEASE" 'PRE_SECURITY_RUN_ID' "Release does not snapshot the previous Security run"
+require_pattern "$RELEASE" 'CI_RUN_ID.*PRE_CI_RUN_ID' \
+  "Release does not confirm that GitHub created a new Full Release CI run"
+require_pattern "$RELEASE" 'SECURITY_RUN_ID.*PRE_SECURITY_RUN_ID' \
+  "Release does not confirm that GitHub created a new Security run"
+require_pattern "$RELEASE" 'GitHub did not create a new Full Release CI run' \
+  "Release has no explicit failure for a missing Full Release CI dispatch"
+require_pattern "$RELEASE" 'GitHub did not create a new Security Scanning run' \
+  "Release has no explicit failure for a missing Security dispatch"
+require_pattern "$RELEASE" 'GITHUB_STEP_SUMMARY' \
+  "Release does not publish confirmed gate URLs in the run summary"
 require_pattern "$RELEASE" 'git ls-remote origin refs/heads/main' "Release dispatch accepts stale main"
+reject_pattern "$RELEASE" 'gh workflow run' \
+  "Release still uses fire-and-forget gh workflow run commands"
 require_pattern "$RELEASE_CONFIG" '\[skip ci\]' "Semantic Release commit no longer prevents push recursion"
 
 require_pattern "$PUBLISH" 'Security Scanning' "Release workflow is not gated by Security"
@@ -93,7 +109,9 @@ reject_pattern "$PUBLISH" "workflow_run\.event == 'push'" "Source push Security 
 require_pattern "$PUBLISH" "workflow_run\.head_branch == 'main'" "Non-main commit can publish images"
 require_pattern "$PUBLISH" 'actions/workflows/ci\.yml/runs' "Publisher does not verify Full Release CI by workflow file"
 require_pattern "$PUBLISH" 'event=workflow_dispatch' "Publisher does not verify dispatched Full Release CI"
-require_pattern "$PUBLISH" 'chore\\\(release\\\):' "Publisher does not validate semantic release subject"
+grep -Fq '[[ "$RELEASE_SUBJECT" == chore\(release\):* ]]' "$PUBLISH" || {
+  echo "Publisher does not validate semantic release subject"; exit 1;
+}
 require_pattern "$PUBLISH" "grep -qF '\[skip ci\]'" "Publisher does not validate release marker"
 require_pattern "$PUBLISH" 'git ls-remote origin refs/heads/main' "Publisher does not reject stale main"
 require_pattern "$PUBLISH" "format\('pr-\{0\}'" "PR checks share production release concurrency"
@@ -135,4 +153,4 @@ done
 PYTHONPATH="$ROOT_DIR/.github/scripts" python3 "$SERVICE_CATALOG_TEST" -v
 PYTHONPATH="$ROOT_DIR/.github/scripts" python3 "$MANIFEST_TEST" -v
 python3 -m py_compile "$SERVICE_CATALOG" "$MANIFEST" "$MANIFEST_TEST"
-echo "Incremental CI, exact full release gates and immutable publication contracts are valid"
+echo "Incremental CI, confirmed exact full release gates and immutable publication contracts are valid"
