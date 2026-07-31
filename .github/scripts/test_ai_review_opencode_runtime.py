@@ -71,8 +71,9 @@ class OpenCodeRuntimeTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 0, completed.stderr)
             self.assertIn('"type": "text"', completed.stdout)
             self.assertTrue(
-                (directory / "opencode-events-001-attempt-1.jsonl").is_file()
+                (directory / "opencode-attempt-001-1.stdout.jsonl").is_file()
             )
+            self.assertEqual(list(directory.glob("opencode-events-*.jsonl")), [])
 
 
 if __name__ == "__main__":
