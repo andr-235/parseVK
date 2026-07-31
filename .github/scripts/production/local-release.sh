@@ -152,11 +152,11 @@ activate_release() {
 }
 
 discard_candidate() {
-  local commit="$1" manifest status release
+  local commit="$1" manifest status failed_at
   validate_commit "$commit"
   manifest="$(manifest_path "$commit")"
   if [ ! -f "$manifest" ]; then
-    log_info "No local release candidate to discard: $commit"
+    log_info "No local release candidate to preserve: $commit"
     return 0
   fi
 
@@ -166,11 +166,11 @@ discard_candidate() {
     return 1
   fi
 
-  while IFS= read -r release; do
-    docker image rm "$release" >/dev/null 2>&1 || true
-  done < <(jq -r '.images[].release_ref' "$manifest")
-  rm -rf "$(dirname "$manifest")"
-  log_info "Discarded failed local release candidate: $commit"
+  failed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  jq --arg failed_at "$failed_at" \
+    '.status = "failed" | .failed_at = $failed_at' "$manifest" >"${manifest}.tmp"
+  mv "${manifest}.tmp" "$manifest"
+  log_warn "Preserved failed local release candidate for recovery: $commit"
 }
 
 case "${1:-}" in

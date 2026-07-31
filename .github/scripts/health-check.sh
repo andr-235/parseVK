@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-# Source logging helper if available
 if [ -f "$(dirname "$0")/log-helper.sh" ]; then
+  # shellcheck source=/dev/null
   source "$(dirname "$0")/log-helper.sh"
 else
   log_info() { echo "[INFO] $1"; }
@@ -11,116 +11,108 @@ else
 fi
 
 MAX_ATTEMPTS=${MAX_ATTEMPTS:-30}
-ATTEMPT=0
-ALL_HEALTHY=false
-
-COMPOSE_FILE=${COMPOSE_FILE:-docker-compose.yml}
-COMPOSE_CMD="docker compose"
-if [ -n "${COMPOSE_FILE:-}" ]; then
-  COMPOSE_CMD="docker compose -f $COMPOSE_FILE"
-fi
-
 TARGET_SERVICES=${TARGET_SERVICES:-}
 FULL_DEPLOY=${FULL_DEPLOY:-false}
+COMPOSE_FILE=${COMPOSE_FILE:-docker-compose.yml}
+COMPOSE_CMD=(docker compose -f "$COMPOSE_FILE")
+
 if [ "$FULL_DEPLOY" = "true" ]; then
   TARGET_SERVICES=""
 fi
-if [ -n "$TARGET_SERVICES" ]; then
-  echo "Target services: $TARGET_SERVICES"
-fi
 
-echo "=== Waiting for services to be healthy ==="
-
-if ! command -v docker > /dev/null 2>&1 || ! docker compose version > /dev/null 2>&1; then
-  echo "Error: Docker or docker compose not available"
+if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
+  log_error "Docker or docker compose not available"
   exit 1
 fi
 
-if [ -n "$TARGET_SERVICES" ]; then
-  if $COMPOSE_CMD wait --timeout 120 $TARGET_SERVICES 2>/dev/null; then
-    echo "All services with healthchecks are healthy (via docker compose wait)"
-    exit 0
-  fi
-else
-  if $COMPOSE_CMD wait --timeout 120 2>/dev/null; then
-    echo "All services with healthchecks are healthy (via docker compose wait)"
-    exit 0
-  fi
+if ! command -v jq >/dev/null 2>&1; then
+  log_error "jq is required for health checks"
+  exit 1
 fi
 
-echo "Warning: docker compose wait failed or timed out, falling back to manual check"
-
-while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-  ATTEMPT=$((ATTEMPT + 1))
-  echo "Attempt $ATTEMPT/$MAX_ATTEMPTS"
-  
-  UNHEALTHY_COUNT=0
-  TOTAL_COUNT=0
-  
+resolve_services() {
   if [ -n "$TARGET_SERVICES" ]; then
-    CONTAINERS=$($COMPOSE_CMD ps -q $TARGET_SERVICES)
-  else
-    CONTAINERS=$($COMPOSE_CMD ps -q)
+    tr ' ' '\n' <<<"$TARGET_SERVICES" | sed '/^$/d'
+    return 0
   fi
 
-  for container in $CONTAINERS; do
+  "${COMPOSE_CMD[@]}" config --format json \
+    | jq -r '
+        .services
+        | to_entries[]
+        | select((.value.restart // "") != "no")
+        | .key
+      '
+}
+
+mapfile -t SERVICES < <(resolve_services)
+[ "${#SERVICES[@]}" -gt 0 ] || {
+  log_error "No runtime services resolved for health check"
+  exit 1
+}
+
+echo "=== Waiting for runtime services to be healthy ==="
+echo "Services: ${SERVICES[*]}"
+
+ALL_HEALTHY=false
+for ((attempt=1; attempt<=MAX_ATTEMPTS; attempt++)); do
+  echo "Attempt $attempt/$MAX_ATTEMPTS"
+  UNHEALTHY_COUNT=0
+
+  for service in "${SERVICES[@]}"; do
+    container="$("${COMPOSE_CMD[@]}" ps -aq "$service" | head -n1)"
     if [ -z "$container" ]; then
+      echo "  $service: missing"
+      UNHEALTHY_COUNT=$((UNHEALTHY_COUNT + 1))
       continue
     fi
-    
-    TOTAL_COUNT=$((TOTAL_COUNT + 1))
-    STATUS=$(docker inspect --format='{{.State.Status}}' "$container" 2>/dev/null || echo "unknown")
-    HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "none")
-    HAS_HEALTHCHECK=$(docker inspect --format='{{.Config.Healthcheck}}' "$container" 2>/dev/null | grep -q "Test" && echo "yes" || echo "no")
-    NAME=$(docker inspect --format='{{.Name}}' "$container" 2>/dev/null | sed 's/^\///')
-    
-    if [ "$STATUS" != "running" ]; then
-      echo "  $NAME: $STATUS (waiting...)"
+
+    status="$(docker inspect --format='{{.State.Status}}' "$container" 2>/dev/null || echo unknown)"
+    health="$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container" 2>/dev/null || echo unknown)"
+    has_healthcheck="$(docker inspect --format='{{if .Config.Healthcheck}}yes{{else}}no{{end}}' "$container" 2>/dev/null || echo no)"
+
+    if [ "$status" != "running" ]; then
+      echo "  $service: $status"
       UNHEALTHY_COUNT=$((UNHEALTHY_COUNT + 1))
-    elif [ "$HAS_HEALTHCHECK" = "yes" ]; then
-      if [ "$HEALTH" = "healthy" ]; then
-        echo "  $NAME: running (healthy)"
-      else
-        echo "  $NAME: running ($HEALTH - waiting...)"
-        UNHEALTHY_COUNT=$((UNHEALTHY_COUNT + 1))
-      fi
+    elif [ "$has_healthcheck" = "yes" ] && [ "$health" != "healthy" ]; then
+      echo "  $service: running ($health)"
+      UNHEALTHY_COUNT=$((UNHEALTHY_COUNT + 1))
+    elif [ "$has_healthcheck" = "yes" ]; then
+      echo "  $service: running (healthy)"
     else
-      echo "  $NAME: running (no healthcheck)"
+      echo "  $service: running (no healthcheck)"
     fi
   done
-  
-  if [ $UNHEALTHY_COUNT -eq 0 ] && [ $TOTAL_COUNT -gt 0 ]; then
+
+  if [ "$UNHEALTHY_COUNT" -eq 0 ]; then
     ALL_HEALTHY=true
     break
   fi
-  
+
   sleep 2
 done
 
 if [ "$ALL_HEALTHY" != "true" ]; then
-  echo "Error: Not all containers are healthy"
+  log_error "Not all runtime containers are healthy"
   echo "=== Container status ==="
-  if [ -n "$TARGET_SERVICES" ]; then
-    $COMPOSE_CMD ps $TARGET_SERVICES
-  else
-    $COMPOSE_CMD ps
-  fi
+  "${COMPOSE_CMD[@]}" ps -a "${SERVICES[@]}" || true
   echo "=== Failed container logs ==="
-  if [ -n "$TARGET_SERVICES" ]; then
-    CONTAINERS=$($COMPOSE_CMD ps -q $TARGET_SERVICES)
-  else
-    CONTAINERS=$($COMPOSE_CMD ps -q)
-  fi
-  for container in $CONTAINERS; do
-    STATUS=$(docker inspect --format='{{.State.Status}}' "$container" 2>/dev/null || echo "unknown")
-    HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "none")
-    NAME=$(docker inspect --format='{{.Name}}' "$container" 2>/dev/null | sed 's/^\///')
-    if [ "$STATUS" != "running" ] || ([ "$HEALTH" != "healthy" ] && [ "$HEALTH" != "none" ]); then
-      echo "=== Logs for $NAME ==="
-      $COMPOSE_CMD logs --tail=100 "$(echo $NAME | sed 's/^parsevk-//' | sed 's/-[0-9]*$//')" || docker logs "$container" --tail=100 || true
+
+  for service in "${SERVICES[@]}"; do
+    container="$("${COMPOSE_CMD[@]}" ps -aq "$service" | head -n1)"
+    if [ -z "$container" ]; then
+      echo "=== $service is missing ==="
+      continue
+    fi
+
+    status="$(docker inspect --format='{{.State.Status}}' "$container" 2>/dev/null || echo unknown)"
+    health="$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container" 2>/dev/null || echo unknown)"
+    if [ "$status" != "running" ] || { [ "$health" != "healthy" ] && [ "$health" != "none" ]; }; then
+      echo "=== Logs for $service ==="
+      "${COMPOSE_CMD[@]}" logs --tail=100 "$service" || docker logs --tail=100 "$container" || true
     fi
   done
   exit 1
 fi
 
-echo "All containers are healthy"
+log_info "All runtime containers are healthy"
