@@ -6,6 +6,7 @@ on:
       - ".github/scripts/production/**"
       - ".github/workflows/production-integrity.yml"
       - ".github/scripts/test_storage_guard.py"
+      - ".github/scripts/test_production_integrity_contract.py"
       - "docs/deploy-runbook.md"
   schedule:
     - cron: "23 2 * * *"
@@ -32,11 +33,15 @@ jobs:
 
       - name: Validate shell syntax
         run: |
+          bash -n .github/scripts/production/storage-integrity.sh
           bash -n .github/scripts/production/storage-guard.sh
           bash -n .github/scripts/production/preflight.sh
 
-      - name: Test storage and workflow contracts
+      - name: Test storage runtime
         run: python3 .github/scripts/test_storage_guard.py -v
+
+      - name: Test workflow contracts
+        run: python3 .github/scripts/test_production_integrity_contract.py -v
 
   integrity:
     name: Check Local Production Integrity
@@ -46,8 +51,6 @@ jobs:
     env:
       PROJECT_ROOT: /opt/parseVK
       DEPLOYMENT_METADATA_FILE: /opt/parseVK/.deployment-metadata.json
-      MIN_FREE_PROJECT_GB: ${{ vars.PRODUCTION_MIN_FREE_PROJECT_GB || '10' }}
-      MIN_FREE_DOCKER_GB: ${{ vars.PRODUCTION_MIN_FREE_DOCKER_GB || '15' }}
     steps:
       - name: Checkout trusted integrity scripts
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
