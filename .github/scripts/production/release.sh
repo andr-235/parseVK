@@ -80,7 +80,7 @@ runtime_health_check_enabled() {
 }
 
 verify_runtime_release() {
-  local health_script="$SCRIPT_DIR/../health-check.sh" check_status
+  local health_script="$SCRIPT_DIR/../health-check.sh" check_status targets
 
   if runtime_health_check_enabled; then
     check_status=0
@@ -105,9 +105,17 @@ verify_runtime_release() {
     return 1
   }
 
-  log_info "Verifying runtime services with current deployment health-check logic"
-  COMPOSE_FILE="$COMPOSE_FILE" FULL_DEPLOY="true" \
-    bash "$health_script"
+  if [ "${#SERVICES[@]}" -gt 0 ]; then
+    printf -v targets '%s ' "${SERVICES[@]}"
+    targets="${targets% }"
+    log_info "Verifying selected runtime services: $targets"
+    COMPOSE_FILE="$COMPOSE_FILE" FULL_DEPLOY="false" TARGET_SERVICES="$targets" \
+      bash "$health_script"
+  else
+    log_info "Verifying all runtime services with current deployment health-check logic"
+    COMPOSE_FILE="$COMPOSE_FILE" FULL_DEPLOY="true" TARGET_SERVICES="" \
+      bash "$health_script"
+  fi
 }
 
 start_full_release() {
