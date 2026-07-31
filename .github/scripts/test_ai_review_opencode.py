@@ -58,11 +58,12 @@ class OpenCodeRunnerTests(unittest.TestCase):
         self.assertEqual((code, calls), (0, 2))
         self.assertEqual(stdout, event())
         self.assertTrue(
-            (self.directory / "opencode-events-001-attempt-1.jsonl").is_file()
+            (self.directory / "opencode-attempt-001-1.stdout.jsonl").is_file()
         )
         self.assertTrue(
-            (self.directory / "opencode-events-001-attempt-2.jsonl").is_file()
+            (self.directory / "opencode-attempt-001-2.stdout.jsonl").is_file()
         )
+        self.assertEqual(list(self.directory.glob("opencode-events-*.jsonl")), [])
 
     def test_timeout_exhaustion_returns_nonzero(self) -> None:
         code, _, _, calls = self.run_with(
