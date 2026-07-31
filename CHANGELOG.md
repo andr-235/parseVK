@@ -1,3 +1,10 @@
+## [0.85.5](https://github.com/andr-235/parseVK/compare/v0.85.4...v0.85.5) (2026-07-31)
+
+
+### Bug Fixes
+
+* **deploy:** dispatch production after release gates explicitly ([#361](https://github.com/andr-235/parseVK/issues/361)) ([94efb27](https://github.com/andr-235/parseVK/commit/94efb27483c5d7c4cbbd6d47d112aee270d60969))
+
 ## [0.85.4](https://github.com/andr-235/parseVK/compare/v0.85.3...v0.85.4) (2026-07-31)
 
 
