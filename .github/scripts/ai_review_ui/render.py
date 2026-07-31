@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import re
 from collections import Counter
 from collections.abc import Sequence
 
 from .markdown import render_alert, render_confidence, render_finding_sections
 from .models import Finding, ReviewResult
+from .titles import compact_title
 from .verdict import verdict_alert_kind, verdict_text
 
 MAX_INLINE_COMMENTS = 12
@@ -31,15 +31,6 @@ def sort_findings(findings: Sequence[Finding]) -> tuple[Finding, ...]:
             ),
         )
     )
-
-
-def compact_title(finding: Finding) -> str:
-    source = finding.fix or finding.scenario
-    source = re.sub(r"\s+", " ", source).strip(" .:;!?—-")
-    title = re.split(r"(?<=[.!?])\s+|;\s+", source, maxsplit=1)[0]
-    if len(title) > 96:
-        title = title[:95].rstrip() + "…"
-    return title or "Проверьте найденный дефект"
 
 
 def render_inline_finding(finding: Finding) -> str:
