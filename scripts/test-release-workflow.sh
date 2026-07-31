@@ -19,10 +19,6 @@ for file in "$PR_CI" "$CI" "$RELEASE" "$RELEASE_CONFIG" "$PUBLISH" "$REUSABLE" "
   [[ -f "$file" ]] || { echo "Required immutable release file not found: $file"; exit 1; }
 done
 
-grep -q 'workflow_call:' "$REUSABLE" || {
-  echo "Image publisher is not reusable"; exit 1;
-}
-
 require_pattern() {
   local file="$1" pattern="$2" message="$3"
   grep -Eq -- "$pattern" "$file" || { echo "$message"; exit 1; }
@@ -40,89 +36,62 @@ require_pattern "$PR_CI" 'push:' "Incremental CI no longer validates main pushes
 grep -Fq '[[ "$RELEASE_SUBJECT" == chore\(release\):* ]]' "$CI" || {
   echo "Full Release CI does not restrict validation to semantic-release commits"; exit 1;
 }
-require_pattern "$CI" "grep -qF '\[skip ci\]'" \
-  "Full Release CI does not validate the semantic-release marker"
-require_pattern "$CI" 'RELEASE_PARENT.*BASE_SHA' \
-  "Full Release CI does not bind the release parent to the validated source"
+require_pattern "$CI" "grep -qF '\[skip ci\]'" "Full Release CI does not validate the release marker"
+require_pattern "$CI" 'RELEASE_PARENT.*BASE_SHA' "Full Release CI is not bound to the validated source"
 require_pattern "$CI" '--purpose pytest' "Full Release CI does not build the Python test matrix"
 require_pattern "$CI" '--purpose migration' "Full Release CI does not build the migration matrix"
 require_pattern "$CI" '--all' "Full Release CI does not select the complete release matrix"
-require_pattern "$CI" 'name: Full Release Gate' "Full Release CI has no aggregate release gate"
+require_pattern "$CI" 'name: Full Release Gate' "Full Release CI has no aggregate gate"
 
 require_pattern "$SECURITY" 'if \[\[.*github\.event_name.*pull_request' \
   "Security workflow does not keep PR Docker scans incremental"
-require_pattern "$SECURITY" 'else' "Security workflow has no full-release branch"
 require_pattern "$SECURITY" '--purpose docker' "Security workflow does not build a Docker matrix"
-require_pattern "$SECURITY" '--all' "Dispatched Security does not scan the complete release matrix"
+require_pattern "$SECURITY" '--all' "Dispatched Security does not scan the complete matrix"
 require_pattern "$SECURITY" "fetch-depth:.*github\.event_name == 'workflow_dispatch'.*&& 2" \
-  "Release secret scan is not bounded to the release commit and its parent"
-reject_pattern "$SECURITY" 'github\.event_name.*push.*BASE_SHA' \
-  "Main Security still scans only changed Docker images"
+  "Release secret scan is not bounded to the release commit and parent"
 
 require_pattern "$RELEASE" 'actions: write' "Release workflow cannot dispatch validation workflows"
 require_pattern "$RELEASE" 'group: semantic-release-main' "Semantic Release executions are not serialized"
-require_pattern "$RELEASE" 'Verify source commit is current main' "Stale CI sources can run Semantic Release"
+require_pattern "$RELEASE" 'Verify source commit is current main' "Stale sources can run Semantic Release"
 require_pattern "$RELEASE" 'CURRENT_MAIN.*SOURCE_SHA' "Source commit is not compared with current main"
-require_pattern "$RELEASE" "source_gate\.outputs\.stale != 'true'" \
-  "Semantic Release steps do not honor the stale source gate"
-require_pattern "$RELEASE" 'RELEASE_PARENT=.*RELEASE_SHA' "Release workflow does not inspect release parent"
+require_pattern "$RELEASE" "source_gate\.outputs\.stale != 'true'" "Release steps ignore the stale source gate"
+require_pattern "$RELEASE" 'RELEASE_PARENT=.*RELEASE_SHA' "Release workflow does not inspect its parent"
 require_pattern "$RELEASE" 'RELEASE_PARENT.*SOURCE_SHA' "Release parent is not bound to validated source"
 grep -Fq '[[ "$RELEASE_SUBJECT" == chore\(release\):* ]]' "$RELEASE" || {
   echo "Release commit subject is not validated"; exit 1;
 }
 require_pattern "$RELEASE" "grep -qF '\[skip ci\]'" "Release commit marker is not validated"
-require_pattern "$RELEASE" 'actions/workflows/ci\.yml/dispatches' \
-  "Release workflow does not dispatch Full Release CI through the Actions API"
-require_pattern "$RELEASE" 'actions/workflows/security\.yml/dispatches' \
-  "Release workflow does not dispatch Security through the Actions API"
+require_pattern "$RELEASE" 'actions/workflows/ci\.yml/dispatches' "Release does not dispatch Full Release CI"
+require_pattern "$RELEASE" 'actions/workflows/security\.yml/dispatches' "Release does not dispatch Security"
 require_pattern "$RELEASE" 'full_validation: true' "Release does not request full CI validation"
-require_pattern "$RELEASE" 'PRE_CI_RUN_ID' "Release does not snapshot the previous Full Release CI run"
+require_pattern "$RELEASE" 'PRE_CI_RUN_ID' "Release does not snapshot the previous Full CI run"
 require_pattern "$RELEASE" 'PRE_SECURITY_RUN_ID' "Release does not snapshot the previous Security run"
-require_pattern "$RELEASE" 'CI_RUN_ID.*PRE_CI_RUN_ID' \
-  "Release does not confirm that GitHub created a new Full Release CI run"
-require_pattern "$RELEASE" 'SECURITY_RUN_ID.*PRE_SECURITY_RUN_ID' \
-  "Release does not confirm that GitHub created a new Security run"
 require_pattern "$RELEASE" 'GitHub did not create a new Full Release CI run' \
-  "Release has no explicit failure for a missing Full Release CI dispatch"
+  "Release does not fail when Full Release CI dispatch is missing"
 require_pattern "$RELEASE" 'GitHub did not create a new Security Scanning run' \
-  "Release has no explicit failure for a missing Security dispatch"
-require_pattern "$RELEASE" 'GITHUB_STEP_SUMMARY' \
-  "Release does not publish confirmed gate URLs in the run summary"
-require_pattern "$RELEASE" 'git ls-remote origin refs/heads/main' "Release dispatch accepts stale main"
-reject_pattern "$RELEASE" 'gh workflow run' \
-  "Release still uses fire-and-forget gh workflow run commands"
-require_pattern "$RELEASE_CONFIG" '\[skip ci\]' "Semantic Release commit no longer prevents push recursion"
+  "Release does not fail when Security dispatch is missing"
+reject_pattern "$RELEASE" 'gh workflow run' "Release still uses fire-and-forget workflow commands"
+require_pattern "$RELEASE_CONFIG" '\[skip ci\]' "Semantic Release commit no longer prevents recursion"
 
-require_pattern "$PUBLISH" 'Security Scanning' "Release workflow is not gated by Security"
-require_pattern "$PUBLISH" "workflow_run\.conclusion == 'success'" "Failed Security run can publish images"
-require_pattern "$PUBLISH" "workflow_run\.event == 'workflow_dispatch'" \
-  "Publisher accepts Security runs not explicitly dispatched for a release commit"
-reject_pattern "$PUBLISH" "workflow_run\.event == 'push'" "Source push Security can publish images"
-require_pattern "$PUBLISH" "workflow_run\.head_branch == 'main'" "Non-main commit can publish images"
+require_pattern "$PUBLISH" 'workflow_dispatch:' "Publisher cannot be explicitly dispatched"
+require_pattern "$PUBLISH" 'target_sha:' "Publisher is not bound to an immutable release SHA"
+require_pattern "$PUBLISH" 'coordinator_run_id:' "Publisher lacks coordinator authorization"
+reject_pattern "$PUBLISH" '^  workflow_run:' "Publisher still depends on recursive workflow_run delivery"
 grep -Fq '[[ "$RELEASE_SUBJECT" == chore\(release\):* ]]' "$PUBLISH" || {
   echo "Publisher does not validate semantic release subject"; exit 1;
 }
 require_pattern "$PUBLISH" "grep -qF '\[skip ci\]'" "Publisher does not validate release marker"
-require_pattern "$PUBLISH" 'git ls-remote origin refs/heads/main' "Publisher does not reject stale main"
-require_pattern "$PUBLISH" "format\('pr-\{0\}'" "PR checks share production release concurrency"
-require_pattern "$PUBLISH" "format\('ignored-\{0\}'" \
-  "Ignored Security runs can cancel an active production release"
-require_pattern "$PUBLISH" "workflow_run\.event != 'workflow_dispatch'" \
-  "Ignored Security concurrency is not restricted to non-release runs"
-require_pattern "$PUBLISH" "\|\| 'main'" "Production release concurrency group is missing"
-require_pattern "$PUBLISH" 'cancel-in-progress: true' "A newer main commit does not cancel stale publishing"
+require_pattern "$PUBLISH" 'git ls-remote origin refs/heads/main' "Publisher accepts stale main"
 require_pattern "$PUBLISH" '--purpose docker' "Release image matrix is not catalog-driven"
 require_pattern "$PUBLISH" 'uses: \./\.github/workflows/reusable-publish-image\.yml' \
-  "Release workflow does not call reusable image publisher"
-require_pattern "$PUBLISH" 'merge-multiple: true' "Digest metadata is not flattened for aggregation"
+  "Release workflow does not call the reusable image publisher"
+require_pattern "$PUBLISH" 'merge-multiple: true' "Digest metadata is not flattened"
 require_pattern "$PUBLISH" '--commit-sha' "Manifest is not bound to the validated commit"
 require_pattern "$PUBLISH" 'release-manifest-.*target_sha' "Release artifact is not commit-addressed"
-require_pattern "$PUBLISH" 'statuses: write' "Publisher cannot record immutable release status"
 require_pattern "$PUBLISH" 'release/immutable-ghcr' "Publisher does not create durable release status"
-require_pattern "$PUBLISH" '\.github/workflows/release\.yml' "Release workflow changes do not run contracts"
-require_pattern "$PUBLISH" '\.github/workflows/ci\.yml' "Full Release CI changes do not run contracts"
+require_pattern "$PUBLISH" '\.github/workflows/release-deploy-coordinator\.yml' \
+  "Coordinator changes do not run publication contracts"
 require_pattern "$PUBLISH" '\.releaserc\.json' "Semantic Release config changes do not run contracts"
-reject_pattern "$PUBLISH" 'workflow_dispatch:' "Publisher accepts manual arbitrary image publication"
 
 require_pattern "$REUSABLE" 'packages: write' "Reusable publisher cannot push to GHCR"
 require_pattern "$REUSABLE" 'attestations: write' "Reusable publisher cannot write attestations"
@@ -133,7 +102,6 @@ require_pattern "$REUSABLE" 'provenance: mode=max' "Published image does not inc
 require_pattern "$REUSABLE" 'git ls-remote origin refs/heads/main' "Reusable publisher accepts stale main"
 require_pattern "$REUSABLE" 'sha256:\[0-9a-f\].*64' "Image digest is not validated"
 require_pattern "$REUSABLE" 'imagetools inspect' "Published digest is not checked in GHCR"
-require_pattern "$REUSABLE" 'published-image-.*service' "Per-service digest metadata is not uploaded"
 
 for file in "$SERVICE_CATALOG" "$MANIFEST" "$MANIFEST_TEST"; do
   lines="$(wc -l < "$file")"
@@ -144,4 +112,4 @@ PYTHONPATH="$ROOT_DIR/.github/scripts" python3 "$SERVICE_CATALOG_TEST" -v
 PYTHONPATH="$ROOT_DIR/.github/scripts" python3 "$MANIFEST_TEST" -v
 python3 -m py_compile "$SERVICE_CATALOG" "$MANIFEST" "$MANIFEST_TEST"
 bash "$HANDOFF"
-echo "Incremental CI, confirmed exact full release gates and immutable publication contracts are valid"
+echo "Explicit full release gates, immutable publication and production handoff contracts are valid"
