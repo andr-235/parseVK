@@ -1,3 +1,10 @@
+## [0.86.2](https://github.com/andr-235/parseVK/compare/v0.86.1...v0.86.2) (2026-07-31)
+
+
+### Bug Fixes
+
+* **deploy:** preserve latest release after non-release commits ([032fab2](https://github.com/andr-235/parseVK/commit/032fab2eb914cef28ec1db714a720e7b60eee1a8)), closes [#347](https://github.com/andr-235/parseVK/issues/347)
+
 ## [0.86.1](https://github.com/andr-235/parseVK/compare/v0.86.0...v0.86.1) (2026-07-31)
 
 
