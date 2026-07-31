@@ -41,8 +41,13 @@ def install_bash_env(trusted_dir: Path) -> None:
     if previous:
         quoted = shlex.quote(previous)
         lines.append(f"[[ ! -f {quoted} ]] || source {quoted}")
-    lines.append(
-        f"opencode() {{ command python3 {shlex.quote(str(wrapper))} \"$@\"; }}"
+    lines.extend(
+        (
+            'if [[ -x "$HOME/.opencode/bin/opencode" '
+            '&& ! -d "${GITHUB_WORKSPACE:-$PWD}/.opencode-installer" ]]; then',
+            f"  opencode() {{ command python3 {shlex.quote(str(wrapper))} \"$@\"; }}",
+            "fi",
+        )
     )
     bash_env.write_text("\n".join(lines) + "\n", encoding="utf-8")
     github_env = os.environ.get("GITHUB_ENV")
