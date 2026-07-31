@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Bounded OpenCode execution with one technical retry."""
-
 from __future__ import annotations
 
 import json
@@ -26,8 +25,7 @@ except ImportError:
         validate_model_result,
     )
 
-PRIMARY_TIMEOUT = 180.0
-RETRY_TIMEOUT = 120.0
+PRIMARY_TIMEOUT, RETRY_TIMEOUT = 180.0, 120.0
 HEAD_RE = re.compile(r"Проверяемый HEAD:\s*([0-9a-fA-F]{40})")
 
 
@@ -134,10 +132,8 @@ def run(arguments: list[str], prompt: bytes) -> int:
     sys.stdout.buffer.write(last[1])
     sys.stderr.buffer.write(last[2])
     for record in records:
-        print(
-            f"AI_REVIEW_ATTEMPT {json.dumps(record, ensure_ascii=False)}",
-            file=sys.stderr,
-        )
+        message = json.dumps(record, ensure_ascii=False)
+        print(f"AI_REVIEW_ATTEMPT {message}", file=sys.stderr)
     return last[0]
 
 
