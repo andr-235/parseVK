@@ -73,5 +73,31 @@ class LatestReleaseTests(unittest.TestCase):
             latest_release.latest_release("main", cwd=self.repo)
 
 
+class WorkflowContractTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        root = Path(__file__).resolve().parents[2]
+        cls.deploy = (root / ".github/workflows/deploy.yml").read_text(encoding="utf-8")
+        cls.coordinator = (
+            root / ".github/workflows/release-deploy-coordinator.yml"
+        ).read_text(encoding="utf-8")
+
+    def test_both_workflows_use_trusted_release_resolver(self) -> None:
+        for workflow in (self.deploy, self.coordinator):
+            self.assertIn(".github/scripts/latest_release.py", workflow)
+            self.assertIn("fetch-depth: 0", workflow)
+
+    def test_manual_deploy_is_bound_to_expected_latest_release(self) -> None:
+        self.assertIn("deployment: \"latest-release\"", self.coordinator)
+        self.assertIn("expected_release_sha", self.coordinator)
+        self.assertIn("EXPECTED_RELEASE_SHA", self.deploy)
+        self.assertIn('TARGET_SHA="$LATEST_RELEASE_SHA"', self.deploy)
+
+    def test_main_tip_is_not_treated_as_release_identity(self) -> None:
+        self.assertNotIn('TARGET_SHA="$MANUAL_SHA"', self.deploy)
+        self.assertNotIn('TARGET_SHA" != "$MAIN_SHA', self.deploy)
+        self.assertNotIn('CURRENT_MAIN" != "$RELEASE_SHA', self.coordinator)
+
+
 if __name__ == "__main__":
     unittest.main()
