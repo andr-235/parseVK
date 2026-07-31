@@ -30,39 +30,37 @@ Reviewer не пересматривает весь накопленный PR п
 
 ## Область анализа commit
 
-Reviewer пропускает:
-
-- Markdown, README и `docs/**`;
-- изображения и PDF;
-- `.github/workflows/ai-code-review.yml`;
-- `.github/ai-review/**`;
-- `.github/scripts/ai_review*`, которые проверяются unit-тестами.
-
-Один commit делится максимум на четыре chunk. На chunk допускается до 20 файлов и 2000 изменённых строк. Один commit ограничен 80 файлами и 8000 изменённых строк. Превышение требует ручного ревью только этого commit.
-
-До четырёх commit-review jobs выполняются параллельно. Каждый job получает отдельный scope, отдельный набор prompt-файлов и отдельный вызов модели.
+Reviewer пропускает Markdown, README, `docs/**`, изображения, PDF, собственный workflow и служебные скрипты reviewer. Один commit делится максимум на четыре chunk, до 20 файлов и 2000 изменённых строк в каждом. Общий предел commit составляет 80 файлов и 8000 изменённых строк.
 
 ## Инструкции AGENTS.md
 
-Перед запуском OpenCode доверенный helper загружает применимые `AGENTS.md` только из `base`-коммита Pull Request:
+`AGENTS.md` является единственным источником репозиторных правил reviewer. Доверенный helper загружает применимые файлы только из `base`-коммита Pull Request:
 
 - корневой файл действует на весь репозиторий;
 - вложенный файл действует на своё поддерево;
 - более глубокие инструкции имеют приоритет;
 - версия из `head` PR не используется.
 
+Формализуемые требования не оставляются на усмотрение модели. Trusted enforcer также извлекается из immutable base и выполняет детерминированные проверки.
+
+Для правила размера файла enforcer:
+
+- извлекает верхнюю границу непосредственно из текста применимого `AGENTS.md`;
+- не содержит отдельного зашитого лимита;
+- применяет вложенное переопределение для соответствующего поддерева;
+- учитывает исключения, прямо перечисленные в правиле: конфиги, Alembic-миграции и автогенерацию;
+- проверяет только исходные файлы, изменённые текущим commit;
+- создаёт `major` finding с `confidence=1.0`, фактическим числом строк, лимитом и источником правила;
+- привязывает finding к изменённой строке и блокирует batch;
+- не создаёт выдуманный лимит, если распознаваемого правила нет.
+
+Детерминированные findings используют тот же JSON-контракт и тот же валидатор, что и findings модели. Prompt запрещает модели дублировать уже выполненную проверку размера файла.
+
 Инструкции не могут расширить commit diff, включить запрещённые инструменты или изменить JSON-контракт reviewer.
 
 ## Проверка findings
 
-Детерминированный Python-код проверяет:
-
-- JSON-схему и точный SHA проверяемого commit;
-- severity и confidence;
-- принадлежность файла diff этого commit;
-- привязку строки к изменённому hunk;
-- допустимость file-level finding;
-- длину и безопасность текста.
+Детерминированный Python-код проверяет JSON-схему, точный SHA commit, severity, confidence, принадлежность файла diff, привязку к изменённому hunk, допустимость file-level finding и безопасность текста.
 
 Пороги:
 
@@ -72,52 +70,33 @@ Reviewer пропускает:
 
 ## Итог batch
 
-Результаты commits агрегируются по приоритету:
-
-1. `changes-required`;
-2. `review-required`;
-3. `findings`;
-4. `unavailable`;
-5. `approved`.
+Приоритет результатов: `changes-required`, `review-required`, `findings`, `unavailable`, `approved`.
 
 Producer-workflow публикует одну реакцию для текущего HEAD:
 
 - `approved`: `👍`;
-- `findings`: `😕`, check остаётся зелёным;
-- `changes-required`: `👎`, check красный;
-- `review-required`: `😕`, check красный;
-- `unavailable`: `😕`, техническая недоступность не блокирует PR.
+- `findings`: `😕`;
+- `changes-required`: `👎`;
+- `review-required`: `😕`;
+- `unavailable`: `😕`.
 
 Status-job не меняет реакцию, если за время анализа HEAD уже обновился.
 
 ## Публикация review
 
-Default-branch publisher работает идемпотентно по SHA каждого commit:
-
-- `findings` и `changes-required`: отдельный review с inline-комментариями;
-- `review-required`: отдельный summary review без выдуманных findings;
-- `approved` и `unavailable`: review-комментарий не создаётся;
-- тело review явно содержит `Проверен commit <sha>`;
-- commit, которого больше нет в PR, безопасно пропускается;
-- повторный workflow не создаёт второй review для того же SHA.
-
-Новые Issue по findings не создаются. Старые legacy-комментарии и связанные Issue закрываются во время миграционной очистки.
+Default-branch publisher работает идемпотентно по SHA каждого commit. Findings публикуются отдельным review с inline-комментариями. `review-required` создаёт summary review. `approved` и `unavailable` не создают пустой комментарий. Commit, которого больше нет в PR, пропускается.
 
 ## Безопасность
 
 - reviewer запускается только для PR владельца репозитория;
 - fork и Dependabot не получают secrets;
 - model job не имеет прав записи;
-- commit planner и aggregator берутся из доверенного `base`;
-- verdict job имеет только `actions: read` и `contents: read`;
-- status job изменяет только реакции `github-actions[bot]` и проверяет текущий HEAD;
+- commit planner, AGENTS helper и enforcer берутся из доверенного `base`;
 - review publisher берётся из default branch;
-- publisher перед публикацией получает полный пагинированный список commits PR;
-- commit artifacts создаются в `$RUNNER_TEMP`, а не в скрытом каталоге workspace;
-- `upload-artifact@v6` и `download-artifact@v7` закреплены по SHA и работают на Node.js 24;
 - `GITHUB_TOKEN` не передаётся OpenCode;
 - проектный `opencode.json` отключён;
 - shell, edit, task, todo, LSP и внешний интернет модели запрещены;
+- artifact actions закреплены по SHA и работают на Node.js 24;
 - OpenCode installer закреплён на версии `1.17.7`.
 
 ## Тесты
@@ -127,4 +106,4 @@ PYTHONPATH=.github/scripts \
 python -m unittest discover -s .github/scripts -p 'test_ai_review*.py' -v
 ```
 
-Publisher и batch helpers дополнительно проверяются Ruff и статическими contract-тестами обоих workflow.
+Publisher, AGENTS enforcer и batch helpers дополнительно проверяются Ruff.
