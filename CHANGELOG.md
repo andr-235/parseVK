@@ -1,3 +1,10 @@
+## [0.86.4](https://github.com/andr-235/parseVK/compare/v0.86.3...v0.86.4) (2026-07-31)
+
+
+### Bug Fixes
+
+* **ai-review:** bound model runtime and retry ([#379](https://github.com/andr-235/parseVK/issues/379)) ([70e17a5](https://github.com/andr-235/parseVK/commit/70e17a53eaa0da2da782bc529da3aed3829feecc)), closes [#374](https://github.com/andr-235/parseVK/issues/374)
+
 ## [0.86.3](https://github.com/andr-235/parseVK/compare/v0.86.2...v0.86.3) (2026-07-31)
 
 
