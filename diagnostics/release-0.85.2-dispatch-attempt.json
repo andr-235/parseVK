@@ -1,0 +1,282 @@
+{
+  "release_sha": "e786ff4db76707a500e3f3935f54400465af7191",
+  "diagnostic_runs": [
+    {
+      "id": 30595724769,
+      "event": "push",
+      "status": "in_progress",
+      "conclusion": null,
+      "head_sha": "725aef6614e8c32375d4a8aa6344c344fbd9cf32",
+      "head_branch": "diagnostics/release-0.85.1",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30595724769",
+      "created_at": "2026-07-31T01:12:38Z",
+      "updated_at": "2026-07-31T01:12:42Z"
+    },
+    {
+      "id": 30595657735,
+      "event": "push",
+      "status": "completed",
+      "conclusion": "failure",
+      "head_sha": "e264a74bfab9a804c494316ba5b2d7af96e2440b",
+      "head_branch": "diagnostics/release-0.85.1",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30595657735",
+      "created_at": "2026-07-31T01:11:10Z",
+      "updated_at": "2026-07-31T01:11:18Z"
+    },
+    {
+      "id": 30595579564,
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "8b0df38bdd23f9c315a3dc4ba1bb42552b0d5801",
+      "head_branch": "diagnostics/release-0.85.1",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30595579564",
+      "created_at": "2026-07-31T01:09:27Z",
+      "updated_at": "2026-07-31T01:09:45Z"
+    },
+    {
+      "id": 30595374333,
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "79e2576d35c0556005a09e216f05b14de0b4ae2d",
+      "head_branch": "diagnostics/release-0.85.1",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30595374333",
+      "created_at": "2026-07-31T01:04:57Z",
+      "updated_at": "2026-07-31T01:05:13Z"
+    },
+    {
+      "id": 30595255498,
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "64730f37c1684029168bcfd4e90ea3e0d2c395c1",
+      "head_branch": "diagnostics/release-0.85.1",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30595255498",
+      "created_at": "2026-07-31T01:02:26Z",
+      "updated_at": "2026-07-31T01:02:38Z"
+    }
+  ],
+  "deploy_runs": [
+    {
+      "id": 30589695779,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30589695779",
+      "created_at": "2026-07-30T23:11:06Z",
+      "updated_at": "2026-07-30T23:11:14Z"
+    },
+    {
+      "id": 30589436195,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30589436195",
+      "created_at": "2026-07-30T23:06:22Z",
+      "updated_at": "2026-07-30T23:06:24Z"
+    },
+    {
+      "id": 30589315559,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30589315559",
+      "created_at": "2026-07-30T23:04:14Z",
+      "updated_at": "2026-07-30T23:04:15Z"
+    },
+    {
+      "id": 30589213358,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30589213358",
+      "created_at": "2026-07-30T23:02:27Z",
+      "updated_at": "2026-07-30T23:02:28Z"
+    },
+    {
+      "id": 30589058084,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30589058084",
+      "created_at": "2026-07-30T22:59:52Z",
+      "updated_at": "2026-07-30T22:59:53Z"
+    },
+    {
+      "id": 30589052534,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30589052534",
+      "created_at": "2026-07-30T22:59:46Z",
+      "updated_at": "2026-07-30T22:59:47Z"
+    },
+    {
+      "id": 30589009949,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30589009949",
+      "created_at": "2026-07-30T22:58:59Z",
+      "updated_at": "2026-07-30T22:59:07Z"
+    },
+    {
+      "id": 30588922665,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30588922665",
+      "created_at": "2026-07-30T22:57:22Z",
+      "updated_at": "2026-07-30T22:57:23Z"
+    },
+    {
+      "id": 30588760006,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30588760006",
+      "created_at": "2026-07-30T22:54:27Z",
+      "updated_at": "2026-07-30T22:54:28Z"
+    },
+    {
+      "id": 30588487519,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30588487519",
+      "created_at": "2026-07-30T22:49:42Z",
+      "updated_at": "2026-07-30T22:49:44Z"
+    },
+    {
+      "id": 30588296577,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30588296577",
+      "created_at": "2026-07-30T22:46:15Z",
+      "updated_at": "2026-07-30T22:46:16Z"
+    },
+    {
+      "id": 30588135202,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30588135202",
+      "created_at": "2026-07-30T22:43:29Z",
+      "updated_at": "2026-07-30T22:43:30Z"
+    },
+    {
+      "id": 30587030651,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30587030651",
+      "created_at": "2026-07-30T22:24:36Z",
+      "updated_at": "2026-07-30T22:24:38Z"
+    },
+    {
+      "id": 30586886717,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30586886717",
+      "created_at": "2026-07-30T22:22:10Z",
+      "updated_at": "2026-07-30T22:22:11Z"
+    },
+    {
+      "id": 30586736920,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30586736920",
+      "created_at": "2026-07-30T22:19:38Z",
+      "updated_at": "2026-07-30T22:19:39Z"
+    },
+    {
+      "id": 30585862801,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30585862801",
+      "created_at": "2026-07-30T22:05:06Z",
+      "updated_at": "2026-07-30T22:05:14Z"
+    },
+    {
+      "id": 30585704965,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30585704965",
+      "created_at": "2026-07-30T22:02:35Z",
+      "updated_at": "2026-07-30T22:02:36Z"
+    },
+    {
+      "id": 30585431026,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30585431026",
+      "created_at": "2026-07-30T21:58:34Z",
+      "updated_at": "2026-07-30T21:58:35Z"
+    },
+    {
+      "id": 30585277659,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30585277659",
+      "created_at": "2026-07-30T21:55:37Z",
+      "updated_at": "2026-07-30T21:55:38Z"
+    },
+    {
+      "id": 30585165913,
+      "event": "workflow_run",
+      "status": "completed",
+      "conclusion": "skipped",
+      "head_sha": "23c09dbe588fac5eba7fd17f1918d6306c225aa9",
+      "head_branch": "main",
+      "html_url": "https://github.com/andr-235/parseVK/actions/runs/30585165913",
+      "created_at": "2026-07-30T21:53:37Z",
+      "updated_at": "2026-07-30T21:53:38Z"
+    }
+  ]
+}
