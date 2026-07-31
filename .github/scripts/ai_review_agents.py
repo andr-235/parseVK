@@ -106,8 +106,9 @@ def run_enforcer(base_sha: str, scope_path: Path, prompt_dir: Path, *, cwd: Path
         return
     target = Path(__file__).with_name("ai_review_agents_enforce.py")
     target.write_text(source, encoding="utf-8")
+    output = prompt_dir / "agents-findings.json"
     command = [sys.executable, str(target), "--base", base_sha, "--scope", str(scope_path),
-               "--event-dir", str(prompt_dir), "--repo", str(cwd)]
+               "--output", str(output), "--repo", str(cwd)]
     completed = subprocess.run(command, cwd=cwd, check=False)  # noqa: S603
     if completed.returncode:
         raise InstructionError(f"AGENTS.md deterministic checks failed: {completed.returncode}")
