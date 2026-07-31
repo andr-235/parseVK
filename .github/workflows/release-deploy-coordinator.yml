@@ -28,37 +28,32 @@ jobs:
       )
 
     steps:
-      - name: Resolve current semantic release
+      - name: Checkout release history and resolver
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/latest_release.py
+          sparse-checkout-cone-mode: false
+
+      - name: Resolve latest semantic release
         id: release
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EVENT_NAME: ${{ github.event_name }}
           SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
 
-          RELEASE_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
-          COMMIT_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${RELEASE_SHA}")"
-          RELEASE_MESSAGE="$(jq -r '.commit.message' <<<"$COMMIT_JSON")"
-          RELEASE_SUBJECT="${RELEASE_MESSAGE%%$'\n'*}"
-          RELEASE_PARENT="$(jq -r '.parents[0].sha // empty' <<<"$COMMIT_JSON")"
-
-          if [[ "$RELEASE_SUBJECT" != chore\(release\):* ]] || \
-             ! printf '%s' "$RELEASE_MESSAGE" | grep -qF '[skip ci]'; then
-            if [[ "$EVENT_NAME" == "workflow_run" ]]; then
-              echo "proceed=false" >> "$GITHUB_OUTPUT"
-              echo "Release run did not produce a current semantic-release commit; nothing to deploy"
-              exit 0
-            fi
-
-            echo "::error::Current main is not a valid semantic-release commit: $RELEASE_SUBJECT"
-            exit 1
-          fi
+          RELEASE_JSON="$(python .github/scripts/latest_release.py --ref HEAD)"
+          RELEASE_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
+          RELEASE_PARENT="$(jq -r '.source_sha' <<<"$RELEASE_JSON")"
 
           if [[ "$EVENT_NAME" == "workflow_run" && "$RELEASE_PARENT" != "$SOURCE_SHA" ]]; then
             echo "proceed=false" >> "$GITHUB_OUTPUT"
-            echo "Release run source $SOURCE_SHA is stale; current release $RELEASE_SHA has parent $RELEASE_PARENT"
+            echo "Release run source $SOURCE_SHA is stale; latest release $RELEASE_SHA has parent $RELEASE_PARENT"
             exit 0
           fi
 
@@ -67,7 +62,7 @@ jobs:
             echo "release_sha=$RELEASE_SHA"
             echo "source_sha=$RELEASE_PARENT"
           } >> "$GITHUB_OUTPUT"
-          echo "Resolved semantic release: $RELEASE_SHA"
+          echo "Resolved latest semantic release reachable from main: $RELEASE_SHA"
 
       - name: Wait for release gates
         id: gates
@@ -156,10 +151,7 @@ jobs:
             [
               .workflow_runs[]
               | select(.head_sha == $sha)
-              | select(
-                  .status != "completed" or
-                  .conclusion == "success"
-                )
+              | select(.status != "completed" or .conclusion == "success")
             ]
             | sort_by(.created_at)
             | last
@@ -174,48 +166,32 @@ jobs:
           fi
 
           previous="$(jq -r '
-            [
-              .workflow_runs[]
-              | select(.event == "workflow_dispatch")
-            ]
+            [.workflow_runs[] | select(.event == "workflow_dispatch")]
             | sort_by(.created_at)
             | last
             | .id // empty
           ' <<<"$DEPLOY_RUNS")"
 
-          CURRENT_MAIN="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
-          if [[ "$CURRENT_MAIN" != "$RELEASE_SHA" ]]; then
-            echo "created=false" >> "$GITHUB_OUTPUT"
-            echo "Validated release $RELEASE_SHA became stale before deploy dispatch; main is $CURRENT_MAIN"
-            exit 0
-          fi
-
-          jq -nc '{ref: "main", inputs: {deployment: "current-main"}}' |
+          jq -nc --arg sha "$RELEASE_SHA" '{
+            ref: "main",
+            inputs: {deployment: "latest-release", expected_release_sha: $sha}
+          }' |
             gh api --method POST \
               "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/dispatches" \
               --input -
 
           run_id=""
-          run_sha=""
           for attempt in $(seq 1 15); do
-            latest_run="$(gh api \
+            run_id="$(gh api \
               --method GET \
               "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs" \
               -f branch=main \
               -f event=workflow_dispatch \
               -f per_page=20 |
-              jq -r '
-                [.workflow_runs[]]
-                | sort_by(.created_at)
-                | last
-                | if . == null then "\t" else "\(.id)\t\(.head_sha)" end
-              ')"
-            IFS=$'\t' read -r run_id run_sha <<<"$latest_run"
-
+              jq -r '[.workflow_runs[]] | sort_by(.created_at) | last | .id // empty')"
             if [[ -n "$run_id" && "$run_id" != "$previous" ]]; then
               break
             fi
-
             echo "Waiting for production deploy run: attempt ${attempt}/15"
             sleep 2
           done
@@ -224,13 +200,6 @@ jobs:
             echo "::error::GitHub did not create a production deploy run for $RELEASE_SHA"
             exit 1
           }
-
-          if [[ "$run_sha" != "$RELEASE_SHA" ]]; then
-            gh api --method POST \
-              "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/cancel" >/dev/null 2>&1 || true
-            echo "::error::Cancelled deploy run $run_id because it targets $run_sha instead of validated release $RELEASE_SHA"
-            exit 1
-          fi
 
           {
             echo "run_id=$run_id"
