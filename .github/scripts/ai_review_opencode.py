@@ -41,6 +41,14 @@ def context(arguments: list[str], prompt: bytes) -> tuple[str, Path, str]:
     return match.group(1), diff.parent, head.group(1).lower()
 
 
+def timeouts(directory: Path) -> tuple[float, float]:
+    scope = json.loads((directory / "scope.json").read_text(encoding="utf-8"))
+    count = max(1, len(scope.get("chunks", ())))
+    primary = float(os.environ.get("AI_REVIEW_PRIMARY_TIMEOUT", PRIMARY_TIMEOUT))
+    retry = float(os.environ.get("AI_REVIEW_RETRY_TIMEOUT", RETRY_TIMEOUT))
+    return primary / count, retry / count
+
+
 def call(binary: Path, arguments: list[str], prompt: bytes, seconds: float):
     started = time.monotonic()
     completed = subprocess.run(  # noqa: S603 -- fixed timeout executable
@@ -102,19 +110,12 @@ def run(arguments: list[str], prompt: bytes) -> int:
             str(Path.home() / ".opencode/bin/opencode"),
         )
     )
-    budgets = (
-        float(os.environ.get("AI_REVIEW_PRIMARY_TIMEOUT", PRIMARY_TIMEOUT)),
-        float(os.environ.get("AI_REVIEW_RETRY_TIMEOUT", RETRY_TIMEOUT)),
-    )
     records: list[dict] = []
-    last = (127, b"", b"")
-
-    for number, seconds in enumerate(budgets, start=1):
+    for number, seconds in enumerate(timeouts(directory), start=1):
         code, stdout, stderr, elapsed = call(binary, arguments, prompt, seconds)
         diagnostic = directory / f"opencode-attempt-{suffix}-{number}.stdout.jsonl"
-        errors = directory / f"opencode-{suffix}-attempt-{number}.stderr"
         diagnostic.write_bytes(stdout)
-        errors.write_bytes(stderr)
+        (directory / f"opencode-{suffix}-attempt-{number}.stderr").write_bytes(stderr)
         code, reason = result_reason(diagnostic, head, code)
         records.append(
             {
@@ -132,15 +133,14 @@ def run(arguments: list[str], prompt: bytes) -> int:
     sys.stdout.buffer.write(last[1])
     sys.stderr.buffer.write(last[2])
     for record in records:
-        message = json.dumps(record, ensure_ascii=False)
-        print(f"AI_REVIEW_ATTEMPT {message}", file=sys.stderr)
+        print(f"AI_REVIEW_ATTEMPT {json.dumps(record, ensure_ascii=False)}", file=sys.stderr)
     return last[0]
 
 
 def main() -> int:
     try:
         return run(sys.argv[1:], sys.stdin.buffer.read())
-    except (OSError, ReviewError, ValueError) as error:
+    except (OSError, ReviewError, ValueError, json.JSONDecodeError) as error:
         print(f"ai-review-opencode error: {error}", file=sys.stderr)
         return 70
 
