@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - .github/service-catalog.yaml
+      - .github/scripts/latest_release.py
+      - .github/scripts/test_latest_release.py
       - .github/scripts/release_manifest.py
       - .github/scripts/test_release_manifest.py
       - .github/workflows/ci.yml
@@ -45,6 +47,8 @@ jobs:
       - name: Run Ruff
         run: >-
           uvx ruff check
+          .github/scripts/latest_release.py
+          .github/scripts/test_latest_release.py
           .github/scripts/release_manifest.py
           .github/scripts/test_release_manifest.py
 
@@ -69,7 +73,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 2
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Verify current release commit and successful CI
@@ -94,8 +98,11 @@ jobs:
 
           for attempt in $(seq 1 60); do
             MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
-            if [[ "$MAIN_SHA" != "$TARGET_SHA" ]]; then
-              echo "::error::Refusing stale release $TARGET_SHA; main is $MAIN_SHA"
+            git fetch --no-tags origin "$MAIN_SHA"
+            RELEASE_JSON="$(python3 .github/scripts/latest_release.py --ref "$MAIN_SHA")"
+            LATEST_RELEASE_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
+            if [[ "$LATEST_RELEASE_SHA" != "$TARGET_SHA" ]]; then
+              echo "::error::Refusing stale release $TARGET_SHA; latest release is $LATEST_RELEASE_SHA, main is $MAIN_SHA"
               exit 1
             fi
 
@@ -162,17 +169,21 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ needs.gate.outputs.target_sha }}
+          fetch-depth: 0
           persist-credentials: false
 
-      - name: Recheck current main before manifest
+      - name: Recheck latest release before manifest
         shell: bash
         env:
           TARGET_SHA: ${{ needs.gate.outputs.target_sha }}
         run: |
           set -euo pipefail
           MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
-          if [[ "$MAIN_SHA" != "$TARGET_SHA" ]]; then
-            echo "::error::Refusing manifest for stale release $TARGET_SHA; main is $MAIN_SHA"
+          git fetch --no-tags origin "$MAIN_SHA"
+          RELEASE_JSON="$(python3 .github/scripts/latest_release.py --ref "$MAIN_SHA")"
+          LATEST_RELEASE_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
+          if [[ "$LATEST_RELEASE_SHA" != "$TARGET_SHA" ]]; then
+            echo "::error::Refusing manifest for stale release $TARGET_SHA; latest release is $LATEST_RELEASE_SHA, main is $MAIN_SHA"
             exit 1
           fi
 
