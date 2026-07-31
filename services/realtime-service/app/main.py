@@ -2,7 +2,8 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager, suppress
 
-from fastapi import Depends, FastAPI, Header, StreamingResponse
+from fastapi import Depends, FastAPI, Header
+from fastapi.responses import StreamingResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
