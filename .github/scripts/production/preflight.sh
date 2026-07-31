@@ -5,6 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/common.sh"
 
+STORAGE_GUARD_SCRIPT="${STORAGE_GUARD_SCRIPT:-$SCRIPT_DIR/storage-guard.sh}"
+
 require_env_file() {
   if [ ! -f "$(project_root)/.env" ]; then
     log_error "Production .env file not found at $(project_root)/.env"
@@ -18,6 +20,14 @@ validate_compose() {
     compose config || true
     return 1
   fi
+}
+
+check_storage_integrity() {
+  [ -f "$STORAGE_GUARD_SCRIPT" ] || {
+    log_error "Production storage guard not found: $STORAGE_GUARD_SCRIPT"
+    return 1
+  }
+  bash "$STORAGE_GUARD_SCRIPT" check
 }
 
 check_external_networks() {
@@ -72,6 +82,7 @@ main() {
   require_env_file
   require_project_file "$COMPOSE_FILE"
   validate_compose
+  check_storage_integrity
   check_external_networks
   check_local_runtime_images
 
