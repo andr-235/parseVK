@@ -1,3 +1,10 @@
+## [0.86.5](https://github.com/andr-235/parseVK/compare/v0.86.4...v0.86.5) (2026-07-31)
+
+
+### Bug Fixes
+
+* **ai-review:** avoid shadowing pinned CLI installer ([cc55ecd](https://github.com/andr-235/parseVK/commit/cc55ecdd7490f52b26fe379b48af655bb5f1d2e9)), closes [#384](https://github.com/andr-235/parseVK/issues/384)
+
 ## [0.86.4](https://github.com/andr-235/parseVK/compare/v0.86.3...v0.86.4) (2026-07-31)
 
 
