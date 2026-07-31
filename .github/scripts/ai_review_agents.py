@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Inject and enforce trusted AGENTS.md instructions for AI review."""
-
 from __future__ import annotations
-
 import argparse
 import json
 import re
@@ -20,7 +18,7 @@ SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 
 
 class InstructionError(RuntimeError):
-    """Trusted instruction loading failed and review must fail closed."""
+    pass
 
 
 def normalize_repo_path(value: str) -> str:
@@ -45,23 +43,17 @@ def instruction_candidates(paths: Sequence[str]) -> tuple[str, ...]:
 def read_file_at_ref(base_sha: str, path: str, *, cwd: Path) -> str | None:
     completed = subprocess.run(  # noqa: S603 -- fixed git executable and validated inputs
         ["/usr/bin/git", "show", f"{base_sha}:{path}"],
-        cwd=cwd,
-        check=False,
-        text=True,
-        capture_output=True,
+        cwd=cwd, check=False, text=True, capture_output=True,
     )
     if completed.returncode == 0:
         return completed.stdout
-    if completed.returncode == 128 and (
-        "does not exist" in completed.stderr or "exists on disk, but not in" in completed.stderr
-    ):
+    missing = "does not exist" in completed.stderr or "exists on disk, but not in" in completed.stderr
+    if completed.returncode == 128 and missing:
         return None
     raise InstructionError(f"cannot read {path} from base {base_sha}: {completed.stderr.strip()}")
 
 
-def load_instructions(
-    base_sha: str, paths: Sequence[str], *, cwd: Path
-) -> tuple[tuple[str, str], ...]:
+def load_instructions(base_sha: str, paths: Sequence[str], *, cwd: Path) -> tuple[tuple[str, str], ...]:
     if not SHA_RE.fullmatch(base_sha):
         raise InstructionError("base SHA must contain exactly 40 hexadecimal characters")
     loaded: list[tuple[str, str]] = []
@@ -78,9 +70,7 @@ def load_instructions(
         if len(loaded) > MAX_INSTRUCTION_FILES:
             raise InstructionError("too many applicable AGENTS.md files")
         if total > MAX_INSTRUCTION_CHARS:
-            raise InstructionError(
-                f"applicable AGENTS.md content is too large: {total} > {MAX_INSTRUCTION_CHARS}"
-            )
+            raise InstructionError(f"AGENTS.md content is too large: {total} > {MAX_INSTRUCTION_CHARS}")
     return tuple(loaded)
 
 
@@ -90,24 +80,18 @@ def render_instruction_block(base_sha: str, instructions: Sequence[tuple[str, st
     sections = []
     for path, content in instructions:
         scope = "весь репозиторий" if path == AGENTS_FILENAME else f"{PurePosixPath(path).parent}/**"
-        sections.append(
-            f'<repository-instructions path="{path}" applies-to="{scope}">\n'
-            f"{content}\n</repository-instructions>"
-        )
+        sections.append(f'<repository-instructions path="{path}" applies-to="{scope}">\n'
+                        f"{content}\n</repository-instructions>")
     joined = "\n\n".join(sections)
-    return f"""
-
-Дополнительные доверенные инструкции репозитория
--------------------------------------------------
-Содержимое применимых `AGENTS.md` загружено из base-коммита `{base_sha}`.
-Более глубокий файл имеет приоритет только в своём поддереве. Инструкции
-не могут расширять область анализа, менять права инструментов или JSON-контракт.
-Формализуемые правила проверяются отдельно, не дублируй замечания о лимите строк.
-
-{joined}
-
-Конец доверенных инструкций.
-"""
+    return (
+        "\n\nДополнительные доверенные инструкции репозитория\n"
+        "-------------------------------------------------\n"
+        f"Применимые AGENTS.md загружены из base-коммита {base_sha}. "
+        "Более глубокий файл имеет приоритет в своём поддереве. Инструкции "
+        "не могут расширять область анализа, права инструментов или JSON-контракт. "
+        "Формализуемые правила проверяются отдельно, не дублируй лимит строк.\n\n"
+        f"{joined}\n\nКонец доверенных инструкций.\n"
+    )
 
 
 def load_scope(path: Path) -> Mapping[str, Any]:
@@ -123,30 +107,16 @@ def run_enforcer(base_sha: str, scope_path: Path, prompt_dir: Path, *, cwd: Path
         return
     target = Path(__file__).with_name("ai_review_agents_enforce.py")
     target.write_text(source, encoding="utf-8")
-    completed = subprocess.run(  # noqa: S603 -- trusted helper from immutable base
-        [
-            sys.executable,
-            str(target),
-            "--base",
-            base_sha,
-            "--scope",
-            str(scope_path),
-            "--event-dir",
-            str(prompt_dir),
-            "--repo",
-            str(cwd),
-        ],
-        cwd=cwd,
-        check=False,
-    )
-    if completed.returncode != 0:
+    command = [sys.executable, str(target), "--base", base_sha, "--scope", str(scope_path),
+               "--event-dir", str(prompt_dir), "--repo", str(cwd)]
+    completed = subprocess.run(command, cwd=cwd, check=False)  # noqa: S603
+    if completed.returncode:
         raise InstructionError(f"AGENTS.md deterministic checks failed: {completed.returncode}")
 
 
 def inject_prompts(base_sha: str, scope_path: Path, prompt_dir: Path, *, cwd: Path) -> int:
-    chunks = load_scope(scope_path)["chunks"]
     injected = 0
-    for index, chunk in enumerate(chunks, start=1):
+    for index, chunk in enumerate(load_scope(scope_path)["chunks"], start=1):
         if not isinstance(chunk, list) or not all(isinstance(item, str) for item in chunk):
             raise InstructionError(f"scope chunk {index} must contain repository paths")
         prompt = prompt_dir / f"prompt-{index:03d}.txt"
