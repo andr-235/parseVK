@@ -1,0 +1,78 @@
+name: Production Integrity
+
+on:
+  pull_request:
+    paths:
+      - ".github/scripts/production/**"
+      - ".github/workflows/production-integrity.yml"
+      - ".github/scripts/test_storage_guard.py"
+      - "docs/deploy-runbook.md"
+  schedule:
+    - cron: "23 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-integrity
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    name: Validate Production Integrity Guard
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout proposed guard
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Validate shell syntax
+        run: |
+          bash -n .github/scripts/production/storage-guard.sh
+          bash -n .github/scripts/production/preflight.sh
+
+      - name: Test storage and workflow contracts
+        run: python3 .github/scripts/test_storage_guard.py -v
+
+  integrity:
+    name: Check Local Production Integrity
+    if: github.event_name != 'pull_request'
+    runs-on: [self-hosted]
+    timeout-minutes: 10
+    env:
+      PROJECT_ROOT: /opt/parseVK
+      DEPLOYMENT_METADATA_FILE: /opt/parseVK/.deployment-metadata.json
+      MIN_FREE_PROJECT_GB: ${{ vars.PRODUCTION_MIN_FREE_PROJECT_GB || '10' }}
+      MIN_FREE_DOCKER_GB: ${{ vars.PRODUCTION_MIN_FREE_DOCKER_GB || '15' }}
+    steps:
+      - name: Checkout trusted integrity scripts
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/log-helper.sh
+            .github/scripts/production
+          sparse-checkout-cone-mode: false
+
+      - name: Verify local storage and rollback releases
+        env:
+          LOCAL_RELEASE_SCRIPT: ${{ github.workspace }}/.github/scripts/production/local-release.sh
+        run: |
+          set -euo pipefail
+          bash "${{ github.workspace }}/.github/scripts/production/storage-guard.sh" check
+
+      - name: Record successful integrity check
+        run: |
+          {
+            echo "### Production integrity"
+            echo
+            echo "- local build storage: healthy"
+            echo "- current/previous rollback images: verified"
+            echo "- registry pulls: not used"
+          } >> "$GITHUB_STEP_SUMMARY"
