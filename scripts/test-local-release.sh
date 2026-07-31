@@ -18,6 +18,14 @@ cat >"$TMP_DIR/bin/docker" <<'SH'
 set -euo pipefail
 state="${FAKE_DOCKER_STATE:?}"
 key() { printf '%s' "$1" | tr '/:' '__'; }
+
+if [ "${1:-} ${2:-} ${3:-} ${4:-}" = "compose -f docker-compose.yml config" ]; then
+  cat <<'JSON'
+{"services":{"frontend":{"build":{"context":"./front"}},"api-gateway":{"build":{"context":"./services/api-gateway"}},"redis":{"image":"redis:7"}}}
+JSON
+  exit 0
+fi
+
 case "$1 $2" in
   "image inspect")
     ref="$3"
@@ -58,6 +66,21 @@ bash "$SCRIPT" snapshot "$commit"
 manifest="$RELEASES_DIR/$commit/release.json"
 [ "$(jq -r '.status' "$manifest")" = "candidate" ]
 [ "$(jq '.images | length' "$manifest")" -eq 2 ]
+
+fallback_commit="6234567890abcdef1234567890abcdef12345678"
+export SERVICE_CATALOG_CLI="$TMP_DIR/project/.github/scripts/missing.py"
+fallback_stderr="$TMP_DIR/fallback.stderr"
+bash "$SCRIPT" snapshot "$fallback_commit" 2>"$fallback_stderr"
+fallback_manifest="$RELEASES_DIR/$fallback_commit/release.json"
+[ "$(jq '.images | length' "$fallback_manifest")" -eq 2 ]
+[ "$(jq -r '.images | keys | sort | join(" ")' "$fallback_manifest")" = "api-gateway frontend" ]
+grep -q 'Service catalog unavailable' "$fallback_stderr"
+if jq -e '.images | keys[] | startswith("[")' "$fallback_manifest" >/dev/null; then
+  echo "Fallback warning leaked into release target output"
+  exit 1
+fi
+bash "$SCRIPT" purge "$fallback_commit"
+export SERVICE_CATALOG_CLI="$TMP_DIR/project/.github/scripts/service_catalog.py"
 
 bash "$SCRIPT" promote "$commit"
 [ "$(jq -r '.status' "$manifest")" = "successful" ]
@@ -134,4 +157,4 @@ if bash "$SCRIPT" purge "$commit_three" >/dev/null 2>&1; then
 fi
 
 [ -f "$RELEASES_DIR/$commit_three/release.json" ]
-echo "Local immutable release lifecycle, protected retention and bounded failed-candidate recovery are valid"
+echo "Local immutable release lifecycle, fallback target isolation, protected retention and bounded failed-candidate recovery are valid"
