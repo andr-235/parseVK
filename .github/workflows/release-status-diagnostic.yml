@@ -1,0 +1,41 @@
+name: Release Status Diagnostic
+
+on:
+  push:
+    branches:
+      - diagnostics/release-0.85.1
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: diagnostics/release-0.85.1
+          fetch-depth: 1
+
+      - name: Query release workflow runs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_SHA: e786ff4db76707a500e3f3935f54400465af7191
+        run: |
+          set -euo pipefail
+          mkdir -p diagnostics
+          gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/runs" \
+            -f head_sha="$RELEASE_SHA" \
+            -f per_page=100 \
+            --jq '{release_sha: env.RELEASE_SHA, runs: [.workflow_runs[] | {id, name, event, status, conclusion, head_sha, head_branch, html_url, created_at, updated_at}]}' \
+            > diagnostics/release-0.85.2.json
+
+      - name: Commit diagnostic result
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+          git add diagnostics/release-0.85.2.json
+          git commit -m "chore(diagnostics): record release 0.85.2 runs"
+          git push origin HEAD:diagnostics/release-0.85.1
