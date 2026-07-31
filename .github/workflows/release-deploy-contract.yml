@@ -6,6 +6,8 @@ on:
     paths:
       - .github/scripts/latest_release.py
       - .github/scripts/test_latest_release.py
+      - .github/workflows/ci.yml
+      - .github/workflows/security.yml
       - .github/workflows/deploy.yml
       - .github/workflows/release-deploy-coordinator.yml
       - .github/workflows/release-deploy-contract.yml
@@ -14,6 +16,8 @@ on:
     paths:
       - .github/scripts/latest_release.py
       - .github/scripts/test_latest_release.py
+      - .github/workflows/ci.yml
+      - .github/workflows/security.yml
       - .github/workflows/deploy.yml
       - .github/workflows/release-deploy-coordinator.yml
       - .github/workflows/release-deploy-contract.yml
