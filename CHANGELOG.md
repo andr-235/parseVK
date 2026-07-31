@@ -1,3 +1,10 @@
+## [0.85.7](https://github.com/andr-235/parseVK/compare/v0.85.6...v0.85.7) (2026-07-31)
+
+
+### Bug Fixes
+
+* **realtime:** correct StreamingResponse import ([#363](https://github.com/andr-235/parseVK/issues/363)) ([d2bd3c1](https://github.com/andr-235/parseVK/commit/d2bd3c199e3418d615244e181fceb8f2e95e1d8b))
+
 ## [0.85.6](https://github.com/andr-235/parseVK/compare/v0.85.5...v0.85.6) (2026-07-31)
 
 
