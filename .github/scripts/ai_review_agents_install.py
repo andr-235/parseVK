@@ -43,7 +43,8 @@ def install_bash_env(trusted_dir: Path) -> None:
         lines.append(f"[[ ! -f {quoted} ]] || source {quoted}")
     lines.extend(
         (
-            'if [[ -x "$HOME/.opencode/bin/opencode" '
+            'opencode_bin="${AI_REVIEW_OPENCODE_BIN:-$HOME/.opencode/bin/opencode}"',
+            'if [[ -x "$opencode_bin" '
             '&& ! -d "${GITHUB_WORKSPACE:-$PWD}/.opencode-installer" ]]; then',
             f"  opencode() {{ command python3 {shlex.quote(str(wrapper))} \"$@\"; }}",
             "fi",
