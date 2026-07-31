@@ -73,6 +73,18 @@ class RenderTests(unittest.TestCase):
         self.assertNotIn("…", heading)
         self.assertIn(f"> {long_fix}", body)
 
+    def test_unavailability_is_reliability_not_security(self) -> None:
+        body = render_inline_finding(
+            finding(
+                fix=(
+                    "Обработайте длительную недоступность внешнего сервиса и сохраните "
+                    "повторные попытки без потери результата текущей операции"
+                )
+            )
+        )
+        heading = next(line for line in body.splitlines() if line.startswith("### "))
+        self.assertEqual(heading, "### 🟠 Major · Надёжность")
+
     def test_long_unknown_finding_uses_neutral_title(self) -> None:
         body = render_inline_finding(
             finding(
