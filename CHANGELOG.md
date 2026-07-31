@@ -1,3 +1,10 @@
+## [0.85.2](https://github.com/andr-235/parseVK/compare/v0.85.1...v0.85.2) (2026-07-31)
+
+
+### Bug Fixes
+
+* **release:** confirm gates and restore Bun lock consistency ([#357](https://github.com/andr-235/parseVK/issues/357)) ([1676459](https://github.com/andr-235/parseVK/commit/167645991eb5b4d570596fd9082f95a0ba1c783f))
+
 ## [0.85.1](https://github.com/andr-235/parseVK/compare/v0.85.0...v0.85.1) (2026-07-30)
 
 
