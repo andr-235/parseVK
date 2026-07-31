@@ -19,7 +19,7 @@ jobs:
   dispatch:
     name: Publish And Deploy Validated Release
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 350
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (
@@ -138,6 +138,10 @@ jobs:
 
           if [[ "$IMMUTABLE_STATE" == "success" ]]; then
             existing_id="${IMMUTABLE_URL##*/}"
+            [[ "$existing_id" =~ ^[0-9]+$ ]] || {
+              echo "::error::Immutable status has invalid target URL: $IMMUTABLE_URL"
+              exit 1
+            }
             echo "run_id=$existing_id" >> "$GITHUB_OUTPUT"
             echo "created=false" >> "$GITHUB_OUTPUT"
             echo "ready=true" >> "$GITHUB_OUTPUT"
@@ -194,20 +198,26 @@ jobs:
           set -euo pipefail
 
           if [[ "$ALREADY_READY" != "true" ]]; then
-            for attempt in $(seq 1 360); do
+            completed=false
+            for attempt in $(seq 1 720); do
               RUN="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PUBLISHER_RUN_ID}")"
               STATUS="$(jq -r '.status' <<<"$RUN")"
               CONCLUSION="$(jq -r '.conclusion // ""' <<<"$RUN")"
-              echo "Publisher: status=$STATUS conclusion=${CONCLUSION:-null} attempt=$attempt/360"
+              echo "Publisher: status=$STATUS conclusion=${CONCLUSION:-null} attempt=$attempt/720"
               if [[ "$STATUS" == "completed" ]]; then
                 [[ "$CONCLUSION" == "success" ]] || {
                   echo "::error::Publisher failed: run=$PUBLISHER_RUN_ID conclusion=$CONCLUSION"
                   exit 1
                 }
+                completed=true
                 break
               fi
               sleep 15
             done
+            [[ "$completed" == "true" ]] || {
+              echo "::error::Timed out waiting for Publisher run $PUBLISHER_RUN_ID"
+              exit 1
+            }
           fi
 
           STATUSES="$(gh api \
