@@ -69,6 +69,19 @@ jobs:
       target_sha: ${{ steps.release.outputs.target_sha }}
       matrix: ${{ steps.matrix.outputs.value }}
     steps:
+      - name: Checkout trusted release resolver
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.workflow_sha }}
+          sparse-checkout: |
+            .github/scripts/latest_release.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Stage trusted release resolver
+        shell: bash
+        run: cp .github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"
+
       - name: Checkout validated release commit
         uses: actions/checkout@v6
         with:
@@ -99,7 +112,7 @@ jobs:
           for attempt in $(seq 1 60); do
             MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
             git fetch --no-tags origin "$MAIN_SHA"
-            RELEASE_JSON="$(python3 .github/scripts/latest_release.py --ref "$MAIN_SHA")"
+            RELEASE_JSON="$(python3 "$RUNNER_TEMP/latest_release.py" --ref "$MAIN_SHA")"
             LATEST_RELEASE_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
             if [[ "$LATEST_RELEASE_SHA" != "$TARGET_SHA" ]]; then
               echo "::error::Refusing stale release $TARGET_SHA; latest release is $LATEST_RELEASE_SHA, main is $MAIN_SHA"
@@ -165,6 +178,19 @@ jobs:
       contents: read
       statuses: write
     steps:
+      - name: Checkout trusted release resolver
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.workflow_sha }}
+          sparse-checkout: |
+            .github/scripts/latest_release.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Stage trusted release resolver
+        shell: bash
+        run: cp .github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"
+
       - name: Checkout validated release commit
         uses: actions/checkout@v6
         with:
@@ -180,7 +206,7 @@ jobs:
           set -euo pipefail
           MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
           git fetch --no-tags origin "$MAIN_SHA"
-          RELEASE_JSON="$(python3 .github/scripts/latest_release.py --ref "$MAIN_SHA")"
+          RELEASE_JSON="$(python3 "$RUNNER_TEMP/latest_release.py" --ref "$MAIN_SHA")"
           LATEST_RELEASE_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
           if [[ "$LATEST_RELEASE_SHA" != "$TARGET_SHA" ]]; then
             echo "::error::Refusing manifest for stale release $TARGET_SHA; latest release is $LATEST_RELEASE_SHA, main is $MAIN_SHA"
