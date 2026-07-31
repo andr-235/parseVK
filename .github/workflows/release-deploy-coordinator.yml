@@ -1,0 +1,243 @@
+name: Release Deploy Coordinator
+
+on:
+  workflow_run:
+    workflows: ["Release"]
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: release-deploy-coordinator
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Dispatch Validated Production Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main'
+      )
+
+    steps:
+      - name: Resolve current semantic release
+        id: release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          RELEASE_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          COMMIT_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${RELEASE_SHA}")"
+          RELEASE_MESSAGE="$(jq -r '.commit.message' <<<"$COMMIT_JSON")"
+          RELEASE_SUBJECT="${RELEASE_MESSAGE%%$'\n'*}"
+          RELEASE_PARENT="$(jq -r '.parents[0].sha // empty' <<<"$COMMIT_JSON")"
+
+          [[ "$RELEASE_SUBJECT" == chore\(release\):* ]] || {
+            echo "::error::Current main is not a semantic-release commit: $RELEASE_SUBJECT"
+            exit 1
+          }
+          printf '%s' "$RELEASE_MESSAGE" | grep -qF '[skip ci]' || {
+            echo "::error::Current semantic-release commit is missing [skip ci]"
+            exit 1
+          }
+
+          if [[ "$EVENT_NAME" == "workflow_run" && "$RELEASE_PARENT" != "$SOURCE_SHA" ]]; then
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "Release run source $SOURCE_SHA is stale; current release $RELEASE_SHA has parent $RELEASE_PARENT"
+            exit 0
+          fi
+
+          {
+            echo "proceed=true"
+            echo "release_sha=$RELEASE_SHA"
+            echo "source_sha=$RELEASE_PARENT"
+          } >> "$GITHUB_OUTPUT"
+          echo "Resolved semantic release: $RELEASE_SHA"
+
+      - name: Wait for release gates
+        id: gates
+        if: steps.release.outputs.proceed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
+        run: |
+          set -euo pipefail
+
+          REQUIRED_WORKFLOWS=("Full Release CI" "Security Scanning")
+          MAX_ATTEMPTS=75
+          SLEEP_SECONDS=20
+
+          for ((attempt=1; attempt<=MAX_ATTEMPTS; attempt++)); do
+            RUNS_JSON="$(gh api \
+              --method GET \
+              "repos/${GITHUB_REPOSITORY}/actions/runs" \
+              -f head_sha="$RELEASE_SHA" \
+              -f event=workflow_dispatch \
+              -f branch=main \
+              -f per_page=100)"
+
+            pending=false
+            for workflow in "${REQUIRED_WORKFLOWS[@]}"; do
+              result="$(jq -r --arg workflow "$workflow" '
+                [.workflow_runs[] | select(.name == $workflow)]
+                | sort_by(.run_number)
+                | last
+                | if . == null then
+                    "missing"
+                  elif .status != "completed" then
+                    .status
+                  else
+                    (.conclusion // "unknown")
+                  end
+              ' <<<"$RUNS_JSON")"
+
+              echo "${workflow}: ${result}"
+              case "$result" in
+                success)
+                  ;;
+                missing|queued|in_progress|requested|waiting|pending)
+                  pending=true
+                  ;;
+                *)
+                  echo "::error::${workflow} did not pass for ${RELEASE_SHA}: ${result}"
+                  exit 1
+                  ;;
+              esac
+            done
+
+            if [[ "$pending" == "false" ]]; then
+              echo "ready=true" >> "$GITHUB_OUTPUT"
+              echo "All release gates passed for $RELEASE_SHA"
+              exit 0
+            fi
+
+            if (( attempt == MAX_ATTEMPTS )); then
+              echo "::error::Timed out waiting for release gates for $RELEASE_SHA"
+              exit 1
+            fi
+
+            echo "Waiting for release gates: attempt ${attempt}/${MAX_ATTEMPTS}"
+            sleep "$SLEEP_SECONDS"
+          done
+
+      - name: Dispatch production deploy
+        id: deploy
+        if: steps.gates.outputs.ready == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
+        run: |
+          set -euo pipefail
+
+          DEPLOY_RUNS="$(gh api \
+            --method GET \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs" \
+            -f branch=main \
+            -f event=workflow_dispatch \
+            -f per_page=100)"
+
+          existing="$(jq -r --arg sha "$RELEASE_SHA" '
+            [
+              .workflow_runs[]
+              | select(.head_sha == $sha)
+              | select(
+                  .status != "completed" or
+                  .conclusion == "success"
+                )
+            ]
+            | sort_by(.created_at)
+            | last
+            | .id // empty
+          ' <<<"$DEPLOY_RUNS")"
+
+          if [[ -n "$existing" ]]; then
+            echo "Production deploy already exists for $RELEASE_SHA: run $existing"
+            echo "run_id=$existing" >> "$GITHUB_OUTPUT"
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          previous="$(jq -r --arg sha "$RELEASE_SHA" '
+            [
+              .workflow_runs[]
+              | select(.head_sha == $sha)
+            ]
+            | sort_by(.created_at)
+            | last
+            | .id // empty
+          ' <<<"$DEPLOY_RUNS")"
+
+          jq -nc '{ref: "main", inputs: {deployment: "current-main"}}' |
+            gh api --method POST \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/dispatches" \
+              --input -
+
+          run_id=""
+          for attempt in $(seq 1 15); do
+            run_id="$(gh api \
+              --method GET \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs" \
+              -f branch=main \
+              -f event=workflow_dispatch \
+              -f per_page=20 |
+              jq -r --arg sha "$RELEASE_SHA" '
+                [
+                  .workflow_runs[]
+                  | select(.head_sha == $sha)
+                ]
+                | sort_by(.created_at)
+                | last
+                | .id // empty
+              ')"
+
+            if [[ -n "$run_id" && "$run_id" != "$previous" ]]; then
+              break
+            fi
+
+            echo "Waiting for production deploy run: attempt ${attempt}/15"
+            sleep 2
+          done
+
+          [[ -n "$run_id" && "$run_id" != "$previous" ]] || {
+            echo "::error::GitHub did not create a production deploy run for $RELEASE_SHA"
+            exit 1
+          }
+
+          {
+            echo "run_id=$run_id"
+            echo "created=true"
+          } >> "$GITHUB_OUTPUT"
+          echo "Dispatched production deploy: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${run_id}"
+
+      - name: Coordinator summary
+        if: always()
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
+          PROCEED: ${{ steps.release.outputs.proceed }}
+          DEPLOY_RUN_ID: ${{ steps.deploy.outputs.run_id }}
+          DEPLOY_CREATED: ${{ steps.deploy.outputs.created }}
+        run: |
+          {
+            echo "### Release deploy coordinator"
+            echo "- Release SHA: \`${RELEASE_SHA:-not-resolved}\`"
+            echo "- Eligible release: \`${PROCEED:-false}\`"
+            echo "- Deploy run created: \`${DEPLOY_CREATED:-false}\`"
+            if [[ -n "${DEPLOY_RUN_ID:-}" ]]; then
+              echo "- Deploy run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${DEPLOY_RUN_ID}"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
