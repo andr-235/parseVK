@@ -1,3 +1,10 @@
+## [0.85.3](https://github.com/andr-235/parseVK/compare/v0.85.2...v0.85.3) (2026-07-31)
+
+
+### Bug Fixes
+
+* **deploy:** make rollback migration-safe ([#359](https://github.com/andr-235/parseVK/issues/359)) ([d3b2333](https://github.com/andr-235/parseVK/commit/d3b2333e9bc3740903411b9924510e4d6ae53cf3))
+
 ## [0.85.2](https://github.com/andr-235/parseVK/compare/v0.85.1...v0.85.2) (2026-07-31)
 
 
