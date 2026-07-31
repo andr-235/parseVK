@@ -30,6 +30,9 @@ class OpenCodeRunnerTests(unittest.TestCase):
         self.directory = Path(self.temp.name)
         self.diff = self.directory / "review-001.diff"
         self.diff.write_text("diff", encoding="utf-8")
+        (self.directory / "scope.json").write_text(
+            json.dumps({"chunks": [["app.py"]]}), encoding="utf-8"
+        )
         self.arguments = ["run", "--file", str(self.diff)]
         self.prompt = f"Проверяемый HEAD: {HEAD}\n".encode()
 
@@ -76,6 +79,13 @@ class OpenCodeRunnerTests(unittest.TestCase):
             [(0, event("technical-error"), b"", 10), (0, event(), b"", 10)]
         )
         self.assertEqual((code, calls), (0, 2))
+
+    def test_commit_budget_is_divided_between_four_chunks(self) -> None:
+        chunks = [[f"file-{index}.py"] for index in range(4)]
+        (self.directory / "scope.json").write_text(
+            json.dumps({"chunks": chunks}), encoding="utf-8"
+        )
+        self.assertEqual(ai_review_opencode.timeouts(self.directory), (45.0, 30.0))
 
 
 if __name__ == "__main__":
