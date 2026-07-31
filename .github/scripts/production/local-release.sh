@@ -30,7 +30,7 @@ resolve_targets() {
     return 0
   fi
 
-  log_warn "Service catalog unavailable; resolving build targets from Compose for release bootstrap"
+  log_warn "Service catalog unavailable; resolving build targets from Compose for release bootstrap" >&2
   compose config --format json \
     | jq -r '.services | to_entries[] | select((.value.build // null) != null) | .key' \
     | sort -u \
