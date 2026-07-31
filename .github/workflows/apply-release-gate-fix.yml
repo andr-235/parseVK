@@ -19,119 +19,7 @@ jobs:
           fetch-depth: 0
 
       - name: Apply isolated checkout and release rules
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from __future__ import annotations
-
-          import json
-          from pathlib import Path
-
-          checkout_before = '''          sparse-checkout-cone-mode: false
-          persist-credentials: false
-
-      - name: Stage trusted release resolver
-        shell: bash
-        run: cp .github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"
-'''
-          checkout_after = '''          sparse-checkout-cone-mode: false
-          persist-credentials: false
-          path: trusted-release-resolver
-
-      - name: Stage trusted release resolver
-        shell: bash
-        run: cp trusted-release-resolver/.github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"
-'''
-
-          expected = {
-              Path('.github/workflows/ci.yml'): 1,
-              Path('.github/workflows/security.yml'): 1,
-              Path('.github/workflows/publish-release-images.yml'): 2,
-          }
-          for path, count in expected.items():
-              text = path.read_text(encoding='utf-8')
-              actual = text.count(checkout_before)
-              if actual != count:
-                  raise SystemExit(
-                      f'{path}: expected {count} vulnerable checkout blocks, found {actual}'
-                  )
-              path.write_text(
-                  text.replace(checkout_before, checkout_after),
-                  encoding='utf-8',
-              )
-
-          config_path = Path('.releaserc.json')
-          config = json.loads(config_path.read_text(encoding='utf-8'))
-          plugins = config['plugins']
-          analyzer_index = plugins.index('@semantic-release/commit-analyzer')
-          plugins[analyzer_index] = [
-              '@semantic-release/commit-analyzer',
-              {
-                  'releaseRules': [
-                      {'scope': 'ai-review', 'release': False},
-                      {'scope': 'ci', 'release': False},
-                      {'scope': 'deploy', 'release': False},
-                  ]
-              },
-          ]
-          config_path.write_text(
-              json.dumps(config, ensure_ascii=False, indent=2) + '\n',
-              encoding='utf-8',
-          )
-
-          test_path = Path('scripts/test-release-workflow.sh')
-          test_text = test_path.read_text(encoding='utf-8')
-          marker = 'Release resolver checkout isolation and non-product release scopes are valid'
-          if marker not in test_text:
-              insertion = r'''
-
-require_pattern "$CI" 'path: trusted-release-resolver' \
-  "Full Release CI trusted resolver checkout is not isolated"
-require_pattern "$CI" 'cp trusted-release-resolver/\.github/scripts/latest_release\.py' \
-  "Full Release CI stages resolver from the isolated checkout"
-require_pattern "$SECURITY" 'path: trusted-release-resolver' \
-  "Security trusted resolver checkout is not isolated"
-require_pattern "$SECURITY" 'cp trusted-release-resolver/\.github/scripts/latest_release\.py' \
-  "Security stages resolver from the isolated checkout"
-
-publish_resolver_paths="$(grep -c 'path: trusted-release-resolver' "$PUBLISH")"
-publish_resolver_stages="$(grep -c 'cp trusted-release-resolver/\.github/scripts/latest_release\.py' "$PUBLISH")"
-[[ "$publish_resolver_paths" -eq 2 ]] || {
-  echo "Publisher must isolate both trusted resolver checkouts"; exit 1;
-}
-[[ "$publish_resolver_stages" -eq 2 ]] || {
-  echo "Publisher must stage both resolvers from isolated checkouts"; exit 1;
-}
-
-python3 - "$RELEASE_CONFIG" <<'PY_RELEASE_RULES'
-import json
-import sys
-
-config = json.load(open(sys.argv[1], encoding="utf-8"))
-analyzer = next(
-    plugin for plugin in config["plugins"]
-    if isinstance(plugin, list) and plugin[0] == "@semantic-release/commit-analyzer"
-)
-rules = {
-    rule.get("scope"): rule.get("release")
-    for rule in analyzer[1].get("releaseRules", [])
-}
-expected = {"ai-review": False, "ci": False, "deploy": False}
-if any(rules.get(scope) is not release for scope, release in expected.items()):
-    raise SystemExit(f"Missing non-product release rules: expected={expected}, actual={rules}")
-PY_RELEASE_RULES
-
-echo "Release resolver checkout isolation and non-product release scopes are valid"
-'''
-              final_echo = 'echo "Incremental CI, confirmed exact full release gates and immutable publication contracts are valid"\n'
-              if final_echo not in test_text:
-                  raise SystemExit('release workflow test final marker not found')
-              test_path.write_text(
-                  test_text.replace(final_echo, insertion + '\n' + final_echo),
-                  encoding='utf-8',
-              )
-          PY
+        run: python3 .github/scripts/apply_release_gate_fix.py
 
       - name: Validate repaired release contracts
         shell: bash
@@ -140,18 +28,14 @@ echo "Release resolver checkout isolation and non-product release scopes are val
           bash scripts/test-release-workflow.sh
           python3 -m json.tool .releaserc.json >/dev/null
 
-      - name: Commit repaired files and remove bootstrap workflow
+      - name: Commit repaired files and remove bootstrap files
         shell: bash
         run: |
           set -euo pipefail
           rm .github/workflows/apply-release-gate-fix.yml
+          rm .github/scripts/apply_release_gate_fix.py
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add .github/workflows/ci.yml \
-            .github/workflows/security.yml \
-            .github/workflows/publish-release-images.yml \
-            .releaserc.json \
-            scripts/test-release-workflow.sh \
-            .github/workflows/apply-release-gate-fix.yml
+          git add -A
           git commit -m "chore(ci): isolate release resolver checkouts"
           git push origin HEAD:fix/release-gate-checkout-isolation
