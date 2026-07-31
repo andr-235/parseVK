@@ -56,6 +56,9 @@ class OpenCodeRuntimeTests(unittest.TestCase):
             fake.chmod(0o755)
             diff = directory / "review-001.diff"
             diff.write_text("diff", encoding="utf-8")
+            (directory / "scope.json").write_text(
+                json.dumps({"chunks": [["app.py"]]}), encoding="utf-8"
+            )
             env = os.environ | {
                 "BASH_ENV": str(directory / "ai-review-bash-env.sh"),
                 "AI_REVIEW_OPENCODE_BIN": str(fake),
