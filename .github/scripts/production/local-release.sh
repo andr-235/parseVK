@@ -184,7 +184,7 @@ mark_failed_candidate() {
 
   status="$(jq -r '.status // empty' "$manifest")"
   if [ "$status" = "successful" ]; then
-    log_error "Refusing to mark successful release as failed: $commit"
+    log_error "Refusing to discard successful release or mark it failed: $commit"
     return 1
   fi
 
