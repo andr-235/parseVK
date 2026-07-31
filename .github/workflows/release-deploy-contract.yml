@@ -1,0 +1,54 @@
+name: Release Deploy Contract
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/scripts/latest_release.py
+      - .github/scripts/test_latest_release.py
+      - .github/workflows/ci.yml
+      - .github/workflows/security.yml
+      - .github/workflows/deploy.yml
+      - .github/workflows/release-deploy-coordinator.yml
+      - .github/workflows/publish-release-images.yml
+      - .github/workflows/reusable-publish-image.yml
+      - .github/workflows/release-deploy-contract.yml
+  push:
+    branches: [main]
+    paths:
+      - .github/scripts/latest_release.py
+      - .github/scripts/test_latest_release.py
+      - .github/workflows/ci.yml
+      - .github/workflows/security.yml
+      - .github/workflows/deploy.yml
+      - .github/workflows/release-deploy-coordinator.yml
+      - .github/workflows/publish-release-images.yml
+      - .github/workflows/reusable-publish-image.yml
+      - .github/workflows/release-deploy-contract.yml
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Validate Latest Release Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout complete release history
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run resolver and workflow contract tests
+        env:
+          PYTHONPATH: .github/scripts
+        run: >-
+          python3 -m unittest discover
+          -s .github/scripts
+          -p 'test_latest_release.py'
+          -v
+
+      - name: Compile release resolver
+        run: python3 -m py_compile .github/scripts/latest_release.py .github/scripts/test_latest_release.py
