@@ -1,3 +1,21 @@
+# [0.86.0](https://github.com/andr-235/parseVK/compare/v0.85.7...v0.86.0) (2026-07-31)
+
+
+### Bug Fixes
+
+* **ai-review:** make AGENTS loader injectable in tests ([d8994dc](https://github.com/andr-235/parseVK/commit/d8994dc3bd5f377952a9d8d64de0779c8c082b0c))
+* **ai-review:** persist every deterministic AGENTS finding ([e5a3a1f](https://github.com/andr-235/parseVK/commit/e5a3a1fc9f83eb9a006ed46f6868ea699535d403))
+* **ai-review:** persist trusted AGENTS findings separately ([d918399](https://github.com/andr-235/parseVK/commit/d91839981c804d09ba0356f9c4db98fe44b15576))
+
+
+### Features
+
+* **ai-review:** execute trusted AGENTS.md rules ([e631bc4](https://github.com/andr-235/parseVK/commit/e631bc4edf5026bb81d28fb351b119380025f800))
+* **ai-review:** install trusted AGENTS result wrapper ([331395a](https://github.com/andr-235/parseVK/commit/331395afb5dbbc0c60038dfbbf28ac788c5c9cb7))
+* **ai-review:** install trusted result wrapper ([e81eb61](https://github.com/andr-235/parseVK/commit/e81eb61f8d97cd88af4dfe5ac05122d52ce7e475))
+* **ai-review:** merge mandatory AGENTS findings after fallback ([50b0ef2](https://github.com/andr-235/parseVK/commit/50b0ef28f82f8b6bf4296c2ff4d44d7b7947a788))
+* **ai-review:** wrap final result with mandatory AGENTS findings ([f064ac9](https://github.com/andr-235/parseVK/commit/f064ac93caa4824177a373ede87ad0a7c29f857a))
+
 ## [0.85.7](https://github.com/andr-235/parseVK/compare/v0.85.6...v0.85.7) (2026-07-31)
 
 
