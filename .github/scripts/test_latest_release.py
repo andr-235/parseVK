@@ -92,11 +92,23 @@ class WorkflowContractTests(unittest.TestCase):
         )
         cls.full_ci = (workflows / "ci.yml").read_text(encoding="utf-8")
         cls.security = (workflows / "security.yml").read_text(encoding="utf-8")
+        cls.publisher = (workflows / "publish-release-images.yml").read_text(
+            encoding="utf-8"
+        )
+        cls.image = (workflows / "reusable-publish-image.yml").read_text(encoding="utf-8")
 
     def test_release_consumers_use_trusted_resolver(self) -> None:
-        for workflow in (self.deploy, self.coordinator, self.full_ci, self.security):
+        consumers = (
+            self.deploy,
+            self.coordinator,
+            self.full_ci,
+            self.security,
+            self.publisher,
+            self.image,
+        )
+        for workflow in consumers:
             self.assertIn(".github/scripts/latest_release.py", workflow)
-        for workflow in (self.full_ci, self.security):
+        for workflow in (self.full_ci, self.security, self.publisher, self.image):
             self.assertIn("LATEST_RELEASE_SHA", workflow)
 
     def test_manual_deploy_is_bound_to_expected_latest_release(self) -> None:
@@ -105,16 +117,18 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("EXPECTED_RELEASE_SHA", self.deploy)
         self.assertIn('TARGET_SHA="$LATEST_RELEASE_SHA"', self.deploy)
 
-    def test_non_release_main_tip_does_not_invalidate_release_gates(self) -> None:
+    def test_non_release_main_tip_does_not_invalidate_release_pipeline(self) -> None:
         for workflow in (self.full_ci, self.security):
             self.assertIn('--ref "$CURRENT_MAIN"', workflow)
-            self.assertIn('LATEST_RELEASE_SHA" == "$TARGET_SHA', workflow)
             self.assertNotIn('CURRENT_MAIN" == "$TARGET_SHA', workflow)
+        for workflow in (self.publisher, self.image):
+            self.assertIn('--ref "$MAIN_SHA"', workflow)
+            self.assertNotIn('MAIN_SHA" != "$TARGET_SHA', workflow)
 
-    def test_main_tip_is_not_treated_as_release_identity(self) -> None:
-        self.assertNotIn('TARGET_SHA="$MANUAL_SHA"', self.deploy)
-        self.assertNotIn('TARGET_SHA" != "$MAIN_SHA', self.deploy)
-        self.assertNotIn('CURRENT_MAIN" != "$RELEASE_SHA', self.coordinator)
+    def test_latest_release_still_must_match_target(self) -> None:
+        for workflow in (self.full_ci, self.security, self.publisher, self.image):
+            self.assertIn('LATEST_RELEASE_SHA"', workflow)
+            self.assertIn('"$TARGET_SHA"', workflow)
 
 
 if __name__ == "__main__":
