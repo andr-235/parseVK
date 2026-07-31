@@ -77,10 +77,11 @@ jobs:
             .github/scripts/latest_release.py
           sparse-checkout-cone-mode: false
           persist-credentials: false
+          path: trusted-release-resolver
 
       - name: Stage trusted release resolver
         shell: bash
-        run: cp .github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"
+        run: cp trusted-release-resolver/.github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"
 
       - name: Checkout validated release commit
         uses: actions/checkout@v6
@@ -186,10 +187,11 @@ jobs:
             .github/scripts/latest_release.py
           sparse-checkout-cone-mode: false
           persist-credentials: false
+          path: trusted-release-resolver
 
       - name: Stage trusted release resolver
         shell: bash
-        run: cp .github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"
+        run: cp trusted-release-resolver/.github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"
 
       - name: Checkout validated release commit
         uses: actions/checkout@v6
