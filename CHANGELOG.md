@@ -1,3 +1,11 @@
+## [0.86.1](https://github.com/andr-235/parseVK/compare/v0.86.0...v0.86.1) (2026-07-31)
+
+
+### Bug Fixes
+
+* **ai-review:** generate concise titles without truncation ([28c5e74](https://github.com/andr-235/parseVK/commit/28c5e74cce0676ad22a9a5b42482feb61c4723bc))
+* **ai-review:** match title categories at word boundaries ([151e8f3](https://github.com/andr-235/parseVK/commit/151e8f3a9146af3ab83bc8368d3e6fb5727e8212))
+
 # [0.86.0](https://github.com/andr-235/parseVK/compare/v0.85.7...v0.86.0) (2026-07-31)
 
 
