@@ -28,9 +28,16 @@ class OpenCodeRuntimeTests(unittest.TestCase):
                     ".github/scripts/ai_review_opencode.py",
                 )
             }
-            with patch(
-                "ai_review_agents_install.read_at_ref",
-                side_effect=lambda _base, path, _repo: sources[path],
+            with (
+                patch(
+                    "ai_review_agents_install.read_at_ref",
+                    side_effect=lambda _base, path, _repo: sources[path],
+                ),
+                patch.dict(
+                    os.environ,
+                    {"GITHUB_ENV": str(directory / "github-env")},
+                    clear=False,
+                ),
             ):
                 install("a" * 40, directory, directory)
             fake = directory / "fake-opencode"
