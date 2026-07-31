@@ -18,24 +18,50 @@ jobs:
           ref: diagnostics/release-0.85.1
           fetch-depth: 1
 
-      - name: Query release workflow runs
+      - name: Query release workflow events
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_SHA: e786ff4db76707a500e3f3935f54400465af7191
+          CI_RUN_ID: "30593489344"
+          SECURITY_RUN_ID: "30593490342"
+          PUBLISH_RUN_ID: "30593583835"
         run: |
           set -euo pipefail
           mkdir -p diagnostics
-          gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/runs" \
-            -f head_sha="$RELEASE_SHA" \
-            -f per_page=100 \
-            --jq '{release_sha: env.RELEASE_SHA, runs: [.workflow_runs[] | {id, name, event, status, conclusion, head_sha, head_branch, html_url, created_at, updated_at}]}' \
-            > diagnostics/release-0.85.2.json
+
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CI_RUN_ID}" > /tmp/ci.json
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SECURITY_RUN_ID}" > /tmp/security.json
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PUBLISH_RUN_ID}" > /tmp/publish.json
+          gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/runs" -f per_page=100 > /tmp/all-runs.json
+
+          jq -n \
+            --arg release_sha "$RELEASE_SHA" \
+            --slurpfile ci /tmp/ci.json \
+            --slurpfile security /tmp/security.json \
+            --slurpfile publish /tmp/publish.json \
+            --slurpfile all /tmp/all-runs.json \
+            '{
+              release_sha: $release_sha,
+              full_release_ci: ($ci[0] | {id,name,event,status,conclusion,head_sha,head_branch,head_repository,html_url,workflow_id,path,created_at,updated_at}),
+              security: ($security[0] | {id,name,event,status,conclusion,head_sha,head_branch,head_repository,html_url,workflow_id,path,created_at,updated_at}),
+              publisher: ($publish[0] | {id,name,event,status,conclusion,head_sha,head_branch,head_repository,html_url,workflow_id,path,created_at,updated_at}),
+              deploy_runs: [
+                $all[0].workflow_runs[]
+                | select(.name == "Deploy to Production Server")
+                | {id,name,event,status,conclusion,head_sha,head_branch,head_repository,html_url,created_at,updated_at}
+              ],
+              publish_runs: [
+                $all[0].workflow_runs[]
+                | select(.name == "Publish Release Images")
+                | {id,name,event,status,conclusion,head_sha,head_branch,head_repository,html_url,created_at,updated_at}
+              ]
+            }' > diagnostics/release-0.85.2-event-details.json
 
       - name: Commit diagnostic result
         run: |
           set -euo pipefail
           git config user.name github-actions[bot]
           git config user.email github-actions[bot]@users.noreply.github.com
-          git add diagnostics/release-0.85.2.json
-          git commit -m "chore(diagnostics): record release 0.85.2 runs"
+          git add diagnostics/release-0.85.2-event-details.json
+          git commit -m "chore(diagnostics): record release event payloads"
           git push origin HEAD:diagnostics/release-0.85.1
