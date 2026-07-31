@@ -1,3 +1,10 @@
+## [0.85.6](https://github.com/andr-235/parseVK/compare/v0.85.5...v0.85.6) (2026-07-31)
+
+
+### Bug Fixes
+
+* **deploy:** isolate fallback release target output ([#362](https://github.com/andr-235/parseVK/issues/362)) ([d7340e9](https://github.com/andr-235/parseVK/commit/d7340e9ceb3dcb129795c215b80c2e4258d9f2de))
+
 ## [0.85.5](https://github.com/andr-235/parseVK/compare/v0.85.4...v0.85.5) (2026-07-31)
 
 
