@@ -1,3 +1,10 @@
+# [0.87.0](https://github.com/andr-235/parseVK/compare/v0.86.5...v0.87.0) (2026-07-31)
+
+
+### Features
+
+* **ci:** protect local production storage and rollback integrity ([7f66fe4](https://github.com/andr-235/parseVK/commit/7f66fe45b1a2bb8fc470b1c2cf4be3dc45e86429)), closes [#380](https://github.com/andr-235/parseVK/issues/380)
+
 ## [0.86.5](https://github.com/andr-235/parseVK/compare/v0.86.4...v0.86.5) (2026-07-31)
 
 
