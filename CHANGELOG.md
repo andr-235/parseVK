@@ -1,3 +1,10 @@
+## [0.86.3](https://github.com/andr-235/parseVK/compare/v0.86.2...v0.86.3) (2026-07-31)
+
+
+### Bug Fixes
+
+* **ai-review:** ограничить время модели и retry ([#375](https://github.com/andr-235/parseVK/issues/375)) ([a0b63be](https://github.com/andr-235/parseVK/commit/a0b63be20d51ed9146d99731e38c3d97b8a5f3e0))
+
 ## [0.86.2](https://github.com/andr-235/parseVK/compare/v0.86.1...v0.86.2) (2026-07-31)
 
 
