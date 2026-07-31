@@ -17,9 +17,9 @@ concurrency:
 
 jobs:
   dispatch:
-    name: Dispatch Validated Production Deploy
+    name: Publish And Deploy Validated Release
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 150
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (
@@ -74,10 +74,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          REQUIRED_CONTEXTS=("release/full-ci" "release/security")
-          MAX_ATTEMPTS=75
-          SLEEP_SECONDS=20
-
           latest_state() {
             local statuses="$1" context="$2"
             jq -r --arg context "$context" '
@@ -88,44 +84,35 @@ jobs:
             ' <<<"$statuses"
           }
 
-          for ((attempt=1; attempt<=MAX_ATTEMPTS; attempt++)); do
+          for attempt in $(seq 1 75); do
             STATUSES="$(gh api \
               "repos/${GITHUB_REPOSITORY}/commits/${RELEASE_SHA}/statuses?per_page=100")"
+            FULL_CI="$(latest_state "$STATUSES" release/full-ci)"
+            SECURITY="$(latest_state "$STATUSES" release/security)"
+            echo "release/full-ci=$FULL_CI release/security=$SECURITY"
 
-            pending=false
-            for context in "${REQUIRED_CONTEXTS[@]}"; do
-              result="$(latest_state "$STATUSES" "$context")"
-              echo "${context}: ${result}"
+            for result in "$FULL_CI" "$SECURITY"; do
               case "$result" in
-                success)
-                  ;;
-                missing|pending)
-                  pending=true
-                  ;;
+                success|missing|pending) ;;
                 *)
-                  echo "::error::${context} did not pass for ${RELEASE_SHA}: ${result}"
+                  echo "::error::Release gate failed for $RELEASE_SHA: $result"
                   exit 1
                   ;;
               esac
             done
 
-            if [[ "$pending" == "false" ]]; then
+            if [[ "$FULL_CI" == "success" && "$SECURITY" == "success" ]]; then
               echo "ready=true" >> "$GITHUB_OUTPUT"
-              echo "All release gate statuses passed for $RELEASE_SHA"
               exit 0
             fi
-
-            if (( attempt == MAX_ATTEMPTS )); then
-              echo "::error::Timed out waiting for release statuses for $RELEASE_SHA"
-              exit 1
-            fi
-
-            echo "Waiting for release statuses: attempt ${attempt}/${MAX_ATTEMPTS}"
-            sleep "$SLEEP_SECONDS"
+            sleep 20
           done
 
-      - name: Dispatch production deploy
-        id: deploy
+          echo "::error::Timed out waiting for release gates for $RELEASE_SHA"
+          exit 1
+
+      - name: Dispatch immutable image publisher
+        id: publisher
         if: steps.gates.outputs.ready == 'true'
         shell: bash
         env:
@@ -134,71 +121,189 @@ jobs:
         run: |
           set -euo pipefail
 
-          DEPLOY_RUNS="$(gh api \
-            --method GET \
-            "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs" \
-            -f branch=main \
-            -f per_page=100)"
-
-          existing="$(jq -r --arg sha "$RELEASE_SHA" '
-            [
-              .workflow_runs[]
-              | select(.head_sha == $sha)
-              | select(.status != "completed" or .conclusion == "success")
-            ]
+          STATUSES="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/commits/${RELEASE_SHA}/statuses?per_page=100")"
+          IMMUTABLE_STATE="$(jq -r '
+            [.[] | select(.context == "release/immutable-ghcr")]
             | sort_by(.created_at)
             | last
-            | .id // empty
-          ' <<<"$DEPLOY_RUNS")"
+            | if . == null then "missing" else (.state // "unknown") end
+          ' <<<"$STATUSES")"
+          IMMUTABLE_URL="$(jq -r '
+            [.[] | select(.context == "release/immutable-ghcr")]
+            | sort_by(.created_at)
+            | last
+            | if . == null then "" else (.target_url // "") end
+          ' <<<"$STATUSES")"
 
-          if [[ -n "$existing" ]]; then
-            echo "Production deploy already exists for $RELEASE_SHA: run $existing"
-            echo "run_id=$existing" >> "$GITHUB_OUTPUT"
+          if [[ "$IMMUTABLE_STATE" == "success" ]]; then
+            existing_id="${IMMUTABLE_URL##*/}"
+            echo "run_id=$existing_id" >> "$GITHUB_OUTPUT"
             echo "created=false" >> "$GITHUB_OUTPUT"
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "Immutable release already published: $IMMUTABLE_URL"
             exit 0
           fi
 
-          previous="$(jq -r '
-            [.workflow_runs[] | select(.event == "workflow_dispatch")]
-            | sort_by(.created_at)
-            | last
-            | .id // empty
-          ' <<<"$DEPLOY_RUNS")"
+          previous="$(gh api --method GET \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/publish-release-images.yml/runs" \
+            -f event=workflow_dispatch -f branch=main -f per_page=20 |
+            jq -r '[.workflow_runs[]] | sort_by(.created_at) | last | .id // empty')"
 
-          jq -nc --arg sha "$RELEASE_SHA" '{
+          jq -nc --arg target "$RELEASE_SHA" --arg coordinator "$GITHUB_RUN_ID" '{
             ref: "main",
-            inputs: {deployment: "latest-release", expected_release_sha: $sha}
-          }' |
-            gh api --method POST \
-              "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/dispatches" \
-              --input -
+            inputs: {
+              target_sha: $target,
+              coordinator_run_id: $coordinator
+            }
+          }' | gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/publish-release-images.yml/dispatches" \
+            --input -
 
           run_id=""
-          for attempt in $(seq 1 15); do
-            run_id="$(gh api \
-              --method GET \
-              "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs" \
-              -f branch=main \
-              -f event=workflow_dispatch \
-              -f per_page=20 |
+          for attempt in $(seq 1 20); do
+            run_id="$(gh api --method GET \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/publish-release-images.yml/runs" \
+              -f event=workflow_dispatch -f branch=main -f per_page=20 |
               jq -r '[.workflow_runs[]] | sort_by(.created_at) | last | .id // empty')"
             if [[ -n "$run_id" && "$run_id" != "$previous" ]]; then
               break
             fi
-            echo "Waiting for production deploy run: attempt ${attempt}/15"
             sleep 2
           done
 
           [[ -n "$run_id" && "$run_id" != "$previous" ]] || {
-            echo "::error::GitHub did not create a production deploy run for $RELEASE_SHA"
+            echo "::error::GitHub did not create Publish Release Images run"
             exit 1
           }
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "created=true" >> "$GITHUB_OUTPUT"
+          echo "ready=false" >> "$GITHUB_OUTPUT"
+          echo "Publisher run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${run_id}"
 
-          {
-            echo "run_id=$run_id"
-            echo "created=true"
-          } >> "$GITHUB_OUTPUT"
-          echo "Dispatched production deploy: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${run_id}"
+      - name: Wait for immutable publication
+        id: publication
+        if: steps.gates.outputs.ready == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
+          PUBLISHER_RUN_ID: ${{ steps.publisher.outputs.run_id }}
+          ALREADY_READY: ${{ steps.publisher.outputs.ready }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$ALREADY_READY" != "true" ]]; then
+            for attempt in $(seq 1 360); do
+              RUN="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PUBLISHER_RUN_ID}")"
+              STATUS="$(jq -r '.status' <<<"$RUN")"
+              CONCLUSION="$(jq -r '.conclusion // ""' <<<"$RUN")"
+              echo "Publisher: status=$STATUS conclusion=${CONCLUSION:-null} attempt=$attempt/360"
+              if [[ "$STATUS" == "completed" ]]; then
+                [[ "$CONCLUSION" == "success" ]] || {
+                  echo "::error::Publisher failed: run=$PUBLISHER_RUN_ID conclusion=$CONCLUSION"
+                  exit 1
+                }
+                break
+              fi
+              sleep 15
+            done
+          fi
+
+          STATUSES="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/commits/${RELEASE_SHA}/statuses?per_page=100")"
+          IMMUTABLE_STATE="$(jq -r '
+            [.[] | select(.context == "release/immutable-ghcr")]
+            | sort_by(.created_at)
+            | last
+            | if . == null then "missing" else (.state // "unknown") end
+          ' <<<"$STATUSES")"
+          IMMUTABLE_URL="$(jq -r '
+            [.[] | select(.context == "release/immutable-ghcr")]
+            | sort_by(.created_at)
+            | last
+            | if . == null then "" else (.target_url // "") end
+          ' <<<"$STATUSES")"
+          EXPECTED_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${PUBLISHER_RUN_ID}"
+          [[ "$IMMUTABLE_STATE" == "success" ]] || {
+            echo "::error::Immutable publication status is $IMMUTABLE_STATE"
+            exit 1
+          }
+          [[ "$IMMUTABLE_URL" == "$EXPECTED_URL" ]] || {
+            echo "::error::Immutable status points to $IMMUTABLE_URL, expected $EXPECTED_URL"
+            exit 1
+          }
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch production deploy
+        id: deploy
+        if: steps.publication.outputs.ready == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
+        run: |
+          set -euo pipefail
+
+          previous="$(gh api --method GET \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs" \
+            -f event=workflow_dispatch -f branch=main -f per_page=20 |
+            jq -r '[.workflow_runs[]] | sort_by(.created_at) | last | .id // empty')"
+
+          jq -nc --arg sha "$RELEASE_SHA" '{
+            ref: "main",
+            inputs: {deployment: "latest-release", expected_release_sha: $sha}
+          }' | gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/dispatches" \
+            --input -
+
+          run_id=""
+          for attempt in $(seq 1 20); do
+            run_id="$(gh api --method GET \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs" \
+              -f event=workflow_dispatch -f branch=main -f per_page=20 |
+              jq -r '[.workflow_runs[]] | sort_by(.created_at) | last | .id // empty')"
+            if [[ -n "$run_id" && "$run_id" != "$previous" ]]; then
+              break
+            fi
+            sleep 2
+          done
+
+          [[ -n "$run_id" && "$run_id" != "$previous" ]] || {
+            echo "::error::GitHub did not create a production deploy run"
+            exit 1
+          }
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Production run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${run_id}"
+
+      - name: Wait for production deploy
+        id: production
+        if: steps.deploy.outputs.run_id != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEPLOY_RUN_ID: ${{ steps.deploy.outputs.run_id }}
+        run: |
+          set -euo pipefail
+
+          for attempt in $(seq 1 360); do
+            RUN="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${DEPLOY_RUN_ID}")"
+            STATUS="$(jq -r '.status' <<<"$RUN")"
+            CONCLUSION="$(jq -r '.conclusion // ""' <<<"$RUN")"
+            echo "Production: status=$STATUS conclusion=${CONCLUSION:-null} attempt=$attempt/360"
+            if [[ "$STATUS" == "completed" ]]; then
+              [[ "$CONCLUSION" == "success" ]] || {
+                echo "::error::Production deploy failed: run=$DEPLOY_RUN_ID conclusion=$CONCLUSION"
+                exit 1
+              }
+              echo "ready=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 15
+          done
+
+          echo "::error::Timed out waiting for production deploy $DEPLOY_RUN_ID"
+          exit 1
 
       - name: Coordinator summary
         if: always()
@@ -206,15 +311,19 @@ jobs:
         env:
           RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
           PROCEED: ${{ steps.release.outputs.proceed }}
+          PUBLISHER_RUN_ID: ${{ steps.publisher.outputs.run_id }}
           DEPLOY_RUN_ID: ${{ steps.deploy.outputs.run_id }}
-          DEPLOY_CREATED: ${{ steps.deploy.outputs.created }}
+          PRODUCTION_READY: ${{ steps.production.outputs.ready }}
         run: |
           {
             echo "### Release deploy coordinator"
             echo "- Release SHA: \`${RELEASE_SHA:-not-resolved}\`"
             echo "- Eligible release: \`${PROCEED:-false}\`"
-            echo "- Deploy run created: \`${DEPLOY_CREATED:-false}\`"
+            echo "- Production completed: \`${PRODUCTION_READY:-false}\`"
+            if [[ -n "${PUBLISHER_RUN_ID:-}" ]]; then
+              echo "- Publisher: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${PUBLISHER_RUN_ID}"
+            fi
             if [[ -n "${DEPLOY_RUN_ID:-}" ]]; then
-              echo "- Deploy run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${DEPLOY_RUN_ID}"
+              echo "- Deploy: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${DEPLOY_RUN_ID}"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
