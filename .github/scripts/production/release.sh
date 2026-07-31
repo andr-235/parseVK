@@ -61,14 +61,12 @@ start_full_release() {
 }
 
 start_runtime_release() {
-  local resolved
   local -a targets
 
   if [ "${#SERVICES[@]}" -gt 0 ]; then
     targets=("${SERVICES[@]}")
   else
-    resolved="$(resolve_runtime_services)"
-    mapfile -t targets <<<"$resolved"
+    mapfile -t targets < <(resolve_runtime_services)
   fi
 
   [ "${#targets[@]}" -gt 0 ] || {
