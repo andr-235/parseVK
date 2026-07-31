@@ -11,6 +11,7 @@ from typing import Any
 
 AGENTS_FILENAME = "AGENTS.md"
 ENFORCER_PATH = ".github/scripts/ai_review_agents_enforce.py"
+INSTALLER_PATH = ".github/scripts/ai_review_agents_install.py"
 MAX_INSTRUCTION_FILES = 16
 MAX_INSTRUCTION_CHARS = 50_000
 SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
@@ -81,7 +82,6 @@ def render_instruction_block(base_sha: str, instructions: Sequence[tuple[str, st
         scope = "весь репозиторий" if path == AGENTS_FILENAME else f"{PurePosixPath(path).parent}/**"
         sections.append(f'<repository-instructions path="{path}" applies-to="{scope}">\n'
                         f"{content}\n</repository-instructions>")
-    joined = "\n\n".join(sections)
     return (
         "\n\nДополнительные доверенные инструкции репозитория\n"
         "-------------------------------------------------\n"
@@ -89,7 +89,7 @@ def render_instruction_block(base_sha: str, instructions: Sequence[tuple[str, st
         "Более глубокий файл имеет приоритет в своём поддереве. Инструкции "
         "не могут расширять область анализа, права инструментов или JSON-контракт. "
         "Формализуемые правила проверяются отдельно, не дублируй лимит строк.\n\n"
-        f"{joined}\n\nКонец доверенных инструкций.\n"
+        f"{'\n\n'.join(sections)}\n\nКонец доверенных инструкций.\n"
     )
 
 
@@ -100,18 +100,18 @@ def load_scope(path: Path) -> Mapping[str, Any]:
     return value
 
 
-def run_enforcer(base_sha: str, scope_path: Path, prompt_dir: Path, *, cwd: Path) -> None:
-    source = read_file_at_ref(base_sha, ENFORCER_PATH, cwd=cwd)
+def run_trusted(base: str, source_path: str, arguments: list[str], cwd: Path) -> bool:
+    source = read_file_at_ref(base, source_path, cwd=cwd)
     if source is None:
-        return
-    target = Path(__file__).with_name("ai_review_agents_enforce.py")
+        return False
+    target = Path(__file__).with_name(PurePosixPath(source_path).name)
     target.write_text(source, encoding="utf-8")
-    output = prompt_dir / "agents-findings.json"
-    command = [sys.executable, str(target), "--base", base_sha, "--scope", str(scope_path),
-               "--output", str(output), "--repo", str(cwd)]
-    completed = subprocess.run(command, cwd=cwd, check=False)  # noqa: S603
+    completed = subprocess.run(  # noqa: S603 -- trusted helper from immutable base
+        [sys.executable, str(target), *arguments], cwd=cwd, check=False
+    )
     if completed.returncode:
-        raise InstructionError(f"AGENTS.md deterministic checks failed: {completed.returncode}")
+        raise InstructionError(f"trusted helper failed: {source_path}")
+    return True
 
 
 def inject_prompts(base_sha: str, scope_path: Path, prompt_dir: Path, *, cwd: Path) -> int:
@@ -125,7 +125,12 @@ def inject_prompts(base_sha: str, scope_path: Path, prompt_dir: Path, *, cwd: Pa
         if block:
             prompt.write_text(prompt.read_text(encoding="utf-8").rstrip() + block, encoding="utf-8")
             injected += len(instructions)
-    run_enforcer(base_sha, scope_path, prompt_dir, cwd=cwd)
+    checked = run_trusted(base_sha, ENFORCER_PATH, ["--base", base_sha, "--scope", str(scope_path),
+        "--output", str(prompt_dir / "agents-findings.json"), "--repo", str(cwd)], cwd)
+    installed = run_trusted(base_sha, INSTALLER_PATH, ["--base", base_sha, "--repo", str(cwd),
+        "--trusted-dir", str(Path(__file__).parent)], cwd)
+    if checked != installed:
+        raise InstructionError("trusted AGENTS.md runtime is incomplete")
     print(f"Trusted AGENTS.md instructions injected: {injected}")
     return injected
 
