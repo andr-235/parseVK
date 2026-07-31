@@ -42,8 +42,8 @@ def instruction_candidates(paths: Sequence[str]) -> tuple[str, ...]:
 
 def read_file_at_ref(base_sha: str, path: str, *, cwd: Path) -> str | None:
     completed = subprocess.run(  # noqa: S603 -- fixed git executable and validated inputs
-        ["/usr/bin/git", "show", f"{base_sha}:{path}"],
-        cwd=cwd, check=False, text=True, capture_output=True,
+        ["/usr/bin/git", "show", f"{base_sha}:{path}"], cwd=cwd, check=False,
+        text=True, capture_output=True,
     )
     if completed.returncode == 0:
         return completed.stdout
@@ -106,9 +106,7 @@ def run_trusted(base: str, source_path: str, arguments: list[str], cwd: Path) ->
         return False
     target = Path(__file__).with_name(PurePosixPath(source_path).name)
     target.write_text(source, encoding="utf-8")
-    completed = subprocess.run(  # noqa: S603 -- trusted helper from immutable base
-        [sys.executable, str(target), *arguments], cwd=cwd, check=False
-    )
+    completed = subprocess.run([sys.executable, str(target), *arguments], cwd=cwd, check=False)  # noqa: S603
     if completed.returncode:
         raise InstructionError(f"trusted helper failed: {source_path}")
     return True
@@ -125,10 +123,8 @@ def inject_prompts(base_sha: str, scope_path: Path, prompt_dir: Path, *, cwd: Pa
         if block:
             prompt.write_text(prompt.read_text(encoding="utf-8").rstrip() + block, encoding="utf-8")
             injected += len(instructions)
-    checked = run_trusted(base_sha, ENFORCER_PATH, ["--base", base_sha, "--scope", str(scope_path),
-        "--output", str(prompt_dir / "agents-findings.json"), "--repo", str(cwd)], cwd)
-    installed = run_trusted(base_sha, INSTALLER_PATH, ["--base", base_sha, "--repo", str(cwd),
-        "--trusted-dir", str(Path(__file__).parent)], cwd)
+    checked = run_trusted(base_sha, ENFORCER_PATH, ["--base", base_sha, "--scope", str(scope_path), "--output", str(prompt_dir / "agents-findings.json"), "--repo", str(cwd)], cwd)
+    installed = run_trusted(base_sha, INSTALLER_PATH, ["--base", base_sha, "--repo", str(cwd), "--trusted-dir", str(Path(__file__).parent)], cwd)
     if checked != installed:
         raise InstructionError("trusted AGENTS.md runtime is incomplete")
     print(f"Trusted AGENTS.md instructions injected: {injected}")
