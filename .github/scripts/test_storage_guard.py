@@ -71,8 +71,8 @@ class StorageGuardRuntimeTests(unittest.TestCase):
         }
 
     def _run(self, **overrides: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            ["bash", str(GUARD), "check"],
+        return subprocess.run(  # noqa: S603 -- controlled test executable
+            ["/usr/bin/bash", str(GUARD), "check"],
             text=True,
             capture_output=True,
             check=False,
