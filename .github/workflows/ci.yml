@@ -56,8 +56,12 @@ jobs:
             echo "::error::Full Release CI checked out $ACTUAL_SHA, expected $TARGET_SHA"
             exit 1
           }
-          [[ "$CURRENT_MAIN" == "$TARGET_SHA" ]] || {
-            echo "::error::Release target is stale: target=$TARGET_SHA main=$CURRENT_MAIN"
+
+          git fetch --no-tags origin "$CURRENT_MAIN"
+          RELEASE_JSON="$(python3 .github/scripts/latest_release.py --ref "$CURRENT_MAIN")"
+          LATEST_RELEASE_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
+          [[ "$LATEST_RELEASE_SHA" == "$TARGET_SHA" ]] || {
+            echo "::error::Release target is stale: target=$TARGET_SHA latest_release=$LATEST_RELEASE_SHA main=$CURRENT_MAIN"
             exit 1
           }
 
@@ -215,7 +219,8 @@ jobs:
     strategy:
       fail-fast: false
       max-parallel: 3
-      matrix: ${{ fromJSON(needs.prepare.outputs.migration_matrix) }}
+      matrix:
+        service: ${{ fromJSON(needs.prepare.outputs.migration_matrix) }}
     uses: ./.github/workflows/reusable-alembic-migration.yml
     with:
       service: ${{ matrix.service }}
