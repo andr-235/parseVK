@@ -66,6 +66,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"Commit review batch: {batch['verdict']}; "
         f"commits={len(batch['commit_results'])}"
     )
+    if batch["verdict"] == "unavailable":
+        print("::error::AI review is unavailable for at least one commit.")
+        return 2
     return 0
 
 
