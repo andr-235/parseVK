@@ -10,7 +10,7 @@ from ai_review_agents_enforce import (
     effective_rule,
     is_exempt,
     parse_rule,
-    write_event,
+    write_findings,
 )
 
 
@@ -85,25 +85,23 @@ class FindingTests(unittest.TestCase):
         self.assertTrue(is_exempt("alembic/versions/001.py", "x\n" * 20, rule))
         self.assertTrue(is_exempt("client.py", "# Generated file\n", rule))
 
-    def test_event_uses_standard_model_contract(self) -> None:
-        path = "app.py"
-        self.write(path, 151)
+    def test_output_preserves_more_than_twenty_violations(self) -> None:
+        paths = [f"file_{index}.py" for index in range(25)]
+        for path in paths:
+            self.write(path, 151)
+        scope = {
+            "head_sha": "b" * 40,
+            "reviewable_files": paths,
+            "line_map": {path: [1] for path in paths},
+        }
         scope_path = self.repo / "scope.json"
-        scope_path.write_text(json.dumps(self.scope(path)), encoding="utf-8")
-        event_dir = self.repo / "events"
-        event_dir.mkdir()
-        count = write_event(
-            "a" * 40,
-            scope_path,
-            event_dir,
-            self.repo,
-            loader=self.loader,
-        )
-        event = json.loads((event_dir / "opencode-events-000.jsonl").read_text())
-        result = json.loads(event["part"]["text"])
-        self.assertEqual(count, 1)
-        self.assertEqual(result["head_sha"], "b" * 40)
-        self.assertEqual(result["findings"][0]["severity"], "major")
+        output = self.repo / "agents-findings.json"
+        scope_path.write_text(json.dumps(scope), encoding="utf-8")
+        count = write_findings("a" * 40, scope_path, output, self.repo, self.loader)
+        payload = json.loads(output.read_text(encoding="utf-8"))
+        self.assertEqual(count, 25)
+        self.assertEqual(len(payload["findings"]), 25)
+        self.assertEqual(payload["head_sha"], "b" * 40)
 
 
 if __name__ == "__main__":
