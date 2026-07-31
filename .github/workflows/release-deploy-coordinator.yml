@@ -74,43 +74,36 @@ jobs:
         run: |
           set -euo pipefail
 
-          REQUIRED_WORKFLOWS=("Full Release CI" "Security Scanning")
+          REQUIRED_CONTEXTS=("release/full-ci" "release/security")
           MAX_ATTEMPTS=75
           SLEEP_SECONDS=20
 
+          latest_state() {
+            local statuses="$1" context="$2"
+            jq -r --arg context "$context" '
+              [.[] | select(.context == $context)]
+              | sort_by(.created_at)
+              | last
+              | if . == null then "missing" else (.state // "unknown") end
+            ' <<<"$statuses"
+          }
+
           for ((attempt=1; attempt<=MAX_ATTEMPTS; attempt++)); do
-            RUNS_JSON="$(gh api \
-              --method GET \
-              "repos/${GITHUB_REPOSITORY}/actions/runs" \
-              -f head_sha="$RELEASE_SHA" \
-              -f event=workflow_dispatch \
-              -f branch=main \
-              -f per_page=100)"
+            STATUSES="$(gh api \
+              "repos/${GITHUB_REPOSITORY}/commits/${RELEASE_SHA}/statuses?per_page=100")"
 
             pending=false
-            for workflow in "${REQUIRED_WORKFLOWS[@]}"; do
-              result="$(jq -r --arg workflow "$workflow" '
-                [.workflow_runs[] | select(.name == $workflow)]
-                | sort_by(.run_number)
-                | last
-                | if . == null then
-                    "missing"
-                  elif .status != "completed" then
-                    .status
-                  else
-                    (.conclusion // "unknown")
-                  end
-              ' <<<"$RUNS_JSON")"
-
-              echo "${workflow}: ${result}"
+            for context in "${REQUIRED_CONTEXTS[@]}"; do
+              result="$(latest_state "$STATUSES" "$context")"
+              echo "${context}: ${result}"
               case "$result" in
                 success)
                   ;;
-                missing|queued|in_progress|requested|waiting|pending)
+                missing|pending)
                   pending=true
                   ;;
                 *)
-                  echo "::error::${workflow} did not pass for ${RELEASE_SHA}: ${result}"
+                  echo "::error::${context} did not pass for ${RELEASE_SHA}: ${result}"
                   exit 1
                   ;;
               esac
@@ -118,16 +111,16 @@ jobs:
 
             if [[ "$pending" == "false" ]]; then
               echo "ready=true" >> "$GITHUB_OUTPUT"
-              echo "All release gates passed for $RELEASE_SHA"
+              echo "All release gate statuses passed for $RELEASE_SHA"
               exit 0
             fi
 
             if (( attempt == MAX_ATTEMPTS )); then
-              echo "::error::Timed out waiting for release gates for $RELEASE_SHA"
+              echo "::error::Timed out waiting for release statuses for $RELEASE_SHA"
               exit 1
             fi
 
-            echo "Waiting for release gates: attempt ${attempt}/${MAX_ATTEMPTS}"
+            echo "Waiting for release statuses: attempt ${attempt}/${MAX_ATTEMPTS}"
             sleep "$SLEEP_SECONDS"
           done
 

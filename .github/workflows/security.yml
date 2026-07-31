@@ -19,6 +19,7 @@ on:
 permissions:
   contents: read
   security-events: write
+  statuses: write
 
 jobs:
   catalog:
@@ -29,6 +30,20 @@ jobs:
       docker_matrix: ${{ steps.docker.outputs.value }}
       docker_changed: ${{ steps.docker.outputs.changed }}
     steps:
+      - name: Mark release Security pending
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: |
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/statuses/${TARGET_SHA}" \
+            -f state=pending \
+            -f context=release/security \
+            -f description="Release Security is running" \
+            -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
       - name: Checkout trusted release resolver
         if: github.event_name == 'workflow_dispatch'
         uses: actions/checkout@v6
@@ -38,11 +53,12 @@ jobs:
             .github/scripts/latest_release.py
           sparse-checkout-cone-mode: false
           persist-credentials: false
+          path: trusted-release-resolver
 
       - name: Stage trusted release resolver
         if: github.event_name == 'workflow_dispatch'
         shell: bash
-        run: cp .github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"
+        run: cp trusted-release-resolver/.github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"
 
       - name: Checkout security target
         uses: actions/checkout@v6
@@ -235,6 +251,8 @@ jobs:
       - name: Enforce security workflow integrity
         shell: bash
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_SHA: ${{ inputs.target_sha }}
           EVENT_NAME: ${{ github.event_name }}
           DOCKER_CHANGED: ${{ needs.catalog.outputs.docker_changed }}
           CATALOG_RESULT: ${{ needs.catalog.result }}
@@ -281,6 +299,22 @@ jobs:
           require_success "Python dependency scan" "$PYTHON_SCAN_RESULT"
           require_conditional "Docker image scan" "$DOCKER_CHANGED" "$DOCKER_SCAN_RESULT"
           require_success "Secret scan" "$SECRET_SCAN_RESULT"
+
+          status_state=success
+          status_description="Release Security passed"
+          if (( failures > 0 )); then
+            status_state=failure
+            status_description="Release Security failed (${failures} groups)"
+          fi
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            gh api --method POST \
+              "repos/${GITHUB_REPOSITORY}/statuses/${TARGET_SHA}" \
+              -f state="$status_state" \
+              -f context=release/security \
+              -f description="$status_description" \
+              -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          fi
 
           if (( failures > 0 )); then
             echo "::error::Security Gate заблокирован: ${failures} проверок не пройдены."

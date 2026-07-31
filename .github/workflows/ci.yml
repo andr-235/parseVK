@@ -19,6 +19,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: full-release-ci-${{ inputs.target_sha }}
@@ -32,6 +33,19 @@ jobs:
       service_matrix: ${{ steps.services.outputs.value }}
       migration_matrix: ${{ steps.migrations.outputs.value }}
     steps:
+      - name: Mark Full Release CI pending
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: |
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/statuses/${TARGET_SHA}" \
+            -f state=pending \
+            -f context=release/full-ci \
+            -f description="Full Release CI is running" \
+            -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
       - name: Checkout trusted release resolver
         uses: actions/checkout@v6
         with:
@@ -40,10 +54,11 @@ jobs:
             .github/scripts/latest_release.py
           sparse-checkout-cone-mode: false
           persist-credentials: false
+          path: trusted-release-resolver
 
       - name: Stage trusted release resolver
         shell: bash
-        run: cp .github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"
+        run: cp trusted-release-resolver/.github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"
 
       - name: Checkout validated release commit
         uses: actions/checkout@v6
@@ -308,6 +323,8 @@ jobs:
       - name: Enforce full release validation
         shell: bash
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_SHA: ${{ inputs.target_sha }}
           PREPARE_RESULT: ${{ needs.prepare.result }}
           REPOSITORY_RESULT: ${{ needs.repository.result }}
           FRONTEND_RESULT: ${{ needs.frontend.result }}
@@ -333,8 +350,23 @@ jobs:
           require_success "Python Services" "$SERVICES_RESULT"
           require_success "Database Migrations" "$MIGRATIONS_RESULT"
           require_success "Contracts" "$CONTRACTS_RESULT"
+
+          status_state=success
+          status_description="Full Release CI passed"
+          if (( failures > 0 )); then
+            status_state=failure
+            status_description="Full Release CI failed (${failures} groups)"
+          fi
+
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/statuses/${TARGET_SHA}" \
+            -f state="$status_state" \
+            -f context=release/full-ci \
+            -f description="$status_description" \
+            -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
           if (( failures > 0 )); then
             echo "::error::Full Release Gate blocked by ${failures} failed validation groups"
             exit 1
           fi
-          echo "Full Release Gate passed for ${{ inputs.target_sha }}"
+          echo "Full Release Gate passed for $TARGET_SHA"
