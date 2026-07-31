@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Emit deterministic findings from trusted AGENTS.md rules."""
+"""Collect machine-checkable findings from trusted AGENTS.md rules."""
 
 from __future__ import annotations
 
@@ -13,7 +13,6 @@ from typing import Any
 
 from ai_review_agents import load_instructions
 
-MAX_FINDINGS = 20
 RULE_RE = re.compile(
     r"(?:размер\s+файла|file\s+size).*?"
     r"(?:не\s+более|до|no\s+more\s+than|maximum|max)\s+"
@@ -107,30 +106,20 @@ def collect_findings(
                 "confidence": 1.0,
             }
         )
-    return findings[:MAX_FINDINGS]
+    return findings
 
 
-def write_event(
+def write_findings(
     base_sha: str,
     scope_path: Path,
-    event_dir: Path,
+    output: Path,
     repo: Path,
     loader: Loader | None = None,
 ) -> int:
     scope = json.loads(scope_path.read_text(encoding="utf-8"))
     findings = collect_findings(base_sha, scope, repo, loader)
-    target = event_dir / "opencode-events-000.jsonl"
-    if not findings:
-        target.unlink(missing_ok=True)
-        return 0
-    result = {
-        "status": "completed",
-        "head_sha": scope["head_sha"],
-        "summary": f"Обязательные правила AGENTS.md: {len(findings)}.",
-        "findings": findings,
-    }
-    event = {"type": "text", "part": {"text": json.dumps(result, ensure_ascii=False)}}
-    target.write_text(json.dumps(event, ensure_ascii=False) + "\n", encoding="utf-8")
+    payload = {"schema_version": 1, "head_sha": scope["head_sha"], "findings": findings}
+    output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"AGENTS.md deterministic findings: {len(findings)}")
     return len(findings)
 
@@ -139,10 +128,10 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", required=True)
     parser.add_argument("--scope", type=Path, required=True)
-    parser.add_argument("--event-dir", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--repo", type=Path, default=Path.cwd())
     args = parser.parse_args()
-    write_event(args.base, args.scope, args.event_dir, args.repo)
+    write_findings(args.base, args.scope, args.output, args.repo)
     return 0
 
 
