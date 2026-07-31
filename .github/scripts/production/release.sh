@@ -80,12 +80,25 @@ runtime_health_check_enabled() {
 }
 
 verify_runtime_release() {
-  local health_script="$SCRIPT_DIR/../health-check.sh"
+  local health_script="$SCRIPT_DIR/../health-check.sh" check_status
 
-  if ! runtime_health_check_enabled; then
-    log_warn "Runtime health check was explicitly skipped"
-    return 0
+  if runtime_health_check_enabled; then
+    check_status=0
+  else
+    check_status=$?
   fi
+
+  case "$check_status" in
+    0)
+      ;;
+    1)
+      log_warn "Runtime health check was explicitly skipped"
+      return 0
+      ;;
+    *)
+      return "$check_status"
+      ;;
+  esac
 
   [ -f "$health_script" ] || {
     log_error "Current runtime health-check script is missing: $health_script"
