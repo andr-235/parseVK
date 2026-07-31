@@ -2,15 +2,14 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager, suppress
 
-from fastapi import Depends, FastAPI, Header
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
 from app.db.session import SessionLocal as session_factory
 from app.modules.retention.cleaner import catchup_loop, retention_loop
-from app.modules.stream.dependencies import verify_internal_token
 from app.modules.stream.listener import RealtimeListener
+from app.routes import create_router
 
 # Convert SQLAlchemy asyncpg DSN to plain asyncpg DSN for LISTEN/NOTIFY.
 listener_dsn = settings.database_url.replace("postgresql+asyncpg://", "postgresql://")
@@ -111,52 +110,8 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, lifespan=lifespan)
-
-    @app.get("/health")
-    async def health() -> dict[str, str]:
-        result: dict[str, str] = {"status": "UP"}
-        if settings.kafka_consumer_enabled:
-            result["kafkaConsumer"] = "healthy" if _consumer_healthy[0] else "unhealthy"
-        return result
-
-    @app.get("/ready")
-    async def ready() -> dict[str, str]:
-        from fastapi import HTTPException
-        from sqlalchemy import text
-
-        from app.db.session import engine
-
-        try:
-            async with engine.connect() as conn:
-                await conn.execute(text("SELECT 1"))
-            return {"status": "READY"}
-        except Exception as e:
-            raise HTTPException(status_code=503, detail=f"Database is not ready: {str(e)}") from e
-
-    @app.get("/internal/realtime/stream", dependencies=[Depends(verify_internal_token)])
-    async def realtime_stream(
-        lastEventId: int | None = None,
-        audienceType: str | None = None,
-        audienceId: str | None = None,
-        x_user_id: str | None = Header(default=None, alias="X-User-ID"),
-    ):
-        from app.modules.stream.sse_handler import stream_events
-
-        # Parse comma-separated audience types; e.g. "authenticated,user" from gateway
-        audience_types = [t.strip() for t in audienceType.split(",")] if audienceType else None
-
-        return StreamingResponse(
-            stream_events(session_factory, lastEventId, audience_types, audienceId, x_user_id, realtime_listener),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "X-Accel-Buffering": "no",
-                "Connection": "keep-alive",
-            },
-        )
-
+    app.include_router(create_router(realtime_listener, _consumer_healthy))
     Instrumentator().instrument(app).expose(app)
-
     return app
 
 
