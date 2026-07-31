@@ -173,15 +173,22 @@ jobs:
             exit 0
           fi
 
-          previous="$(jq -r --arg sha "$RELEASE_SHA" '
+          previous="$(jq -r '
             [
               .workflow_runs[]
-              | select(.head_sha == $sha and .event == "workflow_dispatch")
+              | select(.event == "workflow_dispatch")
             ]
             | sort_by(.created_at)
             | last
             | .id // empty
           ' <<<"$DEPLOY_RUNS")"
+
+          CURRENT_MAIN="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          if [[ "$CURRENT_MAIN" != "$RELEASE_SHA" ]]; then
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            echo "Validated release $RELEASE_SHA became stale before deploy dispatch; main is $CURRENT_MAIN"
+            exit 0
+          fi
 
           jq -nc '{ref: "main", inputs: {deployment: "current-main"}}' |
             gh api --method POST \
@@ -189,22 +196,21 @@ jobs:
               --input -
 
           run_id=""
+          run_sha=""
           for attempt in $(seq 1 15); do
-            run_id="$(gh api \
+            latest_run="$(gh api \
               --method GET \
               "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs" \
               -f branch=main \
               -f event=workflow_dispatch \
               -f per_page=20 |
-              jq -r --arg sha "$RELEASE_SHA" '
-                [
-                  .workflow_runs[]
-                  | select(.head_sha == $sha)
-                ]
+              jq -r '
+                [.workflow_runs[]]
                 | sort_by(.created_at)
                 | last
-                | .id // empty
+                | if . == null then "\t" else "\(.id)\t\(.head_sha)" end
               ')"
+            IFS=$'\t' read -r run_id run_sha <<<"$latest_run"
 
             if [[ -n "$run_id" && "$run_id" != "$previous" ]]; then
               break
@@ -218,6 +224,13 @@ jobs:
             echo "::error::GitHub did not create a production deploy run for $RELEASE_SHA"
             exit 1
           }
+
+          if [[ "$run_sha" != "$RELEASE_SHA" ]]; then
+            gh api --method POST \
+              "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/cancel" >/dev/null 2>&1 || true
+            echo "::error::Cancelled deploy run $run_id because it targets $run_sha instead of validated release $RELEASE_SHA"
+            exit 1
+          fi
 
           {
             echo "run_id=$run_id"
