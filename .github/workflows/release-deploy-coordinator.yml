@@ -44,14 +44,17 @@ jobs:
           RELEASE_SUBJECT="${RELEASE_MESSAGE%%$'\n'*}"
           RELEASE_PARENT="$(jq -r '.parents[0].sha // empty' <<<"$COMMIT_JSON")"
 
-          [[ "$RELEASE_SUBJECT" == chore\(release\):* ]] || {
-            echo "::error::Current main is not a semantic-release commit: $RELEASE_SUBJECT"
+          if [[ "$RELEASE_SUBJECT" != chore\(release\):* ]] || \
+             ! printf '%s' "$RELEASE_MESSAGE" | grep -qF '[skip ci]'; then
+            if [[ "$EVENT_NAME" == "workflow_run" ]]; then
+              echo "proceed=false" >> "$GITHUB_OUTPUT"
+              echo "Release run did not produce a current semantic-release commit; nothing to deploy"
+              exit 0
+            fi
+
+            echo "::error::Current main is not a valid semantic-release commit: $RELEASE_SUBJECT"
             exit 1
-          }
-          printf '%s' "$RELEASE_MESSAGE" | grep -qF '[skip ci]' || {
-            echo "::error::Current semantic-release commit is missing [skip ci]"
-            exit 1
-          }
+          fi
 
           if [[ "$EVENT_NAME" == "workflow_run" && "$RELEASE_PARENT" != "$SOURCE_SHA" ]]; then
             echo "proceed=false" >> "$GITHUB_OUTPUT"
@@ -147,7 +150,6 @@ jobs:
             --method GET \
             "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs" \
             -f branch=main \
-            -f event=workflow_dispatch \
             -f per_page=100)"
 
           existing="$(jq -r --arg sha "$RELEASE_SHA" '
@@ -174,7 +176,7 @@ jobs:
           previous="$(jq -r --arg sha "$RELEASE_SHA" '
             [
               .workflow_runs[]
-              | select(.head_sha == $sha)
+              | select(.head_sha == $sha and .event == "workflow_dispatch")
             ]
             | sort_by(.created_at)
             | last
