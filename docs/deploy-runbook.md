@@ -34,7 +34,7 @@ Default storage thresholds:
 | `PRODUCTION_MIN_FREE_PROJECT_GB` | 10 GiB |
 | `PRODUCTION_MIN_FREE_DOCKER_GB` | 15 GiB |
 
-Set these as GitHub repository variables when the server requires different limits.
+Set these values in `/opt/parseVK/.env` when the server requires different limits. The same server-side values are used by deploy and the scheduled integrity check. Rollback validates the target manifest and local image IDs but deliberately skips the build-space threshold because it does not build images.
 
 ## Release flow
 
@@ -69,7 +69,7 @@ Image tags use:
 parsevk-release/<service>:sha-<commit>
 ```
 
-The manifest records the active tag, immutable release tag and Docker image ID for every build target.
+The manifest records the active tag, immutable release tag and Docker image ID for every build target. Integrity validation rejects missing targets, empty image maps, incorrect commit/status fields and incomplete image records.
 
 ## Rollback
 
@@ -77,22 +77,22 @@ Rollback without an explicit SHA selects `previous_successful_commit`.
 
 The workflow:
 
-1. validates the saved successful manifest;
+1. validates the exact target successful manifest and its complete service coverage;
 2. confirms every local immutable tag still points to the recorded image ID;
 3. retags those images as active Compose images;
 4. starts only runtime services with `--no-build --pull never`;
 5. performs health checks;
 6. rotates deployment metadata only after success.
 
-Rollback does not run old migration/init jobs and does not perform database downgrade.
+Rollback does not run old migration/init jobs, does not perform database downgrade and is not blocked merely because free space fell below the build threshold.
 
 ## Production integrity workflow
 
 `Production Integrity` runs daily and can be started manually. It is read-only and checks:
 
 - free space on the project and Docker filesystems;
-- validity of deployment metadata;
-- current and previous successful manifests;
+- validity and field types of deployment metadata;
+- complete current and previous successful manifests relative to the service catalog;
 - existence and image-ID match of rollback tags.
 
 It never runs build, pull, login, promote, activate or cleanup commands.
@@ -121,7 +121,7 @@ Run the manual `Production Integrity` workflow. Check:
 
 ```bash
 cat /opt/parseVK/.deployment-metadata.json
-find /opt/parseVK/.releases -name release.json -maxdepth 3 -print
+find /opt/parseVK/.releases -maxdepth 3 -name release.json -print
 docker image ls 'parsevk-release/*'
 ```
 
