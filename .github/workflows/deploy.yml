@@ -8,12 +8,17 @@ on:
   workflow_dispatch:
     inputs:
       deployment:
-        description: "Повторно развернуть текущий проверенный commit ветки main"
+        description: "Повторно развернуть последний проверенный semantic release из main"
         required: true
         type: choice
         options:
-          - current-main
-        default: current-main
+          - latest-release
+        default: latest-release
+      expected_release_sha:
+        description: "Ожидаемый release SHA для coordinator; ручной запуск оставляет поле пустым"
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -40,23 +45,34 @@ jobs:
       deploy: ${{ steps.quality.outputs.deploy }}
       gate_event: ${{ steps.target.outputs.gate_event }}
     steps:
+      - name: Checkout release history and resolver
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/latest_release.py
+          sparse-checkout-cone-mode: false
+
       - name: Determine target commit
         id: target
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EVENT_NAME: ${{ github.event_name }}
           WORKFLOW_RUN_SHA: ${{ github.event.workflow_run.head_sha }}
-          WORKFLOW_RUN_EVENT: ${{ github.event.workflow_run.event }}
           MANUAL_REF: ${{ github.ref }}
-          MANUAL_SHA: ${{ github.sha }}
           MANUAL_DEPLOYMENT: ${{ inputs.deployment }}
+          EXPECTED_RELEASE_SHA: ${{ inputs.expected_release_sha }}
         run: |
           set -euo pipefail
+
+          RELEASE_JSON="$(python .github/scripts/latest_release.py --ref HEAD)"
+          LATEST_RELEASE_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
 
           if [ "$EVENT_NAME" = "workflow_run" ]; then
             TARGET_SHA="$WORKFLOW_RUN_SHA"
           else
-            if [ "$MANUAL_DEPLOYMENT" != "current-main" ]; then
+            if [ "$MANUAL_DEPLOYMENT" != "latest-release" ]; then
               echo "::error::Неизвестный режим ручного production deploy: $MANUAL_DEPLOYMENT"
               exit 1
             fi
@@ -64,10 +80,15 @@ jobs:
               echo "::error::Ручной production deploy разрешён только из ветки main. Выбрано: $MANUAL_REF"
               exit 1
             fi
-            TARGET_SHA="$MANUAL_SHA"
+            TARGET_SHA="$LATEST_RELEASE_SHA"
           fi
 
-          COMMIT_MESSAGE="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${TARGET_SHA}" --jq '.commit.message')"
+          if [ -n "$EXPECTED_RELEASE_SHA" ] && [ "$TARGET_SHA" != "$EXPECTED_RELEASE_SHA" ]; then
+            echo "::error::Coordinator ожидал release $EXPECTED_RELEASE_SHA, но latest release равен $TARGET_SHA"
+            exit 1
+          fi
+
+          COMMIT_MESSAGE="$(git show -s --format=%B "$TARGET_SHA")"
           RELEASE_SUBJECT="${COMMIT_MESSAGE%%$'\n'*}"
           [[ "$RELEASE_SUBJECT" == chore\(release\):* ]] || {
             echo "::error::Production deploy accepts only semantic-release commits: $RELEASE_SUBJECT"
@@ -79,11 +100,10 @@ jobs:
           }
           GATE_EVENT="workflow_dispatch"
 
-          MAIN_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
           OBSOLETE=false
-          if [ "$TARGET_SHA" != "$MAIN_SHA" ]; then
+          if [ "$TARGET_SHA" != "$LATEST_RELEASE_SHA" ]; then
             OBSOLETE=true
-            echo "Deployment candidate $TARGET_SHA is obsolete; current main is $MAIN_SHA"
+            echo "Deployment candidate $TARGET_SHA is obsolete; latest release is $LATEST_RELEASE_SHA"
           fi
 
           echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
