@@ -5,11 +5,12 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CI="$ROOT_DIR/.github/workflows/ci.yml"
 SECURITY="$ROOT_DIR/.github/workflows/security.yml"
 PUBLISH="$ROOT_DIR/.github/workflows/publish-release-images.yml"
+REUSABLE_PUBLISH="$ROOT_DIR/.github/workflows/reusable-publish-image.yml"
 COORDINATOR="$ROOT_DIR/.github/workflows/release-deploy-coordinator.yml"
 DEPLOY="$ROOT_DIR/.github/workflows/deploy.yml"
 RELEASE_CONFIG="$ROOT_DIR/.releaserc.json"
 
-for file in "$CI" "$SECURITY" "$PUBLISH" "$COORDINATOR" "$DEPLOY" "$RELEASE_CONFIG"; do
+for file in "$CI" "$SECURITY" "$PUBLISH" "$REUSABLE_PUBLISH" "$COORDINATOR" "$DEPLOY" "$RELEASE_CONFIG"; do
   [[ -f "$file" ]] || { echo "Required release handoff file not found: $file"; exit 1; }
 done
 
@@ -49,6 +50,12 @@ publish_stages="$(grep -c 'cp trusted-release-resolver/\.github/scripts/latest_r
 [[ "$publish_paths" -eq 2 && "$publish_stages" -eq 2 ]] || {
   echo "Publisher must isolate and stage both trusted resolver checkouts"; exit 1;
 }
+require_pattern "$REUSABLE_PUBLISH" 'path: trusted-release-resolver' \
+  "Reusable image publisher trusted resolver checkout is not isolated"
+require_pattern "$REUSABLE_PUBLISH" 'cp trusted-release-resolver/\.github/scripts/latest_release\.py' \
+  "Reusable image publisher does not stage its isolated trusted resolver"
+reject_pattern "$REUSABLE_PUBLISH" 'run: cp \.github/scripts/latest_release\.py' \
+  "Reusable image publisher stages the resolver from the build workspace"
 
 require_pattern "$PUBLISH" 'workflow_dispatch:' "Publisher cannot be explicitly dispatched"
 require_pattern "$PUBLISH" 'target_sha:' "Publisher dispatch is not bound to a release SHA"
@@ -118,4 +125,4 @@ if any(rules.get(scope) is not release for scope, release in expected.items()):
     raise SystemExit(f"Invalid non-product release rules: {rules}")
 PY
 
-echo "Explicit release publication and single-path production handoff contracts are valid"
+echo "Explicit release publication and isolated production handoff contracts are valid"
