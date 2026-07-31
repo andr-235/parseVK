@@ -47,8 +47,12 @@ jobs:
             echo "::error::Dispatched Security checked out $ACTUAL_SHA, expected $TARGET_SHA"
             exit 1
           }
-          [[ "$CURRENT_MAIN" == "$TARGET_SHA" ]] || {
-            echo "::error::Dispatched Security target is stale: target=$TARGET_SHA main=$CURRENT_MAIN"
+
+          git fetch --no-tags origin "$CURRENT_MAIN"
+          RELEASE_JSON="$(python3 .github/scripts/latest_release.py --ref "$CURRENT_MAIN")"
+          LATEST_RELEASE_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
+          [[ "$LATEST_RELEASE_SHA" == "$TARGET_SHA" ]] || {
+            echo "::error::Dispatched Security target is stale: target=$TARGET_SHA latest_release=$LATEST_RELEASE_SHA main=$CURRENT_MAIN"
             exit 1
           }
 
@@ -170,7 +174,8 @@ jobs:
     strategy:
       fail-fast: false
       max-parallel: 3
-      matrix: ${{ fromJSON(needs.catalog.outputs.docker_matrix) }}
+      matrix:
+        service: ${{ fromJSON(needs.catalog.outputs.docker_matrix) }}
     permissions:
       contents: read
       security-events: write
