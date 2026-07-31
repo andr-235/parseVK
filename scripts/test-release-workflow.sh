@@ -9,12 +9,13 @@ RELEASE_CONFIG="$ROOT_DIR/.releaserc.json"
 PUBLISH="$ROOT_DIR/.github/workflows/publish-release-images.yml"
 REUSABLE="$ROOT_DIR/.github/workflows/reusable-publish-image.yml"
 SECURITY="$ROOT_DIR/.github/workflows/security.yml"
+HANDOFF="$ROOT_DIR/scripts/test-release-handoff-workflow.sh"
 SERVICE_CATALOG="$ROOT_DIR/.github/scripts/service_catalog.py"
 SERVICE_CATALOG_TEST="$ROOT_DIR/.github/scripts/test_service_catalog.py"
 MANIFEST="$ROOT_DIR/.github/scripts/release_manifest.py"
 MANIFEST_TEST="$ROOT_DIR/.github/scripts/test_release_manifest.py"
 
-for file in "$PR_CI" "$CI" "$RELEASE" "$RELEASE_CONFIG" "$PUBLISH" "$REUSABLE" "$SECURITY" "$SERVICE_CATALOG" "$SERVICE_CATALOG_TEST" "$MANIFEST" "$MANIFEST_TEST"; do
+for file in "$PR_CI" "$CI" "$RELEASE" "$RELEASE_CONFIG" "$PUBLISH" "$REUSABLE" "$SECURITY" "$HANDOFF" "$SERVICE_CATALOG" "$SERVICE_CATALOG_TEST" "$MANIFEST" "$MANIFEST_TEST"; do
   [[ -f "$file" ]] || { echo "Required immutable release file not found: $file"; exit 1; }
 done
 
@@ -36,12 +37,6 @@ require_pattern "$PR_CI" '^name: CI$' "Incremental CI lost the workflow name use
 require_pattern "$PR_CI" 'pull_request:' "Incremental CI no longer validates pull requests"
 require_pattern "$PR_CI" 'push:' "Incremental CI no longer validates main pushes"
 
-require_pattern "$CI" '^name: Full Release CI$' "Full Release CI workflow is missing"
-require_pattern "$CI" 'workflow_dispatch:' "Full Release CI cannot be dispatched for semantic release commits"
-require_pattern "$CI" 'target_sha:' "Full Release CI is not bound to an exact target SHA"
-require_pattern "$CI" 'base_sha:' "Full Release CI is missing the validated source SHA"
-require_pattern "$CI" 'full_validation:' "Full Release CI does not require explicit full validation"
-require_pattern "$CI" 'Verify exact release target' "Full Release CI does not verify its exact checkout"
 grep -Fq '[[ "$RELEASE_SUBJECT" == chore\(release\):* ]]' "$CI" || {
   echo "Full Release CI does not restrict validation to semantic-release commits"; exit 1;
 }
@@ -54,9 +49,6 @@ require_pattern "$CI" '--purpose migration' "Full Release CI does not build the 
 require_pattern "$CI" '--all' "Full Release CI does not select the complete release matrix"
 require_pattern "$CI" 'name: Full Release Gate' "Full Release CI has no aggregate release gate"
 
-require_pattern "$SECURITY" 'workflow_dispatch:' "Security cannot be dispatched for semantic release commits"
-require_pattern "$SECURITY" 'target_sha:' "Security dispatch is not bound to an exact target SHA"
-require_pattern "$SECURITY" 'Verify dispatched security target' "Security does not verify its dispatched checkout"
 require_pattern "$SECURITY" 'if \[\[.*github\.event_name.*pull_request' \
   "Security workflow does not keep PR Docker scans incremental"
 require_pattern "$SECURITY" 'else' "Security workflow has no full-release branch"
@@ -107,8 +99,6 @@ require_pattern "$PUBLISH" "workflow_run\.event == 'workflow_dispatch'" \
   "Publisher accepts Security runs not explicitly dispatched for a release commit"
 reject_pattern "$PUBLISH" "workflow_run\.event == 'push'" "Source push Security can publish images"
 require_pattern "$PUBLISH" "workflow_run\.head_branch == 'main'" "Non-main commit can publish images"
-require_pattern "$PUBLISH" 'actions/workflows/ci\.yml/runs' "Publisher does not verify Full Release CI by workflow file"
-require_pattern "$PUBLISH" 'event=workflow_dispatch' "Publisher does not verify dispatched Full Release CI"
 grep -Fq '[[ "$RELEASE_SUBJECT" == chore\(release\):* ]]' "$PUBLISH" || {
   echo "Publisher does not validate semantic release subject"; exit 1;
 }
@@ -153,42 +143,5 @@ done
 PYTHONPATH="$ROOT_DIR/.github/scripts" python3 "$SERVICE_CATALOG_TEST" -v
 PYTHONPATH="$ROOT_DIR/.github/scripts" python3 "$MANIFEST_TEST" -v
 python3 -m py_compile "$SERVICE_CATALOG" "$MANIFEST" "$MANIFEST_TEST"
-
-require_pattern "$CI" 'path: trusted-release-resolver' \
-  "Full Release CI trusted resolver checkout is not isolated"
-require_pattern "$CI" 'cp trusted-release-resolver/\.github/scripts/latest_release\.py' \
-  "Full Release CI stages resolver from the isolated checkout"
-require_pattern "$SECURITY" 'path: trusted-release-resolver' \
-  "Security trusted resolver checkout is not isolated"
-require_pattern "$SECURITY" 'cp trusted-release-resolver/\.github/scripts/latest_release\.py' \
-  "Security stages resolver from the isolated checkout"
-
-publish_resolver_paths="$(grep -c 'path: trusted-release-resolver' "$PUBLISH")"
-publish_resolver_stages="$(grep -c 'cp trusted-release-resolver/\.github/scripts/latest_release\.py' "$PUBLISH")"
-[[ "$publish_resolver_paths" -eq 2 ]] || {
-  echo "Publisher must isolate both trusted resolver checkouts"; exit 1;
-}
-[[ "$publish_resolver_stages" -eq 2 ]] || {
-  echo "Publisher must stage both resolvers from isolated checkouts"; exit 1;
-}
-
-python3 - "$RELEASE_CONFIG" <<'PY_RELEASE_RULES'
-import json
-import sys
-
-config = json.load(open(sys.argv[1], encoding="utf-8"))
-analyzer = next(
-    plugin for plugin in config["plugins"]
-    if isinstance(plugin, list) and plugin[0] == "@semantic-release/commit-analyzer"
-)
-rules = {
-    rule.get("scope"): rule.get("release")
-    for rule in analyzer[1].get("releaseRules", [])
-}
-expected = {"ai-review": False, "ci": False, "deploy": False}
-if any(rules.get(scope) is not release for scope, release in expected.items()):
-    raise SystemExit(f"Missing non-product release rules: expected={expected}, actual={rules}")
-PY_RELEASE_RULES
-
-echo "Release resolver checkout isolation and non-product release scopes are valid"
+bash "$HANDOFF"
 echo "Incremental CI, confirmed exact full release gates and immutable publication contracts are valid"
