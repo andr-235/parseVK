@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from ai_review_agents_enforce import (
     collect_findings,
@@ -92,9 +93,7 @@ class FindingTests(unittest.TestCase):
         scope_path.write_text(json.dumps(self.scope(path)), encoding="utf-8")
         event_dir = self.repo / "events"
         event_dir.mkdir()
-        with unittest.mock.patch(
-            "ai_review_agents_enforce.load_instructions", side_effect=self.loader
-        ):
+        with patch("ai_review_agents_enforce.load_instructions", side_effect=self.loader):
             count = write_event("a" * 40, scope_path, event_dir, self.repo)
         event = json.loads((event_dir / "opencode-events-000.jsonl").read_text())
         result = json.loads(event["part"]["text"])
