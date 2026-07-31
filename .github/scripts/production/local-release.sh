@@ -10,6 +10,7 @@ RELEASES_DIR="${RELEASES_DIR:-$(project_root)/.releases}"
 RELEASE_IMAGE_NAMESPACE="${RELEASE_IMAGE_NAMESPACE:-parsevk-release}"
 COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-parsevk}"
 RELEASE_RETENTION="${RELEASE_RETENTION:-3}"
+FAILED_RELEASE_RETENTION="${FAILED_RELEASE_RETENTION:-2}"
 DEPLOYMENT_METADATA_FILE="${DEPLOYMENT_METADATA_FILE:-$(project_root)/.deployment-metadata.json}"
 
 validate_commit() {
@@ -105,8 +106,18 @@ metadata_commit() {
   jq -r ".${key} // empty" "$DEPLOYMENT_METADATA_FILE" 2>/dev/null || printf '\n'
 }
 
+remove_release_manifest() {
+  local manifest="$1" release
+  while IFS= read -r release; do
+    [ -n "$release" ] || continue
+    docker image rm "$release" >/dev/null 2>&1 || true
+  done < <(jq -r '.images[]?.release_ref // empty' "$manifest")
+  rm -rf "$(dirname "$manifest")"
+}
+
 prune_releases() {
-  local kept=0 manifest release commit protected_current protected_previous
+  local successful_kept=0 failed_kept=0 manifest status commit
+  local protected_current protected_previous
   protected_current="$(metadata_commit last_successful_commit)"
   protected_previous="$(metadata_commit previous_successful_commit)"
   mapfile -t manifests < <(
@@ -115,16 +126,27 @@ prune_releases() {
   )
 
   for manifest in "${manifests[@]}"; do
-    [ "$(jq -r '.status // empty' "$manifest")" = "successful" ] || continue
-    kept=$((kept + 1))
+    status="$(jq -r '.status // empty' "$manifest")"
     commit="$(jq -r '.commit_sha // empty' "$manifest")"
-    if [ "$commit" = "$protected_current" ] || [ "$commit" = "$protected_previous" ] || (( kept <= RELEASE_RETENTION )); then
-      continue
-    fi
-    while IFS= read -r release; do
-      docker image rm "$release" >/dev/null 2>&1 || true
-    done < <(jq -r '.images[].release_ref' "$manifest")
-    rm -rf "$(dirname "$manifest")"
+
+    case "$status" in
+      successful)
+        successful_kept=$((successful_kept + 1))
+        if [ "$commit" = "$protected_current" ] || [ "$commit" = "$protected_previous" ] || (( successful_kept <= RELEASE_RETENTION )); then
+          continue
+        fi
+        log_info "Pruning successful local release: $commit"
+        remove_release_manifest "$manifest"
+        ;;
+      failed)
+        failed_kept=$((failed_kept + 1))
+        if (( failed_kept <= FAILED_RELEASE_RETENTION )); then
+          continue
+        fi
+        log_info "Pruning failed local release candidate: $commit"
+        remove_release_manifest "$manifest"
+        ;;
+    esac
   done
 }
 
@@ -151,18 +173,18 @@ activate_release() {
   log_info "Activated local release images: $commit"
 }
 
-discard_candidate() {
+mark_failed_candidate() {
   local commit="$1" manifest status failed_at
   validate_commit "$commit"
   manifest="$(manifest_path "$commit")"
   if [ ! -f "$manifest" ]; then
-    log_info "No local release candidate to preserve: $commit"
+    log_info "No local release candidate to mark failed: $commit"
     return 0
   fi
 
   status="$(jq -r '.status // empty' "$manifest")"
   if [ "$status" = "successful" ]; then
-    log_error "Refusing to discard successful release: $commit"
+    log_error "Refusing to mark successful release as failed: $commit"
     return 1
   fi
 
@@ -171,6 +193,26 @@ discard_candidate() {
     '.status = "failed" | .failed_at = $failed_at' "$manifest" >"${manifest}.tmp"
   mv "${manifest}.tmp" "$manifest"
   log_warn "Preserved failed local release candidate for recovery: $commit"
+  prune_releases
+}
+
+purge_candidate() {
+  local commit="$1" manifest status
+  validate_commit "$commit"
+  manifest="$(manifest_path "$commit")"
+  if [ ! -f "$manifest" ]; then
+    log_info "No local release candidate to purge: $commit"
+    return 0
+  fi
+
+  status="$(jq -r '.status // empty' "$manifest")"
+  if [ "$status" = "successful" ]; then
+    log_error "Refusing to purge successful release: $commit"
+    return 1
+  fi
+
+  remove_release_manifest "$manifest"
+  log_info "Purged local release candidate: $commit"
 }
 
 case "${1:-}" in
@@ -178,7 +220,13 @@ case "${1:-}" in
   promote) [ "$#" -eq 2 ] && promote_release "$2" || exit 2 ;;
   verify) [ "$#" -eq 2 ] && verify_release "$2" || exit 2 ;;
   activate) [ "$#" -eq 2 ] && activate_release "$2" || exit 2 ;;
-  discard) [ "$#" -eq 2 ] && discard_candidate "$2" || exit 2 ;;
+  mark-failed) [ "$#" -eq 2 ] && mark_failed_candidate "$2" || exit 2 ;;
+  discard)
+    [ "$#" -eq 2 ] || exit 2
+    log_warn "Deprecated command 'discard'; use 'mark-failed'"
+    mark_failed_candidate "$2"
+    ;;
+  purge) [ "$#" -eq 2 ] && purge_candidate "$2" || exit 2 ;;
   path) [ "$#" -eq 2 ] && manifest_path "$2" || exit 2 ;;
-  *) log_error "Usage: local-release.sh {snapshot|promote|verify|activate|discard|path} <commit>"; exit 1 ;;
+  *) log_error "Usage: local-release.sh {snapshot|promote|verify|activate|mark-failed|purge|path} <commit>"; exit 1 ;;
 esac
