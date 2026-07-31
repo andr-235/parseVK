@@ -6,7 +6,7 @@ on:
       - diagnostics/release-0.85.1
 
 permissions:
-  actions: write
+  actions: read
   contents: write
 
 jobs:
@@ -18,49 +18,30 @@ jobs:
           ref: diagnostics/release-0.85.1
           fetch-depth: 1
 
-      - name: Dispatch protected production deploy
+      - name: Inspect deploy dispatch attempt
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_SHA: e786ff4db76707a500e3f3935f54400465af7191
         run: |
           set -euo pipefail
           mkdir -p diagnostics
-
-          latest_run_id() {
-            gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs" \
-              -f branch=main \
-              -f event=workflow_dispatch \
-              -f per_page=20 \
-              --jq --arg sha "$RELEASE_SHA" '[.workflow_runs[] | select(.head_sha == $sha)] | sort_by(.created_at) | last | .id // empty'
-          }
-
-          PRE_RUN_ID="$(latest_run_id)"
-          jq -nc '{ref:"main",inputs:{deployment:"current-main"}}' |
-            gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/dispatches" --input -
-
-          RUN_ID=""
-          for attempt in $(seq 1 20); do
-            RUN_ID="$(latest_run_id)"
-            if [[ -n "$RUN_ID" && "$RUN_ID" != "$PRE_RUN_ID" ]]; then
-              break
-            fi
-            sleep 2
-          done
-
-          [[ -n "$RUN_ID" && "$RUN_ID" != "$PRE_RUN_ID" ]] || {
-            echo "::error::GitHub did not create a new production deploy run"
-            exit 1
-          }
-
-          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" \
-            --jq '{release_sha: env.RELEASE_SHA, deploy: {id,name,event,status,conclusion,head_sha,head_branch,html_url,created_at,updated_at}}' \
-            > diagnostics/release-0.85.2-manual-deploy.json
+          gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/workflows/release-status-diagnostic.yml/runs" -f per_page=20 > /tmp/diagnostic-runs.json
+          gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs" -f per_page=20 > /tmp/deploy-runs.json
+          jq -n \
+            --arg release_sha "$RELEASE_SHA" \
+            --slurpfile diagnostic /tmp/diagnostic-runs.json \
+            --slurpfile deploy /tmp/deploy-runs.json \
+            '{
+              release_sha: $release_sha,
+              diagnostic_runs: [$diagnostic[0].workflow_runs[] | {id,event,status,conclusion,head_sha,head_branch,html_url,created_at,updated_at}],
+              deploy_runs: [$deploy[0].workflow_runs[] | {id,event,status,conclusion,head_sha,head_branch,html_url,created_at,updated_at}]
+            }' > diagnostics/release-0.85.2-dispatch-attempt.json
 
       - name: Commit diagnostic result
         run: |
           set -euo pipefail
           git config user.name github-actions[bot]
           git config user.email github-actions[bot]@users.noreply.github.com
-          git add diagnostics/release-0.85.2-manual-deploy.json
-          git commit -m "chore(diagnostics): record production deploy run"
+          git add diagnostics/release-0.85.2-dispatch-attempt.json
+          git commit -m "chore(diagnostics): record deploy dispatch attempt"
           git push origin HEAD:diagnostics/release-0.85.1
