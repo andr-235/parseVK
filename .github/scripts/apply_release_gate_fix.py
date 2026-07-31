@@ -6,21 +6,18 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-CHECKOUT_BEFORE = '''          sparse-checkout-cone-mode: false
+CHECKOUT_BEFORE = """          sparse-checkout-cone-mode: false
           persist-credentials: false
-
-      - name: Stage trusted release resolver
-        shell: bash
-        run: cp .github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"
-'''
-CHECKOUT_AFTER = '''          sparse-checkout-cone-mode: false
+"""
+CHECKOUT_AFTER = """          sparse-checkout-cone-mode: false
           persist-credentials: false
           path: trusted-release-resolver
-
-      - name: Stage trusted release resolver
-        shell: bash
-        run: cp trusted-release-resolver/.github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"
-'''
+"""
+STAGE_BEFORE = 'run: cp .github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"'
+STAGE_AFTER = (
+    'run: cp trusted-release-resolver/.github/scripts/latest_release.py '
+    '"$RUNNER_TEMP/latest_release.py"'
+)
 
 EXPECTED_BLOCKS = {
     Path(".github/workflows/ci.yml"): 1,
@@ -74,14 +71,18 @@ echo "Release resolver checkout isolation and non-product release scopes are val
 def isolate_checkouts() -> None:
     for path, expected_count in EXPECTED_BLOCKS.items():
         text = path.read_text(encoding="utf-8")
-        actual_count = text.count(CHECKOUT_BEFORE)
-        if actual_count != expected_count:
+        checkout_count = text.count(CHECKOUT_BEFORE)
+        stage_count = text.count(STAGE_BEFORE)
+        if checkout_count != expected_count or stage_count != expected_count:
             raise RuntimeError(
-                f"{path}: expected {expected_count} vulnerable checkout blocks, "
-                f"found {actual_count}"
+                f"{path}: expected {expected_count} resolver blocks, "
+                f"found checkout={checkout_count}, stage={stage_count}"
             )
         path.write_text(
-            text.replace(CHECKOUT_BEFORE, CHECKOUT_AFTER),
+            text.replace(CHECKOUT_BEFORE, CHECKOUT_AFTER).replace(
+                STAGE_BEFORE,
+                STAGE_AFTER,
+            ),
             encoding="utf-8",
         )
 
