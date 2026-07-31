@@ -1,3 +1,10 @@
+## [0.85.4](https://github.com/andr-235/parseVK/compare/v0.85.3...v0.85.4) (2026-07-31)
+
+
+### Bug Fixes
+
+* **deploy:** address rollback review gaps ([#360](https://github.com/andr-235/parseVK/issues/360)) ([591a607](https://github.com/andr-235/parseVK/commit/591a607602bf6fc9788aa2051ddd52a4e60e7fad))
+
 ## [0.85.3](https://github.com/andr-235/parseVK/compare/v0.85.2...v0.85.3) (2026-07-31)
 
 
