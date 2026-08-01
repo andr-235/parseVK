@@ -34,7 +34,7 @@ class SmokeTest(unittest.TestCase):
         return server, f"http://127.0.0.1:{server.server_port}/"
 
     def run_smoke(self, url: str, report: Path) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
+        return subprocess.run(  # noqa: S603
             [
                 sys.executable,
                 str(SCRIPT),
