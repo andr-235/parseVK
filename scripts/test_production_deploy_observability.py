@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEPLOY = ROOT / ".github/workflows/deploy.yml"
 HEALTH = ROOT / ".github/scripts/health-check.sh"
 VERIFY = ROOT / ".github/workflows/production-verification.yml"
+RECORDER = ROOT / ".github/workflows/reusable-record-production-deploy.yml"
 
 
 class ProductionObservabilityContract(unittest.TestCase):
@@ -24,16 +25,20 @@ class ProductionObservabilityContract(unittest.TestCase):
         self.assertIn("SMOKE_REPORT", health_script)
 
     def test_deploy_completion_records_exact_release(self) -> None:
-        text = VERIFY.read_text(encoding="utf-8")
-        self.assertIn("workflow_run:", text)
-        self.assertIn("Deploy to Production Server", text)
-        self.assertIn("github.event.workflow_run.head_sha", text)
-        self.assertIn("latest_release.py", text)
-        self.assertIn("release/production", text)
-        self.assertIn("deployment_evidence.py", text)
-        self.assertIn("actions/upload-artifact@", text)
-        self.assertIn("statuses: write", text)
-        self.assertIn("Finalize production release status", text)
+        orchestration = VERIFY.read_text(encoding="utf-8")
+        recorder = RECORDER.read_text(encoding="utf-8")
+        self.assertIn("workflow_run:", orchestration)
+        self.assertIn("Deploy to Production Server", orchestration)
+        self.assertIn("github.event.workflow_run.head_sha", orchestration)
+        self.assertIn("reusable-record-production-deploy.yml", orchestration)
+        self.assertIn("latest_release.py", recorder)
+        self.assertIn("release/production", recorder)
+        self.assertIn("deployment_evidence.py", recorder)
+        self.assertIn("actions/upload-artifact@", recorder)
+        self.assertIn("statuses: write", recorder)
+        self.assertIn("Finalize Production Release Status", recorder)
+        self.assertNotIn("git fetch --no-tags origin", recorder)
+        self.assertNotIn("gh api", recorder)
 
     def test_scheduled_verification_is_read_only(self) -> None:
         text = VERIFY.read_text(encoding="utf-8")
