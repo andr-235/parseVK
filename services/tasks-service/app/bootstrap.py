@@ -94,3 +94,26 @@ class ApplicationFactory:
             tasks=TasksRepository(self.session),
             outbox=self._create_outbox(),
         )
+
+    def create_sources_service(self):
+        from app.modules.sources.repository import SourcesRepository
+        from app.modules.sources.resolver import InternalVkSourceResolver
+        from app.modules.sources.service import SourcesService
+
+        logger.debug("ApplicationFactory: created SourcesService")
+        return SourcesService(
+            session=self.session,
+            resolver=InternalVkSourceResolver(),
+            sources_repo=SourcesRepository(self.session),
+            tasks_repo=TasksRepository(self.session),
+        )
+
+    def create_access_scope_service(self):
+        from app.modules.sources.resolver import InternalVkSourceResolver
+        from app.modules.sources.scope_service import AccessScopeService
+
+        logger.debug("ApplicationFactory: created AccessScopeService")
+        return AccessScopeService(
+            session=self.session,
+            resolver=InternalVkSourceResolver(),
+        )

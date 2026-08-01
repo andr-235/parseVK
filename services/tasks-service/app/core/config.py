@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     outbox_publish_enabled: bool = False
     automation_scheduler_enabled: bool = False
     kafka_consumer_enabled: bool = False
+    sources_api_enabled: bool = False
+    source_compat_write_enabled: bool = False
 
 
 settings = Settings()

@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.db.models import Task, TaskAuditLog
 from app.modules.outbox.service import OutboxService
 from app.modules.tasks.event_payloads import task_request_payload
@@ -17,6 +18,7 @@ from app.modules.tasks.exceptions import TaskNotFoundError
 from app.modules.tasks.mapper import audit_to_response, task_to_response
 from app.modules.tasks.repository import TasksRepository
 from app.modules.tasks.schemas import CreateParseTaskRequest
+from app.modules.tasks.source_compat import SourceCompatAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +70,8 @@ class TasksCrudService:
                 event_data={"taskId": str(task.id), "source": "manual"},
             )
         )
+        if settings.source_compat_write_enabled:
+            await SourceCompatAdapter(self.session).write_through(task, group_ids)
         await self.outbox.add_event(
             event_type="task.created",
             aggregate_type="task",
