@@ -1,7 +1,7 @@
 """Add task_runs and task_run_source_demands.
 
-Revision ID: 20260801_0002_add_task_run_tables
-Revises: 20260801_0001_add_source_scope_tables
+Revision ID: p1_task_run_snapshot
+Revises: p1_sources_scope
 """
 
 from collections.abc import Sequence
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
-revision: str = "20260801_0002_add_task_run_tables"
-down_revision: str | None = "20260801_0001_add_source_scope_tables"
+revision: str = "p1_task_run_snapshot"
+down_revision: str | None = "p1_sources_scope"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
