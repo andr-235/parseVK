@@ -1,17 +1,17 @@
 """Sources module repository: async CRUD over source/task-source tables.
 
-Identity semantics (issue #283 AC):
-- dedupe by (provider, source_type, external_id) via unique constraint;
-- task attachment is unique by (task_id, source_id).
-Scope/access CRUD lives in ``scope_repository.py``.
+MonitoringSource is a globally deduplicated identity. User visibility is
+therefore derived from registration or from a task owned by that user, rather
+than treating the first registering user as the sole owner forever.
 """
 
+from collections.abc import Iterable
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import exists, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import MonitoringSource, TaskSource, utcnow
+from app.db.models import MonitoringSource, Task, TaskSource, utcnow
 
 
 class SourcesRepository:
@@ -45,9 +45,23 @@ class SourcesRepository:
         return source
 
     async def list_sources(self, owner_user_id: str) -> tuple[list[MonitoringSource], int]:
+        linked_to_owner = exists(
+            select(1)
+            .select_from(TaskSource)
+            .join(Task, Task.id == TaskSource.task_id)
+            .where(
+                TaskSource.source_id == MonitoringSource.id,
+                Task.owner_user_id == owner_user_id,
+            )
+        )
         result = await self.session.scalars(
             select(MonitoringSource)
-            .where(MonitoringSource.owner_user_id == owner_user_id)
+            .where(
+                or_(
+                    MonitoringSource.owner_user_id == owner_user_id,
+                    linked_to_owner,
+                )
+            )
             .order_by(MonitoringSource.created_at.desc())
         )
         sources = list(result)
@@ -55,7 +69,7 @@ class SourcesRepository:
 
     async def link_task_source(
         self, task_id: int, source_id: UUID, kind: str = "target"
-    ) -> TaskSource | None:
+    ) -> TaskSource:
         existing = await self.get_task_source(task_id, source_id)
         if existing is not None:
             return existing
@@ -68,7 +82,8 @@ class SourcesRepository:
     async def get_task_source(self, task_id: int, source_id: UUID) -> TaskSource | None:
         return await self.session.scalar(
             select(TaskSource).where(
-                TaskSource.task_id == task_id, TaskSource.source_id == source_id
+                TaskSource.task_id == task_id,
+                TaskSource.source_id == source_id,
             )
         )
 
@@ -76,6 +91,36 @@ class SourcesRepository:
         result = await self.session.scalars(
             select(TaskSource)
             .where(TaskSource.task_id == task_id)
-            .order_by(TaskSource.created_at.asc())
+            .order_by(TaskSource.created_at.asc(), TaskSource.source_id.asc())
+        )
+        return list(result)
+
+    async def list_sources_for_task(self, task_id: int) -> list[MonitoringSource]:
+        result = await self.session.scalars(
+            select(MonitoringSource)
+            .join(TaskSource, TaskSource.source_id == MonitoringSource.id)
+            .where(TaskSource.task_id == task_id)
+            .order_by(
+                MonitoringSource.provider.asc(),
+                MonitoringSource.source_type.asc(),
+                MonitoringSource.external_id.asc(),
+                MonitoringSource.id.asc(),
+            )
+        )
+        return list(result)
+
+    async def list_sources_by_ids(self, source_ids: Iterable[UUID]) -> list[MonitoringSource]:
+        ids = list(source_ids)
+        if not ids:
+            return []
+        result = await self.session.scalars(
+            select(MonitoringSource)
+            .where(MonitoringSource.id.in_(ids))
+            .order_by(
+                MonitoringSource.provider.asc(),
+                MonitoringSource.source_type.asc(),
+                MonitoringSource.external_id.asc(),
+                MonitoringSource.id.asc(),
+            )
         )
         return list(result)
