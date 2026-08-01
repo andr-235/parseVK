@@ -4,9 +4,8 @@ from __future__ import annotations
 import argparse
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-
 
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
@@ -45,7 +44,7 @@ def main() -> int:
     smoke = load_smoke(args.smoke_report)
     evidence = {
         "schema_version": 1,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "release_sha": args.release_sha,
         "active_sha": args.active_sha,
         "previous_release_sha": args.previous_sha,
