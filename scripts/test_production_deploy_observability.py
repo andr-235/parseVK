@@ -13,7 +13,7 @@ VERIFY = ROOT / ".github/workflows/production-verification.yml"
 class ProductionObservabilityContract(unittest.TestCase):
     def test_full_deploy_health_precedes_promotion(self) -> None:
         deploy = DEPLOY.read_text(encoding="utf-8")
-        health = deploy.index("- name: Verify container health")
+        health = deploy.index("- name: Verify container and HTTP health")
         promote = deploy.index("- name: Promote local release")
         metadata = deploy.index("- name: Update deployment metadata")
         self.assertLess(health, promote)
@@ -23,6 +23,15 @@ class ProductionObservabilityContract(unittest.TestCase):
         self.assertIn('if [ "$FULL_DEPLOY" = "true" ]', health_script)
         self.assertIn("post_deploy_smoke.py", health_script)
         self.assertIn("SMOKE_REPORT", health_script)
+
+    def test_deploy_publishes_evidence_and_status(self) -> None:
+        text = DEPLOY.read_text(encoding="utf-8")
+        self.assertIn("release/production", text)
+        self.assertIn("deployment_evidence.py", text)
+        self.assertIn("actions/upload-artifact@", text)
+        self.assertIn("statuses: write", text)
+        self.assertIn("- name: Mark production deployment pending", text)
+        self.assertIn("- name: Finalize production release status", text)
 
     def test_scheduled_verification_is_read_only(self) -> None:
         text = VERIFY.read_text(encoding="utf-8")
