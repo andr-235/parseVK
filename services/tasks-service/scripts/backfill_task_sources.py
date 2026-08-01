@@ -13,9 +13,13 @@ _SERVICE_ROOT = Path(__file__).resolve().parent.parent
 if str(_SERVICE_ROOT) not in sys.path:
     sys.path.insert(0, str(_SERVICE_ROOT))
 
-from app.db.session import SessionLocal
-from scripts.backfill_sources.identity import SourceKey, source_key, stable_source_id
-from scripts.backfill_sources.processor import (
+from app.db.session import SessionLocal  # noqa: E402
+from scripts.backfill_sources.identity import (  # noqa: E402
+    SourceKey,
+    source_key,
+    stable_source_id,
+)
+from scripts.backfill_sources.processor import (  # noqa: E402
     fetch_existing_links,
     fetch_sources,
     fetch_tasks,
@@ -23,7 +27,10 @@ from scripts.backfill_sources.processor import (
     process_task_sources,
     run_backfill,
 )
-from scripts.backfill_sources.snapshots import canonical_json, snapshot_sha256
+from scripts.backfill_sources.snapshots import (  # noqa: E402
+    canonical_json,
+    snapshot_sha256,
+)
 
 logger = logging.getLogger("backfill_task_sources")
 
