@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402, I001
 """Backfill normalized task sources and immutable TaskRun snapshots."""
-# ruff: noqa: E402
 
 from __future__ import annotations
 
