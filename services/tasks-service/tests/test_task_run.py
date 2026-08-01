@@ -16,6 +16,7 @@ use_service_path()
 
 from app.core.config import settings
 from app.db.models import TaskRun, TaskRunSourceDemand
+from app.modules.tasks.exceptions import TaskConflictError
 from app.modules.tasks.state_service import TaskStateService
 from app.modules.tasks.task_run import TaskRunFreezeError, freeze_task_run
 
@@ -236,8 +237,6 @@ async def test_resume_without_run_is_rejected():
     task.execution_run_id = None
     repository = SimpleNamespace(get_task_for_update=AsyncMock(return_value=task))
     service = TaskStateService(AsyncMock(), repository, SimpleNamespace())
-
-    from app.modules.tasks.exceptions import TaskConflictError
 
     with pytest.raises(TaskConflictError):
         await service.resume_task("user-1", 42)
