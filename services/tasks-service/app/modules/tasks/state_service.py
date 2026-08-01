@@ -69,6 +69,7 @@ class TaskStateService:
                     "TaskRun freeze failed on resume for task_id=%s: %s", task.id, exc, exc_info=True
                 )
                 raise
+        resume_attempt_revision = task.revision + 1
         await self.repository.add_audit(
             TaskAuditLog(
                 owner_user_id=owner_user_id,
@@ -76,14 +77,20 @@ class TaskStateService:
                 aggregate_id=str(task.id),
                 task_id=task.id,
                 event_type="task.resumed",
-                event_data={"taskId": str(task.id), "runId": task.execution_run_id},
+                event_data={
+                    "taskId": str(task.id),
+                    "runId": task.execution_run_id,
+                    "attemptRevision": resume_attempt_revision,
+                },
             )
         )
         await self.outbox.add_event(
             event_type="task.resumed",
             aggregate_type="task",
             aggregate_id=str(task.id),
-            dedupe_key=f"task.resumed:{task.id}:{task.execution_run_id}",
+            dedupe_key=(
+                f"task.resumed:{task.id}:{task.execution_run_id}:{resume_attempt_revision}"
+            ),
             payload=task_request_payload(task, owner_user_id, run_meta),
         )
         task = await self.repository.touch_task(task)
