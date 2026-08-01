@@ -1,3 +1,11 @@
+## [0.87.1](https://github.com/andr-235/parseVK/compare/v0.87.0...v0.87.1) (2026-08-01)
+
+
+### Bug Fixes
+
+* **ci:** suppress unstable Ruff import ordering in backfill processor ([#401](https://github.com/andr-235/parseVK/issues/401)) ([402acfd](https://github.com/andr-235/parseVK/commit/402acfd6b2a19ccdba6028082962de3948f3958c))
+* **tasks:** harden sources and immutable task run snapshots ([#400](https://github.com/andr-235/parseVK/issues/400)) ([01b0acf](https://github.com/andr-235/parseVK/commit/01b0acf4df6851fba607b63886214f510732988d))
+
 # [0.87.0](https://github.com/andr-235/parseVK/compare/v0.86.5...v0.87.0) (2026-07-31)
 
 
