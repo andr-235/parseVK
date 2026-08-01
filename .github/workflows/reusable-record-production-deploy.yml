@@ -33,7 +33,7 @@ jobs:
       - name: Download actual deployment target
         uses: actions/download-artifact@v7
         with:
-          name: production-deploy-target-${{ inputs.deploy_run_id }}
+          name: production-deploy-target-${{ inputs.deploy_run_id }}-${{ inputs.deploy_run_attempt }}
           path: ${{ runner.temp }}/deploy-target
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
@@ -44,7 +44,7 @@ jobs:
         continue-on-error: true
         uses: actions/download-artifact@v7
         with:
-          name: production-deploy-execution-${{ inputs.deploy_run_id }}
+          name: production-deploy-execution-${{ inputs.deploy_run_id }}-${{ inputs.deploy_run_attempt }}
           path: ${{ runner.temp }}/deploy-execution
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
@@ -213,7 +213,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: production-deployment-${{ needs.resolve.outputs.target_sha }}-${{ inputs.deploy_run_id }}
+          name: production-deployment-${{ needs.resolve.outputs.target_sha }}-${{ inputs.deploy_run_id }}-${{ inputs.deploy_run_attempt }}-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/deployment-evidence.json
             ${{ runner.temp }}/post-deploy-verification.json
