@@ -5,6 +5,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.dialects import postgresql
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _service_path import use_service_path
@@ -25,8 +26,10 @@ class FakeSession:
         self._scalar_values = list(scalar_sequence or [None])
         self.get_return = get_return
         self.added = []
+        self.statements = []
 
     async def scalar(self, stmt):
+        self.statements.append(stmt)
         return self._scalar_values.pop(0) if self._scalar_values else None
 
     async def get(self, model, pk):
@@ -40,6 +43,10 @@ class FakeSession:
 
     async def refresh(self, obj):
         return obj
+
+
+def compiled_sql(statement) -> str:
+    return str(statement.compile(dialect=postgresql.dialect())).lower()
 
 
 def test_monitoring_source_unique_identity():
@@ -92,14 +99,16 @@ async def test_grant_scope_source_creates_row():
         source_id=source_id,
         ref_count=1,
     )
-    repo = ScopeRepository(FakeSession(scalar_sequence=[returned]))
+    session = FakeSession(scalar_sequence=[returned])
+    repo = ScopeRepository(session)
 
     access = await repo.grant_scope_source(scope_id, source_id)
 
+    sql = compiled_sql(session.statements[0])
+    assert sql.startswith("insert into scope_source_access")
+    assert "on conflict (access_scope_id, source_id) do update" in sql
     assert access is returned
     assert access.ref_count == 1
-    assert access.access_scope_id == scope_id
-    assert access.source_id == source_id
 
 
 @pytest.mark.asyncio
@@ -110,13 +119,16 @@ async def test_grant_scope_source_increments_ref_count():
         source_id=source_id,
         ref_count=3,
     )
-    repo = ScopeRepository(FakeSession(scalar_sequence=[returned]))
+    session = FakeSession(scalar_sequence=[returned])
+    repo = ScopeRepository(session)
 
     access = await repo.grant_scope_source(scope_id, source_id)
 
-    assert access is returned
+    sql = compiled_sql(session.statements[0])
+    assert "ref_count = (scope_source_access.ref_count +" in sql
+    assert "revoked_at =" in sql
+    assert "revoked_by =" in sql
     assert access.ref_count == 3
-    assert access.revoked_at is None
 
 
 @pytest.mark.asyncio
