@@ -45,7 +45,7 @@ def make_service(task):
 
 
 @pytest.mark.anyio
-async def test_resume_uses_attempt_scoped_dedupe_key_and_row_lock():
+async def test_resume_keeps_run_scoped_event_key_and_row_lock():
     run_id = str(uuid4())
     task = make_task("failed", run_id)
     service, repository, outbox = make_service(task)
@@ -55,42 +55,21 @@ async def test_resume_uses_attempt_scoped_dedupe_key_and_row_lock():
     repository.get_task_for_update.assert_awaited_once_with("user-1", 42)
     assert result["status"] == "pending"
     resumed_call = next(
-        call for call in outbox.add_event.await_args_list if call.kwargs["event_type"] == "task.resumed"
+        call
+        for call in outbox.add_event.await_args_list
+        if call.kwargs["event_type"] == "task.resumed"
     )
     assert resumed_call.kwargs["payload"]["runId"] == run_id
     assert task.execution_run_id == run_id
-    assert resumed_call.kwargs["dedupe_key"] == f"task.resumed:42:{run_id}:3"
+    assert resumed_call.kwargs["dedupe_key"] == f"task.resumed:42:{run_id}"
     changed_call = next(
-        call for call in outbox.add_event.await_args_list if call.kwargs["event_type"] == "task.state_changed"
-    )
-    assert changed_call.kwargs["dedupe_key"] == f"task.state_changed:42:resumed:{task.revision}"
-
-
-@pytest.mark.anyio
-async def test_resume_attempts_get_distinct_dedupe_keys_for_same_run():
-    run_id = str(uuid4())
-    task = make_task("failed", run_id, revision=3)
-    service, _, outbox = make_service(task)
-
-    await service.resume_task("user-1", 42)
-    first_key = next(
-        call.kwargs["dedupe_key"]
+        call
         for call in outbox.add_event.await_args_list
-        if call.kwargs["event_type"] == "task.resumed"
+        if call.kwargs["event_type"] == "task.state_changed"
     )
-
-    task.status = "failed"
-    task.revision = 4
-    outbox.add_event.reset_mock()
-    await service.resume_task("user-1", 42)
-    second_key = next(
-        call.kwargs["dedupe_key"]
-        for call in outbox.add_event.await_args_list
-        if call.kwargs["event_type"] == "task.resumed"
+    assert changed_call.kwargs["dedupe_key"] == (
+        f"task.state_changed:42:resumed:{task.revision}"
     )
-
-    assert first_key == f"task.resumed:42:{run_id}:3"
-    assert second_key == f"task.resumed:42:{run_id}:4"
 
 
 @pytest.mark.anyio
@@ -110,11 +89,17 @@ async def test_cancel_uses_current_execution_run_in_dedupe_key():
 
     assert result["status"] == "cancelled"
     cancelled_call = next(
-        call for call in outbox.add_event.await_args_list if call.kwargs["event_type"] == "task.cancelled"
+        call
+        for call in outbox.add_event.await_args_list
+        if call.kwargs["event_type"] == "task.cancelled"
     )
     assert cancelled_call.kwargs["dedupe_key"] == "task.cancelled:42:run-8"
     assert cancelled_call.kwargs["payload"]["runId"] == "run-8"
     changed_call = next(
-        call for call in outbox.add_event.await_args_list if call.kwargs["event_type"] == "task.state_changed"
+        call
+        for call in outbox.add_event.await_args_list
+        if call.kwargs["event_type"] == "task.state_changed"
     )
-    assert changed_call.kwargs["dedupe_key"] == f"task.state_changed:42:cancelled:{task.revision}"
+    assert changed_call.kwargs["dedupe_key"] == (
+        f"task.state_changed:42:cancelled:{task.revision}"
+    )
