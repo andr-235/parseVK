@@ -7,6 +7,7 @@ on:
       - ".github/scripts/production/**"
       - ".github/scripts/test_deployment_evidence.py"
       - ".github/scripts/test_post_deploy_smoke.py"
+      - ".github/workflows/deploy.yml"
       - ".github/workflows/production-integrity.yml"
       - ".github/workflows/production-verification.yml"
       - ".github/workflows/reusable-record-production-deploy.yml"
@@ -43,6 +44,8 @@ jobs:
           bash -n .github/scripts/production/storage-integrity.sh
           bash -n .github/scripts/production/storage-guard.sh
           bash -n .github/scripts/production/preflight.sh
+          ruby -e 'require "yaml"; YAML.load_file(ARGV.fetch(0))' \
+            .github/workflows/deploy.yml
           ruby -e 'require "yaml"; YAML.load_file(ARGV.fetch(0))' \
             .github/workflows/production-verification.yml
           ruby -e 'require "yaml"; YAML.load_file(ARGV.fetch(0))' \
