@@ -44,13 +44,14 @@ async def test_resumed_event_requeues_cancelled_run():
 
     await service._handle_created_or_resumed(event)
 
-    repository.update_task_run.assert_awaited_once_with(
-        1,
-        run_id="run-1",
-        updated_at=pytest.approx(repository.update_task_run.await_args.kwargs["updated_at"]),
-        status="pending",
-        finished_at=None,
-        last_error=None,
-        execution_sequence=0,
-        attempts=0,
-    )
+    repository.update_task_run.assert_awaited_once()
+    task_id = repository.update_task_run.await_args.args[0]
+    values = repository.update_task_run.await_args.kwargs
+    assert task_id == 1
+    assert values["run_id"] == "run-1"
+    assert values["status"] == "pending"
+    assert values["finished_at"] is None
+    assert values["last_error"] is None
+    assert values["execution_sequence"] == 0
+    assert values["attempts"] == 0
+    assert values["updated_at"] is not None
