@@ -82,6 +82,22 @@ jobs:
 
           echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
 
+      - name: Write deployment target context
+        env:
+          TARGET_SHA: ${{ steps.target.outputs.target_sha }}
+        run: |
+          set -euo pipefail
+          jq -n --arg target_sha "$TARGET_SHA" '{target_sha:$target_sha}' \
+            > "$RUNNER_TEMP/deployment-target.json"
+
+      - name: Upload deployment target context
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-deploy-target-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/deployment-target.json
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Verify immutable release statuses
         id: quality
         env:
@@ -345,6 +361,28 @@ jobs:
           set -euo pipefail
           PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
             bash "$LOCAL_RELEASE_SCRIPT" discard "$TARGET_SHA"
+
+      - name: Write deployment execution context
+        if: always()
+        env:
+          SKIP_DEPLOY: ${{ steps.deployment_context.outputs.skip_deploy }}
+        run: |
+          set -euo pipefail
+          VALUE="${SKIP_DEPLOY:-false}"
+          if [ "$VALUE" != true ] && [ "$VALUE" != false ]; then
+            VALUE=false
+          fi
+          jq -n --argjson skip_deploy "$VALUE" '{skip_deploy:$skip_deploy}' \
+            > "$RUNNER_TEMP/deployment-execution.json"
+
+      - name: Upload deployment execution context
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-deploy-execution-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/deployment-execution.json
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Deployment status
         if: always()
