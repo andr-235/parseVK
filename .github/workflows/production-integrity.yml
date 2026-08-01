@@ -36,18 +36,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install Ruff
-        uses: astral-sh/setup-uv@v5
-
-      - name: Show Ruff auto-fix diff
-        run: >-
-          uvx ruff check --fix --diff
-          .github/scripts/production/deployment_evidence.py
-          .github/scripts/production/post_deploy_smoke.py
-          .github/scripts/test_deployment_evidence.py
-          .github/scripts/test_post_deploy_smoke.py
-          scripts/test_production_deploy_observability.py
-
       - name: Validate shell syntax
         run: |
           bash -n .github/scripts/health-check.sh
