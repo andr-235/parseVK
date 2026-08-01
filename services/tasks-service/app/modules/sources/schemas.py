@@ -1,10 +1,4 @@
-"""Sources module Pydantic schemas.
-
-``createdByUserId`` and ``accessScopeId`` are separate fields by contract
-(issue #283 AC); ``externalId`` is a string (PositiveExternalId) while the
-legacy task API uses ``group_ids: list[int]`` — conversion happens at the
-adapter boundary, never inside the schemas.
-"""
+"""Sources module Pydantic schemas."""
 
 from datetime import datetime
 from typing import Literal
@@ -17,6 +11,19 @@ SourceStatus = Literal["active", "inactive"]
 Provider = Literal["vk"]
 
 
+def canonical_external_id(value: str) -> str:
+    """Return a positive canonical ASCII decimal identifier."""
+    if not value.isascii() or not value.isdigit():
+        raise ValueError("externalId must be a positive numeric string")
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise ValueError("externalId must be a positive numeric string") from exc
+    if parsed <= 0:
+        raise ValueError("externalId must be a positive numeric string")
+    return str(parsed)
+
+
 class CreateSourceRequest(BaseModel):
     provider: Provider = "vk"
     source_type: str = Field(default="community", min_length=1, max_length=32, alias="sourceType")
@@ -24,13 +31,7 @@ class CreateSourceRequest(BaseModel):
     display_name: str | None = Field(default=None, max_length=255, alias="displayName")
 
     model_config = ConfigDict(populate_by_name=True)
-
-    @field_validator("external_id")
-    @classmethod
-    def external_id_digits(cls, value: str) -> str:
-        if not value.isdigit() or int(value) <= 0:
-            raise ValueError("externalId must be a positive numeric string")
-        return str(int(value))
+    external_id_digits = field_validator("external_id")(canonical_external_id)
 
 
 class SourceResponse(BaseModel):
@@ -60,13 +61,7 @@ class TaskSourceRequest(BaseModel):
     kind: SourceKind = "target"
 
     model_config = ConfigDict(populate_by_name=True)
-
-    @field_validator("external_id")
-    @classmethod
-    def external_id_digits(cls, value: str) -> str:
-        if not value.isdigit() or int(value) <= 0:
-            raise ValueError("externalId must be a positive numeric string")
-        return str(int(value))
+    external_id_digits = field_validator("external_id")(canonical_external_id)
 
 
 class TaskSourceResponse(BaseModel):
@@ -100,13 +95,7 @@ class GrantAccessRequest(BaseModel):
     external_id: str = Field(min_length=1, max_length=64, alias="externalId")
 
     model_config = ConfigDict(populate_by_name=True)
-
-    @field_validator("external_id")
-    @classmethod
-    def external_id_digits(cls, value: str) -> str:
-        if not value.isdigit() or int(value) <= 0:
-            raise ValueError("externalId must be a positive numeric string")
-        return str(int(value))
+    external_id_digits = field_validator("external_id")(canonical_external_id)
 
 
 class ScopeSourceAccessResponse(BaseModel):
