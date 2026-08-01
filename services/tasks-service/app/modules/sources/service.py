@@ -1,8 +1,8 @@
 """Sources service: business rules for sources and task attachments.
 
-External identities are NEVER trusted without resolver validation
-(issue #283 AC). Dedupe by (provider, source_type, external_id).
-Access-scope rules live in ``scope_service.py``.
+External identities are never trusted without resolver validation. Persisted
+identity fields come only from the resolver result; request values are lookup
+inputs, not authoritative source data.
 """
 
 import logging
@@ -35,22 +35,24 @@ class SourcesService:
         self, owner_user_id: str, request: CreateSourceRequest
     ) -> MonitoringSource:
         identity = SourceIdentity(request.provider, request.source_type, request.external_id)
-        await canonical_source(self.resolver, self.sources_repo, identity)
+        resolved = await self.resolver.resolve(identity)
 
         existing = await self.sources_repo.get_source_by_identity(
-            request.provider, request.source_type, request.external_id
+            resolved.provider, resolved.source_type, resolved.external_id
         )
         if existing is not None:
             logger.debug("Source already registered: id=%s", existing.id)
             return existing
 
         source = MonitoringSource(
+            id=resolved.source_id,
             owner_user_id=owner_user_id,
-            provider=request.provider,
-            source_type=request.source_type,
-            external_id=request.external_id,
-            owner_id=-int(request.external_id),
+            provider=resolved.provider,
+            source_type=resolved.source_type,
+            external_id=resolved.external_id,
+            owner_id=resolved.owner_id,
             display_name=request.display_name,
+            revision=resolved.source_revision,
         )
         source = await self.sources_repo.create_source(source)
         logger.info("Source registered: id=%s external=%s", source.id, source.external_id)
@@ -78,9 +80,4 @@ class SourcesService:
         task = await self.tasks_repo.get_task(owner_user_id, task_id)
         if task is None:
             raise TaskNotFoundError(f"Task {task_id} not found")
-        links = await self.sources_repo.list_task_sources(task_id)
-        return [
-            source
-            for link in links
-            if (source := await self.sources_repo.get_source_by_id(link.source_id))
-        ]
+        return await self.sources_repo.list_sources_for_task(task_id)
