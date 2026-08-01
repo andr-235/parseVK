@@ -7,9 +7,8 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-
 
 DEFAULT_ENDPOINTS = (
     "frontend=http://127.0.0.1:8080/",
@@ -86,7 +85,7 @@ def main() -> int:
     ]
     report = {
         "schema_version": 1,
-        "checked_at": datetime.now(timezone.utc).isoformat(),
+        "checked_at": datetime.now(UTC).isoformat(),
         "success": all(bool(check["success"]) for check in checks),
         "checks": checks,
     }
