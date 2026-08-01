@@ -3,6 +3,7 @@ name: Production Verification
 on:
   pull_request:
     paths:
+      - ".github/scripts/health-check.sh"
       - ".github/scripts/production/post_deploy_smoke.py"
       - ".github/scripts/production/deployment_evidence.py"
       - ".github/scripts/test_post_deploy_smoke.py"
@@ -11,12 +12,19 @@ on:
       - ".github/workflows/production-verification.yml"
       - "scripts/test_production_deploy_observability.py"
       - "docs/deploy-runbook.md"
+  workflow_run:
+    workflows:
+      - Deploy to Production Server
+    types:
+      - completed
   schedule:
     - cron: "17 3 * * *"
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
+  statuses: write
 
 concurrency:
   group: production-verification
@@ -44,7 +52,7 @@ jobs:
 
   verify:
     name: Verify Production Entrypoints
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: [self-hosted]
     timeout-minutes: 10
     env:
@@ -88,3 +96,146 @@ jobs:
               echo "Smoke report was not created."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+  record-deploy:
+    name: Record Production Deployment Evidence
+    if: github.event_name == 'workflow_run'
+    runs-on: [self-hosted]
+    timeout-minutes: 15
+    env:
+      SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+      DEPLOY_RESULT: ${{ github.event.workflow_run.conclusion }}
+      DEPLOY_RUN_ID: ${{ github.event.workflow_run.id }}
+      DEPLOY_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+      DEPLOY_RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}
+      DEPLOYMENT_METADATA_FILE: /opt/parseVK/.deployment-metadata.json
+      SMOKE_REPORT: ${{ runner.temp }}/post-deploy-verification.json
+      DEPLOYMENT_EVIDENCE: ${{ runner.temp }}/deployment-evidence.json
+    steps:
+      - name: Checkout trusted deployment observer
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/latest_release.py
+            .github/scripts/production/post_deploy_smoke.py
+            .github/scripts/production/deployment_evidence.py
+          sparse-checkout-cone-mode: false
+
+      - name: Resolve release and active production state
+        id: state
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "::error::Deploy workflow source SHA is invalid: $SOURCE_SHA"
+            exit 1
+          }
+          git fetch --no-tags origin "$SOURCE_SHA"
+          RELEASE_JSON="$(python3 .github/scripts/latest_release.py --ref "$SOURCE_SHA")"
+          TARGET_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "::error::Could not resolve exact release SHA from $SOURCE_SHA"
+            exit 1
+          }
+          [[ -f "$DEPLOYMENT_METADATA_FILE" ]] || {
+            echo "::error::Deployment metadata is missing"
+            exit 1
+          }
+          ACTIVE_SHA="$(jq -r '.last_successful_commit // empty' "$DEPLOYMENT_METADATA_FILE")"
+          PREVIOUS_SHA="$(jq -r '.previous_successful_commit // empty' "$DEPLOYMENT_METADATA_FILE")"
+          [[ "$ACTIVE_SHA" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "::error::Active production SHA is invalid: $ACTIVE_SHA"
+            exit 1
+          }
+          if [ -n "$PREVIOUS_SHA" ]; then
+            [[ "$PREVIOUS_SHA" =~ ^[0-9a-f]{40}$ ]] || {
+              echo "::error::Previous production SHA is invalid: $PREVIOUS_SHA"
+              exit 1
+            }
+          fi
+          echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+          echo "active_sha=$ACTIVE_SHA" >> "$GITHUB_OUTPUT"
+          echo "previous_sha=$PREVIOUS_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Mark production verification pending
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_SHA: ${{ steps.state.outputs.target_sha }}
+        run: |
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/statuses/${TARGET_SHA}" \
+            -f state=pending \
+            -f context=release/production \
+            -f description="Recording production deployment evidence" \
+            -f target_url="$DEPLOY_RUN_URL" >/dev/null
+
+      - name: Verify production HTTP entrypoints
+        id: smoke
+        continue-on-error: true
+        run: |
+          python3 .github/scripts/production/post_deploy_smoke.py \
+            --report "$SMOKE_REPORT"
+
+      - name: Build deployment evidence
+        env:
+          TARGET_SHA: ${{ steps.state.outputs.target_sha }}
+          ACTIVE_SHA: ${{ steps.state.outputs.active_sha }}
+          PREVIOUS_SHA: ${{ steps.state.outputs.previous_sha }}
+          SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
+        run: |
+          set -euo pipefail
+          STATUS=failure
+          if [ "$DEPLOY_RESULT" = "success" ] && \
+             [ "$SMOKE_OUTCOME" = "success" ] && \
+             [ "$TARGET_SHA" = "$ACTIVE_SHA" ]; then
+            STATUS=success
+          fi
+          python3 .github/scripts/production/deployment_evidence.py \
+            --release-sha "$TARGET_SHA" \
+            --active-sha "$ACTIVE_SHA" \
+            --previous-sha "$PREVIOUS_SHA" \
+            --deployment-status "$STATUS" \
+            --skipped false \
+            --repository "$GITHUB_REPOSITORY" \
+            --run-id "$DEPLOY_RUN_ID" \
+            --run-attempt "$DEPLOY_RUN_ATTEMPT" \
+            --smoke-report "$SMOKE_REPORT" \
+            --output "$DEPLOYMENT_EVIDENCE"
+
+      - name: Upload deployment evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-deployment-${{ steps.state.outputs.target_sha }}-${{ github.event.workflow_run.id }}
+          path: |
+            ${{ runner.temp }}/deployment-evidence.json
+            ${{ runner.temp }}/post-deploy-verification.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Finalize production release status
+        if: always() && steps.state.outputs.target_sha != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_SHA: ${{ steps.state.outputs.target_sha }}
+          ACTIVE_SHA: ${{ steps.state.outputs.active_sha }}
+          SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
+        run: |
+          set -euo pipefail
+          STATE=failure
+          DESCRIPTION="Production deployment failed, rolled back or did not pass smoke verification"
+          if [ "$DEPLOY_RESULT" = "success" ] && \
+             [ "$SMOKE_OUTCOME" = "success" ] && \
+             [ "$TARGET_SHA" = "$ACTIVE_SHA" ]; then
+            STATE=success
+            DESCRIPTION="Production deployment and smoke verification succeeded"
+          fi
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/statuses/${TARGET_SHA}" \
+            -f state="$STATE" \
+            -f context=release/production \
+            -f description="$DESCRIPTION" \
+            -f target_url="$DEPLOY_RUN_URL" >/dev/null
+          [ "$STATE" = "success" ]
