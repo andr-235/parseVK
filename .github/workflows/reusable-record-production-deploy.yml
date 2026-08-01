@@ -3,9 +3,6 @@ name: Reusable Record Production Deployment
 on:
   workflow_call:
     inputs:
-      source_sha:
-        required: true
-        type: string
       deploy_result:
         required: true
         type: string
@@ -20,17 +17,39 @@ on:
         type: string
 
 permissions:
+  actions: read
   contents: read
   statuses: write
 
 jobs:
   resolve:
-    name: Resolve Exact Release
+    name: Resolve Actual Deploy Context
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      target_sha: ${{ steps.release.outputs.target_sha }}
+      target_sha: ${{ steps.context.outputs.target_sha }}
+      skipped: ${{ steps.context.outputs.skipped }}
     steps:
+      - name: Download actual deployment target
+        uses: actions/download-artifact@v7
+        with:
+          name: production-deploy-target-${{ inputs.deploy_run_id }}
+          path: ${{ runner.temp }}/deploy-target
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.deploy_run_id }}
+
+      - name: Download deployment execution context
+        id: execution
+        continue-on-error: true
+        uses: actions/download-artifact@v7
+        with:
+          name: production-deploy-execution-${{ inputs.deploy_run_id }}
+          path: ${{ runner.temp }}/deploy-execution
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.deploy_run_id }}
+
       - name: Checkout trusted release resolver
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -41,32 +60,48 @@ jobs:
             .github/scripts/latest_release.py
           sparse-checkout-cone-mode: false
 
-      - name: Resolve semantic release from deploy source
-        id: release
+      - name: Validate actual deploy context
+        id: context
         env:
-          SOURCE_SHA: ${{ inputs.source_sha }}
+          TARGET_FILE: ${{ runner.temp }}/deploy-target/deployment-target.json
+          EXECUTION_FILE: ${{ runner.temp }}/deploy-execution/deployment-execution.json
         run: |
           set -euo pipefail
-          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || {
-            echo "::error::Deploy workflow source SHA is invalid: $SOURCE_SHA"
+          [[ -f "$TARGET_FILE" ]] || {
+            echo "::error::Deploy target artifact is missing"
             exit 1
           }
-          git cat-file -e "${SOURCE_SHA}^{commit}" || {
-            echo "::error::Deploy source SHA is unavailable in main history: $SOURCE_SHA"
-            exit 1
-          }
-          RELEASE_JSON="$(python3 .github/scripts/latest_release.py --ref "$SOURCE_SHA")"
-          TARGET_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
+          TARGET_SHA="$(jq -er '.target_sha' "$TARGET_FILE")"
           [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || {
-            echo "::error::Could not resolve exact release SHA from $SOURCE_SHA"
+            echo "::error::Deploy target SHA is invalid: $TARGET_SHA"
             exit 1
           }
+          git cat-file -e "${TARGET_SHA}^{commit}" || {
+            echo "::error::Deploy target SHA is unavailable in main history: $TARGET_SHA"
+            exit 1
+          }
+          RELEASE_JSON="$(python3 .github/scripts/latest_release.py --ref "$TARGET_SHA")"
+          RELEASE_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
+          [ "$RELEASE_SHA" = "$TARGET_SHA" ] || {
+            echo "::error::Deploy target is not a semantic-release commit: $TARGET_SHA"
+            exit 1
+          }
+
+          SKIPPED=false
+          if [ -f "$EXECUTION_FILE" ]; then
+            SKIPPED="$(jq -er '.skip_deploy' "$EXECUTION_FILE")"
+          fi
+          if [ "$SKIPPED" != true ] && [ "$SKIPPED" != false ]; then
+            echo "::error::Deploy skipped flag is invalid: $SKIPPED"
+            exit 1
+          fi
           echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+          echo "skipped=$SKIPPED" >> "$GITHUB_OUTPUT"
 
       - name: Mark production evidence pending
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TARGET_SHA: ${{ steps.release.outputs.target_sha }}
+          TARGET_SHA: ${{ steps.context.outputs.target_sha }}
           DEPLOY_RUN_URL: ${{ inputs.deploy_run_url }}
         run: |
           set -euo pipefail
@@ -94,6 +129,7 @@ jobs:
       verified: ${{ steps.evidence.outputs.verified }}
     env:
       TARGET_SHA: ${{ needs.resolve.outputs.target_sha }}
+      SKIPPED: ${{ needs.resolve.outputs.skipped }}
       DEPLOY_RESULT: ${{ inputs.deploy_result }}
       DEPLOYMENT_METADATA_FILE: /opt/parseVK/.deployment-metadata.json
       SMOKE_REPORT: ${{ runner.temp }}/post-deploy-verification.json
@@ -165,7 +201,7 @@ jobs:
             --active-sha "$ACTIVE_SHA" \
             --previous-sha "$PREVIOUS_SHA" \
             --deployment-status "$STATUS" \
-            --skipped false \
+            --skipped "$SKIPPED" \
             --repository "$GITHUB_REPOSITORY" \
             --run-id "${{ inputs.deploy_run_id }}" \
             --run-attempt "${{ inputs.deploy_run_attempt }}" \
