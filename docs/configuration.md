@@ -39,6 +39,8 @@
 |----------|---------|-------------|
 | `TASKS_KAFKA_CONSUMER_ENABLED` | `false` | Enable event-driven progress consumer (`task.execution_progressed` from vk-service) |
 | `KAFKA_BOOTSTRAP_SERVERS` | `kafka:9092` | Kafka bootstrap servers |
+| `TASKS_SOURCES_API_ENABLED` | `false` | Enable sources/access-scope API (`/internal/sources`, `/internal/tasks/{id}/sources`, `/internal/access-scopes`) |
+| `TASKS_SOURCE_COMPAT_WRITE_ENABLED` | `false` | Compatibility write path: mirrors legacy `group_ids` into normalized `task_sources` and freezes immutable `TaskRun` snapshots on task create/start (issue #283/#284) |
 
 ## Пример .env
 

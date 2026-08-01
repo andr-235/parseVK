@@ -6,8 +6,10 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import text
 
 from app.background import create_lifespan
+from app.core.config import settings
 from app.core.exception_handlers import register_exception_handlers
 from app.modules.automation.router import router as automation_router
+from app.modules.sources.router import router as sources_router
 from app.modules.tasks.router import router as tasks_router
 
 _outbox_publisher_health: WorkerHealth = WorkerHealth()
@@ -49,6 +51,8 @@ def create_app() -> FastAPI:
 
     app.include_router(automation_router)
     app.include_router(tasks_router)
+    if settings.sources_api_enabled:
+        app.include_router(sources_router)
     register_exception_handlers(app)
     Instrumentator().instrument(app).expose(app)
     return app

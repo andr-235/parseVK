@@ -196,7 +196,10 @@ class TaskEventsService:
             if task_run.run_id == run_id and task_run.status in {"pending", "running"}:
                 return None
             values: dict = {"run_id": run_id, "updated_at": utcnow()}
-            if event.event_type == "task.resumed" and task_run.status == "failed":
+            if event.event_type == "task.resumed" and task_run.status in {
+                "failed",
+                "cancelled",
+            }:
                 values.update(
                     status="pending",
                     finished_at=None,

@@ -23,3 +23,13 @@ def count_event(event_type: str) -> None:
     logger.debug(
         "Execution event counter: %s=%d", short, execution_event_counters[short]
     )
+
+
+task_run_created_counter = 0
+
+
+def count_task_run_created() -> None:
+    """Count a frozen immutable TaskRun snapshot (issue #284 DoD logs/metrics)."""
+    global task_run_created_counter
+    task_run_created_counter += 1
+    logger.debug("TaskRun created counter: %d", task_run_created_counter)

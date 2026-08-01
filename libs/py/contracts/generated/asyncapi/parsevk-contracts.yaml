@@ -5,12 +5,43 @@ info:
   description: AsyncAPI specification for ParseVK Kafka message contracts
 defaultContentType: application/json
 channels:
+  parsevk_sources_events:
+    address: parsevk.sources.events
+    messages:
+      sources_access_granted_v1:
+        $ref: '#/components/messages/sources_access_granted_v1'
+      sources_access_revoked_v1:
+        $ref: '#/components/messages/sources_access_revoked_v1'
   parsevk_vk_commands:
     address: parsevk.vk.commands
     messages:
       vk_execution_requested_v1:
         $ref: '#/components/messages/vk_execution_requested_v1'
 operations:
+  tasks_service_send_sources_access_granted_v1:
+    action: send
+    channel:
+      $ref: '#/channels/parsevk_sources_events'
+    messages:
+    - $ref: '#/channels/parsevk_sources_events/messages/sources_access_granted_v1'
+  vk_service_receive_sources_access_granted_v1:
+    action: receive
+    channel:
+      $ref: '#/channels/parsevk_sources_events'
+    messages:
+    - $ref: '#/channels/parsevk_sources_events/messages/sources_access_granted_v1'
+  tasks_service_send_sources_access_revoked_v1:
+    action: send
+    channel:
+      $ref: '#/channels/parsevk_sources_events'
+    messages:
+    - $ref: '#/channels/parsevk_sources_events/messages/sources_access_revoked_v1'
+  vk_service_receive_sources_access_revoked_v1:
+    action: receive
+    channel:
+      $ref: '#/channels/parsevk_sources_events'
+    messages:
+    - $ref: '#/channels/parsevk_sources_events/messages/sources_access_revoked_v1'
   tasks_service_send_vk_execution_requested_v1:
     action: send
     channel:
@@ -25,6 +56,20 @@ operations:
     - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_requested_v1'
 components:
   messages:
+    sources_access_granted_v1:
+      name: sources.access.granted
+      title: sources.access.granted
+      summary: sources.access.granted v1
+      contentType: application/json
+      payload:
+        $ref: ../json-schema/sources.access.granted/1.json
+    sources_access_revoked_v1:
+      name: sources.access.revoked
+      title: sources.access.revoked
+      summary: sources.access.revoked v1
+      contentType: application/json
+      payload:
+        $ref: ../json-schema/sources.access.revoked/1.json
     vk_execution_requested_v1:
       name: vk.execution.requested
       title: vk.execution.requested

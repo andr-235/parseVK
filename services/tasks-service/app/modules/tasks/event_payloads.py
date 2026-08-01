@@ -1,8 +1,8 @@
 from datetime import UTC, datetime
 
 
-def task_request_payload(task, owner_user_id: str) -> dict:
-    return {
+def task_request_payload(task, owner_user_id: str, run_meta: dict | None = None) -> dict:
+    payload = {
         "taskId": str(task.id),
         "ownerUserId": owner_user_id,
         "runId": task.execution_run_id,
@@ -12,6 +12,9 @@ def task_request_payload(task, owner_user_id: str) -> dict:
         "postLimit": task.post_limit,
         "source": task.source,
     }
+    if run_meta:
+        payload.update(run_meta)
+    return payload
 
 
 def task_identity_payload(task, owner_user_id: str) -> dict:

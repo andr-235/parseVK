@@ -1,6 +1,46 @@
 {
   "contracts": [
     {
+      "causationPolicy": "optional",
+      "compatibility": "backward",
+      "consumers": [
+        "vk-service"
+      ],
+      "correlationRequired": false,
+      "messageType": "sources.access.granted",
+      "partitionKey": {
+        "paths": [
+          "payload.sourceId"
+        ],
+        "separator": ":"
+      },
+      "producers": [
+        "tasks-service"
+      ],
+      "schemaVersion": 1,
+      "topic": "parsevk.sources.events"
+    },
+    {
+      "causationPolicy": "optional",
+      "compatibility": "backward",
+      "consumers": [
+        "vk-service"
+      ],
+      "correlationRequired": false,
+      "messageType": "sources.access.revoked",
+      "partitionKey": {
+        "paths": [
+          "payload.sourceId"
+        ],
+        "separator": ":"
+      },
+      "producers": [
+        "tasks-service"
+      ],
+      "schemaVersion": 1,
+      "topic": "parsevk.sources.events"
+    },
+    {
       "causationPolicy": "forbidden",
       "compatibility": "backward",
       "consumers": [
