@@ -21,7 +21,7 @@ class EvidenceTest(unittest.TestCase):
             smoke = root / "smoke.json"
             output = root / "evidence.json"
             smoke.write_text('{"success": true, "checks": []}\n', encoding="utf-8")
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603
                 [
                     sys.executable,
                     str(SCRIPT),
