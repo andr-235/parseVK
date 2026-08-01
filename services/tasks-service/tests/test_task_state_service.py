@@ -45,7 +45,7 @@ def make_service(task):
 
 
 @pytest.mark.anyio
-async def test_resume_uses_run_scoped_dedupe_key_and_row_lock():
+async def test_resume_uses_attempt_scoped_dedupe_key_and_row_lock():
     run_id = str(uuid4())
     task = make_task("failed", run_id)
     service, repository, outbox = make_service(task)
@@ -59,11 +59,38 @@ async def test_resume_uses_run_scoped_dedupe_key_and_row_lock():
     )
     assert resumed_call.kwargs["payload"]["runId"] == run_id
     assert task.execution_run_id == run_id
-    assert resumed_call.kwargs["dedupe_key"] == f"task.resumed:42:{run_id}"
+    assert resumed_call.kwargs["dedupe_key"] == f"task.resumed:42:{run_id}:3"
     changed_call = next(
         call for call in outbox.add_event.await_args_list if call.kwargs["event_type"] == "task.state_changed"
     )
     assert changed_call.kwargs["dedupe_key"] == f"task.state_changed:42:resumed:{task.revision}"
+
+
+@pytest.mark.anyio
+async def test_resume_attempts_get_distinct_dedupe_keys_for_same_run():
+    run_id = str(uuid4())
+    task = make_task("failed", run_id, revision=3)
+    service, _, outbox = make_service(task)
+
+    await service.resume_task("user-1", 42)
+    first_key = next(
+        call.kwargs["dedupe_key"]
+        for call in outbox.add_event.await_args_list
+        if call.kwargs["event_type"] == "task.resumed"
+    )
+
+    task.status = "failed"
+    task.revision = 4
+    outbox.add_event.reset_mock()
+    await service.resume_task("user-1", 42)
+    second_key = next(
+        call.kwargs["dedupe_key"]
+        for call in outbox.add_event.await_args_list
+        if call.kwargs["event_type"] == "task.resumed"
+    )
+
+    assert first_key == f"task.resumed:42:{run_id}:3"
+    assert second_key == f"task.resumed:42:{run_id}:4"
 
 
 @pytest.mark.anyio
