@@ -86,24 +86,35 @@ def test_access_scope_has_separate_created_by_column():
 
 @pytest.mark.asyncio
 async def test_grant_scope_source_creates_row():
-    session = FakeSession(scalar_sequence=[None])
-    repo = ScopeRepository(session)
     scope_id, source_id = uuid4(), uuid4()
+    returned = ScopeSourceAccess(
+        access_scope_id=scope_id,
+        source_id=source_id,
+        ref_count=1,
+    )
+    repo = ScopeRepository(FakeSession(scalar_sequence=[returned]))
 
     access = await repo.grant_scope_source(scope_id, source_id)
 
+    assert access is returned
     assert access.ref_count == 1
-    assert session.added[0].access_scope_id == scope_id
+    assert access.access_scope_id == scope_id
+    assert access.source_id == source_id
 
 
 @pytest.mark.asyncio
 async def test_grant_scope_source_increments_ref_count():
     scope_id, source_id = uuid4(), uuid4()
-    existing = ScopeSourceAccess(access_scope_id=scope_id, source_id=source_id, ref_count=2)
-    repo = ScopeRepository(FakeSession(scalar_sequence=[existing]))
+    returned = ScopeSourceAccess(
+        access_scope_id=scope_id,
+        source_id=source_id,
+        ref_count=3,
+    )
+    repo = ScopeRepository(FakeSession(scalar_sequence=[returned]))
 
     access = await repo.grant_scope_source(scope_id, source_id)
 
+    assert access is returned
     assert access.ref_count == 3
     assert access.revoked_at is None
 
