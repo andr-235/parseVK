@@ -6,9 +6,9 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+Provider = Literal["vk"]
 SourceKind = Literal["target", "reference"]
 SourceStatus = Literal["active", "inactive"]
-Provider = Literal["vk"]
 
 
 def canonical_external_id(value: str) -> str:
@@ -26,9 +26,18 @@ def canonical_external_id(value: str) -> str:
 
 class CreateSourceRequest(BaseModel):
     provider: Provider = "vk"
-    source_type: str = Field(default="community", min_length=1, max_length=32, alias="sourceType")
+    source_type: str = Field(
+        default="community",
+        min_length=1,
+        max_length=32,
+        alias="sourceType",
+    )
     external_id: str = Field(min_length=1, max_length=64, alias="externalId")
-    display_name: str | None = Field(default=None, max_length=255, alias="displayName")
+    display_name: str | None = Field(
+        default=None,
+        max_length=255,
+        alias="displayName",
+    )
 
     model_config = ConfigDict(populate_by_name=True)
     external_id_digits = field_validator("external_id")(canonical_external_id)
@@ -56,7 +65,12 @@ class SourceListResponse(BaseModel):
 
 class TaskSourceRequest(BaseModel):
     provider: Provider = "vk"
-    source_type: str = Field(default="community", min_length=1, max_length=32, alias="sourceType")
+    source_type: str = Field(
+        default="community",
+        min_length=1,
+        max_length=32,
+        alias="sourceType",
+    )
     external_id: str = Field(min_length=1, max_length=64, alias="externalId")
     kind: SourceKind = "target"
 
@@ -91,7 +105,12 @@ class AccessScopeResponse(BaseModel):
 
 class GrantAccessRequest(BaseModel):
     provider: Provider = "vk"
-    source_type: str = Field(default="community", min_length=1, max_length=32, alias="sourceType")
+    source_type: str = Field(
+        default="community",
+        min_length=1,
+        max_length=32,
+        alias="sourceType",
+    )
     external_id: str = Field(min_length=1, max_length=64, alias="externalId")
 
     model_config = ConfigDict(populate_by_name=True)
