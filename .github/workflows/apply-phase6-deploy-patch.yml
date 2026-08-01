@@ -1,0 +1,42 @@
+name: Apply Phase 6 Deploy Patch
+
+on:
+  push:
+    branches:
+      - ci/phase-6-deploy-observability
+    paths:
+      - .github/workflows/apply-phase6-deploy-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout phase 6 branch
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ci/phase-6-deploy-observability
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Apply validated deploy patch
+        run: python3 scripts/apply_phase6_deploy_patch.py
+
+      - name: Validate runtime and workflow contracts
+        run: |
+          bash -n .github/scripts/health-check.sh
+          python3 .github/scripts/test_post_deploy_smoke.py -v
+          python3 .github/scripts/test_deployment_evidence.py -v
+          python3 scripts/test_production_deploy_observability.py -v
+
+      - name: Commit patched deploy workflow
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/deploy.yml
+          git commit -m "feat(ci): publish production deployment evidence"
+          git push origin HEAD:ci/phase-6-deploy-observability
