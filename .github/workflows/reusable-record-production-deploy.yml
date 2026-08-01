@@ -1,0 +1,266 @@
+name: Reusable Record Production Deployment
+
+on:
+  workflow_call:
+    inputs:
+      deploy_result:
+        required: true
+        type: string
+      deploy_run_id:
+        required: true
+        type: string
+      deploy_run_attempt:
+        required: true
+        type: string
+      deploy_run_url:
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+  statuses: write
+
+jobs:
+  resolve:
+    name: Resolve Actual Deploy Context
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      target_sha: ${{ steps.context.outputs.target_sha }}
+      skipped: ${{ steps.context.outputs.skipped }}
+    steps:
+      - name: Download actual deployment target
+        uses: actions/download-artifact@v7
+        with:
+          name: production-deploy-target-${{ inputs.deploy_run_id }}-${{ inputs.deploy_run_attempt }}
+          path: ${{ runner.temp }}/deploy-target
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.deploy_run_id }}
+
+      - name: Download deployment execution context
+        id: execution
+        continue-on-error: true
+        uses: actions/download-artifact@v7
+        with:
+          name: production-deploy-execution-${{ inputs.deploy_run_id }}-${{ inputs.deploy_run_attempt }}
+          path: ${{ runner.temp }}/deploy-execution
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.deploy_run_id }}
+
+      - name: Checkout trusted release resolver
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/latest_release.py
+          sparse-checkout-cone-mode: false
+
+      - name: Validate actual deploy context
+        id: context
+        env:
+          TARGET_FILE: ${{ runner.temp }}/deploy-target/deployment-target.json
+          EXECUTION_FILE: ${{ runner.temp }}/deploy-execution/deployment-execution.json
+        run: |
+          set -euo pipefail
+          [[ -f "$TARGET_FILE" ]] || {
+            echo "::error::Deploy target artifact is missing"
+            exit 1
+          }
+          TARGET_SHA="$(jq -er '.target_sha' "$TARGET_FILE")"
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "::error::Deploy target SHA is invalid: $TARGET_SHA"
+            exit 1
+          }
+          git cat-file -e "${TARGET_SHA}^{commit}" || {
+            echo "::error::Deploy target SHA is unavailable in main history: $TARGET_SHA"
+            exit 1
+          }
+          RELEASE_JSON="$(python3 .github/scripts/latest_release.py --ref "$TARGET_SHA")"
+          RELEASE_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
+          [ "$RELEASE_SHA" = "$TARGET_SHA" ] || {
+            echo "::error::Deploy target is not a semantic-release commit: $TARGET_SHA"
+            exit 1
+          }
+
+          SKIPPED=false
+          if [ -f "$EXECUTION_FILE" ]; then
+            SKIPPED="$(jq -er '.skip_deploy' "$EXECUTION_FILE")"
+          fi
+          if [ "$SKIPPED" != true ] && [ "$SKIPPED" != false ]; then
+            echo "::error::Deploy skipped flag is invalid: $SKIPPED"
+            exit 1
+          fi
+          echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+          echo "skipped=$SKIPPED" >> "$GITHUB_OUTPUT"
+
+      - name: Mark production evidence pending
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_SHA: ${{ steps.context.outputs.target_sha }}
+          DEPLOY_RUN_URL: ${{ inputs.deploy_run_url }}
+        run: |
+          set -euo pipefail
+          payload="$(jq -nc \
+            --arg state pending \
+            --arg context release/production \
+            --arg description 'Recording production deployment evidence' \
+            --arg target_url "$DEPLOY_RUN_URL" \
+            '{state:$state,context:$context,description:$description,target_url:$target_url}')"
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $GITHUB_TOKEN" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${TARGET_SHA}" \
+            --data "$payload" >/dev/null
+
+  verify:
+    name: Verify Active Production
+    needs: resolve
+    runs-on: [self-hosted]
+    timeout-minutes: 15
+    outputs:
+      active_sha: ${{ steps.state.outputs.active_sha }}
+      verified: ${{ steps.evidence.outputs.verified }}
+    env:
+      TARGET_SHA: ${{ needs.resolve.outputs.target_sha }}
+      SKIPPED: ${{ needs.resolve.outputs.skipped }}
+      DEPLOY_RESULT: ${{ inputs.deploy_result }}
+      DEPLOYMENT_METADATA_FILE: /opt/parseVK/.deployment-metadata.json
+      SMOKE_REPORT: ${{ runner.temp }}/post-deploy-verification.json
+      DEPLOYMENT_EVIDENCE: ${{ runner.temp }}/deployment-evidence.json
+    steps:
+      - name: Checkout trusted deployment observer
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/production/post_deploy_smoke.py
+            .github/scripts/production/deployment_evidence.py
+          sparse-checkout-cone-mode: false
+
+      - name: Inspect active production metadata
+        id: state
+        run: |
+          set -euo pipefail
+          ACTIVE_SHA=""
+          PREVIOUS_SHA=""
+          STATE_VALID=true
+          if [ ! -f "$DEPLOYMENT_METADATA_FILE" ]; then
+            echo "::error::Deployment metadata is missing"
+            STATE_VALID=false
+          else
+            ACTIVE_SHA="$(jq -r '.last_successful_commit // empty' "$DEPLOYMENT_METADATA_FILE")"
+            PREVIOUS_SHA="$(jq -r '.previous_successful_commit // empty' "$DEPLOYMENT_METADATA_FILE")"
+            [[ "$ACTIVE_SHA" =~ ^[0-9a-f]{40}$ ]] || {
+              echo "::error::Active production SHA is invalid: $ACTIVE_SHA"
+              STATE_VALID=false
+            }
+            if [ -n "$PREVIOUS_SHA" ] && [[ ! "$PREVIOUS_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "::error::Previous production SHA is invalid: $PREVIOUS_SHA"
+              STATE_VALID=false
+            fi
+          fi
+          echo "active_sha=$ACTIVE_SHA" >> "$GITHUB_OUTPUT"
+          echo "previous_sha=$PREVIOUS_SHA" >> "$GITHUB_OUTPUT"
+          echo "state_valid=$STATE_VALID" >> "$GITHUB_OUTPUT"
+
+      - name: Verify production HTTP entrypoints
+        id: smoke
+        continue-on-error: true
+        run: python3 .github/scripts/production/post_deploy_smoke.py --report "$SMOKE_REPORT"
+
+      - name: Build deployment evidence
+        id: evidence
+        if: always()
+        env:
+          ACTIVE_SHA: ${{ steps.state.outputs.active_sha }}
+          PREVIOUS_SHA: ${{ steps.state.outputs.previous_sha }}
+          STATE_VALID: ${{ steps.state.outputs.state_valid }}
+          SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
+        run: |
+          set -euo pipefail
+          STATUS=failure
+          VERIFIED=false
+          if [ "$DEPLOY_RESULT" = success ] && \
+             [ "$STATE_VALID" = true ] && \
+             [ "$SMOKE_OUTCOME" = success ] && \
+             [ "$TARGET_SHA" = "$ACTIVE_SHA" ]; then
+            STATUS=success
+            VERIFIED=true
+          fi
+          python3 .github/scripts/production/deployment_evidence.py \
+            --release-sha "$TARGET_SHA" \
+            --active-sha "$ACTIVE_SHA" \
+            --previous-sha "$PREVIOUS_SHA" \
+            --deployment-status "$STATUS" \
+            --skipped "$SKIPPED" \
+            --repository "$GITHUB_REPOSITORY" \
+            --run-id "${{ inputs.deploy_run_id }}" \
+            --run-attempt "${{ inputs.deploy_run_attempt }}" \
+            --smoke-report "$SMOKE_REPORT" \
+            --output "$DEPLOYMENT_EVIDENCE"
+          echo "verified=$VERIFIED" >> "$GITHUB_OUTPUT"
+
+      - name: Upload deployment evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-deployment-${{ needs.resolve.outputs.target_sha }}-${{ inputs.deploy_run_id }}-${{ inputs.deploy_run_attempt }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/deployment-evidence.json
+            ${{ runner.temp }}/post-deploy-verification.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Enforce verified production state
+        if: always()
+        env:
+          VERIFIED: ${{ steps.evidence.outputs.verified }}
+        run: '[ "$VERIFIED" = true ]'
+
+  finalize:
+    name: Finalize Production Release Status
+    needs:
+      - resolve
+      - verify
+    if: always() && needs.resolve.outputs.target_sha != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Publish terminal production status
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_SHA: ${{ needs.resolve.outputs.target_sha }}
+          VERIFIED: ${{ needs.verify.outputs.verified }}
+          VERIFY_RESULT: ${{ needs.verify.result }}
+          DEPLOY_RUN_URL: ${{ inputs.deploy_run_url }}
+        run: |
+          set -euo pipefail
+          STATE=failure
+          DESCRIPTION="Production deployment failed, rolled back or did not pass smoke verification"
+          if [ "$VERIFY_RESULT" = success ] && [ "$VERIFIED" = true ]; then
+            STATE=success
+            DESCRIPTION="Production deployment and smoke verification succeeded"
+          fi
+          payload="$(jq -nc \
+            --arg state "$STATE" \
+            --arg context release/production \
+            --arg description "$DESCRIPTION" \
+            --arg target_url "$DEPLOY_RUN_URL" \
+            '{state:$state,context:$context,description:$description,target_url:$target_url}')"
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $GITHUB_TOKEN" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${TARGET_SHA}" \
+            --data "$payload" >/dev/null
+          [ "$STATE" = success ]

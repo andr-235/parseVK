@@ -51,6 +51,7 @@ Set these values in `/opt/parseVK/.env` when the server requires different limit
 11. Compose starts the candidate with `--no-build --pull never`.
 12. Container and HTTP health checks run.
 13. The candidate is promoted and deployment metadata rotates current/previous releases.
+14. `Production Verification` records the exact release outcome and uploads deployment evidence.
 
 No application image is downloaded from GHCR during this flow.
 
@@ -97,6 +98,28 @@ Rollback does not run old migration/init jobs, does not perform database downgra
 
 It never runs build, pull, login, promote, activate or cleanup commands.
 
+## Post-deploy smoke and evidence
+
+A full deployment is not promoted after container health alone. With `FULL_DEPLOY=true`, `.github/scripts/health-check.sh` also checks these local production entrypoints:
+
+```text
+frontend    http://127.0.0.1:8080/
+api-gateway http://127.0.0.1:3002/health
+```
+
+The checks are read-only, use no operator credentials and retry transient failures. If either endpoint remains unavailable, the health step fails before promotion and the existing automatic restoration path activates the previous local release.
+
+After every `Deploy to Production Server` run, `Production Verification` resolves the semantic release from the deploy run source SHA, reads active/previous release metadata on the self-hosted runner, repeats the HTTP smoke checks and publishes:
+
+- commit status `release/production` on the exact semantic-release SHA;
+- `deployment-evidence.json` with release SHA, active SHA, previous release, deploy conclusion and smoke results;
+- the smoke JSON report;
+- a 90-day workflow artifact linked to the deploy run.
+
+The terminal status is `success` only when the deploy run succeeded, the active production SHA equals the target release and both HTTP entrypoints pass. A failed deployment, rollback, SHA mismatch or failed smoke produces `release/production=failure`.
+
+The same workflow also runs daily and can be started manually. Scheduled/manual verification is read-only and does not build, pull, login, promote, activate or alter deployment metadata.
+
 ## Troubleshooting
 
 ### Insufficient disk space
@@ -126,6 +149,10 @@ docker image ls 'parsevk-release/*'
 ```
 
 Restore the missing local image/tag before deploying another release.
+
+### Failed production smoke
+
+Open the `Production Verification` run associated with the deploy. Download the `production-deployment-<sha>-<run>` artifact and inspect the endpoint status, latency, retry count and error in the smoke JSON. Confirm the active SHA in `.deployment-metadata.json` before manually retrying anything.
 
 ### Build failure
 
