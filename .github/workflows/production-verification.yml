@@ -101,7 +101,6 @@ jobs:
     if: github.event_name == 'workflow_run'
     uses: ./.github/workflows/reusable-record-production-deploy.yml
     with:
-      source_sha: ${{ github.event.workflow_run.head_sha }}
       deploy_result: ${{ github.event.workflow_run.conclusion }}
       deploy_run_id: ${{ github.event.workflow_run.id }}
       deploy_run_attempt: ${{ github.event.workflow_run.run_attempt }}
