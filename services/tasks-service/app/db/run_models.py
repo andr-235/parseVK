@@ -70,7 +70,6 @@ class TaskRunSourceDemand(Base):
             "status IN ('active', 'completed', 'failed', 'cancelled')",
             name="ck_task_run_source_demands_status",
         ),
-        Index("ix_task_run_source_demands_run", "task_run_id"),
         Index("ix_task_run_source_demands_source", "source_id"),
     )
 
