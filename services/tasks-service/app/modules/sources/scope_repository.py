@@ -1,10 +1,4 @@
-"""Access-scope repository: scope CRUD and ref-counted scope/source access.
-
-Access semantics (issue #283 AC):
-- scope/source access uses reference counting (ref_count);
-- revoke marks a tombstone (revoked_at/revoked_by), never hard delete;
-- grant after revoke re-activates the row.
-"""
+"""Access-scope repository: scope CRUD and ref-counted scope/source access."""
 
 from uuid import UUID
 
@@ -36,22 +30,31 @@ class ScopeRepository:
         return list(result)
 
     async def get_scope_source(
-        self, scope_id: UUID, source_id: UUID
+        self,
+        scope_id: UUID,
+        source_id: UUID,
+        *,
+        for_update: bool = False,
     ) -> ScopeSourceAccess | None:
-        return await self.session.scalar(
-            select(ScopeSourceAccess).where(
-                ScopeSourceAccess.access_scope_id == scope_id,
-                ScopeSourceAccess.source_id == source_id,
-            )
+        statement = select(ScopeSourceAccess).where(
+            ScopeSourceAccess.access_scope_id == scope_id,
+            ScopeSourceAccess.source_id == source_id,
         )
+        if for_update:
+            statement = statement.with_for_update()
+        return await self.session.scalar(statement)
 
     async def grant_scope_source(
         self, scope_id: UUID, source_id: UUID
     ) -> ScopeSourceAccess:
-        """Insert or re-activate access; ref_count incremented by service."""
-        access = await self.get_scope_source(scope_id, source_id)
+        """Insert or re-activate access while serializing ref-count updates."""
+        access = await self.get_scope_source(scope_id, source_id, for_update=True)
         if access is None:
-            access = ScopeSourceAccess(access_scope_id=scope_id, source_id=source_id, ref_count=1)
+            access = ScopeSourceAccess(
+                access_scope_id=scope_id,
+                source_id=source_id,
+                ref_count=1,
+            )
             self.session.add(access)
         else:
             access.ref_count += 1
@@ -62,7 +65,7 @@ class ScopeRepository:
         return access
 
     async def decrement_scope_ref(self, scope_id: UUID, source_id: UUID) -> None:
-        access = await self.get_scope_source(scope_id, source_id)
+        access = await self.get_scope_source(scope_id, source_id, for_update=True)
         if access is None:
             return
         access.ref_count = max(0, access.ref_count - 1)
@@ -71,8 +74,8 @@ class ScopeRepository:
     async def revoke_scope_source(
         self, scope_id: UUID, source_id: UUID, revoked_by: str
     ) -> ScopeSourceAccess | None:
-        """Mark tombstone (revoked_at/revoked_by) instead of hard delete."""
-        access = await self.get_scope_source(scope_id, source_id)
+        """Administratively revoke all effective access and retain a tombstone."""
+        access = await self.get_scope_source(scope_id, source_id, for_update=True)
         if access is None:
             return None
         access.ref_count = 0
