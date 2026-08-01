@@ -9,6 +9,7 @@ on:
       - ".github/scripts/test_post_deploy_smoke.py"
       - ".github/workflows/production-integrity.yml"
       - ".github/workflows/production-verification.yml"
+      - ".github/workflows/reusable-record-production-deploy.yml"
       - ".github/scripts/test_storage_guard.py"
       - ".github/scripts/test_production_integrity_contract.py"
       - "scripts/test_production_deploy_observability.py"
@@ -36,12 +37,16 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Validate shell syntax
+      - name: Validate shell and workflow syntax
         run: |
           bash -n .github/scripts/health-check.sh
           bash -n .github/scripts/production/storage-integrity.sh
           bash -n .github/scripts/production/storage-guard.sh
           bash -n .github/scripts/production/preflight.sh
+          ruby -e 'require "yaml"; YAML.load_file(ARGV.fetch(0))' \
+            .github/workflows/production-verification.yml
+          ruby -e 'require "yaml"; YAML.load_file(ARGV.fetch(0))' \
+            .github/workflows/reusable-record-production-deploy.yml
 
       - name: Test storage runtime
         run: python3 .github/scripts/test_storage_guard.py -v
