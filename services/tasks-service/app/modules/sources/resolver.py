@@ -27,6 +27,20 @@ class SourceNotFoundError(ResolverError):
     """Identity could not be resolved to a canonical source."""
 
 
+def canonical_external_id(external_id: str) -> str:
+    """Return the canonical positive decimal representation."""
+    if not external_id.isdigit() or int(external_id) <= 0:
+        raise SourceNotFoundError(f"Invalid external id: {external_id}")
+    return str(int(external_id))
+
+
+def canonical_source_id(provider: str, source_type: str, external_id: str) -> UUID:
+    """Derive a stable UUID from the complete canonical global identity."""
+    normalized_external_id = canonical_external_id(external_id)
+    canonical_key = f"parsevk:{provider}:{source_type}:{normalized_external_id}"
+    return uuid5(NAMESPACE_URL, canonical_key)
+
+
 @dataclass(frozen=True, slots=True)
 class SourceIdentity:
     """Normalized identity supplied by a caller."""
@@ -41,8 +55,7 @@ class SourceIdentity:
             raise SourceNotFoundError(f"Unsupported provider: {self.provider}")
         if self.source_type != VK_SOURCE_TYPE:
             raise SourceNotFoundError(f"Unsupported source type: {self.source_type}")
-        if not self.external_id.isdigit() or int(self.external_id) <= 0:
-            raise SourceNotFoundError(f"Invalid external id: {self.external_id}")
+        canonical_external_id(self.external_id)
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,11 +91,11 @@ class InternalVkSourceResolver:
     async def resolve(self, identity: SourceIdentity) -> ResolvedSource:
         logger.debug("Resolving source identity: %s", identity)
         identity.validate()
-        canonical_key = f"parsevk:{identity.provider}:{identity.source_type}:{identity.external_id}"
+        external_id = canonical_external_id(identity.external_id)
         return ResolvedSource(
-            source_id=uuid5(NAMESPACE_URL, canonical_key),
+            source_id=canonical_source_id(identity.provider, identity.source_type, external_id),
             provider=identity.provider,
             source_type=identity.source_type,
-            external_id=str(int(identity.external_id)),
-            owner_id=-int(identity.external_id),
+            external_id=external_id,
+            owner_id=-int(external_id),
         )
