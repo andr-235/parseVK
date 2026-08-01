@@ -7,10 +7,15 @@ import sys
 import tempfile
 from pathlib import Path
 
+from parsevk_contracts.catalog import ContractCatalog
 from parsevk_contracts.compatibility import CompatibilityCheckError, check_compatibility
 from parsevk_contracts.generation import generate_all
 from parsevk_contracts.registry_validation import validate_registry
-from parsevk_contracts.vk.commands import CATALOG
+from parsevk_contracts.sources import SOURCES_CATALOG
+from parsevk_contracts.vk.commands import CATALOG as VK_CATALOG
+
+# Single merged catalog across all registered domains.
+CATALOG = ContractCatalog.from_contracts(VK_CATALOG.contracts + SOURCES_CATALOG.contracts)
 
 
 def _tree_files(root: Path) -> set[Path]:

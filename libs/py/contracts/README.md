@@ -59,6 +59,21 @@ from .commands import MY_CONTRACT
 CATALOG = ContractCatalog.from_contracts((MY_CONTRACT,))
 ```
 
+4. Re-export the catalog from the domain package `__init__.py` so the
+   generation CLI drift-check and registry validation see the new contracts:
+
+```python
+# parsevk_contracts/<domain>/__init__.py
+from parsevk_contracts.<domain>.commands import CATALOG as DOMAIN_CATALOG
+
+__all__ = ["DOMAIN_CATALOG"]
+```
+
+The generation CLI (`parsevk_contracts/generation/cli.py`) merges the
+catalogs of all registered domains into a single catalog used for
+generation, drift-check, and registry validation. New domains must be
+added there as well.
+
 ## How to use the boundary API
 
 ### Publishing a message
@@ -197,8 +212,31 @@ parsevk_contracts/
     catalog.py            # MessageContract, PartitionKeySpec, ContractCatalog
     validation.py         # prepare_for_publish / parse_for_consume
     vk/                   # VK domain contracts
+    sources/              # Source domain contracts (access change events)
     generation/           # JSON Schema, manifest, AsyncAPI generators + drift CLI
 ```
+
+## Registered contracts
+
+| Message type | Topic | Producers | Consumers | Notes |
+|--------------|-------|-----------|-----------|-------|
+| `vk.execution.requested` | `parsevk.vk.commands` | tasks-service | vk-service | Execution command with immutable task/source snapshot refs |
+| `sources.access.granted` | `parsevk.sources.events` | tasks-service | vk-service (declared) | Source granted to an access scope; consumers disabled until a later phase |
+| `sources.access.revoked` | `parsevk.sources.events` | tasks-service | vk-service (declared) | Source revoked from an access scope (tombstone); consumers disabled until a later phase |
+
+Source access events partition on `payload.sourceId`, so all events for one
+source land in the same partition. The declared consumer (`vk-service`) is
+registered in the catalog for schema evolution and registry validation but is
+NOT wired to consume yet — downstream consumers are enabled in later phases.
+
+### VK source resolver contract
+
+`parsevk_contracts/vk/resolver.py` defines the internal VK source resolver
+data contract used to validate frontend-supplied normalized identities
+(`VkSourceResolverRequest` → `VkSourceResolverResponse`). The response reuses
+`SourceReference` for the identity shape and adds the canonical access scope
+plus source/scope revisions. The actual resolution is implemented behind the
+source resolver port in tasks-service in a later phase.
 
 ## License
 
