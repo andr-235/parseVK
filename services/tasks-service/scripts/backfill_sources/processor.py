@@ -12,8 +12,15 @@ from app.db.models import (
     TaskRunSourceDemand,
     TaskSource,
 )
-from scripts.backfill_sources.identity import SourceKey, source_key, stable_source_id
-from scripts.backfill_sources.snapshots import build_run_snapshot, build_source_set_snapshot
+from scripts.backfill_sources.identity import (
+    SourceKey,
+    source_key,
+    stable_source_id,
+)
+from scripts.backfill_sources.snapshots import (
+    build_run_snapshot,
+    build_source_set_snapshot,
+)
 
 logger = logging.getLogger("backfill_task_sources")
 
