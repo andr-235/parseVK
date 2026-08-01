@@ -79,6 +79,9 @@ API Gateway реализован по трехуровневой архитек�
 | GET | `/api/v1/tasks/automation-settings` | Настройки автоматизации |
 
 > Internal endpoint removed: ~~`POST /internal/tasks/{taskId}/execution/progress`~~ — replaced by `task.execution_progressed` event (P2C).
+>
+> Internal sources endpoints (issue #283, за флагом `TASKS_SOURCES_API_ENABLED`, НЕ проксируются gateway):
+> `GET/POST /internal/sources`, `GET/POST /internal/tasks/{taskId}/sources`, `GET/POST /internal/access-scopes`, `POST /internal/access-scopes/{scopeId}/grant|revoke`. Требуют `X-Internal-Service-Token` + `X-User-ID`.
 
 ### VK (`/api/v1/vk`)
 
