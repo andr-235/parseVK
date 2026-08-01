@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
+
 from app.modules.tasks.exceptions import TaskConflictError
 from app.modules.tasks.state_service import TaskStateService
 
