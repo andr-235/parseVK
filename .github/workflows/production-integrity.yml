@@ -3,10 +3,17 @@ name: Production Integrity
 on:
   pull_request:
     paths:
+      - ".github/scripts/health-check.sh"
       - ".github/scripts/production/**"
+      - ".github/scripts/test_deployment_evidence.py"
+      - ".github/scripts/test_post_deploy_smoke.py"
+      - ".github/workflows/deploy.yml"
       - ".github/workflows/production-integrity.yml"
+      - ".github/workflows/production-verification.yml"
+      - ".github/workflows/reusable-record-production-deploy.yml"
       - ".github/scripts/test_storage_guard.py"
       - ".github/scripts/test_production_integrity_contract.py"
+      - "scripts/test_production_deploy_observability.py"
       - "docs/deploy-runbook.md"
   schedule:
     - cron: "23 2 * * *"
@@ -31,17 +38,31 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Validate shell syntax
+      - name: Validate shell and workflow syntax
         run: |
+          bash -n .github/scripts/health-check.sh
           bash -n .github/scripts/production/storage-integrity.sh
           bash -n .github/scripts/production/storage-guard.sh
           bash -n .github/scripts/production/preflight.sh
+          ruby -e 'require "yaml"; YAML.load_file(ARGV.fetch(0))' \
+            .github/workflows/deploy.yml
+          ruby -e 'require "yaml"; YAML.load_file(ARGV.fetch(0))' \
+            .github/workflows/production-verification.yml
+          ruby -e 'require "yaml"; YAML.load_file(ARGV.fetch(0))' \
+            .github/workflows/reusable-record-production-deploy.yml
 
       - name: Test storage runtime
         run: python3 .github/scripts/test_storage_guard.py -v
 
+      - name: Test production smoke and evidence runtime
+        run: |
+          python3 .github/scripts/test_post_deploy_smoke.py -v
+          python3 .github/scripts/test_deployment_evidence.py -v
+
       - name: Test workflow contracts
-        run: python3 .github/scripts/test_production_integrity_contract.py -v
+        run: |
+          python3 .github/scripts/test_production_integrity_contract.py -v
+          python3 scripts/test_production_deploy_observability.py -v
 
   integrity:
     name: Check Local Production Integrity
