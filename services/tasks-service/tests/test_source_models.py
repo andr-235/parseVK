@@ -8,17 +8,22 @@ import pytest
 from sqlalchemy.dialects import postgresql
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _service_path import use_service_path
+from _service_path import use_service_path  # noqa: E402
 
 use_service_path()
 
-from app.db.models import AccessScope, MonitoringSource, ScopeSourceAccess, TaskSource
-from app.modules.sources.resolver import (
+from app.db.models import (  # noqa: E402
+    AccessScope,
+    MonitoringSource,
+    ScopeSourceAccess,
+    TaskSource,
+)
+from app.modules.sources.resolver import (  # noqa: E402
     InternalVkSourceResolver,
     SourceIdentity,
     SourceNotFoundError,
 )
-from app.modules.sources.scope_repository import ScopeRepository
+from app.modules.sources.scope_repository import ScopeRepository  # noqa: E402
 
 
 class FakeSession:
@@ -78,7 +83,8 @@ def test_scope_source_access_unique_pair():
     constraint = next(
         constraint
         for constraint in ScopeSourceAccess.__table__.constraints
-        if getattr(constraint, "name", None) == "uq_scope_source_access_scope_source"
+        if getattr(constraint, "name", None)
+        == "uq_scope_source_access_scope_source"
     )
     assert list(constraint.columns) == [
         ScopeSourceAccess.__table__.c.access_scope_id,
@@ -134,10 +140,18 @@ async def test_grant_scope_source_increments_ref_count():
 @pytest.mark.asyncio
 async def test_revoke_marks_tombstone_not_delete():
     scope_id, source_id = uuid4(), uuid4()
-    existing = ScopeSourceAccess(access_scope_id=scope_id, source_id=source_id, ref_count=3)
+    existing = ScopeSourceAccess(
+        access_scope_id=scope_id,
+        source_id=source_id,
+        ref_count=3,
+    )
     repo = ScopeRepository(FakeSession(scalar_sequence=[existing]))
 
-    access = await repo.revoke_scope_source(scope_id, source_id, revoked_by="user-1")
+    access = await repo.revoke_scope_source(
+        scope_id,
+        source_id,
+        revoked_by="user-1",
+    )
 
     assert access.ref_count == 0
     assert access.revoked_at is not None
@@ -147,7 +161,11 @@ async def test_revoke_marks_tombstone_not_delete():
 @pytest.mark.asyncio
 async def test_decrement_scope_ref_never_goes_negative():
     scope_id, source_id = uuid4(), uuid4()
-    existing = ScopeSourceAccess(access_scope_id=scope_id, source_id=source_id, ref_count=0)
+    existing = ScopeSourceAccess(
+        access_scope_id=scope_id,
+        source_id=source_id,
+        ref_count=0,
+    )
     repo = ScopeRepository(FakeSession(scalar_sequence=[existing]))
 
     await repo.decrement_scope_ref(scope_id, source_id)
@@ -160,14 +178,18 @@ async def test_internal_resolver_rejects_untrusted_identity():
     resolver = InternalVkSourceResolver()
 
     with pytest.raises(SourceNotFoundError):
-        await resolver.resolve(SourceIdentity("vk", "community", "non-numeric"))
+        await resolver.resolve(
+            SourceIdentity("vk", "community", "non-numeric")
+        )
 
 
 @pytest.mark.asyncio
 async def test_internal_resolver_accepts_any_positive_vk_community_id():
     resolver = InternalVkSourceResolver()
 
-    resolved = await resolver.resolve(SourceIdentity("vk", "community", "42"))
+    resolved = await resolver.resolve(
+        SourceIdentity("vk", "community", "42")
+    )
 
     assert resolved.external_id == "42"
     assert resolved.owner_id == -42
