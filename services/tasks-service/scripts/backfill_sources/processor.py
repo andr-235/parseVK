@@ -1,3 +1,5 @@
+# ruff: noqa: I001
+
 import logging
 from typing import Any
 from uuid import UUID
