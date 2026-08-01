@@ -38,7 +38,7 @@ def check_endpoint(name: str, url: str, attempts: int, timeout: float, delay: fl
         started = time.monotonic()
         try:
             request = urllib.request.Request(url, headers={"User-Agent": "parseVK-production-smoke/1"})
-            with urllib.request.urlopen(request, timeout=timeout) as response:
+            with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
                 status = int(response.status)
             result.update(
                 status=status,
