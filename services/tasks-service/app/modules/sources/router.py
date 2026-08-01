@@ -14,7 +14,12 @@ from app.core.security import require_internal_token, require_owner_user_id
 from app.modules.sources.errors import TaskNotFoundError
 from app.modules.sources.helpers import map_source_error, require_sources_enabled
 from app.modules.sources.resolver import SourceNotFoundError as ResolverNotFoundError
-from app.modules.sources.schemas import CreateSourceRequest, TaskSourceRequest
+from app.modules.sources.schemas import (
+    CreateSourceRequest,
+    SourceListResponse,
+    SourceResponse,
+    TaskSourceRequest,
+)
 from app.modules.sources.scopes import router as scopes_router
 from app.modules.sources.service import SourcesService
 
@@ -36,17 +41,25 @@ def _reject_unresolved(exc: ResolverNotFoundError, context: str) -> HTTPExceptio
     )
 
 
-@router.get("/sources", dependencies=[Depends(require_sources_enabled)])
+@router.get(
+    "/sources",
+    response_model=SourceListResponse,
+    dependencies=[Depends(require_sources_enabled)],
+)
 async def list_sources(
     owner_user_id: Annotated[str, Depends(require_owner_user_id)],
     service: SourcesService = Depends(get_sources_service),
 ):
     sources, total = await service.list_sources(owner_user_id)
     logger.info("Listed sources: owner=%s count=%d", owner_user_id, total)
-    return {"sources": sources, "total": total}
+    return SourceListResponse(sources=sources, total=total)
 
 
-@router.post("/sources", dependencies=[Depends(require_sources_enabled)])
+@router.post(
+    "/sources",
+    response_model=SourceResponse,
+    dependencies=[Depends(require_sources_enabled)],
+)
 async def create_source(
     payload: CreateSourceRequest,
     owner_user_id: Annotated[str, Depends(require_owner_user_id)],
@@ -60,7 +73,11 @@ async def create_source(
     return source
 
 
-@router.get("/tasks/{task_id}/sources", dependencies=[Depends(require_sources_enabled)])
+@router.get(
+    "/tasks/{task_id}/sources",
+    response_model=SourceListResponse,
+    dependencies=[Depends(require_sources_enabled)],
+)
 async def list_task_sources(
     task_id: int,
     owner_user_id: Annotated[str, Depends(require_owner_user_id)],
@@ -71,10 +88,14 @@ async def list_task_sources(
     except TaskNotFoundError as exc:
         raise map_source_error(exc) from exc
     logger.info("Listed task sources: task=%s count=%d", task_id, len(sources))
-    return {"sources": sources, "total": len(sources)}
+    return SourceListResponse(sources=sources, total=len(sources))
 
 
-@router.post("/tasks/{task_id}/sources", dependencies=[Depends(require_sources_enabled)])
+@router.post(
+    "/tasks/{task_id}/sources",
+    response_model=SourceResponse,
+    dependencies=[Depends(require_sources_enabled)],
+)
 async def attach_task_source(
     task_id: int,
     payload: TaskSourceRequest,
