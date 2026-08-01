@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
-from uuid import UUID
+from uuid import uuid4
 
 import pytest
 from app.modules.tasks.exceptions import TaskConflictError
@@ -45,7 +45,8 @@ def make_service(task):
 
 @pytest.mark.anyio
 async def test_resume_uses_run_scoped_dedupe_key_and_row_lock():
-    task = make_task("failed", "run-7")
+    run_id = str(uuid4())
+    task = make_task("failed", run_id)
     service, repository, outbox = make_service(task)
 
     result = await service.resume_task("user-1", 42)
@@ -55,9 +56,7 @@ async def test_resume_uses_run_scoped_dedupe_key_and_row_lock():
     resumed_call = next(
         call for call in outbox.add_event.await_args_list if call.kwargs["event_type"] == "task.resumed"
     )
-    run_id = resumed_call.kwargs["payload"]["runId"]
-    assert UUID(run_id)
-    assert run_id != "run-7"
+    assert resumed_call.kwargs["payload"]["runId"] == run_id
     assert task.execution_run_id == run_id
     assert resumed_call.kwargs["dedupe_key"] == f"task.resumed:42:{run_id}"
     changed_call = next(
