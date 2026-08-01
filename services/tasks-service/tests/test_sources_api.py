@@ -20,28 +20,31 @@ class FakeSourcesService:
         self.created = []
         self.attached = []
 
-    async def list_sources(self, owner_user_id):
-        return [], 0
-
-    async def create_source(self, owner_user_id, payload):
-        source = {
+    @staticmethod
+    def source_response(payload):
+        return {
             "id": str(uuid4()),
             "provider": payload.provider,
             "sourceType": payload.source_type,
             "externalId": payload.external_id,
             "ownerId": -int(payload.external_id),
-            "displayName": payload.display_name,
+            "displayName": getattr(payload, "display_name", None),
             "status": "active",
             "revision": 0,
             "createdAt": "2026-08-01T12:00:00Z",
             "updatedAt": "2026-08-01T12:00:00Z",
         }
+
+    async def list_sources(self, owner_user_id):
+        return [], 0
+
+    async def create_source(self, owner_user_id, payload):
         self.created.append((owner_user_id, payload))
-        return source
+        return self.source_response(payload)
 
     async def attach_source_to_task(self, owner_user_id, task_id, payload):
         self.attached.append((owner_user_id, task_id, payload))
-        return {"id": str(uuid4()), "externalId": payload.external_id}
+        return self.source_response(payload)
 
     async def list_task_sources(self, owner_user_id, task_id):
         return []
@@ -111,9 +114,12 @@ def headers(user_id="user-1"):
 
 @pytest.mark.asyncio
 async def test_sources_api_disabled_returns_404(app_without_sources):
-    async with AsyncClient(transport=ASGITransport(app=app_without_sources), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app_without_sources), base_url="http://test"
+    ) as client:
         response = await client.post(
-            "/internal/sources", headers=headers(),
+            "/internal/sources",
+            headers=headers(),
             json={"provider": "vk", "sourceType": "community", "externalId": "12345"},
         )
     assert response.status_code == 404
@@ -121,9 +127,12 @@ async def test_sources_api_disabled_returns_404(app_without_sources):
 
 @pytest.mark.asyncio
 async def test_create_source_when_enabled(app_with_sources, fake_service):
-    async with AsyncClient(transport=ASGITransport(app=app_with_sources), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app_with_sources), base_url="http://test"
+    ) as client:
         response = await client.post(
-            "/internal/sources", headers=headers(),
+            "/internal/sources",
+            headers=headers(),
             json={"provider": "vk", "sourceType": "community", "externalId": "12345"},
         )
     assert response.status_code == 200
@@ -133,9 +142,12 @@ async def test_create_source_when_enabled(app_with_sources, fake_service):
 
 @pytest.mark.asyncio
 async def test_create_source_rejects_non_numeric_external_id(app_with_sources):
-    async with AsyncClient(transport=ASGITransport(app=app_with_sources), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app_with_sources), base_url="http://test"
+    ) as client:
         response = await client.post(
-            "/internal/sources", headers=headers(),
+            "/internal/sources",
+            headers=headers(),
             json={"provider": "vk", "sourceType": "community", "externalId": "abc"},
         )
     assert response.status_code == 422
@@ -143,18 +155,29 @@ async def test_create_source_rejects_non_numeric_external_id(app_with_sources):
 
 @pytest.mark.asyncio
 async def test_attach_task_source(app_with_sources, fake_service):
-    async with AsyncClient(transport=ASGITransport(app=app_with_sources), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app_with_sources), base_url="http://test"
+    ) as client:
         response = await client.post(
-            "/internal/tasks/1/sources", headers=headers(),
-            json={"provider": "vk", "sourceType": "community", "externalId": "12345", "kind": "target"},
+            "/internal/tasks/1/sources",
+            headers=headers(),
+            json={
+                "provider": "vk",
+                "sourceType": "community",
+                "externalId": "12345",
+                "kind": "target",
+            },
         )
     assert response.status_code == 200
+    assert response.json()["externalId"] == "12345"
     assert fake_service.attached[0][1] == 1
 
 
 @pytest.mark.asyncio
 async def test_list_sources_when_enabled(app_with_sources):
-    async with AsyncClient(transport=ASGITransport(app=app_with_sources), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app_with_sources), base_url="http://test"
+    ) as client:
         response = await client.get("/internal/sources", headers=headers())
     assert response.status_code == 200
     assert response.json() == {"sources": [], "total": 0}
@@ -162,9 +185,12 @@ async def test_list_sources_when_enabled(app_with_sources):
 
 @pytest.mark.asyncio
 async def test_create_access_scope(app_with_sources, fake_scope_service):
-    async with AsyncClient(transport=ASGITransport(app=app_with_sources), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app_with_sources), base_url="http://test"
+    ) as client:
         response = await client.post(
-            "/internal/access-scopes", headers=headers(),
+            "/internal/access-scopes",
+            headers=headers(),
             json={"name": "Main scope"},
         )
     assert response.status_code == 200
@@ -175,9 +201,12 @@ async def test_create_access_scope(app_with_sources, fake_scope_service):
 @pytest.mark.asyncio
 async def test_grant_access(app_with_sources, fake_scope_service):
     scope_id = str(uuid4())
-    async with AsyncClient(transport=ASGITransport(app=app_with_sources), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app_with_sources), base_url="http://test"
+    ) as client:
         response = await client.post(
-            f"/internal/access-scopes/{scope_id}/grant", headers=headers(),
+            f"/internal/access-scopes/{scope_id}/grant",
+            headers=headers(),
             json={"provider": "vk", "sourceType": "community", "externalId": "12345"},
         )
     assert response.status_code == 200
@@ -188,9 +217,12 @@ async def test_grant_access(app_with_sources, fake_scope_service):
 @pytest.mark.asyncio
 async def test_revoke_access(app_with_sources, fake_scope_service):
     scope_id = str(uuid4())
-    async with AsyncClient(transport=ASGITransport(app=app_with_sources), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app_with_sources), base_url="http://test"
+    ) as client:
         response = await client.post(
-            f"/internal/access-scopes/{scope_id}/revoke", headers=headers(),
+            f"/internal/access-scopes/{scope_id}/revoke",
+            headers=headers(),
             json={"provider": "vk", "sourceType": "community", "externalId": "12345"},
         )
     assert response.status_code == 200
