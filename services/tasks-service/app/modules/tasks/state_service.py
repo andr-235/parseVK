@@ -5,7 +5,6 @@ Validates transitions and publishes outbox events for downstream consumers.
 """
 
 import logging
-from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,9 +51,14 @@ class TaskStateService:
             raise TaskConflictError(
                 "Invalid task transition", task_id=task_id, current_status=task.status
             )
+        if not task.execution_run_id:
+            raise TaskConflictError(
+                "Cannot resume task without an execution run",
+                task_id=task_id,
+                current_status=task.status,
+            )
         task.status = "pending"
         task.error = None
-        task.execution_run_id = str(uuid4())
         task.last_execution_sequence = 0
         run_meta = None
         if settings.source_compat_write_enabled:
