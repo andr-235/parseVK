@@ -3,9 +3,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from common.events import TaskEvent
-
 from app.services.task_events_service import TaskEventsService
+from common.events import TaskEvent
 
 
 @pytest.mark.anyio
