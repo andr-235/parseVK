@@ -42,11 +42,11 @@ def build_source_set_snapshot(
 
 
 def build_run_snapshot(task: Task, source_set_snapshot: list[dict]) -> tuple[dict, str]:
+    """Build a concrete run snapshot without legacy ``group_ids`` selectors."""
     config_snapshot = {
         "scope": task.scope,
         "mode": task.mode,
         "postLimit": task.post_limit,
-        "groupIds": list(task.group_ids),
     }
     payload = {
         "config": config_snapshot,
