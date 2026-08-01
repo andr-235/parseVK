@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.db.models import MonitoringSource, Task
 from app.modules.sources.repository import SourcesRepository
+from app.modules.sources.resolver import canonical_external_id, canonical_source_id
 
 logger = logging.getLogger(__name__)
 
@@ -28,15 +29,16 @@ class SourceCompatAdapter:
             logger.debug("Source compat write disabled; skipping adapter sync")
             return
         for group_id in group_ids:
-            external_id = str(group_id)
+            external_id = canonical_external_id(str(group_id))
             source = await self.sources_repo.get_source_by_identity("vk", "community", external_id)
             if source is None:
                 source = MonitoringSource(
+                    id=canonical_source_id("vk", "community", external_id),
                     owner_user_id=task.owner_user_id,
                     provider="vk",
                     source_type="community",
                     external_id=external_id,
-                    owner_id=-group_id,
+                    owner_id=-int(external_id),
                 )
                 source = await self.sources_repo.create_source(source)
                 logger.debug(
