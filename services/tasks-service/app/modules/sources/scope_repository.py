@@ -3,6 +3,7 @@
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import AccessScope, ScopeSourceAccess, utcnow
@@ -47,21 +48,31 @@ class ScopeRepository:
     async def grant_scope_source(
         self, scope_id: UUID, source_id: UUID
     ) -> ScopeSourceAccess:
-        """Insert or re-activate access while serializing ref-count updates."""
-        access = await self.get_scope_source(scope_id, source_id, for_update=True)
-        if access is None:
-            access = ScopeSourceAccess(
+        """Atomically insert or re-activate ref-counted access."""
+        statement = (
+            insert(ScopeSourceAccess)
+            .values(
                 access_scope_id=scope_id,
                 source_id=source_id,
                 ref_count=1,
             )
-            self.session.add(access)
-        else:
-            access.ref_count += 1
-            access.revoked_at = None
-            access.revoked_by = None
+            .on_conflict_do_update(
+                index_elements=[
+                    ScopeSourceAccess.access_scope_id,
+                    ScopeSourceAccess.source_id,
+                ],
+                set_={
+                    "ref_count": ScopeSourceAccess.ref_count + 1,
+                    "revoked_at": None,
+                    "revoked_by": None,
+                },
+            )
+            .returning(ScopeSourceAccess)
+        )
+        access = await self.session.scalar(statement)
+        if access is None:
+            raise RuntimeError("scope/source grant did not return a row")
         await self.session.flush()
-        await self.session.refresh(access)
         return access
 
     async def decrement_scope_ref(self, scope_id: UUID, source_id: UUID) -> None:
