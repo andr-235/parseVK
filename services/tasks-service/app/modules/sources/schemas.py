@@ -28,9 +28,9 @@ class CreateSourceRequest(BaseModel):
     @field_validator("external_id")
     @classmethod
     def external_id_digits(cls, value: str) -> str:
-        if not value.isdigit():
-            raise ValueError("externalId must be a numeric string")
-        return value
+        if not value.isdigit() or int(value) <= 0:
+            raise ValueError("externalId must be a positive numeric string")
+        return str(int(value))
 
 
 class SourceResponse(BaseModel):
@@ -45,7 +45,7 @@ class SourceResponse(BaseModel):
     created_at: datetime = Field(alias="createdAt")
     updated_at: datetime = Field(alias="updatedAt")
 
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
 
 class SourceListResponse(BaseModel):
@@ -64,9 +64,9 @@ class TaskSourceRequest(BaseModel):
     @field_validator("external_id")
     @classmethod
     def external_id_digits(cls, value: str) -> str:
-        if not value.isdigit():
-            raise ValueError("externalId must be a numeric string")
-        return value
+        if not value.isdigit() or int(value) <= 0:
+            raise ValueError("externalId must be a positive numeric string")
+        return str(int(value))
 
 
 class TaskSourceResponse(BaseModel):
@@ -77,7 +77,7 @@ class TaskSourceResponse(BaseModel):
     revision: int
     created_at: datetime = Field(alias="createdAt")
 
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
 
 class CreateAccessScopeRequest(BaseModel):
@@ -91,7 +91,7 @@ class AccessScopeResponse(BaseModel):
     created_by_user_id: str = Field(alias="createdByUserId")
     created_at: datetime = Field(alias="createdAt")
 
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
 
 
 class GrantAccessRequest(BaseModel):
@@ -104,9 +104,9 @@ class GrantAccessRequest(BaseModel):
     @field_validator("external_id")
     @classmethod
     def external_id_digits(cls, value: str) -> str:
-        if not value.isdigit():
-            raise ValueError("externalId must be a numeric string")
-        return value
+        if not value.isdigit() or int(value) <= 0:
+            raise ValueError("externalId must be a positive numeric string")
+        return str(int(value))
 
 
 class ScopeSourceAccessResponse(BaseModel):
@@ -117,4 +117,4 @@ class ScopeSourceAccessResponse(BaseModel):
     revoked_by: str | None = Field(default=None, alias="revokedBy")
     created_at: datetime = Field(alias="createdAt")
 
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
