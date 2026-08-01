@@ -2,10 +2,12 @@ import logging
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
+from app.core.config import settings as app_settings
 from app.db.models import Task, TaskAuditLog, TaskAutomationSettings
 from app.modules.automation.schemas import AutomationSettingsUpdate
 from app.modules.tasks.event_payloads import task_request_payload
 from app.modules.tasks.mapper import task_to_response
+from app.modules.tasks.task_run import TaskRunFreezeError, freeze_task_run
 
 logger = logging.getLogger(__name__)
 
@@ -129,6 +131,16 @@ class AutomationService:
                 event_data={"taskId": str(task.id), "source": "automation"},
             )
         )
+        run_meta = None
+        if app_settings.source_compat_write_enabled:
+            await self._clone_task_sources(base_task, task)
+            try:
+                run_meta = await freeze_task_run(self.session, task)
+            except TaskRunFreezeError as exc:
+                logger.error(
+                    "TaskRun freeze failed for automation task_id=%s: %s", task.id, exc, exc_info=True
+                )
+                raise
         await self.tasks.add_audit(
             TaskAuditLog(
                 owner_user_id=owner_user_id,
@@ -139,7 +151,7 @@ class AutomationService:
                 event_data={"started": True, "taskId": str(task.id)},
             )
         )
-        payload = task_request_payload(task, owner_user_id)
+        payload = task_request_payload(task, owner_user_id, run_meta)
         logger.debug(
             "[AutomationService.run] Publishing automation run requested payload=%s",
             payload,
@@ -163,6 +175,27 @@ class AutomationService:
             "settings": await self._settings_response(owner_user_id, settings),
             "task": task_to_response(task),
         }
+
+    async def _clone_task_sources(self, base_task: Task, new_task: Task) -> None:
+        """Clone TaskSource rows from base_task into the new automation task.
+
+        Automation creates tasks directly via the repository, bypassing the
+        compat adapter — without cloning, the frozen snapshot would be empty
+        while group_ids is populated (plan Task 9 note).
+        """
+        from app.modules.sources.repository import SourcesRepository
+
+        sources_repo = SourcesRepository(self.session)
+        links = await sources_repo.list_task_sources(base_task.id)
+        for link in links:
+            source = await sources_repo.get_source_by_id(link.source_id)
+            if source is None:
+                continue
+            await sources_repo.link_task_source(new_task.id, source.id, link.kind)
+        logger.debug(
+            "Cloned task sources for automation: base_task=%s new_task=%s count=%d",
+            base_task.id, new_task.id, len(links),
+        )
 
     async def check_and_run_due(self, settings: TaskAutomationSettings, _now: datetime | None = None) -> None:
         if not settings.enabled:

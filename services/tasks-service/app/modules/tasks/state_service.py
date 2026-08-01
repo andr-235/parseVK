@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.db.models import TaskAuditLog
 from app.modules.outbox.service import OutboxService
 from app.modules.tasks.event_payloads import (
@@ -20,6 +21,7 @@ from app.modules.tasks.event_payloads import (
 from app.modules.tasks.exceptions import TaskConflictError, TaskNotFoundError
 from app.modules.tasks.mapper import task_to_response
 from app.modules.tasks.repository import TasksRepository
+from app.modules.tasks.task_run import TaskRunFreezeError, freeze_task_run
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +29,17 @@ logger = logging.getLogger(__name__)
 class TaskStateService:
     """Handles task state transitions: resume, cancel, check, delete."""
 
-    def __init__(self, session: AsyncSession, repository: TasksRepository, outbox: OutboxService):
+    def __init__(
+        self,
+        session: AsyncSession,
+        repository: TasksRepository,
+        outbox: OutboxService,
+        freezer=freeze_task_run,
+    ):
         self.session = session
         self.repository = repository
         self.outbox = outbox
+        self.freezer = freezer
 
     async def resume_task(self, owner_user_id: str, task_id: int) -> dict | None:
         task = await self.repository.get_task_for_update(owner_user_id, task_id)
@@ -47,6 +56,15 @@ class TaskStateService:
         task.error = None
         task.execution_run_id = str(uuid4())
         task.last_execution_sequence = 0
+        run_meta = None
+        if settings.source_compat_write_enabled:
+            try:
+                run_meta = await self.freezer(self.session, task)
+            except TaskRunFreezeError as exc:
+                logger.error(
+                    "TaskRun freeze failed on resume for task_id=%s: %s", task.id, exc, exc_info=True
+                )
+                raise
         await self.repository.add_audit(
             TaskAuditLog(
                 owner_user_id=owner_user_id,
@@ -62,7 +80,7 @@ class TaskStateService:
             aggregate_type="task",
             aggregate_id=str(task.id),
             dedupe_key=f"task.resumed:{task.id}:{task.execution_run_id}",
-            payload=task_request_payload(task, owner_user_id),
+            payload=task_request_payload(task, owner_user_id, run_meta),
         )
         task = await self.repository.touch_task(task)
         await self.outbox.add_event(

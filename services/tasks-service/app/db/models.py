@@ -192,6 +192,72 @@ class ScopeSourceAccess(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 
 
+class TaskRun(Base):
+    """Immutable snapshot of one task run, frozen once at creation/start.
+
+    No update path exists in repositories — after creation the row is never
+    modified (issue #284 AC: retry/resume never rereads changed task config).
+    ``id`` is a UUID matching ``task_run_id`` in the ``vk.execution.requested``
+    contract (NOT BigInteger like other tables).
+    """
+
+    __tablename__ = "task_runs"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('requested', 'running', 'completed', 'failed', 'cancelled')",
+            name="ck_task_runs_status",
+        ),
+        CheckConstraint("run_revision >= 0", name="ck_task_runs_run_revision"),
+        CheckConstraint("source_set_revision >= 0", name="ck_task_runs_source_set_revision"),
+        Index("ix_task_runs_task_created", "task_id", "created_at"),
+    )
+
+    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    task_id: Mapped[int] = mapped_column(
+        ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False
+    )
+    run_revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="requested")
+    source_set_revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    snapshot_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    config_snapshot: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    source_set_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class TaskRunSourceDemand(Base):
+    """One source demand of a frozen run; snapshot rows reference normalized sources.
+
+    ``payload`` carries the snapshot source fields
+    (sourceId/provider/type/externalId/ownerId + task/source revisions).
+    """
+
+    __tablename__ = "task_run_source_demands"
+    __table_args__ = (
+        UniqueConstraint(
+            "task_run_id", "source_id",
+            name="uq_task_run_source_demands_run_source",
+        ),
+        CheckConstraint(
+            "status IN ('active', 'completed', 'failed', 'cancelled')",
+            name="ck_task_run_source_demands_status",
+        ),
+        Index("ix_task_run_source_demands_run", "task_run_id"),
+        Index("ix_task_run_source_demands_source", "source_id"),
+    )
+
+    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    task_run_id: Mapped[PyUUID] = mapped_column(
+        ForeignKey("task_runs.id", ondelete="CASCADE"), nullable=False
+    )
+    source_id: Mapped[PyUUID] = mapped_column(
+        ForeignKey("monitoring_sources.id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
+    payload: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
 class TaskAutomationSettings(Base):
     __tablename__ = "task_automation_settings"
     __table_args__ = (

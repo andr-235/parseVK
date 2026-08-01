@@ -19,6 +19,7 @@ from app.modules.tasks.mapper import audit_to_response, task_to_response
 from app.modules.tasks.repository import TasksRepository
 from app.modules.tasks.schemas import CreateParseTaskRequest
 from app.modules.tasks.source_compat import SourceCompatAdapter
+from app.modules.tasks.task_run import TaskRunFreezeError
 
 logger = logging.getLogger(__name__)
 
@@ -70,15 +71,25 @@ class TasksCrudService:
                 event_data={"taskId": str(task.id), "source": "manual"},
             )
         )
+        run_meta = None
         if settings.source_compat_write_enabled:
             await SourceCompatAdapter(self.session).write_through(task, group_ids)
+            try:
+                from app.modules.tasks.task_run import freeze_task_run
+
+                run_meta = await freeze_task_run(self.session, task)
+            except TaskRunFreezeError as exc:
+                logger.error(
+                    "TaskRun freeze failed for task_id=%s: %s", task.id, exc, exc_info=True
+                )
+                raise
         await self.outbox.add_event(
             event_type="task.created",
             aggregate_type="task",
             aggregate_id=str(task.id),
             correlation_id=correlation_id,
             dedupe_key=f"task.created:{task.id}",
-            payload=task_request_payload(task, owner_user_id),
+            payload=task_request_payload(task, owner_user_id, run_meta),
         )
         return task_to_response(task)
 
