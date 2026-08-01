@@ -1,9 +1,4 @@
-"""TaskRun freeze: immutable run snapshot, created once per run start.
-
-A run's concrete snapshot is frozen at creation/start and NEVER re-read from
-live task config afterwards (issue #284 AC). Freeze failure raises before any
-outbox publish — the whole transaction rolls back.
-"""
+"""TaskRun freeze: immutable run snapshot, created once per run id."""
 
 import logging
 from uuid import UUID
@@ -26,18 +21,26 @@ def _config_snapshot(task: Task) -> dict:
         "scope": task.scope,
         "mode": task.mode,
         "postLimit": task.post_limit,
-        "groupIds": task.group_ids,
+        "groupIds": list(task.group_ids),
+    }
+
+
+def _run_meta(run: TaskRun) -> dict:
+    return {
+        "taskRunId": str(run.id),
+        "sourceSetRevision": run.source_set_revision,
+        "snapshotSha256": run.snapshot_sha256,
     }
 
 
 async def freeze_task_run(
     session: AsyncSession, task: Task, sources_repo=None
 ) -> dict | None:
-    """Freeze the concrete snapshot for a task run; returns additive payload meta.
+    """Freeze one concrete snapshot and return its event metadata.
 
-    Returns None when the task has no execution_run_id. Requires
-    ``task_sources`` rows to be populated before the call (compat adapter or
-    automation clone). Raises TaskRunFreezeError on any failure.
+    The operation is idempotent by ``execution_run_id``. Retry/resume of the
+    same run returns the stored metadata and never reads live task sources or
+    configuration again.
     """
     if not task.execution_run_id:
         return None
@@ -46,16 +49,21 @@ async def freeze_task_run(
     except ValueError as exc:
         raise TaskRunFreezeError(f"Invalid execution_run_id: {task.execution_run_id}") from exc
 
+    existing = await session.get(TaskRun, run_id)
+    if existing is not None:
+        if existing.task_id != task.id:
+            raise TaskRunFreezeError(
+                f"TaskRun {run_id} belongs to task {existing.task_id}, not {task.id}"
+            )
+        logger.info("TaskRun snapshot reused: task_run_id=%s task_id=%s", run_id, task.id)
+        return _run_meta(existing)
+
     if sources_repo is None:
         from app.modules.sources.repository import SourcesRepository
 
         sources_repo = SourcesRepository(session)
     links = await sources_repo.list_task_sources(task.id)
-    sources = [
-        source
-        for link in links
-        if (source := await sources_repo.get_source_by_id(link.source_id))
-    ]
+    sources = await sources_repo.list_sources_by_ids(link.source_id for link in links)
     source_set_snapshot = [
         {
             "sourceId": str(source.id),
@@ -101,15 +109,11 @@ async def freeze_task_run(
     await session.flush()
     count_task_run_created()
     logger.info(
-        "TaskRun created: task_run_id=%s task_id=%s revision=%s sha=%s...",
-        run_id, task.id, source_set_revision, sha[:8],
+        "TaskRun created: task_run_id=%s task_id=%s source_count=%s revision=%s sha=%s...",
+        run_id,
+        task.id,
+        len(source_set_snapshot),
+        source_set_revision,
+        sha[:8],
     )
-    logger.debug(
-        "TaskRun snapshot contents: task=%s sha=%s config=%s source_set=%s",
-        task.id, sha, config_snapshot, source_set_snapshot,
-    )
-    return {
-        "taskRunId": str(run_id),
-        "sourceSetRevision": source_set_revision,
-        "snapshotSha256": sha,
-    }
+    return _run_meta(run)
