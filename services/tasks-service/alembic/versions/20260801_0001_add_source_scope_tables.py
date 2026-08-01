@@ -1,6 +1,6 @@
-"""Add monitoring_sources, task_sources, access_scopes, scope_source_access
+"""Add monitoring_sources, task_sources, access_scopes, scope_source_access.
 
-Revision ID: 20260801_0001_add_source_scope_tables
+Revision ID: p1_sources_scope
 Revises: pr2c1_progress_event_fields
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import UUID
 
-revision: str = "20260801_0001_add_source_scope_tables"
+revision: str = "p1_sources_scope"
 down_revision: str | None = "pr2c1_progress_event_fields"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
