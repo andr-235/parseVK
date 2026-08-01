@@ -1,0 +1,90 @@
+name: Production Verification
+
+on:
+  pull_request:
+    paths:
+      - ".github/scripts/production/post_deploy_smoke.py"
+      - ".github/scripts/production/deployment_evidence.py"
+      - ".github/scripts/test_post_deploy_smoke.py"
+      - ".github/scripts/test_deployment_evidence.py"
+      - ".github/workflows/deploy.yml"
+      - ".github/workflows/production-verification.yml"
+      - "scripts/test_production_deploy_observability.py"
+      - "docs/deploy-runbook.md"
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-verification
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    name: Validate Production Verification
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout proposed verification
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Test smoke and evidence runtime
+        run: |
+          python3 .github/scripts/test_post_deploy_smoke.py -v
+          python3 .github/scripts/test_deployment_evidence.py -v
+
+      - name: Test workflow contracts
+        run: python3 scripts/test_production_deploy_observability.py -v
+
+  verify:
+    name: Verify Production Entrypoints
+    if: github.event_name != 'pull_request'
+    runs-on: [self-hosted]
+    timeout-minutes: 10
+    env:
+      SMOKE_REPORT: ${{ runner.temp }}/production-verification.json
+    steps:
+      - name: Checkout trusted smoke verifier
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/production/post_deploy_smoke.py
+          sparse-checkout-cone-mode: false
+
+      - name: Verify production HTTP entrypoints
+        run: |
+          python3 .github/scripts/production/post_deploy_smoke.py \
+            --report "$SMOKE_REPORT"
+
+      - name: Upload verification report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-verification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/production-verification.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Write verification summary
+        if: always()
+        run: |
+          {
+            echo "### Production verification"
+            echo
+            if [ -f "$SMOKE_REPORT" ]; then
+              echo '```json'
+              cat "$SMOKE_REPORT"
+              echo '```'
+            else
+              echo "Smoke report was not created."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
