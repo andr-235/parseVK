@@ -5,7 +5,11 @@ from fastapi import FastAPI
 from app.api.router_registry import register_routers
 from app.bootstrap import get_provider_account_repository, get_secret_provider
 from app.core.config import mask_token, settings
-from app.domain.entities.provider_account import SYSTEM_VK_ACCOUNT_KEY
+from app.core.redaction import redact_secrets
+from app.domain.entities.provider_account import (
+    ACCOUNT_STATUS_ACTIVE,
+    SYSTEM_VK_ACCOUNT_KEY,
+)
 from app.infrastructure.db.session import SessionLocal
 from app.tasks.lifespan import (
     get_consumer_healthy,
@@ -36,6 +40,7 @@ def create_app() -> FastAPI:
             credential = None
         if credential is not None and credential.raw_secret:
             vk_display = credential.display_version
+
         vk_account_status = "unknown"
         try:
             async with SessionLocal() as session:
@@ -45,6 +50,17 @@ def create_app() -> FastAPI:
             vk_account_status = account.status if account else "unconfigured"
         except Exception:
             pass
+
+        provider_active = vk_account_status == ACCOUNT_STATUS_ACTIVE
+        if not settings.task_worker_enabled:
+            task_worker_status = "disabled"
+        elif not provider_active:
+            task_worker_status = "blocked"
+        else:
+            task_worker_status = (
+                "healthy" if get_task_worker_healthy() else "unhealthy"
+            )
+
         ok_creds_configured = (
             "yes"
             if (
@@ -55,17 +71,23 @@ def create_app() -> FastAPI:
             else "no"
         )
         return {
-            "status": "UP",
+            "status": "UP" if provider_active else "DEGRADED",
             "vkTokenConfigured": "yes" if vk_display else "no",
             "vkTokenMasked": vk_display,
             "vkAccountStatus": vk_account_status,
             "okCredentialsConfigured": ok_creds_configured,
-            "okTokenMasked": mask_token(settings.ok_access_token)
-            if settings.ok_access_token
-            else "",
-            "kafkaConsumer": "healthy" if get_consumer_healthy() else "unhealthy",
-            "outboxPublisher": "healthy" if get_publisher_healthy() else "unhealthy",
-            "taskWorker": "healthy" if get_task_worker_healthy() else "unhealthy",
+            "okTokenMasked": (
+                mask_token(settings.ok_access_token)
+                if settings.ok_access_token
+                else ""
+            ),
+            "kafkaConsumer": (
+                "healthy" if get_consumer_healthy() else "unhealthy"
+            ),
+            "outboxPublisher": (
+                "healthy" if get_publisher_healthy() else "unhealthy"
+            ),
+            "taskWorker": task_worker_status,
         }
 
     @app.get("/ready")
@@ -79,15 +101,17 @@ def create_app() -> FastAPI:
             async with engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))
             return {"status": "READY"}
-        except Exception as e:
-            raise HTTPException(status_code=503, detail=f"Database is not ready: {str(e)}") from e
+        except Exception as error:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Database is not ready: {redact_secrets(error)}",
+            ) from error
 
     register_routers(app)
 
     from prometheus_fastapi_instrumentator import Instrumentator
 
     Instrumentator().instrument(app).expose(app)
-
     return app
 
 
