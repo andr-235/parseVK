@@ -149,6 +149,7 @@ jobs:
       PRODUCTION_SCRIPTS_DIR: ${{ github.workspace }}/.github/scripts/production
       SERVICE_CATALOG_CLI: ${{ github.workspace }}/.github/scripts/service_catalog.py
       LOCAL_RELEASE_SCRIPT: ${{ github.workspace }}/.github/scripts/production/local-release.sh
+      HEALTH_CHECK_SCRIPT: ${{ github.workspace }}/.github/scripts/health-check.sh
       TARGET_SHA: ${{ needs.gate.outputs.target_sha }}
       ALLOW_IMAGE_PULLS: "false"
       PULL_POLICY: never
@@ -311,7 +312,7 @@ jobs:
         run: |
           set -euo pipefail
           COMPOSE_FILE="$COMPOSE_FILE" FULL_DEPLOY="$FULL_DEPLOY" MAX_ATTEMPTS="$MAX_ATTEMPTS" \
-            bash "${{ github.workspace }}/.github/scripts/health-check.sh"
+            bash "$HEALTH_CHECK_SCRIPT"
 
       - name: Promote local release
         if: success() && steps.deployment_context.outputs.skip_deploy != 'true'
@@ -352,7 +353,7 @@ jobs:
           PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" PULL_POLICY="$PULL_POLICY" \
             UP_ARGS="-d --no-build" bash "$PRODUCTION_SCRIPTS_DIR/release.sh"
           COMPOSE_FILE="$COMPOSE_FILE" FULL_DEPLOY="true" MAX_ATTEMPTS="30" \
-            bash "$PROJECT_ROOT/.github/scripts/health-check.sh"
+            bash "$HEALTH_CHECK_SCRIPT"
 
       - name: Discard failed local release candidate
         if: failure() && steps.release_snapshot.outcome == 'success'
