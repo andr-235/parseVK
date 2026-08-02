@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.entities.provider_account import (
     ACCOUNT_STATUS_ACTIVE,
     ACCOUNT_STATUS_INVALID,
+    SYSTEM_VK_CAPABILITY,
     ProviderAccount,
 )
 from app.domain.repositories.provider_accounts import ProviderAccountRepository
@@ -54,6 +55,9 @@ class SqlAlchemyProviderAccountRepository(ProviderAccountRepository):
         credential_version: str,
         capabilities: list[str] | None = None,
     ) -> ProviderAccount:
+        effective_capabilities = (
+            [SYSTEM_VK_CAPABILITY] if capabilities is None else capabilities
+        )
         model = await self.session.scalar(
             select(VkProviderAccount)
             .where(VkProviderAccount.account_key == account_key)
@@ -65,14 +69,14 @@ class SqlAlchemyProviderAccountRepository(ProviderAccountRepository):
                 provider=provider,
                 status=ACCOUNT_STATUS_ACTIVE,
                 credential_version=credential_version,
-                capabilities=capabilities or [],
+                capabilities=effective_capabilities,
             )
             self.session.add(model)
         else:
             model.provider = provider
             model.status = ACCOUNT_STATUS_ACTIVE
             model.credential_version = credential_version
-            model.capabilities = capabilities or []
+            model.capabilities = effective_capabilities
             model.cooldown_until = None
             model.last_error_code = None
             model.last_error_kind = None
