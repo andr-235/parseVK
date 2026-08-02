@@ -3,10 +3,7 @@
 import logging
 from datetime import UTC, datetime
 
-from app.domain.entities.provider_account import (
-    ACCOUNT_STATUS_ACTIVE,
-    SYSTEM_VK_ACCOUNT_KEY,
-)
+from app.domain.entities.provider_account import SYSTEM_VK_ACCOUNT_KEY
 from app.domain.exceptions.provider_account import (
     ProviderAccountBlockedError,
     ProviderCredentialChangedError,
@@ -61,20 +58,22 @@ async def bind_system_vk_client(
     session,
     lane_id: str,
 ) -> BoundVkApiClient:
-    """Load and bind the active system account for an HTTP/background lane."""
+    """Load and bind the executable system account for an HTTP/background lane."""
     account = await provider_accounts_factory(session).get_by_key(
         SYSTEM_VK_ACCOUNT_KEY
     )
     now = datetime.now(UTC)
     if (
         account is None
-        or account.status != ACCOUNT_STATUS_ACTIVE
+        or not account.can_execute_vk
         or (
             account.cooldown_until is not None
             and account.cooldown_until > now
         )
     ):
-        raise ProviderAccountBlockedError("provider account is not active")
+        raise ProviderAccountBlockedError(
+            "provider account is inactive or lacks vk.all capability"
+        )
     return _bind(
         vk_client,
         account.account_key,
