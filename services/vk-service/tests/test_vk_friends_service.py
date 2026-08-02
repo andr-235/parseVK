@@ -87,10 +87,12 @@ async def test_fail_job(repo: SqlAlchemyVkFriendsRepository):
 
 
 @pytest.mark.anyio
-async def test_run_export_job_success(service: VkFriendsExportService, repo: SqlAlchemyVkFriendsRepository):
+async def test_run_export_job_success(
+    service: VkFriendsExportService,
+    repo: SqlAlchemyVkFriendsRepository,
+):
     job = await repo.create_job({"user_id": 333}, vk_user_id=333)
 
-    # Mock VK friends_get to return paginated response
     mock_vk_response = {
         "count": 3,
         "items": [
@@ -104,20 +106,21 @@ async def test_run_export_job_success(service: VkFriendsExportService, repo: Sql
     mock_client.friends_get.return_value = mock_vk_response
 
     service.vk_client = mock_client
-    with patch("app.services.vk_friends.exporter.write_xlsx_file", return_value="/tmp/test.xlsx") as mock_write:
+    with patch(
+        "app.services.vk_friends.exporter.write_xlsx_file",
+        return_value="/tmp/test.xlsx",
+    ) as mock_write:
         await service.run_export_job(job.id, {"user_id": 333})
 
         mock_client.friends_get.assert_called_once()
         mock_write.assert_called_once()
 
-        # Check job final status in DB
         finished = await repo.get_job_by_id(job.id)
         assert finished.status == JobStatus.DONE.value
         assert finished.fetched_count == 3
         assert finished.total_count == 3
         assert finished.xlsx_path == "/tmp/test.xlsx"
 
-        # Check logs are populated
         logs = await repo.get_job_logs(job.id)
         messages = [log.message for log in logs]
         assert "Export completed" in messages
@@ -125,15 +128,16 @@ async def test_run_export_job_success(service: VkFriendsExportService, repo: Sql
 
 @pytest.mark.anyio
 async def test_api_routes():
-    from unittest.mock import AsyncMock, patch
     app = create_app()
     headers = {"X-Internal-Service-Token": settings.internal_service_token}
 
-    with patch("app.services.vk_friends.exporter.VkFriendsExportService.run_export_job", new_callable=AsyncMock):
+    with patch(
+        "app.api.routers.vk_friends.run_export_job_background",
+        new_callable=AsyncMock,
+    ):
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as ac:
-            # Start export
             start_payload = {"params": {"user_id": 777}}
             res = await ac.post(
                 "/internal/vk/friends/export", json=start_payload, headers=headers
@@ -144,14 +148,14 @@ async def test_api_routes():
             assert data["status"] == JobStatus.RUNNING.value
             job_id = data["jobId"]
 
-            # Get job details
-            res_job = await ac.get(f"/internal/vk/friends/jobs/{job_id}", headers=headers)
+            res_job = await ac.get(
+                f"/internal/vk/friends/jobs/{job_id}", headers=headers
+            )
             assert res_job.status_code == 200
             job_data = res_job.json()
             assert job_data["job"]["id"] == job_id
             assert "logs" in job_data
 
-            # Get raw logs
             res_logs = await ac.get(
                 f"/internal/vk/friends/jobs/{job_id}/logs/raw", headers=headers
             )
