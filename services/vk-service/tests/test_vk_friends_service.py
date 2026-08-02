@@ -55,7 +55,10 @@ async def test_create_and_get_job(repo: SqlAlchemyVkFriendsRepository):
 
 
 @pytest.mark.anyio
-async def test_update_progress_and_complete(repo: SqlAlchemyVkFriendsRepository):
+async def test_update_progress_and_complete(
+    repo: SqlAlchemyVkFriendsRepository,
+    tmp_path: Path,
+):
     job = await repo.create_job({"user_id": 111}, vk_user_id=111)
 
     await repo.update_progress(
@@ -66,7 +69,7 @@ async def test_update_progress_and_complete(repo: SqlAlchemyVkFriendsRepository)
     assert fetched.total_count == 30
     assert fetched.warning == "some warning"
 
-    xlsx_path = "/tmp/fake.xlsx"
+    xlsx_path = str(tmp_path / "fake.xlsx")
     await repo.complete_job(
         job.id, fetched_count=30, total_count=30, warning=None, xlsx_path=xlsx_path
     )
@@ -90,6 +93,7 @@ async def test_fail_job(repo: SqlAlchemyVkFriendsRepository):
 async def test_run_export_job_success(
     service: VkFriendsExportService,
     repo: SqlAlchemyVkFriendsRepository,
+    tmp_path: Path,
 ):
     job = await repo.create_job({"user_id": 333}, vk_user_id=333)
 
@@ -104,11 +108,12 @@ async def test_run_export_job_success(
 
     mock_client = AsyncMock()
     mock_client.friends_get.return_value = mock_vk_response
+    xlsx_path = str(tmp_path / "test.xlsx")
 
     service.vk_client = mock_client
     with patch(
         "app.services.vk_friends.exporter.write_xlsx_file",
-        return_value="/tmp/test.xlsx",
+        return_value=xlsx_path,
     ) as mock_write:
         await service.run_export_job(job.id, {"user_id": 333})
 
@@ -119,7 +124,7 @@ async def test_run_export_job_success(
         assert finished.status == JobStatus.DONE.value
         assert finished.fetched_count == 3
         assert finished.total_count == 3
-        assert finished.xlsx_path == "/tmp/test.xlsx"
+        assert finished.xlsx_path == xlsx_path
 
         logs = await repo.get_job_logs(job.id)
         messages = [log.message for log in logs]
