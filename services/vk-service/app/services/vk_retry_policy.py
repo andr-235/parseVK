@@ -1,9 +1,9 @@
 """VK retry policy: classification, budgets, delays and cooldowns."""
 
-import random
 from collections.abc import Callable
 from datetime import timedelta
-from enum import Enum
+from enum import StrEnum
+from random import SystemRandom
 
 import httpx
 
@@ -24,7 +24,7 @@ RateCategories = frozenset({CODE_SHORT_OVERSHOOT, CODE_FLOOD, CODE_HARD_LIMIT})
 JitterFn = Callable[[float, float], float]
 
 
-class RetryCategory(str, Enum):
+class RetryCategory(StrEnum):
     SHORT_OVERSHOOT = "short_overshoot"
     FLOOD = "flood"
     HARD_LIMIT = "hard_limit"
@@ -35,7 +35,7 @@ class RetryCategory(str, Enum):
 class VkRetryPolicy:
     def __init__(self, settings: Settings):
         self._settings = settings
-        self._random = random.Random()
+        self._random = SystemRandom()
 
     def classify(self, error: BaseException) -> RetryCategory:
         if isinstance(error, VkApiRateLimitError):
