@@ -5,7 +5,10 @@ from datetime import UTC, datetime
 from sqlalchemy import and_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.entities.provider_account import ACCOUNT_STATUS_ACTIVE
+from app.domain.entities.provider_account import (
+    ACCOUNT_STATUS_ACTIVE,
+    SYSTEM_VK_CAPABILITY,
+)
 from app.domain.entities.tasks import VkTaskRun as VkTaskRunEntity
 from app.domain.repositories.task_queue import TaskQueueRepository
 from app.infrastructure.db.models.outbox import OutboxEvent
@@ -49,7 +52,7 @@ class SqlAlchemyTaskQueueRepository(TaskQueueRepository):
             )
             .with_for_update()
         )
-        if account is None:
+        if account is None or SYSTEM_VK_CAPABILITY not in (account.capabilities or []):
             return None
 
         model = await self.session.scalar(
