@@ -77,9 +77,11 @@ class FakeVkClient:
     def __init__(self):
         self.bound_contexts = []
 
-    def bind(self, context):
+    def bind_snapshot(self, context):
         self.bound_contexts.append(context)
         return object()
+
+    bind = bind_snapshot
 
 
 class FakeProviderAccounts:
