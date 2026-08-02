@@ -21,7 +21,7 @@ from app.services.vk_scheduler_models import AccountState, LaneRequest, RetryExh
 
 logger = logging.getLogger(__name__)
 
-MetricsHook = Callable[[str, str, float, float], None]
+MetricsHook = Callable[[str, str, str, float, float], None]  # account_id, method, outcome, wait, duration
 RetryHook = Callable[[str, int], None]
 Outcome = str
 
@@ -148,10 +148,11 @@ class FairScheduler:
     ) -> None:
         wait_seconds = started - request.enqueued_at
         duration = self._time() - started
+        method = getattr(request.call, "method", "") or "vk"
         if isinstance(result, BaseException):
             outcome = self._outcome(result)
             if self.metrics_hook:
-                self.metrics_hook(account_id, outcome, wait_seconds, duration)
+                self.metrics_hook(account_id, method, outcome, wait_seconds, duration)
             if self._should_retry(request, result):
                 await self._requeue(account_id, state, request, result)
                 return
@@ -169,7 +170,7 @@ class FairScheduler:
                 )
             return
         if self.metrics_hook:
-            self.metrics_hook(account_id, OUTCOME_SUCCESS, wait_seconds, duration)
+            self.metrics_hook(account_id, method, OUTCOME_SUCCESS, wait_seconds, duration)
         request.future.set_result(result)
 
     def _should_retry(self, request: LaneRequest, error: BaseException) -> bool:

@@ -2,9 +2,13 @@
 
 import logging
 
-from app.domain.entities.provider_account import SYSTEM_VK_ACCOUNT_KEY
+from app.domain.entities.provider_account import (
+    ACCOUNT_STATUS_INVALID,
+    SYSTEM_VK_ACCOUNT_KEY,
+)
 from app.domain.exceptions.provider_account import ProviderAccountBlockedError
 from app.domain.exceptions.vk_api import VkApiAuthError
+from app.infrastructure.metrics.vk_metrics import set_account_status
 
 logger = logging.getLogger("vk-service.task-worker")
 
@@ -40,5 +44,6 @@ async def mark_account_invalid(session_factory, provider_accounts_factory, accou
         became_invalid,
         error.code,
     )
+    set_account_status(SYSTEM_VK_ACCOUNT_KEY, ACCOUNT_STATUS_INVALID)
     if account_gate is not None:
         account_gate.invalidate()

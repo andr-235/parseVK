@@ -177,8 +177,8 @@ async def test_queue_depth_and_metrics_hook():
     clock = FakeClock()
     scheduler = _scheduler(_policy(), clock)
     metrics = []
-    scheduler.metrics_hook = lambda account, outcome, wait, dur: metrics.append(
-        (account, outcome, wait)
+    scheduler.metrics_hook = lambda account, method, outcome, wait, dur: metrics.append(
+        (account, method, outcome, wait)
     )
 
     gate = asyncio.Event()
@@ -199,4 +199,7 @@ async def test_queue_depth_and_metrics_hook():
     gate.set()
     assert await first == "slow-ok"
     assert await second == "quick-ok"
-    assert metrics == [("system-vk", "success", 0.0), ("system-vk", "success", 0.0)]
+    assert metrics == [
+        ("system-vk", "vk", "success", 0.0),
+        ("system-vk", "vk", "success", 0.0),
+    ]

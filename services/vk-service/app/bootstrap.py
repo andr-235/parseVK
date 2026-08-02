@@ -12,6 +12,12 @@ from app.infrastructure.db.repositories.outbox import SqlAlchemyOutboxRepository
 from app.infrastructure.db.repositories.provider_accounts import SqlAlchemyProviderAccountRepository
 from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsRepository
 from app.infrastructure.db.repositories.vk_friends import SqlAlchemyVkFriendsRepository
+from app.infrastructure.metrics.vk_metrics import (
+    observe_rate_limit_retry,
+    observe_request,
+    observe_scheduler_wait,
+    set_scheduler_queue_depth,
+)
 from app.infrastructure.ok_client.client import OkApiClient
 from app.infrastructure.secrets import build_secret_provider
 from app.infrastructure.tasks_client.client import TasksClient
@@ -33,6 +39,16 @@ from app.services.vk_scheduler import FairScheduler
 _secret_provider = build_secret_provider(settings)
 _vk_transport = VkTransport()
 _vk_scheduler = FairScheduler(VkRetryPolicy(settings))
+
+
+def _on_scheduler_result(account_id: str, method: str, outcome: str, wait_seconds: float, duration: float) -> None:
+    observe_request(account_id, method, outcome, duration)
+    observe_scheduler_wait(account_id, wait_seconds)
+    set_scheduler_queue_depth(account_id, _vk_scheduler.queue_depth(account_id))
+
+
+_vk_scheduler.metrics_hook = _on_scheduler_result
+_vk_scheduler.retry_hook = lambda account_id, code: observe_rate_limit_retry(account_id, code)
 _vk_client = VkApiClient(
     secret_provider=_secret_provider,
     scheduler=_vk_scheduler,

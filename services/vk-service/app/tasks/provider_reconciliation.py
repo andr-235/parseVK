@@ -13,6 +13,12 @@ from app.domain.entities.provider_account import (
 )
 from app.domain.exceptions.vk_api import VkApiAuthError, VkApiInfrastructureError
 from app.domain.ports.secret_provider import SecretProviderError
+from app.infrastructure.metrics.vk_metrics import (
+    cooldown_seconds_until,
+    set_account_cooldown,
+    set_account_status,
+    set_provider_account_info,
+)
 from app.infrastructure.vk_client.base import ProviderRequestContext
 
 logger = logging.getLogger(__name__)
@@ -49,30 +55,29 @@ async def _validate_once(vk_client, credential) -> VkApiAuthError | VkApiInfrast
     return None
 
 
+def _publish_account_metrics(status: str, credential_version: str, cooldown_until: datetime | None) -> None:
+    set_account_status(SYSTEM_VK_ACCOUNT_KEY, status)
+    set_account_cooldown(SYSTEM_VK_ACCOUNT_KEY, cooldown_seconds_until(cooldown_until))
+    if credential_version:
+        set_provider_account_info(SYSTEM_VK_ACCOUNT_KEY, credential_version)
+
+
 async def _check_existing(existing, credential, current: datetime) -> ReconciliationResult | None:
     if existing.cooldown_until is not None and existing.cooldown_until > current:
-        logger.info(
-            "startup reconciliation: account=%s stays cooling_down until %s (display=%s)",
-            SYSTEM_VK_ACCOUNT_KEY,
-            existing.cooldown_until,
-            credential.display_version,
-        )
+        logger.info("startup reconciliation: account=%s stays cooling_down until %s (display=%s)",
+                    SYSTEM_VK_ACCOUNT_KEY, existing.cooldown_until, credential.display_version)
         return _result(ACCOUNT_STATUS_COOLING_DOWN, existing.credential_version,
                        credential.display_version, "cooldown active")
     if existing.status == ACCOUNT_STATUS_DISABLED:
-        logger.info(
-            "startup reconciliation: account=%s is disabled, stays disabled (display=%s)",
-            SYSTEM_VK_ACCOUNT_KEY, credential.display_version,
-        )
+        logger.info("startup reconciliation: account=%s is disabled, stays disabled (display=%s)",
+                    SYSTEM_VK_ACCOUNT_KEY, credential.display_version)
         return _result(ACCOUNT_STATUS_DISABLED, existing.credential_version,
                        credential.display_version, "disabled")
     if existing.credential_version == credential.version_digest:
         if existing.status == ACCOUNT_STATUS_INVALID:
-            logger.warning(
-                "startup reconciliation: account=%s already invalid (display=%s), "
-                "stays invalid; operator action required",
-                SYSTEM_VK_ACCOUNT_KEY, credential.display_version,
-            )
+            logger.warning("startup reconciliation: account=%s already invalid (display=%s), "
+                           "stays invalid; operator action required",
+                           SYSTEM_VK_ACCOUNT_KEY, credential.display_version)
             return _result(ACCOUNT_STATUS_INVALID, existing.credential_version,
                            credential.display_version, "already invalid")
         logger.debug("startup reconciliation: account=%s unchanged and active, validation skipped", SYSTEM_VK_ACCOUNT_KEY)
@@ -107,6 +112,7 @@ async def reconcile_provider_account(
     if existing is not None:
         outcome = await _check_existing(existing, credential, datetime.now(UTC) if now is None else now)
         if outcome is not None:
+            _publish_account_metrics(existing.status, existing.credential_version, existing.cooldown_until)
             return outcome
 
     account = await provider_accounts.upsert_system(
@@ -123,27 +129,19 @@ async def reconcile_provider_account(
             error_code=failure.code,
             error_kind="auth",
         )
-        logger.warning(
-            "startup reconciliation: account=%s invalidated (became_invalid=%s, display=%s, reason=%s)",
-            SYSTEM_VK_ACCOUNT_KEY, became_invalid, credential.display_version, failure,
-        )
-        return _result(ACCOUNT_STATUS_INVALID, credential.version_digest,
-                       credential.display_version, "auth error")
+        logger.warning("startup reconciliation: account=%s invalidated (became_invalid=%s, display=%s, reason=%s)",
+                       SYSTEM_VK_ACCOUNT_KEY, became_invalid, credential.display_version, failure)
+        _publish_account_metrics(ACCOUNT_STATUS_INVALID, credential.version_digest, None)
+        return _result(ACCOUNT_STATUS_INVALID, credential.version_digest, credential.display_version, "auth error")
     if failure is not None:
-        logger.warning(
-            "startup reconciliation: validation could not complete for account=%s (display=%s): %s",
-            SYSTEM_VK_ACCOUNT_KEY, credential.display_version, failure,
-        )
-        return _result(ACCOUNT_STATUS_ACTIVE, credential.version_digest,
-                       credential.display_version, "validation not completed")
+        logger.warning("startup reconciliation: validation could not complete for account=%s (display=%s): %s",
+                       SYSTEM_VK_ACCOUNT_KEY, credential.display_version, failure)
+        _publish_account_metrics(ACCOUNT_STATUS_ACTIVE, credential.version_digest, None)
+        return _result(ACCOUNT_STATUS_ACTIVE, credential.version_digest, credential.display_version, "validation not completed")
 
-    await provider_accounts.mark_active(
-        account.id, credential.version_digest, SYSTEM_VK_CAPABILITIES
-    )
+    await provider_accounts.mark_active(account.id, credential.version_digest, SYSTEM_VK_CAPABILITIES)
     await provider_accounts.touch_validated(account.id)
-    logger.info(
-        "startup reconciliation: account=%s validated and active (display=%s)",
-        SYSTEM_VK_ACCOUNT_KEY, credential.display_version,
-    )
-    return _result(ACCOUNT_STATUS_ACTIVE, credential.version_digest,
-                   credential.display_version, "validated")
+    logger.info("startup reconciliation: account=%s validated and active (display=%s)",
+                SYSTEM_VK_ACCOUNT_KEY, credential.display_version)
+    _publish_account_metrics(ACCOUNT_STATUS_ACTIVE, credential.version_digest, None)
+    return _result(ACCOUNT_STATUS_ACTIVE, credential.version_digest, credential.display_version, "validated")

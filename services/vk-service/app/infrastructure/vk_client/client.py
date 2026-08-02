@@ -142,6 +142,7 @@ class BoundVkApiClient(_VkApiCallSurface):
             async def transport_call():
                 return await self._transport.call(self._credential, method, **params)
 
+            transport_call.method = method
             return await self._scheduler.execute(
                 self._context.account_id, self._context.lane_id, transport_call
             )
