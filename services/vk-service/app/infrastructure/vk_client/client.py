@@ -72,7 +72,13 @@ class VkApiClient(_VkApiCallSurface):
         self._friends = FriendsClient(self._call)
 
     def bind(self, context: ProviderRequestContext) -> "BoundVkApiClient":
-        credential = self._resolve_credential()
+        return self.bind_credential(self._resolve_credential(), context)
+
+    def bind_credential(
+        self,
+        credential: CredentialMaterial,
+        context: ProviderRequestContext,
+    ) -> "BoundVkApiClient":
         if context.credential_version != credential.version_digest:
             expected = context.credential_version[:12] or "(missing)"
             raise CredentialVersionMismatchError(
@@ -95,12 +101,13 @@ class VkApiClient(_VkApiCallSurface):
 
     def bind_current(self, account_id: str, lane_id: str) -> "BoundVkApiClient":
         credential = self._resolve_credential()
-        return self.bind(
+        return self.bind_credential(
+            credential,
             ProviderRequestContext(
                 account_id=account_id,
                 credential_version=credential.version_digest,
                 lane_id=lane_id,
-            )
+            ),
         )
 
     def _resolve_credential(self) -> CredentialMaterial:
