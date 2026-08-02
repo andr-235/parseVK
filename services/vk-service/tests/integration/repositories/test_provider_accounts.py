@@ -50,6 +50,7 @@ async def test_transition_to_invalid_with_matching_version(db_session):
     assert loaded.status == ACCOUNT_STATUS_INVALID
     assert loaded.last_error_code == 5
     assert loaded.last_error_kind == "auth"
+    assert loaded.revision == 1
 
 
 @pytest.mark.anyio
@@ -90,19 +91,29 @@ async def test_set_cooldown_and_get_by_key_roundtrip(db_session):
     assert loaded.cooldown_until is not None
     loaded_naive = loaded.cooldown_until.replace(tzinfo=UTC)
     assert (loaded_naive - until).total_seconds() < 2
+    assert loaded.revision == 1
 
 
 @pytest.mark.anyio
 async def test_mark_active_bumps_revision_and_resets_errors(db_session):
     repo = SqlAlchemyProviderAccountRepository(db_session)
     account = await _seed(repo)
-    await repo.transition_to_invalid(account.id, VERSION_V1, error_code=5, error_kind="auth")
+    await repo.transition_to_invalid(
+        account.id,
+        VERSION_V1,
+        error_code=5,
+        error_kind="auth",
+    )
 
-    updated = await repo.mark_active(account.id, VERSION_V1, ["groups", "posts"])
+    updated = await repo.mark_active(
+        account.id,
+        VERSION_V1,
+        ["groups", "posts"],
+    )
 
     assert updated is not None
     assert updated.status == ACCOUNT_STATUS_ACTIVE
-    assert updated.revision == 1
+    assert updated.revision == 2
     assert updated.capabilities == ["groups", "posts"]
     assert updated.last_error_code is None
     assert updated.last_error_kind is None
@@ -123,6 +134,7 @@ async def test_upsert_system_is_idempotent(db_session):
     assert first.id == second.id
     assert second.credential_version == VERSION_V2
     assert second.capabilities == ["posts"]
+    assert second.revision == 1
 
     count = await db_session.scalar(
         select(func.count()).select_from(VkProviderAccount)
