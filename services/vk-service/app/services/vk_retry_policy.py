@@ -1,23 +1,16 @@
-"""VK retry policy: error classification, budgets, delays and cooldowns.
-
-Pure computation — no sleeps, no I/O — so it stays deterministic and testable.
-"""
+"""VK retry policy: classification, budgets, delays and cooldowns."""
 
 import random
+from collections.abc import Callable
 from datetime import timedelta
 from enum import Enum
-from typing import Callable
 
 import httpx
 
 from app.core.config import Settings
 from app.domain.exceptions.vk_api import (
-    VK_API_AUTH_CODES,
-    VK_API_CAPTCHA_CODE,
-    VK_API_INFRA_CODE,
     VkApiAuthError,
     VkApiCaptchaError,
-    VkApiDomainError,
     VkApiInfrastructureError,
     VkApiRateLimitError,
 )
@@ -77,6 +70,9 @@ class VkRetryPolicy:
             fn = jitter or self._random.uniform
             return delay * fn(0.5, 1.5)
         return delay
+
+    def target_interval_seconds(self) -> float:
+        return 1.0 / self._settings.target_requests_per_second
 
     def max_elapsed_seconds(self) -> float:
         return self._settings.retry_max_elapsed_seconds
