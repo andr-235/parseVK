@@ -26,6 +26,8 @@ class VkTaskRun:
     heartbeat_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    provider_account_key: str | None = None
+    credential_version: str | None = None
     execution_sequence: int = 0
 
 
