@@ -6,10 +6,7 @@ from app.api.router_registry import register_routers
 from app.bootstrap import get_provider_account_repository, get_secret_provider
 from app.core.config import mask_token, settings
 from app.core.redaction import redact_secrets
-from app.domain.entities.provider_account import (
-    ACCOUNT_STATUS_ACTIVE,
-    SYSTEM_VK_ACCOUNT_KEY,
-)
+from app.domain.entities.provider_account import SYSTEM_VK_ACCOUNT_KEY
 from app.infrastructure.db.session import SessionLocal
 from app.tasks.lifespan import (
     get_consumer_healthy,
@@ -41,6 +38,7 @@ def create_app() -> FastAPI:
         if credential is not None and credential.raw_secret:
             vk_display = credential.display_version
 
+        account = None
         vk_account_status = "unknown"
         try:
             async with SessionLocal() as session:
@@ -51,10 +49,10 @@ def create_app() -> FastAPI:
         except Exception:
             pass
 
-        provider_active = vk_account_status == ACCOUNT_STATUS_ACTIVE
+        provider_ready = account is not None and account.can_execute_vk
         if not settings.task_worker_enabled:
             task_worker_status = "disabled"
-        elif not provider_active:
+        elif not provider_ready:
             task_worker_status = "blocked"
         else:
             task_worker_status = (
@@ -71,7 +69,7 @@ def create_app() -> FastAPI:
             else "no"
         )
         return {
-            "status": "UP" if provider_active else "DEGRADED",
+            "status": "UP" if provider_ready else "DEGRADED",
             "vkTokenConfigured": "yes" if vk_display else "no",
             "vkTokenMasked": vk_display,
             "vkAccountStatus": vk_account_status,
