@@ -5,7 +5,6 @@ from datetime import timedelta
 from pathlib import Path
 
 import httpx
-import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _service_path import use_service_path
@@ -50,12 +49,23 @@ def test_classify_rate_codes():
 
 def test_classify_transient_and_no_retry():
     policy = _policy()
-    assert policy.classify(VkApiInfrastructureError(10, "boom", "users.get")) is RetryCategory.TRANSIENT
+    assert (
+        policy.classify(VkApiInfrastructureError(10, "boom", "users.get"))
+        is RetryCategory.TRANSIENT
+    )
     assert policy.classify(httpx.ConnectError("refused")) is RetryCategory.TRANSIENT
 
     for code in VK_API_AUTH_CODES:
-        assert policy.classify(VkApiAuthError(code, "auth", "users.get")) is RetryCategory.NO_RETRY
-    assert policy.classify(VkApiCaptchaError(VK_API_CAPTCHA_CODE, "captcha", "users.get")) is RetryCategory.NO_RETRY
+        assert (
+            policy.classify(VkApiAuthError(code, "auth", "users.get"))
+            is RetryCategory.NO_RETRY
+        )
+    assert (
+        policy.classify(
+            VkApiCaptchaError(VK_API_CAPTCHA_CODE, "captcha", "users.get")
+        )
+        is RetryCategory.NO_RETRY
+    )
     assert policy.classify(RuntimeError("unknown")) is RetryCategory.NO_RETRY
 
 
@@ -94,7 +104,10 @@ def test_max_elapsed_seconds():
 
 
 def test_account_cooldowns():
-    policy = _policy(account_cooldown_seconds=300, hard_limit_cooldown_seconds=3600)
+    policy = _policy(
+        account_cooldown_seconds=300,
+        hard_limit_cooldown_seconds=3600,
+    )
     assert policy.account_cooldown(RetryCategory.FLOOD) == timedelta(seconds=300)
     assert policy.account_cooldown(RetryCategory.HARD_LIMIT) == timedelta(seconds=3600)
     assert policy.account_cooldown(RetryCategory.SHORT_OVERSHOOT) is None
