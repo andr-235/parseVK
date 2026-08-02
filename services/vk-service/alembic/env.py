@@ -1,6 +1,10 @@
 from logging.config import fileConfig
 
 from alembic import context
+from sqlalchemy import pool
+from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import async_engine_from_config
+
 from app.core.config import settings
 from app.infrastructure.db.base import Base
 from app.infrastructure.db.models.ok_friends import (  # noqa: F401
@@ -9,19 +13,22 @@ from app.infrastructure.db.models.ok_friends import (  # noqa: F401
     OkFriendsRecord,
 )
 from app.infrastructure.db.models.outbox import OutboxEvent  # noqa: F401
-from app.infrastructure.db.models.provider_accounts import VkProviderAccount  # noqa: F401
+from app.infrastructure.db.models.provider_accounts import (  # noqa: F401
+    VkProviderAccount,
+)
 from app.infrastructure.db.models.tasks import ProcessedEvent, VkTaskRun  # noqa: F401
 from app.infrastructure.db.models.vk_friends import (  # noqa: F401
     VkFriendsExportJob,
     VkFriendsJobLog,
     VkFriendsRecord,
 )
-
-# Import all domain models to ensure they are registered with DeclarativeBase metadata for Alembic
-from app.infrastructure.db.models.vk_ingestion import VkAuthor, VkComment, VkGroup, VkPost, VkIngestionCheckpoint  # noqa: F401
-from sqlalchemy import pool
-from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
+from app.infrastructure.db.models.vk_ingestion import (  # noqa: F401
+    VkAuthor,
+    VkComment,
+    VkGroup,
+    VkIngestionCheckpoint,
+    VkPost,
+)
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)
