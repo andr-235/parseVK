@@ -45,6 +45,7 @@ class VkTransport:
             else settings.vk_api_timeout_seconds
         )
         self._apis: dict[str, Any] = {}
+        self._api: Any = None
         self._api_lock = asyncio.Lock()
 
     def _default_vk_session_factory(self, **kwargs) -> Any:
@@ -64,6 +65,10 @@ class VkTransport:
         return session.get_api()
 
     async def _api_for(self, credential: CredentialMaterial) -> Any:
+        # Compatibility for tests and explicit low-level injection. Runtime
+        # construction never sets this field and therefore uses versioned caches.
+        if self._api is not None:
+            return self._api
         version = credential.version_digest
         api = self._apis.get(version)
         if api is not None:
