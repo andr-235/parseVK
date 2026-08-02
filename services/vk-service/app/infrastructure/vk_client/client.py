@@ -38,8 +38,8 @@ class VkApiClient(_VkApiCallSurface):
     """Shared facade owning the scheduler and transport.
 
     ``bind`` remains compatible with legacy callers that supply opaque version
-    labels. Runtime and HTTP execution must use ``bind_snapshot`` so the loaded
-    secret is verified against the version captured in persistent state.
+    labels. Digest-shaped metadata is still checked. Runtime and HTTP execution
+    use ``bind_snapshot`` and always require an exact persisted version match.
     """
 
     def __init__(
@@ -72,8 +72,11 @@ class VkApiClient(_VkApiCallSurface):
         self._friends = FriendsClient(self._call)
 
     def bind(self, context: ProviderRequestContext) -> "BoundVkApiClient":
-        """Bind a legacy caller without interpreting its opaque version label."""
-        return self._build_bound(self._resolve_credential(), context)
+        """Bind legacy callers while validating real SHA-256 version labels."""
+        credential = self._resolve_credential()
+        if len(context.credential_version) == 64:
+            self._ensure_version_matches(credential, context)
+        return self._build_bound(credential, context)
 
     def bind_snapshot(
         self, context: ProviderRequestContext
