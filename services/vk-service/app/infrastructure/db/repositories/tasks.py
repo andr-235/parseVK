@@ -37,6 +37,8 @@ def _to_task_run_entity(model: VkTaskRun) -> VkTaskRunEntity:
         heartbeat_at=model.heartbeat_at,
         created_at=model.created_at,
         updated_at=model.updated_at,
+        provider_account_key=model.provider_account_key,
+        credential_version=model.credential_version,
         execution_sequence=model.execution_sequence,
     )
 
