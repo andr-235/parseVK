@@ -1,4 +1,4 @@
-"""CLI logic for the validate-token script: candidate probing and account status."""
+"""CLI logic for candidate validation and provider account status."""
 
 import logging
 from datetime import UTC, datetime
@@ -9,6 +9,7 @@ from app.domain.entities.credentials import CredentialMaterial
 from app.domain.entities.provider_account import (
     ACCOUNT_STATUS_ACTIVE,
     SYSTEM_VK_ACCOUNT_KEY,
+    SYSTEM_VK_CAPABILITY,
 )
 from app.domain.exceptions.vk_api import VkApiAuthError
 from app.infrastructure.db.repositories.provider_accounts import (
@@ -26,7 +27,7 @@ EXIT_AUTH_FAILURE = 1
 EXIT_INFRA_CONFIG = 2
 
 VALIDATION_LANE = "cli:validate-token"
-CAPABILITIES = ["vk.all"]
+CAPABILITIES = [SYSTEM_VK_CAPABILITY]
 
 __all__ = ["exit_code_for", "read_account_status", "validate_candidate"]
 
@@ -126,6 +127,9 @@ async def read_account_status(session, accounts_factory=None) -> dict:
             ok=False,
             errors=["provider account is not configured"],
         )
+    errors = [] if account.can_execute_vk else [
+        "provider account is inactive or lacks vk.all capability"
+    ]
     return _payload(
         display_version=account.credential_version[:12],
         status=account.status,
@@ -135,6 +139,6 @@ async def read_account_status(session, accounts_factory=None) -> dict:
             if account.last_validated_at is not None
             else None
         ),
-        ok=account.is_active,
-        errors=[],
+        ok=account.can_execute_vk,
+        errors=errors,
     )
