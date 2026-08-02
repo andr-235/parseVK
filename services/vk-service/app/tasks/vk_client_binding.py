@@ -8,7 +8,11 @@ from app.domain.entities.provider_account import (
     SYSTEM_VK_ACCOUNT_KEY,
 )
 from app.domain.exceptions.provider_account import ProviderAccountBlockedError
-from app.infrastructure.vk_client.client import BoundVkApiClient, ProviderRequestContext
+from app.infrastructure.vk_client.client import (
+    BoundVkApiClient,
+    CredentialVersionMismatchError,
+    ProviderRequestContext,
+)
 
 logger = logging.getLogger("vk-service.task-worker")
 
@@ -20,13 +24,18 @@ def _bind(vk_client, account_key: str, credential_version: str, lane_id: str):
         lane_id,
         credential_version[:12],
     )
-    return vk_client.bind_snapshot(
-        ProviderRequestContext(
-            account_id=account_key,
-            credential_version=credential_version,
-            lane_id=lane_id,
+    try:
+        return vk_client.bind_snapshot(
+            ProviderRequestContext(
+                account_id=account_key,
+                credential_version=credential_version,
+                lane_id=lane_id,
+            )
         )
-    )
+    except CredentialVersionMismatchError as error:
+        raise ProviderAccountBlockedError(
+            "provider credential changed after execution claim"
+        ) from error
 
 
 def bind_task_vk_client(vk_client, task_run) -> BoundVkApiClient:
