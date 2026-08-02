@@ -4,6 +4,15 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
+from scripts.validate_token import (
+    CAPABILITIES,
+    EXIT_AUTH_FAILURE,
+    EXIT_INFRA_CONFIG,
+    EXIT_OK,
+    exit_code_for,
+    read_account_status,
+    validate_candidate,
+)
 
 from app.core.redaction import register_secret
 from app.domain.entities.credentials import CredentialMaterial
@@ -14,15 +23,6 @@ from app.domain.entities.provider_account import (
     SYSTEM_VK_CAPABILITY,
 )
 from app.domain.exceptions.vk_api import VkApiAuthError, VkApiInfrastructureError
-from scripts.validate_token import (
-    CAPABILITIES,
-    EXIT_AUTH_FAILURE,
-    EXIT_INFRA_CONFIG,
-    EXIT_OK,
-    exit_code_for,
-    read_account_status,
-    validate_candidate,
-)
 
 CREDENTIAL = CredentialMaterial.from_secret("candidate-secret-123")
 
