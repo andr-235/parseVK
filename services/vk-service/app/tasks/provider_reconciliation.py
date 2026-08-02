@@ -21,6 +21,7 @@ from app.infrastructure.metrics.vk_metrics import (
 )
 from app.infrastructure.vk_client.base import ProviderRequestContext
 from app.infrastructure.vk_client.transport import VkApiConfigurationError
+from app.services.vk_scheduler_models import RetryExhaustedError
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,12 @@ async def _validate_once(vk_client, credential):
     try:
         bound = vk_client.bind_credential(credential, context)
         await bound.test_token()
-    except (VkApiAuthError, VkApiInfrastructureError, VkApiConfigurationError) as error:
+    except (
+        VkApiAuthError,
+        VkApiInfrastructureError,
+        VkApiConfigurationError,
+        RetryExhaustedError,
+    ) as error:
         return error
     return None
 
