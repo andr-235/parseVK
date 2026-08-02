@@ -14,19 +14,26 @@ from app.domain.entities.provider_account import (
     ACCOUNT_STATUS_ACTIVE,
     ACCOUNT_STATUS_COOLING_DOWN,
     ACCOUNT_STATUS_INVALID,
-    ProviderAccount,
+    SYSTEM_VK_CAPABILITY,
     VALID_ACCOUNT_STATUSES,
+    ProviderAccount,
 )
 
 
-def _account(status: str = ACCOUNT_STATUS_ACTIVE, cooldown_until: datetime | None = None):
+def _account(
+    status: str = ACCOUNT_STATUS_ACTIVE,
+    cooldown_until: datetime | None = None,
+    capabilities=None,
+):
     return ProviderAccount(
         id=uuid4(),
         account_key="system-vk",
         provider="vk",
         status=status,
         credential_version="a" * 64,
-        capabilities=["groups", "posts"],
+        capabilities=(
+            [SYSTEM_VK_CAPABILITY] if capabilities is None else capabilities
+        ),
         cooldown_until=cooldown_until,
         last_error_code=None,
         last_error_kind=None,
@@ -53,10 +60,17 @@ def test_is_active_only_for_active_status():
     assert _account(status="disabled").is_active is False
 
 
+def test_can_execute_requires_active_status_and_vk_all():
+    assert _account().can_execute_vk is True
+    assert _account(capabilities=[]).can_execute_vk is False
+    assert _account(capabilities=["groups", "posts"]).can_execute_vk is False
+    assert _account(status=ACCOUNT_STATUS_INVALID).can_execute_vk is False
+
+
 def test_entity_is_frozen():
-    acc = _account()
+    account = _account()
     try:
-        acc.status = ACCOUNT_STATUS_INVALID
+        account.status = ACCOUNT_STATUS_INVALID
         assert False, "ProviderAccount must be immutable"
     except Exception:
         pass
@@ -64,5 +78,8 @@ def test_entity_is_frozen():
 
 def test_cooldown_until_roundtrip():
     until = datetime.now(UTC) + timedelta(minutes=5)
-    acc = _account(status=ACCOUNT_STATUS_COOLING_DOWN, cooldown_until=until)
-    assert acc.cooldown_until == until
+    account = _account(
+        status=ACCOUNT_STATUS_COOLING_DOWN,
+        cooldown_until=until,
+    )
+    assert account.cooldown_until == until
