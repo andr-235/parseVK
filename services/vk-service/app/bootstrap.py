@@ -2,14 +2,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.redaction import redact_secrets
+from app.domain.ports.secret_provider import SecretProvider
 from app.domain.ports.vk_api import VkApiPort
 from app.domain.repositories.provider_accounts import ProviderAccountRepository
-from app.domain.ports.secret_provider import SecretProvider
-from app.infrastructure.db.repositories.checkpoint import SqlAlchemyIngestionCheckpointStore
+from app.infrastructure.db.repositories.checkpoint import (
+    SqlAlchemyIngestionCheckpointStore,
+)
 from app.infrastructure.db.repositories.ingestion import SqlAlchemyIngestionRepository
 from app.infrastructure.db.repositories.ok_friends import SqlAlchemyOkFriendsRepository
 from app.infrastructure.db.repositories.outbox import SqlAlchemyOutboxRepository
-from app.infrastructure.db.repositories.provider_accounts import SqlAlchemyProviderAccountRepository
+from app.infrastructure.db.repositories.provider_accounts import (
+    SqlAlchemyProviderAccountRepository,
+)
 from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsRepository
 from app.infrastructure.db.repositories.vk_friends import SqlAlchemyVkFriendsRepository
 from app.infrastructure.metrics.vk_metrics import (
@@ -34,21 +38,27 @@ from app.services.vk_groups_service import VkGroupsService
 from app.services.vk_retry_policy import VkRetryPolicy
 from app.services.vk_scheduler import FairScheduler
 
-# Shared client singletons. VkApiClient is an unbound facade; the task worker
-# binds it per execution via TaskExecutor (see task_executor.py).
 _secret_provider = build_secret_provider(settings)
 _vk_transport = VkTransport()
 _vk_scheduler = FairScheduler(VkRetryPolicy(settings))
 
 
-def _on_scheduler_result(account_id: str, method: str, outcome: str, wait_seconds: float, duration: float) -> None:
+def _on_scheduler_result(
+    account_id: str,
+    method: str,
+    outcome: str,
+    wait_seconds: float,
+    duration: float,
+) -> None:
     observe_request(account_id, method, outcome, duration)
     observe_scheduler_wait(account_id, wait_seconds)
     set_scheduler_queue_depth(account_id, _vk_scheduler.queue_depth(account_id))
 
 
 _vk_scheduler.metrics_hook = _on_scheduler_result
-_vk_scheduler.retry_hook = lambda account_id, code: observe_rate_limit_retry(account_id, code)
+_vk_scheduler.retry_hook = lambda account_id, code: observe_rate_limit_retry(
+    account_id, code
+)
 _vk_client = VkApiClient(
     secret_provider=_secret_provider,
     scheduler=_vk_scheduler,
@@ -64,7 +74,9 @@ def get_secret_provider() -> SecretProvider:
     return _secret_provider
 
 
-def get_provider_account_repository(session: AsyncSession) -> ProviderAccountRepository:
+def get_provider_account_repository(
+    session: AsyncSession,
+) -> ProviderAccountRepository:
     return SqlAlchemyProviderAccountRepository(session)
 
 
@@ -76,9 +88,13 @@ def get_tasks_client() -> TasksClient:
     return _tasks_client
 
 
-def get_vk_friends_service(session: AsyncSession) -> VkFriendsExportService:
+def get_vk_friends_service(
+    session: AsyncSession,
+    *,
+    adapter: VkApiPort | None = None,
+) -> VkFriendsExportService:
     repo = SqlAlchemyVkFriendsRepository(session)
-    return VkFriendsExportService(repo=repo, vk_client=_vk_client)
+    return VkFriendsExportService(repo=repo, vk_client=adapter or _vk_client)
 
 
 def get_ok_friends_service(session: AsyncSession) -> OkFriendsExportService:
@@ -87,7 +103,9 @@ def get_ok_friends_service(session: AsyncSession) -> OkFriendsExportService:
 
 
 def get_ingestion_service(
-    session: AsyncSession, *, adapter: VkApiPort | None = None
+    session: AsyncSession,
+    *,
+    adapter: VkApiPort | None = None,
 ) -> IngestionService:
     adapter = adapter or _vk_client
     repository = SqlAlchemyIngestionRepository(session)
