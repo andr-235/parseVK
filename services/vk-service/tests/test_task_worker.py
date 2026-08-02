@@ -2,8 +2,9 @@ import asyncio
 from types import SimpleNamespace
 
 import pytest
-from app.tasks.task_worker import TaskWorker
 from common.runtime import WorkerHealth
+
+from app.tasks.task_worker import TaskWorker
 
 
 class FakeLeaseStore:
