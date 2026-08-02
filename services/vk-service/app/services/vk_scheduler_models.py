@@ -32,6 +32,7 @@ class RetryExhaustedError(RuntimeError):
 class LaneRequest:
     call: RequestCallable
     lane_id: str
+    credential_version: str
     future: asyncio.Future
     not_before: float
     enqueued_at: float
@@ -47,6 +48,7 @@ class AccountState:
     rotation_pos: int = 0
     cooldown_until: float | None = None
     next_dispatch_at: float = 0.0
+    blocked_credentials: dict[str, BaseException] = field(default_factory=dict)
     slot: asyncio.Lock = field(default_factory=asyncio.Lock)
     wake: asyncio.Event = field(default_factory=asyncio.Event)
     dispatcher: asyncio.Task | None = None
