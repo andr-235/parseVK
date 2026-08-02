@@ -1,4 +1,4 @@
-"""Function-level tests for the validate-token CLI (scripts/validate_token.py)."""
+"""Function-level tests for the validate-token CLI."""
 
 from datetime import UTC, datetime
 from uuid import uuid4
@@ -11,6 +11,7 @@ from app.domain.entities.provider_account import (
     ACCOUNT_STATUS_ACTIVE,
     ACCOUNT_STATUS_INVALID,
     SYSTEM_VK_ACCOUNT_KEY,
+    SYSTEM_VK_CAPABILITY,
 )
 from app.domain.exceptions.vk_api import VkApiAuthError, VkApiInfrastructureError
 from scripts.validate_token import (
@@ -27,8 +28,6 @@ CREDENTIAL = CredentialMaterial.from_secret("candidate-secret-123")
 
 
 class FakeTransport:
-    """In-process transport stub that records the probe and raises on demand."""
-
     def __init__(self, *, error: Exception | None = None):
         self.error = error
         self.calls = []
@@ -41,8 +40,6 @@ class FakeTransport:
 
 
 class FakeScheduler:
-    """Scheduler stub that runs the call directly (no retry machinery)."""
-
     def __init__(self):
         self.executions = []
 
@@ -62,7 +59,11 @@ class FakeAccounts:
 @pytest.mark.anyio
 async def test_validate_candidate_ok_shape():
     transport = FakeTransport()
-    payload = await validate_candidate(CREDENTIAL, transport=transport, scheduler=FakeScheduler())
+    payload = await validate_candidate(
+        CREDENTIAL,
+        transport=transport,
+        scheduler=FakeScheduler(),
+    )
 
     assert payload["account_key"] == SYSTEM_VK_ACCOUNT_KEY
     assert payload["display_version"] == CREDENTIAL.display_version
@@ -72,8 +73,13 @@ async def test_validate_candidate_ok_shape():
     assert payload["ok"] is True
     assert payload["errors"] == []
     assert set(payload) == {
-        "account_key", "display_version", "status", "capabilities",
-        "validated_at", "ok", "errors",
+        "account_key",
+        "display_version",
+        "status",
+        "capabilities",
+        "validated_at",
+        "ok",
+        "errors",
     }
     assert transport.calls == [("users.get", {"user_ids": "1"})]
     assert exit_code_for(payload) == EXIT_OK
@@ -81,8 +87,14 @@ async def test_validate_candidate_ok_shape():
 
 @pytest.mark.anyio
 async def test_validate_candidate_auth_failure_maps_to_exit_1():
-    transport = FakeTransport(error=VkApiAuthError(5, "token expired", "users.get"))
-    payload = await validate_candidate(CREDENTIAL, transport=transport, scheduler=FakeScheduler())
+    transport = FakeTransport(
+        error=VkApiAuthError(5, "token expired", "users.get")
+    )
+    payload = await validate_candidate(
+        CREDENTIAL,
+        transport=transport,
+        scheduler=FakeScheduler(),
+    )
 
     assert payload["status"] == ACCOUNT_STATUS_INVALID
     assert payload["ok"] is False
@@ -92,8 +104,14 @@ async def test_validate_candidate_auth_failure_maps_to_exit_1():
 
 @pytest.mark.anyio
 async def test_validate_candidate_infra_error_maps_to_exit_2():
-    transport = FakeTransport(error=VkApiInfrastructureError(10, "server error", "users.get"))
-    payload = await validate_candidate(CREDENTIAL, transport=transport, scheduler=FakeScheduler())
+    transport = FakeTransport(
+        error=VkApiInfrastructureError(10, "server error", "users.get")
+    )
+    payload = await validate_candidate(
+        CREDENTIAL,
+        transport=transport,
+        scheduler=FakeScheduler(),
+    )
 
     assert payload["status"] == "unknown"
     assert payload["ok"] is False
@@ -104,19 +122,31 @@ async def test_validate_candidate_infra_error_maps_to_exit_2():
 @pytest.mark.anyio
 async def test_validate_candidate_works_while_account_invalid():
     transport = FakeTransport()
-    payload = await validate_candidate(CREDENTIAL, transport=transport, scheduler=FakeScheduler())
+    payload = await validate_candidate(
+        CREDENTIAL,
+        transport=transport,
+        scheduler=FakeScheduler(),
+    )
 
     assert payload["ok"] is True
-    assert transport.calls != []
+    assert transport.calls
 
 
 @pytest.mark.anyio
 async def test_secret_never_in_output():
     register_secret(CREDENTIAL.raw_secret)
     transport = FakeTransport(
-        error=VkApiAuthError(5, f"expired: {CREDENTIAL.raw_secret}", "users.get")
+        error=VkApiAuthError(
+            5,
+            f"expired: {CREDENTIAL.raw_secret}",
+            "users.get",
+        )
     )
-    payload = await validate_candidate(CREDENTIAL, transport=transport, scheduler=FakeScheduler())
+    payload = await validate_candidate(
+        CREDENTIAL,
+        transport=transport,
+        scheduler=FakeScheduler(),
+    )
 
     assert CREDENTIAL.raw_secret not in payload["errors"][0]
     assert CREDENTIAL.raw_secret not in str(payload)
@@ -125,7 +155,10 @@ async def test_secret_never_in_output():
 
 @pytest.mark.anyio
 async def test_account_status_unconfigured():
-    payload = await read_account_status(None, accounts_factory=lambda s: FakeAccounts(None))
+    payload = await read_account_status(
+        None,
+        accounts_factory=lambda _session: FakeAccounts(None),
+    )
 
     assert payload["status"] == "unconfigured"
     assert payload["ok"] is False
@@ -136,19 +169,25 @@ async def test_account_status_unconfigured():
 @pytest.mark.anyio
 async def test_account_status_invalid_account():
     account = FakeProviderAccount(status=ACCOUNT_STATUS_INVALID)
-    payload = await read_account_status(None, accounts_factory=lambda s: FakeAccounts(account))
+    payload = await read_account_status(
+        None,
+        accounts_factory=lambda _session: FakeAccounts(account),
+    )
 
     assert payload["status"] == ACCOUNT_STATUS_INVALID
     assert payload["display_version"] == account.credential_version[:12]
     assert payload["ok"] is False
-    assert payload["errors"] == []
+    assert payload["errors"]
     assert exit_code_for(payload) == EXIT_AUTH_FAILURE
 
 
 @pytest.mark.anyio
 async def test_account_status_active_account():
     account = FakeProviderAccount(status=ACCOUNT_STATUS_ACTIVE)
-    payload = await read_account_status(None, accounts_factory=lambda s: FakeAccounts(account))
+    payload = await read_account_status(
+        None,
+        accounts_factory=lambda _session: FakeAccounts(account),
+    )
 
     assert payload["status"] == ACCOUNT_STATUS_ACTIVE
     assert payload["ok"] is True
@@ -156,14 +195,36 @@ async def test_account_status_active_account():
     assert exit_code_for(payload) == EXIT_OK
 
 
-class FakeProviderAccount:
-    """Minimal ProviderAccount-shaped stub for status reading."""
+@pytest.mark.anyio
+async def test_account_status_missing_vk_all_capability():
+    account = FakeProviderAccount(
+        status=ACCOUNT_STATUS_ACTIVE,
+        capabilities=["groups", "posts"],
+    )
+    payload = await read_account_status(
+        None,
+        accounts_factory=lambda _session: FakeAccounts(account),
+    )
 
-    def __init__(self, *, status: str):
+    assert payload["ok"] is False
+    assert "vk.all" in payload["errors"][0]
+    assert exit_code_for(payload) == EXIT_INFRA_CONFIG
+
+
+class FakeProviderAccount:
+    def __init__(self, *, status: str, capabilities=None):
         self.account_key = SYSTEM_VK_ACCOUNT_KEY
         self.status = status
         self.credential_version = CREDENTIAL.version_digest
-        self.capabilities = list(CAPABILITIES)
+        self.capabilities = (
+            [SYSTEM_VK_CAPABILITY] if capabilities is None else capabilities
+        )
         self.last_validated_at = datetime.now(UTC)
-        self.is_active = status == ACCOUNT_STATUS_ACTIVE
         self.id = uuid4()
+
+    @property
+    def can_execute_vk(self):
+        return (
+            self.status == ACCOUNT_STATUS_ACTIVE
+            and SYSTEM_VK_CAPABILITY in self.capabilities
+        )
