@@ -7,6 +7,40 @@ source "$SCRIPT_DIR/common.sh"
 
 STORAGE_GUARD_SCRIPT="${STORAGE_GUARD_SCRIPT:-$SCRIPT_DIR/storage-guard.sh}"
 
+stage_deploy_tools() {
+  if [ -z "${RUNNER_TEMP:-}" ] || [ -z "${GITHUB_ENV:-}" ]; then
+    return 0
+  fi
+
+  local source_root stage_root
+  source_root="$(project_root)/.github/scripts"
+  stage_root="$RUNNER_TEMP/parsevk-deploy-tools-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}"
+
+  [ -d "$source_root" ] || {
+    log_error "Validated deploy scripts not found: $source_root"
+    return 1
+  }
+
+  rm -rf "$stage_root"
+  mkdir -p "$stage_root"
+  cp -a "$source_root/." "$stage_root/"
+
+  PRODUCTION_SCRIPTS_DIR="$stage_root/production"
+  SERVICE_CATALOG_CLI="$stage_root/service_catalog.py"
+  LOCAL_RELEASE_SCRIPT="$stage_root/production/local-release.sh"
+  STORAGE_GUARD_SCRIPT="$stage_root/production/storage-guard.sh"
+  export PRODUCTION_SCRIPTS_DIR SERVICE_CATALOG_CLI LOCAL_RELEASE_SCRIPT STORAGE_GUARD_SCRIPT
+
+  {
+    printf 'PRODUCTION_SCRIPTS_DIR=%s\n' "$PRODUCTION_SCRIPTS_DIR"
+    printf 'SERVICE_CATALOG_CLI=%s\n' "$SERVICE_CATALOG_CLI"
+    printf 'LOCAL_RELEASE_SCRIPT=%s\n' "$LOCAL_RELEASE_SCRIPT"
+    printf 'STORAGE_GUARD_SCRIPT=%s\n' "$STORAGE_GUARD_SCRIPT"
+  } >> "$GITHUB_ENV"
+
+  log_info "Deploy tools staged outside shared workspace: $stage_root"
+}
+
 require_env_file() {
   if [ ! -f "$(project_root)/.env" ]; then
     log_error "Production .env file not found at $(project_root)/.env"
@@ -92,6 +126,7 @@ main() {
   require_env_file
   require_project_file "$COMPOSE_FILE"
   validate_compose
+  stage_deploy_tools
   check_storage_integrity
   check_external_networks
   check_local_runtime_images
