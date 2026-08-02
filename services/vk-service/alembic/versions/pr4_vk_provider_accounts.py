@@ -1,4 +1,4 @@
-"""Add vk_provider_accounts table
+"""Add VK provider accounts and attempt credential metadata.
 
 Revision ID: pr4_vk_provider_accounts
 Revises: pr2c1_add_execution_sequence
@@ -34,7 +34,17 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.UniqueConstraint("account_key", name="uq_vk_provider_accounts_account_key"),
     )
+    op.add_column(
+        "vk_task_runs",
+        sa.Column("provider_account_key", sa.String(128), nullable=True),
+    )
+    op.add_column(
+        "vk_task_runs",
+        sa.Column("credential_version", sa.String(64), nullable=True),
+    )
 
 
 def downgrade() -> None:
+    op.drop_column("vk_task_runs", "credential_version")
+    op.drop_column("vk_task_runs", "provider_account_key")
     op.drop_table("vk_provider_accounts")
