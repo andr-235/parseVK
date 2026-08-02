@@ -318,6 +318,14 @@ services:
       VK_SERVICE_OUTBOX_PUBLISH_ENABLED: ${VK_SERVICE_OUTBOX_PUBLISH_ENABLED:-true}
       VK_SERVICE_DEFAULT_GROUP_IDS: '${VK_SERVICE_DEFAULT_GROUP_IDS:-[1]}'
       VK_SERVICE_VK_TOKEN: ${VK_SERVICE_VK_TOKEN:-${VK_TOKEN:-}}
+      # Preferred secret path: mount the token file and point VK_SERVICE_TOKEN_FILE at it.
+      # Example with a top-level secrets section:
+      #   secrets:
+      #     vk_token_file:
+      #       file: ./secrets/vk_token
+      # then add `secrets: [vk_token_file]` to this service and set
+      # VK_SERVICE_TOKEN_FILE: /run/secrets/vk_token
+      VK_SERVICE_TOKEN_FILE: ${VK_SERVICE_TOKEN_FILE:-}
       VK_SERVICE_OK_ACCESS_TOKEN: ${VK_SERVICE_OK_ACCESS_TOKEN:-}
       VK_SERVICE_OK_APPLICATION_KEY: ${VK_SERVICE_OK_APPLICATION_KEY:-}
       VK_SERVICE_OK_APPLICATION_SECRET_KEY: ${VK_SERVICE_OK_APPLICATION_SECRET_KEY:-}
