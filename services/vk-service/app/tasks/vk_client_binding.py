@@ -7,7 +7,10 @@ from app.domain.entities.provider_account import (
     ACCOUNT_STATUS_ACTIVE,
     SYSTEM_VK_ACCOUNT_KEY,
 )
-from app.domain.exceptions.provider_account import ProviderAccountBlockedError
+from app.domain.exceptions.provider_account import (
+    ProviderAccountBlockedError,
+    ProviderCredentialChangedError,
+)
 from app.infrastructure.vk_client.client import (
     BoundVkApiClient,
     CredentialVersionMismatchError,
@@ -33,7 +36,7 @@ def _bind(vk_client, account_key: str, credential_version: str, lane_id: str):
             )
         )
     except CredentialVersionMismatchError as error:
-        raise ProviderAccountBlockedError(
+        raise ProviderCredentialChangedError(
             "provider credential changed after execution claim"
         ) from error
 
