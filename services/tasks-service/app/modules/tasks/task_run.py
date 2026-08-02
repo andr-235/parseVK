@@ -17,11 +17,11 @@ class TaskRunFreezeError(Exception):
 
 
 def _config_snapshot(task: Task) -> dict:
+    """Capture execution configuration without legacy source selectors."""
     return {
         "scope": task.scope,
         "mode": task.mode,
         "postLimit": task.post_limit,
-        "groupIds": list(task.group_ids),
     }
 
 
@@ -40,7 +40,8 @@ async def freeze_task_run(
 
     The operation is idempotent by ``execution_run_id``. Retry/resume of the
     same run returns the stored metadata and never reads live task sources or
-    configuration again.
+    configuration again. Source selection comes only from normalized
+    ``task_sources`` relations; legacy ``group_ids`` is intentionally excluded.
     """
     if not task.execution_run_id:
         return None

@@ -114,7 +114,12 @@ async def test_freeze_creates_snapshot_with_contract_fields():
 
     run = next(obj for obj in session.added if isinstance(obj, TaskRun))
     assert str(run.id) == task.execution_run_id
-    assert run.config_snapshot["groupIds"] == [12345]
+    assert run.config_snapshot == {
+        "scope": "selected",
+        "mode": "recent_posts",
+        "postLimit": 10,
+    }
+    assert "groupIds" not in run.config_snapshot
     assert run.source_set_snapshot[0] == {
         "sourceId": str(source_id),
         "provider": "vk",
