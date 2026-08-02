@@ -72,7 +72,7 @@ async def bind_system_vk_client(
         )
     ):
         raise ProviderAccountBlockedError(
-            "provider account is inactive or lacks vk.all capability"
+            "provider account is not active or lacks vk.all capability"
         )
     return _bind(
         vk_client,
