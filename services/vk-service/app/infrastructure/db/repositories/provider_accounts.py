@@ -3,7 +3,6 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select, update
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.entities.provider_account import (
@@ -40,7 +39,6 @@ class SqlAlchemyProviderAccountRepository(ProviderAccountRepository):
         self.session = session
 
     async def get_by_key(self, account_key: str) -> ProviderAccount | None:
-        logger.debug("get provider account by key %s", account_key)
         model = await self.session.scalar(
             select(VkProviderAccount).where(
                 VkProviderAccount.account_key == account_key
@@ -56,33 +54,31 @@ class SqlAlchemyProviderAccountRepository(ProviderAccountRepository):
         credential_version: str,
         capabilities: list[str] | None = None,
     ) -> ProviderAccount:
-        logger.debug("upsert system provider account %s", account_key)
-        values = {
-            "account_key": account_key,
-            "provider": provider,
-            "credential_version": credential_version,
-            "capabilities": capabilities or [],
-        }
-        stmt = (
-            pg_insert(VkProviderAccount)
-            .values(**values)
-            .on_conflict_do_update(
-                constraint="uq_vk_provider_accounts_account_key",
-                set_={
-                    "provider": provider,
-                    "status": ACCOUNT_STATUS_ACTIVE,
-                    "credential_version": credential_version,
-                    "capabilities": capabilities or [],
-                    "cooldown_until": None,
-                    "last_error_code": None,
-                    "last_error_kind": None,
-                    "revision": VkProviderAccount.revision + 1,
-                },
-            )
-            .returning(VkProviderAccount)
+        model = await self.session.scalar(
+            select(VkProviderAccount)
+            .where(VkProviderAccount.account_key == account_key)
+            .with_for_update()
         )
-        result = await self.session.execute(stmt)
-        return _to_entity(result.scalar_one())
+        if model is None:
+            model = VkProviderAccount(
+                account_key=account_key,
+                provider=provider,
+                status=ACCOUNT_STATUS_ACTIVE,
+                credential_version=credential_version,
+                capabilities=capabilities or [],
+            )
+            self.session.add(model)
+        else:
+            model.provider = provider
+            model.status = ACCOUNT_STATUS_ACTIVE
+            model.credential_version = credential_version
+            model.capabilities = capabilities or []
+            model.cooldown_until = None
+            model.last_error_code = None
+            model.last_error_kind = None
+            model.revision += 1
+        await self.session.flush()
+        return _to_entity(model)
 
     async def transition_to_invalid(
         self,
@@ -92,7 +88,7 @@ class SqlAlchemyProviderAccountRepository(ProviderAccountRepository):
         error_code: int | None = None,
         error_kind: str | None = None,
     ) -> bool:
-        stmt = (
+        result = await self.session.execute(
             update(VkProviderAccount)
             .where(
                 VkProviderAccount.id == account_id,
@@ -108,17 +104,9 @@ class SqlAlchemyProviderAccountRepository(ProviderAccountRepository):
             )
             .returning(VkProviderAccount.id)
         )
-        result = await self.session.execute(stmt)
-        became_invalid = result.scalar_one_or_none() is not None
-        logger.debug(
-            "transition account %s to invalid (version match=%s)",
-            account_id,
-            became_invalid,
-        )
-        return became_invalid
+        return result.scalar_one_or_none() is not None
 
     async def set_cooldown(self, account_id: UUID, until: datetime) -> None:
-        logger.debug("set cooldown for account %s until %s", account_id, until)
         await self.session.execute(
             update(VkProviderAccount)
             .where(VkProviderAccount.id == account_id)
@@ -135,7 +123,7 @@ class SqlAlchemyProviderAccountRepository(ProviderAccountRepository):
         credential_version: str,
         capabilities: list[str],
     ) -> ProviderAccount | None:
-        stmt = (
+        result = await self.session.execute(
             update(VkProviderAccount)
             .where(VkProviderAccount.id == account_id)
             .values(
@@ -149,13 +137,10 @@ class SqlAlchemyProviderAccountRepository(ProviderAccountRepository):
             )
             .returning(VkProviderAccount)
         )
-        result = await self.session.execute(stmt)
         model = result.scalar_one_or_none()
-        logger.debug("mark account %s active (revision bump)", account_id)
         return _to_entity(model) if model is not None else None
 
     async def touch_validated(self, account_id: UUID) -> None:
-        logger.debug("touch last_validated_at for account %s", account_id)
         await self.session.execute(
             update(VkProviderAccount)
             .where(VkProviderAccount.id == account_id)
