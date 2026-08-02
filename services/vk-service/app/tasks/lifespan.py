@@ -51,10 +51,15 @@ async def supervise(name: str, coro_factory, health_flag: list[bool] | None = No
             if health_flag is not None:
                 health_flag[0] = False
             break
-        except Exception as e:
+        except Exception as error:
             if health_flag is not None:
                 health_flag[0] = False
-            logger.error("%s crashed: %s. Restarting in %ds...", name, e, retry_delay)
+            logger.error(
+                "%s crashed: %s. Restarting in %ds...",
+                name,
+                error,
+                retry_delay,
+            )
             await asyncio.sleep(retry_delay)
             retry_delay = min(retry_delay * 2, 30)
 
@@ -72,8 +77,8 @@ async def lifespan(app: FastAPI):
     schedule_startup_checks()
 
     async def run_startup_reconciliation():
-        async with SessionLocal() as session:
-            await reconcile_provider_account(
+        async with SessionLocal.begin() as session:
+            return await reconcile_provider_account(
                 get_vk_client(),
                 get_secret_provider(),
                 get_provider_account_repository(session),
@@ -111,7 +116,11 @@ async def lifespan(app: FastAPI):
     if settings.task_worker_enabled:
         task_worker = build_task_worker(session_factory, _task_worker_health)
         task_worker_task = asyncio.create_task(
-            supervise_worker("VK task worker", task_worker.run_forever, health=_task_worker_health)
+            supervise_worker(
+                "VK task worker",
+                task_worker.run_forever,
+                health=_task_worker_health,
+            )
         )
     else:
         logger.info("VK task worker disabled by configuration")
