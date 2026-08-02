@@ -1,4 +1,4 @@
-"""Unit tests for VkTransport: error mapping, redaction, thread execution."""
+"""Unit tests for VkTransport: errors, redaction and credential rotation."""
 
 import asyncio
 import sys
@@ -36,6 +36,10 @@ def run_inline(func, *args, **kwargs):
     return func(*args, **kwargs)
 
 
+async def run_async_inline(func, *args, **kwargs):
+    return func(*args, **kwargs)
+
+
 def _transport(**kwargs) -> VkTransport:
     return VkTransport(call_runner=run_inline, **kwargs)
 
@@ -44,18 +48,25 @@ def _credential(secret: str = "fake-token") -> CredentialMaterial:
     return CredentialMaterial.from_secret(secret)
 
 
-def _inject_api(transport: VkTransport, api: MagicMock):
-    transport._api = api
+def _inject_api(
+    transport: VkTransport,
+    api: MagicMock,
+    credential: CredentialMaterial | None = None,
+):
+    material = credential or _credential()
+    transport._apis[material.version_digest] = api
 
 
 @pytest.mark.anyio
 async def test_call_maps_vk_api_error():
     transport = _transport()
     method = MagicMock(side_effect=MockVkApiError(8, "Application is blocked"))
-    api = MagicMock(groups=MagicMock(getById=method))
-    _inject_api(transport, api)
+    _inject_api(transport, MagicMock(groups=MagicMock(getById=method)))
 
-    with patch("app.infrastructure.vk_client.transport._VK_API_ERRORS", (MockVkApiError,)):
+    with patch(
+        "app.infrastructure.vk_client.transport._VK_API_ERRORS",
+        (MockVkApiError,),
+    ):
         with pytest.raises(VkApiAuthError) as exc_info:
             await transport.call(_credential(), "groups.getById", group_ids="1")
 
@@ -67,10 +78,15 @@ async def test_call_maps_vk_api_error():
 @pytest.mark.anyio
 async def test_call_maps_rate_limit():
     transport = _transport()
-    method = MagicMock(side_effect=MockVkApiError(6, "Too many requests per second"))
+    method = MagicMock(
+        side_effect=MockVkApiError(6, "Too many requests per second")
+    )
     _inject_api(transport, MagicMock(wall=MagicMock(get=method)))
 
-    with patch("app.infrastructure.vk_client.transport._VK_API_ERRORS", (MockVkApiError,)):
+    with patch(
+        "app.infrastructure.vk_client.transport._VK_API_ERRORS",
+        (MockVkApiError,),
+    ):
         with pytest.raises(VkApiRateLimitError) as exc_info:
             await transport.call(_credential(), "wall.get", owner_id=-1, count=10)
 
@@ -80,7 +96,12 @@ async def test_call_maps_rate_limit():
 @pytest.mark.anyio
 async def test_call_maps_infrastructure_error():
     transport = _transport()
-    _inject_api(transport, MagicMock(groups=MagicMock(getById=MagicMock(side_effect=TimeoutError()))))
+    _inject_api(
+        transport,
+        MagicMock(
+            groups=MagicMock(getById=MagicMock(side_effect=TimeoutError()))
+        ),
+    )
 
     with pytest.raises(VkApiInfrastructureError):
         await transport.call(_credential(), "groups.getById", group_ids="1")
@@ -97,14 +118,22 @@ async def test_call_without_token_raises_configuration_error():
 @pytest.mark.anyio
 async def test_raw_token_never_appears_in_exception():
     secret = "super-secret-token-abc123"
-    register_secret(secret)  # SecretProvider registers loaded secrets (F2)
+    credential = _credential(secret)
+    register_secret(secret)
     transport = _transport()
     method = MagicMock(side_effect=MockVkApiError(8, f"bad {secret}"))
-    _inject_api(transport, MagicMock(groups=MagicMock(getById=method)))
+    _inject_api(
+        transport,
+        MagicMock(groups=MagicMock(getById=method)),
+        credential,
+    )
 
-    with patch("app.infrastructure.vk_client.transport._VK_API_ERRORS", (MockVkApiError,)):
+    with patch(
+        "app.infrastructure.vk_client.transport._VK_API_ERRORS",
+        (MockVkApiError,),
+    ):
         with pytest.raises(VkApiAuthError) as exc_info:
-            await transport.call(_credential(secret), "groups.getById", group_ids="1")
+            await transport.call(credential, "groups.getById", group_ids="1")
 
     assert secret not in str(exc_info.value)
     assert secret not in exc_info.value.error_msg
@@ -118,12 +147,23 @@ async def test_registered_secret_from_file_provider_is_redacted(tmp_path):
     from app.infrastructure.secrets.file_provider import FileSecretProvider
 
     material = FileSecretProvider(str(token_file)).load()
-
     transport = _transport()
-    method = MagicMock(side_effect=MockVkApiError(29, "hard limit mounted-file-token-xyz"))
-    _inject_api(transport, MagicMock(wall=MagicMock(get=method)))
+    method = MagicMock(
+        side_effect=MockVkApiError(
+            29,
+            "hard limit mounted-file-token-xyz",
+        )
+    )
+    _inject_api(
+        transport,
+        MagicMock(wall=MagicMock(get=method)),
+        material,
+    )
 
-    with patch("app.infrastructure.vk_client.transport._VK_API_ERRORS", (MockVkApiError,)):
+    with patch(
+        "app.infrastructure.vk_client.transport._VK_API_ERRORS",
+        (MockVkApiError,),
+    ):
         with pytest.raises(VkApiRateLimitError) as exc_info:
             await transport.call(material, "wall.get", owner_id=-1)
 
@@ -146,3 +186,35 @@ async def test_call_runs_in_thread_and_returns_result():
 
     assert result == {"items": [{"id": 1}]}
     assert executed_in_thread == [True]
+
+
+@pytest.mark.anyio
+async def test_transport_builds_distinct_sessions_after_rotation():
+    created_tokens = []
+
+    class Session:
+        def __init__(self, token):
+            self.token = token
+
+        def get_api(self):
+            return MagicMock(
+                users=MagicMock(
+                    get=MagicMock(return_value={"token": self.token})
+                )
+            )
+
+    def factory(**kwargs):
+        created_tokens.append(kwargs["token"])
+        return Session(kwargs["token"])
+
+    transport = VkTransport(
+        vk_session_factory=factory,
+        call_runner=run_async_inline,
+    )
+    old = _credential("old-token")
+    new = _credential("new-token")
+
+    assert await transport.call(old, "users.get") == {"token": "old-token"}
+    assert await transport.call(new, "users.get") == {"token": "new-token"}
+    assert await transport.call(new, "users.get") == {"token": "new-token"}
+    assert created_tokens == ["old-token", "new-token"]
