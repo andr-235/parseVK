@@ -4,10 +4,17 @@ import asyncio
 import logging
 
 from app.domain.entities.tasks import VkTaskRun
-from app.domain.exceptions.provider_account import ProviderAccountBlockedError
+from app.domain.exceptions.provider_account import (
+    ProviderAccountBlockedError,
+    ProviderCredentialChangedError,
+)
 from app.domain.exceptions.vk_api import VkApiAuthError
 from app.services.ingestion.pipeline import IngestionFailedError
-from app.tasks.provider_account_guard import ensure_provider_available, mark_account_invalid
+from app.tasks.provider_account_guard import (
+    block_account_version,
+    ensure_provider_available,
+    mark_account_invalid,
+)
 from app.tasks.task_finalizer import TaskFinalizer
 from app.tasks.task_run_runner import LeaseLostError, TaskRunRunner
 from app.tasks.vk_client_binding import bind_task_vk_client
@@ -109,6 +116,25 @@ class TaskExecutor:
                 task_run.task_id,
                 task_run.run_id,
                 error.code,
+            )
+        except ProviderCredentialChangedError as error:
+            await block_account_version(
+                self.session_factory,
+                self.provider_accounts_factory,
+                self.account_gate,
+                credential_version=task_run.credential_version or "",
+                error_code=None,
+                error_kind="credential_changed",
+            )
+            await self.finalizer.release_blocked(
+                task_run,
+                "provider_credential_changed",
+            )
+            logger.warning(
+                "Provider credential changed for task_id=%s run_id=%s: %s",
+                task_run.task_id,
+                task_run.run_id,
+                error,
             )
         except ProviderAccountBlockedError as error:
             await self.finalizer.release_blocked(
