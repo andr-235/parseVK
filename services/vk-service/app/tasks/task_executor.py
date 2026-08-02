@@ -47,8 +47,8 @@ class TaskExecutor:
             lease_seconds=lease_seconds,
             heartbeat_seconds=heartbeat_seconds,
             timeout_seconds=timeout_seconds,
-            adapter_factory=lambda session, run_id: bind_task_vk_client(
-                vk_client, provider_accounts_factory, session, run_id
+            adapter_factory=lambda _session, task_run: bind_task_vk_client(
+                vk_client, task_run
             ),
         )
 
@@ -96,7 +96,10 @@ class TaskExecutor:
             raise
         except VkApiAuthError as error:
             await mark_account_invalid(
-                self.session_factory, self.provider_accounts_factory, self.account_gate, error
+                self.session_factory,
+                self.provider_accounts_factory,
+                self.account_gate,
+                error,
             )
             await self.finalizer.release_blocked(task_run, "provider_account_invalid")
             logger.warning(
