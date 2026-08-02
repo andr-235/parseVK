@@ -33,6 +33,8 @@ jobs:
       PRODUCTION_SCRIPTS_DIR: ${{ github.workspace }}/.github/scripts/production
       SERVICE_CATALOG_CLI: ${{ github.workspace }}/.github/scripts/service_catalog.py
       LOCAL_RELEASE_SCRIPT: ${{ github.workspace }}/.github/scripts/production/local-release.sh
+      HEALTH_CHECK_SCRIPT: ${{ github.workspace }}/.github/scripts/health-check.sh
+      HTTP_HEALTH_CHECK_SCRIPT: ${{ github.workspace }}/.github/scripts/http-health-check.sh
       PULL_POLICY: never
 
     steps:
@@ -109,13 +111,19 @@ jobs:
           git checkout -f "$TARGET_COMMIT"
           echo "Checked out commit: $TARGET_COMMIT"
 
-      - name: Validate target release prerequisites
+      - name: Stage and validate rollback tools
         working-directory: /opt/parseVK
         timeout-minutes: 2
         run: |
           set -euo pipefail
           PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" \
             bash "$PRODUCTION_SCRIPTS_DIR/preflight.sh"
+
+      - name: Verify target local release
+        working-directory: /opt/parseVK
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
           PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" COMPOSE_PROJECT_NAME="$COMPOSE_PROJECT_NAME" \
             SERVICE_CATALOG_CLI="$SERVICE_CATALOG_CLI" bash "$LOCAL_RELEASE_SCRIPT" verify \
             "${{ steps.determine_commit.outputs.target_commit }}"
@@ -143,7 +151,7 @@ jobs:
         timeout-minutes: 5
         run: |
           set -euo pipefail
-          COMPOSE_FILE="$COMPOSE_FILE" bash .github/scripts/health-check.sh
+          COMPOSE_FILE="$COMPOSE_FILE" bash "$HEALTH_CHECK_SCRIPT"
 
       - name: HTTP health check
         if: github.event.inputs.skip_health_check != 'true'
@@ -151,7 +159,7 @@ jobs:
         timeout-minutes: 3
         run: |
           set -euo pipefail
-          COMPOSE_FILE="$COMPOSE_FILE" bash .github/scripts/http-health-check.sh
+          COMPOSE_FILE="$COMPOSE_FILE" bash "$HTTP_HEALTH_CHECK_SCRIPT"
 
       - name: Update deployment metadata
         working-directory: /opt/parseVK
