@@ -1,4 +1,4 @@
-"""Scheduler helper types: lane requests, account state, typed failures."""
+"""Scheduler helper types: lane requests, account state and typed failures."""
 
 import asyncio
 from collections import deque
@@ -11,7 +11,13 @@ RequestCallable = Callable[[], Awaitable[object]]
 class RetryExhaustedError(RuntimeError):
     """Raised when a request exhausts its retry budget or elapsed deadline."""
 
-    def __init__(self, method: str, last_error: BaseException, attempts: int, elapsed: float):
+    def __init__(
+        self,
+        method: str,
+        last_error: BaseException,
+        attempts: int,
+        elapsed: float,
+    ):
         self.method = method
         self.last_error = last_error
         self.attempts = attempts
@@ -31,6 +37,7 @@ class LaneRequest:
     enqueued_at: float
     deadline: float
     attempts: int = 0
+    last_error: BaseException | None = None
 
 
 @dataclass
@@ -39,6 +46,7 @@ class AccountState:
     rotation: list[str] = field(default_factory=list)
     rotation_pos: int = 0
     cooldown_until: float | None = None
+    next_dispatch_at: float = 0.0
     slot: asyncio.Lock = field(default_factory=asyncio.Lock)
     wake: asyncio.Event = field(default_factory=asyncio.Event)
     dispatcher: asyncio.Task | None = None
