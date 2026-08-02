@@ -4,7 +4,7 @@ import asyncio
 import logging
 import time
 from collections import deque
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 import httpx
 
@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 MetricsHook = Callable[[str, str, str, float, float], None]
 RetryHook = Callable[[str, int], None]
+SleepFn = Callable[[float], Awaitable[object]]
 
 OUTCOME_SUCCESS = "success"
 OUTCOME_AUTH = "auth"
@@ -36,7 +37,7 @@ class FairScheduler:
         retry_policy: VkRetryPolicy,
         *,
         time_fn: Callable[[], float] = time.monotonic,
-        sleep_fn: Callable[[float], object] = asyncio.sleep,
+        sleep_fn: SleepFn = asyncio.sleep,
     ):
         self._policy = retry_policy
         self._time = time_fn
@@ -69,9 +70,7 @@ class FairScheduler:
                 )
             state.wake.set()
 
-        logger.debug(
-            "scheduled lane=%s on account=%s", lane_id, account_id
-        )
+        logger.debug("scheduled lane=%s on account=%s", lane_id, account_id)
         try:
             return await request.future
         except asyncio.CancelledError:
@@ -108,8 +107,10 @@ class FairScheduler:
                 async with state.slot:
                     try:
                         result = await request.call()
-                    except BaseException as exc:  # noqa: BLE001
-                        result = exc
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as error:  # noqa: BLE001
+                        result = error
                     finally:
                         state.in_flight = None
                 await self._handle_result(
