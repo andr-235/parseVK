@@ -34,9 +34,11 @@ validate_metadata() {
 
 resolve_targets() {
   if [ -f "$SERVICE_CATALOG_CLI" ]; then
-    python3 "$SERVICE_CATALOG_CLI" \
-      --repo-root "$(project_root)" changed --purpose deploy --all
-    return
+    if python3 "$SERVICE_CATALOG_CLI" \
+      --repo-root "$(project_root)" changed --purpose deploy --all; then
+      return
+    fi
+    log_info "Service catalog CLI is unavailable or failed; falling back to Compose targets"
   fi
   compose config --format json \
     | jq -r '.services | to_entries[] | select((.value.build // null) != null) | .key' \
