@@ -5,6 +5,10 @@ from datetime import UTC, datetime
 from sqlalchemy import and_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from common.events.task_execution_completed import TaskExecutionCompletedPayload
+from common.events.task_execution_failed import TaskExecutionFailedPayload
+from common.events.task_execution_started import TaskExecutionStartedPayload
+
 from app.domain.entities.provider_account import (
     ACCOUNT_STATUS_ACTIVE,
     SYSTEM_VK_CAPABILITY,
@@ -15,9 +19,6 @@ from app.infrastructure.db.models.outbox import OutboxEvent
 from app.infrastructure.db.models.provider_accounts import VkProviderAccount
 from app.infrastructure.db.models.tasks import VkTaskRun
 from app.infrastructure.db.repositories.tasks import _to_task_run_entity
-from common.events.task_execution_completed import TaskExecutionCompletedPayload
-from common.events.task_execution_failed import TaskExecutionFailedPayload
-from common.events.task_execution_started import TaskExecutionStartedPayload
 
 logger = logging.getLogger("vk-service")
 
