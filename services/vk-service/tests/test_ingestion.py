@@ -253,22 +253,32 @@ async def test_scope_all_without_active_groups_fails_task():
 
 @pytest.mark.anyio
 async def test_real_vk_adapter_requires_token_without_leaking_secret():
+    from app.infrastructure.vk_client.client import ProviderRequestContext
+
     client = VkApiClient(token="")
+    context = ProviderRequestContext(
+        account_id="system-vk", credential_version="", lane_id="test"
+    )
 
     with pytest.raises(VkApiConfigurationError, match="VK token is not configured"):
-        await client.get_groups([1])
+        client.bind(context)
 
 
 @pytest.mark.anyio
 async def test_real_vk_adapter_uses_vk_api_library_session():
+    from app.infrastructure.vk_client.client import ProviderRequestContext
+
     calls = []
     client = VkApiClient(
         token="vk-token", vk_session_factory=fake_vk_session_factory(calls), call_runner=run_inline
     )
+    bound = client.bind(
+        ProviderRequestContext(account_id="system-vk", credential_version="v1", lane_id="test")
+    )
 
-    groups = await client.get_groups([1])
-    posts = await client.get_posts(1, mode="recent_posts", post_limit=1)
-    comments = await client.get_comments(-1, 10)
+    groups = await bound.get_groups([1])
+    posts = await bound.get_posts(1, mode="recent_posts", post_limit=1)
+    comments = await bound.get_comments(-1, 10)
 
     assert groups == [{"id": 1, "name": "Group 1"}]
     assert posts == {
@@ -366,16 +376,17 @@ async def test_ingestion_failure_is_reported_without_mutating_task_run():
 
 
 def test_vk_token_redaction():
+    from app.core.redaction import register_secret
+
     repository = FakeRepository()
     tasks_client = FakeTasksClient()
 
-    class MockAdapter:
-        token = "secret-token-123"
-
     service = IngestionService(
-        adapter=MockAdapter(), repository=repository, tasks_client=tasks_client
+        adapter=StubVkApiClient(), repository=repository, tasks_client=tasks_client
     )
 
+    # Secrets loaded from files/env are registered with the redaction module.
+    register_secret("secret-token-123")
     err = "Failed with secret-token-123 in message"
     sanitized = service._sanitize_error(err)
     assert sanitized == "Failed with <redacted> in message"

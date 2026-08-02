@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 from app.domain.entities.tasks import VkTaskRun
 from app.services.ingestion.pipeline import IngestionFailedError
 from app.tasks.task_finalizer import TaskFinalizer
+from app.tasks.vk_client_binding import bind_task_vk_client
 
 logger = logging.getLogger("vk-service.task-worker")
 
@@ -21,6 +22,8 @@ class TaskExecutor:
         lease_store,
         session_factory,
         ingestion_factory,
+        vk_client,
+        provider_accounts_factory,
         lease_seconds: int,
         heartbeat_seconds: int,
         timeout_seconds: int,
@@ -30,6 +33,8 @@ class TaskExecutor:
         self.lease_store = lease_store
         self.session_factory = session_factory
         self.ingestion_factory = ingestion_factory
+        self.vk_client = vk_client
+        self.provider_accounts_factory = provider_accounts_factory
         self.lease_seconds = lease_seconds
         self.heartbeat_seconds = heartbeat_seconds
         self.timeout_seconds = timeout_seconds
@@ -132,7 +137,10 @@ class TaskExecutor:
 
     async def _run_ingestion(self, task_run: VkTaskRun):
         async with self.session_factory() as session:
-            service = self.ingestion_factory(session)
+            bound_client = await bind_task_vk_client(
+                self.vk_client, self.provider_accounts_factory, session, task_run.run_id
+            )
+            service = self.ingestion_factory(session, adapter=bound_client)
             try:
                 result = await service.execute(task_run, correlation_id=task_run.run_id)
                 await session.commit()
