@@ -392,6 +392,82 @@ def test_vk_token_redaction():
     assert sanitized == "Failed with <redacted> in message"
 
 
+class AuthAdapter(StubVkApiClient):
+    """Stub that raises VkApiAuthError from a configurable call site."""
+
+    def __init__(self, *, raise_on=None):
+        self.raise_on = raise_on
+
+    async def get_groups(self, group_ids, fields=None):
+        if self.raise_on == "groups":
+            raise VkApiAuthError(8, "invalid token", "groups.getById")
+        return await super().get_groups(group_ids, fields)
+
+    async def get_posts(self, group_id, *, mode, post_limit):
+        if self.raise_on == "posts":
+            raise VkApiAuthError(8, "invalid token", "wall.get")
+        return await super().get_posts(group_id, mode=mode, post_limit=post_limit)
+
+    async def iter_comment_pages(self, owner_id, post_id, start_offset=0, page_size=100):
+        if self.raise_on == "comments":
+            raise VkApiAuthError(8, "invalid token", "wall.getComments")
+        async for page in super().iter_comment_pages(
+            owner_id, post_id, start_offset=start_offset, page_size=page_size
+        ):
+            yield page
+
+
+@pytest.mark.anyio
+async def test_group_auth_error_aborts_collection():
+    service = IngestionService(
+        adapter=AuthAdapter(raise_on="groups"),
+        repository=FakeRepository(),
+        tasks_client=FakeTasksClient(),
+    )
+
+    with pytest.raises(VkApiAuthError):
+        await service.execute(task_run())
+
+
+@pytest.mark.anyio
+async def test_posts_auth_error_aborts_collection():
+    service = IngestionService(
+        adapter=AuthAdapter(raise_on="posts"),
+        repository=FakeRepository(),
+        tasks_client=FakeTasksClient(),
+    )
+
+    with pytest.raises(VkApiAuthError):
+        await service.execute(task_run())
+
+
+@pytest.mark.anyio
+async def test_comments_auth_error_aborts_collection():
+    service = IngestionService(
+        adapter=AuthAdapter(raise_on="comments"),
+        repository=FakeRepository(),
+        tasks_client=FakeTasksClient(),
+    )
+
+    with pytest.raises(VkApiAuthError):
+        await service.execute(task_run())
+
+
+@pytest.mark.anyio
+async def test_pipeline_auth_error_skips_fail_execution():
+    tasks_client = FakeTasksClient()
+    service = IngestionService(
+        adapter=AuthAdapter(raise_on="groups"),
+        repository=FakeRepository(),
+        tasks_client=tasks_client,
+    )
+
+    with pytest.raises(VkApiAuthError):
+        await service.execute(task_run())
+
+    assert not any(call[0] == "fail" for call in tasks_client.calls)
+
+
 class TestIsInfrastructureError:
     def test_dbapi_error_is_infrastructure(self):
         import sqlalchemy.exc

@@ -2,12 +2,14 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import and_, or_, select, update
+from sqlalchemy import and_, exists, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.entities.provider_account import ACCOUNT_STATUS_ACTIVE
 from app.domain.entities.tasks import VkTaskRun as VkTaskRunEntity
 from app.domain.repositories.task_queue import TaskQueueRepository
 from app.infrastructure.db.models.outbox import OutboxEvent
+from app.infrastructure.db.models.provider_accounts import VkProviderAccount
 from app.infrastructure.db.models.tasks import VkTaskRun
 from app.infrastructure.db.repositories.tasks import _to_task_run_entity
 from common.events.task_execution_completed import TaskExecutionCompletedPayload
@@ -28,9 +30,23 @@ class SqlAlchemyTaskQueueRepository(TaskQueueRepository):
         self.session = session
 
     async def claim_next(
-        self, *, worker_id: str, lease_expires_at: datetime
+        self,
+        *,
+        worker_id: str,
+        lease_expires_at: datetime,
+        account_key: str = "system-vk",
     ) -> VkTaskRunEntity | None:
         now = utcnow()
+        account_gate = exists(
+            select(VkProviderAccount.id).where(
+                VkProviderAccount.account_key == account_key,
+                VkProviderAccount.status == ACCOUNT_STATUS_ACTIVE,
+                or_(
+                    VkProviderAccount.cooldown_until.is_(None),
+                    VkProviderAccount.cooldown_until <= now,
+                ),
+            )
+        )
         model = await self.session.scalar(
             select(VkTaskRun)
             .where(
@@ -43,7 +59,8 @@ class SqlAlchemyTaskQueueRepository(TaskQueueRepository):
                             VkTaskRun.lease_expires_at <= now,
                         ),
                     ),
-                )
+                ),
+                account_gate,
             )
             .order_by(VkTaskRun.available_at, VkTaskRun.created_at)
             .with_for_update(skip_locked=True)

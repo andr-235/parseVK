@@ -7,6 +7,7 @@ import httpx
 import sqlalchemy.exc
 
 from app.domain.exceptions.vk_api import (
+    VkApiAuthError,
     VkApiDomainError,
     VkApiInfrastructureError,
     VkApiRateLimitError,
@@ -57,6 +58,13 @@ class IngestionPipeline:
                 correlation_id=correlation_id,
             )
             return result
+
+        except VkApiAuthError:
+            logger.warning(
+                "VK auth error for task_id=%s; aborting without terminal failure",
+                task_run.task_id,
+            )
+            raise
 
         except Exception as exc:
             logger.exception("Task execution failed for task_run.task_id=%s", task_run.task_id)

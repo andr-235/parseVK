@@ -429,7 +429,14 @@ async def test_worker_claims_null_lease_running_task(db_session):
     from datetime import datetime, timedelta
 
     from app.infrastructure.db.models.tasks import VkTaskRun
+    from app.infrastructure.db.repositories.provider_accounts import (
+        SqlAlchemyProviderAccountRepository,
+    )
     from app.infrastructure.db.repositories.task_queue import SqlAlchemyTaskQueueRepository
+
+    await SqlAlchemyProviderAccountRepository(db_session).upsert_system(
+        account_key="system-vk", provider="vk", credential_version="seed-v1"
+    )
 
     run = VkTaskRun(
         task_id=1,
@@ -494,7 +501,14 @@ async def test_regression_lost_task_fixed(db_session):
     from datetime import datetime, timedelta
 
     from app.infrastructure.db.models.tasks import VkTaskRun
+    from app.infrastructure.db.repositories.provider_accounts import (
+        SqlAlchemyProviderAccountRepository,
+    )
     from app.infrastructure.db.repositories.task_queue import SqlAlchemyTaskQueueRepository
+
+    await SqlAlchemyProviderAccountRepository(db_session).upsert_system(
+        account_key="system-vk", provider="vk", credential_version="seed-v1"
+    )
 
     run = VkTaskRun(
         task_id=1,

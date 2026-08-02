@@ -20,6 +20,7 @@ class TaskWorker:
         poll_seconds: float,
         lease_seconds: int,
         health: WorkerHealth,
+        account_gate=None,
     ):
         self.lease_store = lease_store
         self.executor_factory = executor_factory
@@ -27,6 +28,7 @@ class TaskWorker:
         self.poll_seconds = poll_seconds
         self.lease_seconds = lease_seconds
         self.health = health
+        self.account_gate = account_gate
         self.worker_id = f"vk-{uuid4()}"
         self._active: set[asyncio.Task] = set()
 
@@ -52,6 +54,8 @@ class TaskWorker:
     async def _fill_capacity(self) -> bool:
         claimed_any = False
         while len(self._active) < self.concurrency:
+            if self.account_gate is not None and not await self.account_gate.can_claim():
+                break
             task_run = await self.lease_store.claim(
                 worker_id=self.worker_id,
                 lease_expires_at=lease_deadline(self.lease_seconds),
