@@ -1,9 +1,12 @@
 """Unit tests for the ProviderAccount domain entity."""
 
 import sys
+from dataclasses import FrozenInstanceError
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _service_path import use_service_path
@@ -69,11 +72,8 @@ def test_can_execute_requires_active_status_and_vk_all():
 
 def test_entity_is_frozen():
     account = _account()
-    try:
+    with pytest.raises(FrozenInstanceError):
         account.status = ACCOUNT_STATUS_INVALID
-        assert False, "ProviderAccount must be immutable"
-    except Exception:
-        pass
 
 
 def test_cooldown_until_roundtrip():
