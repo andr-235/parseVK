@@ -1,6 +1,9 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from sqlalchemy import select
+
+from app.infrastructure.db.models.outbox import OutboxEvent
 from app.infrastructure.db.repositories.provider_accounts import (
     SqlAlchemyProviderAccountRepository,
 )
@@ -11,16 +14,23 @@ from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsReposit
 async def _seed_account(db_session, *, status="active", cooldown_until=None):
     repo = SqlAlchemyProviderAccountRepository(db_session)
     account = await repo.upsert_system(
-        account_key="system-vk", provider="vk", credential_version="seed-v1"
+        account_key="system-vk",
+        provider="vk",
+        credential_version="seed-v1",
     )
     if status == "invalid":
-        await repo.transition_to_invalid(account.id, "seed-v1", error_code=8, error_kind="auth")
+        await repo.transition_to_invalid(
+            account.id,
+            "seed-v1",
+            error_code=8,
+            error_kind="auth",
+        )
     elif cooldown_until is not None:
         await repo.set_cooldown(account.id, cooldown_until)
     return account
 
 
-async def _create_task(db_session, *, task_id, run_id, available_at=None):
+async def _create_task(db_session, *, task_id, run_id):
     events = SqlAlchemyTaskEventsRepository(db_session)
     await events.create_task_run(
         task_id=task_id,
@@ -48,6 +58,19 @@ async def test_task_queue_claim_renew_and_complete(db_session):
     assert claimed.task_id == 900
     assert claimed.status == "running"
     assert claimed.attempts == 1
+    assert claimed.provider_account_key == "system-vk"
+    assert claimed.credential_version == "seed-v1"
+
+    started = await db_session.scalar(
+        select(OutboxEvent).where(
+            OutboxEvent.event_type == "task.execution_started",
+            OutboxEvent.aggregate_id == "900",
+        )
+    )
+    assert started is not None
+    assert started.payload["providerAccountKey"] == "system-vk"
+    assert started.payload["credentialVersion"] == "seed-v1"
+
     assert await queue.renew_lease(
         task_id=900,
         run_id="run-900",
@@ -88,6 +111,7 @@ async def test_expired_running_task_is_reclaimed(db_session):
     assert recovered.task_id == 901
     assert recovered.attempts == 2
     assert recovered.lease_owner == "new-worker"
+    assert recovered.credential_version == "seed-v1"
 
 
 @pytest.mark.anyio
@@ -122,7 +146,9 @@ async def test_claim_returns_none_when_account_cooling_down(db_session):
 
 
 @pytest.mark.anyio
-async def test_claim_returns_none_while_cooling_down_until_reconciliation(db_session):
+async def test_claim_returns_none_while_cooling_down_until_reconciliation(
+    db_session,
+):
     await _seed_account(
         db_session,
         cooldown_until=datetime.now(UTC) - timedelta(seconds=5),
