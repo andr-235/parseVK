@@ -28,10 +28,7 @@ class VkApiConfigurationError(RuntimeError):
 
 
 class VkTransport:
-    """Low-level VK API transport: session ownership, sync calls, error mapping.
-
-    Holds no public token attribute — credentials flow via CredentialMaterial.
-    """
+    """Low-level VK transport with one cached session per credential version."""
 
     def __init__(
         self,
@@ -42,8 +39,12 @@ class VkTransport:
     ):
         self._vk_session_factory = vk_session_factory or self._default_vk_session_factory
         self._call_runner = call_runner or self._execute_in_thread
-        self._timeout_seconds = timeout_seconds if timeout_seconds is not None else settings.vk_api_timeout_seconds
-        self._api: Any = None
+        self._timeout_seconds = (
+            timeout_seconds
+            if timeout_seconds is not None
+            else settings.vk_api_timeout_seconds
+        )
+        self._apis: dict[str, Any] = {}
         self._api_lock = asyncio.Lock()
 
     def _default_vk_session_factory(self, **kwargs) -> Any:
@@ -59,18 +60,28 @@ class VkTransport:
         }
 
     def _resolve_api(self, credential: CredentialMaterial) -> Any:
-        """Resolve and cache the VK API object (synchronous, called from thread)."""
         session = self._vk_session_factory(**self._session_kwargs(credential))
         return session.get_api()
 
-    def _call_sync(self, credential: CredentialMaterial, method: str, **params) -> dict:
+    async def _api_for(self, credential: CredentialMaterial) -> Any:
+        version = credential.version_digest
+        api = self._apis.get(version)
+        if api is not None:
+            return api
+        async with self._api_lock:
+            api = self._apis.get(version)
+            if api is None:
+                api = self._resolve_api(credential)
+                self._apis[version] = api
+            return api
+
+    def _call_sync(self, api: Any, method: str, **params) -> dict:
         namespace, _, method_name = method.partition(".")
         if not method_name:
             raise ValueError(
                 f"Invalid VK API method format: '{method}'. Expected 'namespace.method'."
             )
 
-        api = self._api
         api_namespace = getattr(api, namespace, None)
         if api_namespace is None:
             raise ValueError(f"Unknown VK API namespace: '{namespace}'")
@@ -89,19 +100,22 @@ class VkTransport:
             raise map_vk_error(code, redact_secrets(msg), method) from exc
         except Exception as exc:
             from httpx import RequestError as HttpxRequestError
+
             msg = self._safe_error_message(exc)
-            if isinstance(exc, (ConnectionError, TimeoutError, HttpxRequestError, OSError)):
+            if isinstance(
+                exc,
+                (ConnectionError, TimeoutError, HttpxRequestError, OSError),
+            ):
                 raise VkApiInfrastructureError(0, msg) from exc
             raise RuntimeError(msg) from exc
 
-    async def call(self, credential: CredentialMaterial, method: str, **params) -> dict:
+    async def call(
+        self, credential: CredentialMaterial, method: str, **params
+    ) -> dict:
         if not credential.raw_secret:
             raise VkApiConfigurationError("VK token is not configured")
-        if self._api is None:
-            async with self._api_lock:
-                if self._api is None:
-                    self._api = self._resolve_api(credential)
-        return await self._call_runner(self._call_sync, credential, method, **params)
+        api = await self._api_for(credential)
+        return await self._call_runner(self._call_sync, api, method, **params)
 
     async def _execute_in_thread(self, sync_function: Callable, *args, **kwargs) -> Any:
         return await asyncio.to_thread(sync_function, *args, **kwargs)
