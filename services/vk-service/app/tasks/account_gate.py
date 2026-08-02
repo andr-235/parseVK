@@ -8,6 +8,7 @@ from app.domain.entities.provider_account import (
     ACCOUNT_STATUS_DISABLED,
     ACCOUNT_STATUS_INVALID,
     SYSTEM_VK_ACCOUNT_KEY,
+    SYSTEM_VK_CAPABILITY,
 )
 
 logger = logging.getLogger("vk-service.task-worker")
@@ -61,8 +62,8 @@ class AccountGate:
             return False
         self._status = account.status
         self._cooldown_until = account.cooldown_until
-        self._capability_ready = account.can_execute_vk
-        if not account.can_execute_vk:
+        self._capability_ready = account.supports(SYSTEM_VK_CAPABILITY)
+        if not account.is_active or not self._capability_ready:
             self._log_blocked()
             return False
         if account.cooldown_until is not None and account.cooldown_until > now:
