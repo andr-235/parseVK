@@ -2,12 +2,11 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import and_, or_, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from common.events.task_execution_completed import TaskExecutionCompletedPayload
 from common.events.task_execution_failed import TaskExecutionFailedPayload
 from common.events.task_execution_started import TaskExecutionStartedPayload
+from sqlalchemy import and_, or_, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.entities.provider_account import (
     ACCOUNT_STATUS_ACTIVE,
