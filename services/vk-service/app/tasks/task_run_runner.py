@@ -1,6 +1,7 @@
 """Supervises a single ingestion run: heartbeat renewal, timeout and cancellation."""
 
 import asyncio
+import inspect
 import logging
 from datetime import UTC, datetime, timedelta
 
@@ -56,7 +57,9 @@ class TaskRunRunner:
         async with self.session_factory() as session:
             adapter = None
             if self.adapter_factory is not None:
-                adapter = self.adapter_factory(session, task_run.run_id)
+                adapter = self.adapter_factory(session, task_run)
+                if inspect.isawaitable(adapter):
+                    adapter = await adapter
             service = self.ingestion_factory(session, adapter=adapter)
             try:
                 result = await service.execute(task_run, correlation_id=task_run.run_id)
