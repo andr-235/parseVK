@@ -1,3 +1,11 @@
+## [0.87.2](https://github.com/andr-235/parseVK/compare/v0.87.1...v0.87.2) (2026-08-02)
+
+
+### Bug Fixes
+
+* **ci:** tolerate disappearing service catalog workspace ([#403](https://github.com/andr-235/parseVK/issues/403)) ([0697c61](https://github.com/andr-235/parseVK/commit/0697c6111c857f27c196165c28104259ac2316f5))
+* **tasks:** complete normalized TaskRun snapshot cutover ([#402](https://github.com/andr-235/parseVK/issues/402)) ([1d63088](https://github.com/andr-235/parseVK/commit/1d63088b538c9e1c2e2d1fe5e92064f83a89c2fa))
+
 ## [0.87.1](https://github.com/andr-235/parseVK/compare/v0.87.0...v0.87.1) (2026-08-01)
 
 
