@@ -1,9 +1,16 @@
+import sys
 from datetime import UTC, datetime
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
 from starlette.requests import Request
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _service_path import use_service_path
+
+use_service_path()
 
 from app.api.dependencies import get_vk_client_dep
 from app.domain.entities.credentials import CredentialMaterial
