@@ -42,7 +42,9 @@ class SqlAlchemyProviderAccountRepository(ProviderAccountRepository):
     async def get_by_key(self, account_key: str) -> ProviderAccount | None:
         logger.debug("get provider account by key %s", account_key)
         model = await self.session.scalar(
-            select(VkProviderAccount).where(VkProviderAccount.account_key == account_key)
+            select(VkProviderAccount).where(
+                VkProviderAccount.account_key == account_key
+            )
         )
         return _to_entity(model) if model is not None else None
 
@@ -68,15 +70,19 @@ class SqlAlchemyProviderAccountRepository(ProviderAccountRepository):
                 constraint="uq_vk_provider_accounts_account_key",
                 set_={
                     "provider": provider,
+                    "status": ACCOUNT_STATUS_ACTIVE,
                     "credential_version": credential_version,
                     "capabilities": capabilities or [],
+                    "cooldown_until": None,
+                    "last_error_code": None,
+                    "last_error_kind": None,
+                    "revision": VkProviderAccount.revision + 1,
                 },
             )
             .returning(VkProviderAccount)
         )
         result = await self.session.execute(stmt)
-        model = result.scalar_one()
-        return _to_entity(model)
+        return _to_entity(result.scalar_one())
 
     async def transition_to_invalid(
         self,
@@ -95,14 +101,20 @@ class SqlAlchemyProviderAccountRepository(ProviderAccountRepository):
             )
             .values(
                 status=ACCOUNT_STATUS_INVALID,
+                cooldown_until=None,
                 last_error_code=error_code,
                 last_error_kind=error_kind,
+                revision=VkProviderAccount.revision + 1,
             )
             .returning(VkProviderAccount.id)
         )
         result = await self.session.execute(stmt)
         became_invalid = result.scalar_one_or_none() is not None
-        logger.debug("transition account %s to invalid (version match=%s)", account_id, became_invalid)
+        logger.debug(
+            "transition account %s to invalid (version match=%s)",
+            account_id,
+            became_invalid,
+        )
         return became_invalid
 
     async def set_cooldown(self, account_id: UUID, until: datetime) -> None:
@@ -110,7 +122,11 @@ class SqlAlchemyProviderAccountRepository(ProviderAccountRepository):
         await self.session.execute(
             update(VkProviderAccount)
             .where(VkProviderAccount.id == account_id)
-            .values(status="cooling_down", cooldown_until=until)
+            .values(
+                status="cooling_down",
+                cooldown_until=until,
+                revision=VkProviderAccount.revision + 1,
+            )
         )
 
     async def mark_active(
