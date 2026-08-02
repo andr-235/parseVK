@@ -1,10 +1,4 @@
-"""VkApiClient facade over the fair scheduler and transport with bound clients.
-
-The shared client is unbound: direct calls fail fast with
-``ProviderContextMissingError``. Per-task execution goes through
-``shared.bind(ProviderRequestContext(...))`` which returns an immutable
-``BoundVkApiClient`` carrying the account context into the scheduler.
-"""
+"""VK API facade with immutable provider-bound client instances."""
 
 import logging
 
@@ -37,11 +31,16 @@ __all__ = [
 
 
 class CredentialVersionMismatchError(VkApiConfigurationError):
-    """Raised when DB attempt metadata and loaded secret disagree."""
+    """Raised when audited attempt metadata and loaded secret disagree."""
 
 
 class VkApiClient(_VkApiCallSurface):
-    """Shared facade owning the scheduler and transport; produces bound clients."""
+    """Shared facade owning the scheduler and transport.
+
+    ``bind`` remains compatible with legacy callers that supply opaque version
+    labels. Runtime and HTTP execution must use ``bind_snapshot`` so the loaded
+    secret is verified against the version captured in persistent state.
+    """
 
     def __init__(
         self,
@@ -60,7 +59,8 @@ class VkApiClient(_VkApiCallSurface):
             scheduler = FairScheduler(VkRetryPolicy(settings))
         self._secret_provider = secret_provider
         self._transport = transport or VkTransport(
-            vk_session_factory=vk_session_factory, call_runner=call_runner
+            vk_session_factory=vk_session_factory,
+            call_runner=call_runner,
         )
         self._scheduler = scheduler
         self._fallback_credential = (
@@ -72,20 +72,56 @@ class VkApiClient(_VkApiCallSurface):
         self._friends = FriendsClient(self._call)
 
     def bind(self, context: ProviderRequestContext) -> "BoundVkApiClient":
-        return self.bind_credential(self._resolve_credential(), context)
+        """Bind a legacy caller without interpreting its opaque version label."""
+        return self._build_bound(self._resolve_credential(), context)
+
+    def bind_snapshot(
+        self, context: ProviderRequestContext
+    ) -> "BoundVkApiClient":
+        """Bind the current secret only when it matches persisted metadata."""
+        credential = self._resolve_credential()
+        self._ensure_version_matches(credential, context)
+        return self._build_bound(credential, context)
 
     def bind_credential(
         self,
         credential: CredentialMaterial,
         context: ProviderRequestContext,
     ) -> "BoundVkApiClient":
-        if context.credential_version != credential.version_digest:
-            expected = context.credential_version[:12] or "(missing)"
-            raise CredentialVersionMismatchError(
-                "provider credential version mismatch for "
-                f"{context.account_id}: expected {expected}, "
-                f"loaded {credential.display_version}"
-            )
+        """Bind exact material, used by isolated candidate validation."""
+        self._ensure_version_matches(credential, context)
+        return self._build_bound(credential, context)
+
+    def bind_current(self, account_id: str, lane_id: str) -> "BoundVkApiClient":
+        credential = self._resolve_credential()
+        return self._build_bound(
+            credential,
+            ProviderRequestContext(
+                account_id=account_id,
+                credential_version=credential.version_digest,
+                lane_id=lane_id,
+            ),
+        )
+
+    @staticmethod
+    def _ensure_version_matches(
+        credential: CredentialMaterial,
+        context: ProviderRequestContext,
+    ) -> None:
+        if context.credential_version == credential.version_digest:
+            return
+        expected = context.credential_version[:12] or "(missing)"
+        raise CredentialVersionMismatchError(
+            "provider credential version mismatch for "
+            f"{context.account_id}: expected {expected}, "
+            f"loaded {credential.display_version}"
+        )
+
+    def _build_bound(
+        self,
+        credential: CredentialMaterial,
+        context: ProviderRequestContext,
+    ) -> "BoundVkApiClient":
         logger.debug(
             "binding vk client account=%s lane=%s credential=%s",
             context.account_id,
@@ -97,17 +133,6 @@ class VkApiClient(_VkApiCallSurface):
             transport=self._transport,
             credential=credential,
             context=context,
-        )
-
-    def bind_current(self, account_id: str, lane_id: str) -> "BoundVkApiClient":
-        credential = self._resolve_credential()
-        return self.bind_credential(
-            credential,
-            ProviderRequestContext(
-                account_id=account_id,
-                credential_version=credential.version_digest,
-                lane_id=lane_id,
-            ),
         )
 
     def _resolve_credential(self) -> CredentialMaterial:
@@ -127,17 +152,17 @@ class VkApiClient(_VkApiCallSurface):
 
     async def _call(self, method: str, **params) -> dict:
         logger.warning(
-            "unbound VkApiClient used for %s; bind() with a ProviderRequestContext first",
+            "unbound VkApiClient used for %s; bind with provider context first",
             method,
         )
         raise ProviderContextMissingError(
-            f"unbound VkApiClient used for {method}; call bind() with a "
+            f"unbound VkApiClient used for {method}; bind with a "
             "ProviderRequestContext first"
         )
 
 
 class BoundVkApiClient(_VkApiCallSurface):
-    """Immutable per-task facade: fixed context + shared scheduler/transport."""
+    """Immutable per-task facade with fixed context and credential material."""
 
     def __init__(
         self,
@@ -172,9 +197,15 @@ class BoundVkApiClient(_VkApiCallSurface):
         with request_context(self._context):
 
             async def transport_call():
-                return await self._transport.call(self._credential, method, **params)
+                return await self._transport.call(
+                    self._credential,
+                    method,
+                    **params,
+                )
 
             transport_call.method = method
             return await self._scheduler.execute(
-                self._context.account_id, self._context.lane_id, transport_call
+                self._context.account_id,
+                self._context.lane_id,
+                transport_call,
             )
