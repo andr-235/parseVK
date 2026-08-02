@@ -1,6 +1,6 @@
-import os
 import uuid
 
+from anyio import Path as AsyncPath
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -116,7 +116,9 @@ async def download_xlsx(
         raise HTTPException(status_code=400, detail="Invalid job ID format") from error
 
     job = await repo.get_job_by_id(job_uuid)
-    if not job or not job.xlsx_path or not os.path.exists(job.xlsx_path):
+    if not job or not job.xlsx_path:
+        raise HTTPException(status_code=404, detail="XLSX file not found")
+    if not await AsyncPath(job.xlsx_path).exists():
         raise HTTPException(status_code=404, detail="XLSX file not found")
 
     return FileResponse(
