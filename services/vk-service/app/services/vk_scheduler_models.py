@@ -50,6 +50,7 @@ class AccountState:
     slot: asyncio.Lock = field(default_factory=asyncio.Lock)
     wake: asyncio.Event = field(default_factory=asyncio.Event)
     dispatcher: asyncio.Task | None = None
+    in_flight: LaneRequest | None = None
 
     def has_work(self) -> bool:
         return any(self.lanes.get(lane_id) for lane_id in self.rotation)
