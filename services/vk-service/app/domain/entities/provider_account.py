@@ -3,6 +3,7 @@ from datetime import datetime
 from uuid import UUID
 
 SYSTEM_VK_ACCOUNT_KEY = "system-vk"
+SYSTEM_VK_CAPABILITY = "vk.all"
 
 ACCOUNT_STATUS_ACTIVE = "active"
 ACCOUNT_STATUS_INVALID = "invalid"
@@ -10,7 +11,12 @@ ACCOUNT_STATUS_COOLING_DOWN = "cooling_down"
 ACCOUNT_STATUS_DISABLED = "disabled"
 
 VALID_ACCOUNT_STATUSES = frozenset(
-    {ACCOUNT_STATUS_ACTIVE, ACCOUNT_STATUS_INVALID, ACCOUNT_STATUS_COOLING_DOWN, ACCOUNT_STATUS_DISABLED}
+    {
+        ACCOUNT_STATUS_ACTIVE,
+        ACCOUNT_STATUS_INVALID,
+        ACCOUNT_STATUS_COOLING_DOWN,
+        ACCOUNT_STATUS_DISABLED,
+    }
 )
 
 
@@ -33,3 +39,10 @@ class ProviderAccount:
     @property
     def is_active(self) -> bool:
         return self.status == ACCOUNT_STATUS_ACTIVE
+
+    def supports(self, capability: str) -> bool:
+        return capability in self.capabilities
+
+    @property
+    def can_execute_vk(self) -> bool:
+        return self.is_active and self.supports(SYSTEM_VK_CAPABILITY)
