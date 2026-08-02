@@ -100,6 +100,7 @@ class TaskExecutor:
                 self.provider_accounts_factory,
                 self.account_gate,
                 error,
+                credential_version=task_run.credential_version or "",
             )
             await self.finalizer.release_blocked(task_run, "provider_account_invalid")
             logger.warning(
@@ -109,12 +110,16 @@ class TaskExecutor:
                 task_run.run_id,
                 error.code,
             )
-        except ProviderAccountBlockedError:
-            await self.finalizer.release_blocked(task_run, "provider_account_blocked")
+        except ProviderAccountBlockedError as error:
+            await self.finalizer.release_blocked(
+                task_run,
+                "provider_account_blocked",
+            )
             logger.warning(
-                "Provider account blocked for task_id=%s run_id=%s; released without retry",
+                "Provider account blocked for task_id=%s run_id=%s: %s",
                 task_run.task_id,
                 task_run.run_id,
+                error,
             )
         except Exception as exc:
             await self.finalizer.fail(task_run, str(exc) or type(exc).__name__)
