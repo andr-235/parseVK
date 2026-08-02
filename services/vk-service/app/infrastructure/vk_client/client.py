@@ -207,6 +207,7 @@ class BoundVkApiClient(_VkApiCallSurface):
                 )
 
             transport_call.method = method
+            transport_call.credential_version = self._context.credential_version
             return await self._scheduler.execute(
                 self._context.account_id,
                 self._context.lane_id,
