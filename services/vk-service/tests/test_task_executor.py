@@ -97,14 +97,14 @@ async def test_completion_recording_failure_releases_task_for_retry():
     assert not any(call[0] == "done" for call in leases.calls)
 
 
-def _account() -> ProviderAccount:
+def _account(*, credential_version: str = "fake-version") -> ProviderAccount:
     now = datetime.now(UTC)
     return ProviderAccount(
         id=uuid4(),
         account_key=SYSTEM_VK_ACCOUNT_KEY,
         provider="vk",
         status="active",
-        credential_version="v1",
+        credential_version=credential_version,
         capabilities=[],
         cooldown_until=None,
         last_error_code=None,
@@ -122,11 +122,21 @@ class RecordingAccounts:
         self.transitions = []
 
     async def get_by_key(self, account_key):
+        assert account_key == SYSTEM_VK_ACCOUNT_KEY
         return self.account
 
-    async def transition_to_invalid(self, account_id, credential_version, *, error_code=None, error_kind=None):
-        self.transitions.append((account_id, credential_version, error_code, error_kind))
-        return True
+    async def transition_to_invalid(
+        self,
+        account_id,
+        credential_version,
+        *,
+        error_code=None,
+        error_kind=None,
+    ):
+        self.transitions.append(
+            (account_id, credential_version, error_code, error_kind)
+        )
+        return credential_version == self.account.credential_version
 
 
 class FakeGate:
@@ -161,12 +171,42 @@ async def test_executor_auth_error_releases_blocked_and_marks_account_invalid():
 
     await executor.execute(task_run())
 
-    assert accounts.transitions == [(account.id, "v1", 8, "auth")]
+    assert accounts.transitions == [
+        (account.id, "fake-version", 8, "auth")
+    ]
     assert gate.invalidated is True
     release = next(call for call in leases.calls if call[0] == "release")
     assert release[1]["error"] == "provider_account_invalid"
     assert not any(call[0] == "failed" for call in leases.calls)
     assert not any(call[0] == "done" for call in leases.calls)
+
+
+@pytest.mark.anyio
+async def test_stale_attempt_cannot_invalidate_rotated_credential():
+    account = _account(credential_version="new-version")
+
+    class Service:
+        async def execute(self, _task_run, **_kwargs):
+            raise VkApiAuthError(8, "old token invalid", "users.get")
+
+    leases = FakeLeaseStore()
+    accounts = RecordingAccounts(account)
+    gate = FakeGate()
+    executor = build_executor(
+        Service(),
+        leases,
+        provider_accounts_factory=lambda _session: accounts,
+        account_gate=gate,
+    )
+
+    await executor.execute(task_run())
+
+    assert accounts.transitions == [
+        (account.id, "fake-version", 8, "auth")
+    ]
+    assert gate.invalidated is False
+    assert any(call[0] == "release" for call in leases.calls)
+    assert not any(call[0] == "failed" for call in leases.calls)
 
 
 @pytest.mark.anyio
