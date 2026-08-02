@@ -40,7 +40,7 @@ def test_missing_secret_source_raises_outside_pytest():
         "from app.core.config import Settings\n"
         "Settings(vk_token='', token_file='')\n"
     )
-    result = subprocess.run(
+    result = subprocess.run(  # noqa: S603
         [sys.executable, "-c", code],
         cwd=SERVICE_DIR,
         capture_output=True,
