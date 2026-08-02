@@ -30,17 +30,18 @@ __all__ = [
     "BoundVkApiClient",
     "ProviderRequestContext",
     "ProviderContextMissingError",
+    "CredentialVersionMismatchError",
     "current_request_context",
     "VkApiConfigurationError",
 ]
 
 
-class VkApiClient(_VkApiCallSurface):
-    """Shared facade owning the scheduler and transport; produces bound clients.
+class CredentialVersionMismatchError(VkApiConfigurationError):
+    """Raised when DB attempt metadata and loaded secret disagree."""
 
-    Backward-compatible constructor kwargs (``token``, ``vk_session_factory``,
-    ``call_runner``) build an internal transport/scheduler when none is given.
-    """
+
+class VkApiClient(_VkApiCallSurface):
+    """Shared facade owning the scheduler and transport; produces bound clients."""
 
     def __init__(
         self,
@@ -52,8 +53,6 @@ class VkApiClient(_VkApiCallSurface):
         vk_session_factory=None,
         call_runner=None,
     ):
-        # Lazy imports: app.services.* runs the package __init__ which imports
-        # back into this module — must not execute at module load time.
         if scheduler is None:
             from app.services.vk_retry_policy import VkRetryPolicy
             from app.services.vk_scheduler import FairScheduler
@@ -74,6 +73,13 @@ class VkApiClient(_VkApiCallSurface):
 
     def bind(self, context: ProviderRequestContext) -> "BoundVkApiClient":
         credential = self._resolve_credential()
+        if context.credential_version != credential.version_digest:
+            expected = context.credential_version[:12] or "(missing)"
+            raise CredentialVersionMismatchError(
+                "provider credential version mismatch for "
+                f"{context.account_id}: expected {expected}, "
+                f"loaded {credential.display_version}"
+            )
         logger.debug(
             "binding vk client account=%s lane=%s credential=%s",
             context.account_id,
@@ -85,6 +91,16 @@ class VkApiClient(_VkApiCallSurface):
             transport=self._transport,
             credential=credential,
             context=context,
+        )
+
+    def bind_current(self, account_id: str, lane_id: str) -> "BoundVkApiClient":
+        credential = self._resolve_credential()
+        return self.bind(
+            ProviderRequestContext(
+                account_id=account_id,
+                credential_version=credential.version_digest,
+                lane_id=lane_id,
+            )
         )
 
     def _resolve_credential(self) -> CredentialMaterial:
@@ -137,8 +153,17 @@ class BoundVkApiClient(_VkApiCallSurface):
     def context(self) -> ProviderRequestContext:
         return self._context
 
+    @property
+    def credential_version(self) -> str:
+        return self._credential.version_digest
+
+    @property
+    def display_version(self) -> str:
+        return self._credential.display_version
+
     async def _call(self, method: str, **params) -> dict:
         with request_context(self._context):
+
             async def transport_call():
                 return await self._transport.call(self._credential, method, **params)
 
