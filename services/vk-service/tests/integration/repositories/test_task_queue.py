@@ -3,6 +3,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy import select
 
+from app.domain.entities.provider_account import SYSTEM_VK_CAPABILITY
 from app.infrastructure.db.models.outbox import OutboxEvent
 from app.infrastructure.db.repositories.provider_accounts import (
     SqlAlchemyProviderAccountRepository,
@@ -11,12 +12,21 @@ from app.infrastructure.db.repositories.task_queue import SqlAlchemyTaskQueueRep
 from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsRepository
 
 
-async def _seed_account(db_session, *, status="active", cooldown_until=None):
+async def _seed_account(
+    db_session,
+    *,
+    status="active",
+    cooldown_until=None,
+    capabilities=None,
+):
     repo = SqlAlchemyProviderAccountRepository(db_session)
     account = await repo.upsert_system(
         account_key="system-vk",
         provider="vk",
         credential_version="seed-v1",
+        capabilities=(
+            [SYSTEM_VK_CAPABILITY] if capabilities is None else capabilities
+        ),
     )
     if status == "invalid":
         await repo.transition_to_invalid(
@@ -129,12 +139,26 @@ async def test_claim_returns_none_when_account_invalid(db_session):
 
 
 @pytest.mark.anyio
+async def test_claim_returns_none_when_account_lacks_capability(db_session):
+    await _seed_account(db_session, capabilities=[])
+    await _create_task(db_session, task_id=903, run_id="run-903")
+    queue = SqlAlchemyTaskQueueRepository(db_session)
+
+    claimed = await queue.claim_next(
+        worker_id="worker-1",
+        lease_expires_at=datetime.now(UTC) + timedelta(minutes=1),
+    )
+
+    assert claimed is None
+
+
+@pytest.mark.anyio
 async def test_claim_returns_none_when_account_cooling_down(db_session):
     await _seed_account(
         db_session,
         cooldown_until=datetime.now(UTC) + timedelta(hours=1),
     )
-    await _create_task(db_session, task_id=903, run_id="run-903")
+    await _create_task(db_session, task_id=904, run_id="run-904")
     queue = SqlAlchemyTaskQueueRepository(db_session)
 
     claimed = await queue.claim_next(
@@ -153,7 +177,7 @@ async def test_claim_returns_none_while_cooling_down_until_reconciliation(
         db_session,
         cooldown_until=datetime.now(UTC) - timedelta(seconds=5),
     )
-    await _create_task(db_session, task_id=904, run_id="run-904")
+    await _create_task(db_session, task_id=905, run_id="run-905")
     queue = SqlAlchemyTaskQueueRepository(db_session)
 
     claimed = await queue.claim_next(
@@ -166,7 +190,7 @@ async def test_claim_returns_none_while_cooling_down_until_reconciliation(
 
 @pytest.mark.anyio
 async def test_claim_returns_none_without_account_row(db_session):
-    await _create_task(db_session, task_id=905, run_id="run-905")
+    await _create_task(db_session, task_id=906, run_id="run-906")
     queue = SqlAlchemyTaskQueueRepository(db_session)
 
     claimed = await queue.claim_next(
