@@ -54,6 +54,7 @@ class FairScheduler:
         request = LaneRequest(
             call=call,
             lane_id=lane_id,
+            credential_version=getattr(call, "credential_version", ""),
             future=loop.create_future(),
             not_before=now,
             enqueued_at=now,
@@ -63,12 +64,16 @@ class FairScheduler:
             if self._closed:
                 raise RuntimeError("VK scheduler is closed")
             state = self._accounts.setdefault(account_id, AccountState())
-            self._enqueue(state, request)
-            if state.dispatcher is None or state.dispatcher.done():
-                state.dispatcher = asyncio.create_task(
-                    self._dispatch(account_id, state)
-                )
-            state.wake.set()
+            blocked = state.blocked_credentials.get(request.credential_version)
+            if blocked is not None:
+                self._set_exception(request, self._copy_auth_error(blocked))
+            else:
+                self._enqueue(state, request)
+                if state.dispatcher is None or state.dispatcher.done():
+                    state.dispatcher = asyncio.create_task(
+                        self._dispatch(account_id, state)
+                    )
+                state.wake.set()
 
         logger.debug("scheduled lane=%s on account=%s", lane_id, account_id)
         try:
@@ -175,7 +180,7 @@ class FairScheduler:
             lane = state.lanes.get(lane_id)
             if lane is None:
                 continue
-            while lane and lane[0].future.cancelled():
+            while lane and lane[0].future.done():
                 lane.popleft()
             if lane:
                 active_lanes.append(lane_id)
@@ -196,6 +201,11 @@ class FairScheduler:
             lane_id = state.rotation[idx]
             lane = state.lanes[lane_id]
             head = lane[0]
+            blocked = state.blocked_credentials.get(head.credential_version)
+            if blocked is not None:
+                lane.popleft()
+                self._set_exception(head, self._copy_auth_error(blocked))
+                continue
             if head.not_before <= now:
                 state.rotation_pos = (idx + 1) % total
                 lane.popleft()
@@ -225,6 +235,15 @@ class FairScheduler:
                 self.metrics_hook(
                     account_id, method, outcome, wait_seconds, duration
                 )
+            if isinstance(result, VkApiAuthError):
+                state.blocked_credentials[request.credential_version] = result
+                self._fail_queued_credential(
+                    state,
+                    request.credential_version,
+                    result,
+                )
+                self._set_exception(request, result)
+                return
             if request.future.cancelled():
                 return
             if self._should_retry(request, result):
@@ -247,6 +266,24 @@ class FairScheduler:
             )
         if not request.future.done():
             request.future.set_result(result)
+
+    def _fail_queued_credential(
+        self,
+        state: AccountState,
+        credential_version: str,
+        error: VkApiAuthError,
+    ) -> None:
+        for lane_id, lane in list(state.lanes.items()):
+            remaining = deque()
+            while lane:
+                queued = lane.popleft()
+                if queued.credential_version == credential_version:
+                    self._set_exception(queued, self._copy_auth_error(error))
+                else:
+                    remaining.append(queued)
+            state.lanes[lane_id] = remaining
+        self._compact(state)
+        state.wake.set()
 
     def _should_retry(
         self, request: LaneRequest, error: BaseException
@@ -333,6 +370,12 @@ class FairScheduler:
         if not request.future.done():
             request.future.set_exception(error)
 
+    @staticmethod
+    def _copy_auth_error(error: BaseException) -> BaseException:
+        if isinstance(error, VkApiAuthError):
+            return VkApiAuthError(error.code, error.error_msg, error.method)
+        return error
+
     def _outcome(self, error: BaseException) -> str:
         if isinstance(error, VkApiAuthError):
             return OUTCOME_AUTH
@@ -350,7 +393,7 @@ class FairScheduler:
             1
             for lane in state.lanes.values()
             for request in lane
-            if not request.future.cancelled()
+            if not request.future.done()
         )
 
     async def close(self) -> None:
