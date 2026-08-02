@@ -6,7 +6,6 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_vk_friends_repository_dep
-from app.infrastructure.db.session import get_session
 from app.api.schemas.vk_friends import (
     VkFriendsExportStartRequest,
     VkFriendsExportStartResponse,
@@ -16,6 +15,7 @@ from app.api.schemas.vk_friends import (
 )
 from app.core.security import require_internal_token
 from app.domain.repositories.vk_friends import VkFriendsRepository
+from app.infrastructure.db.session import get_session
 
 router = APIRouter(
     prefix="/internal/vk/friends",
@@ -23,17 +23,36 @@ router = APIRouter(
     dependencies=[Depends(require_internal_token)],
 )
 
+
 async def run_export_job_background(job_id: uuid.UUID, params: dict) -> None:
     import asyncio
-    await asyncio.sleep(0.1)  # Brief backoff before starting background work
-    from app.bootstrap import get_vk_friends_service
+
+    from app.bootstrap import (
+        get_provider_account_repository,
+        get_vk_client,
+        get_vk_friends_service,
+    )
     from app.infrastructure.db.session import SessionLocal
+    from app.tasks.vk_client_binding import bind_system_vk_client
+
+    await asyncio.sleep(0.1)
     async with SessionLocal() as session:
         async with session.begin():
-            service = get_vk_friends_service(session)
+            client = await bind_system_vk_client(
+                get_vk_client(),
+                get_provider_account_repository,
+                session,
+                f"friends-export:{job_id}",
+            )
+            service = get_vk_friends_service(session, adapter=client)
             await service.run_export_job(job_id, params)
 
-@router.post("/export", response_model=VkFriendsExportStartResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/export",
+    response_model=VkFriendsExportStartResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def start_export(
     payload: VkFriendsExportStartRequest,
     background_tasks: BackgroundTasks,
@@ -42,17 +61,11 @@ async def start_export(
 ) -> VkFriendsExportStartResponse:
     params = payload.params
     vk_user_id = params.get("user_id")
-
-    # Create job in database
     job = await repo.create_job(params, vk_user_id=vk_user_id)
-
-    # Commit so the job is visible to the background task session
     await session.commit()
-
-    # Launch processing in background with a dedicated background session
     background_tasks.add_task(run_export_job_background, job.id, params)
-
     return VkFriendsExportStartResponse(job_id=str(job.id), status=job.status)
+
 
 @router.get("/jobs/{job_id}", response_model=VkFriendsJobDetailResponse)
 async def get_job(
@@ -61,15 +74,14 @@ async def get_job(
 ) -> VkFriendsJobDetailResponse:
     try:
         job_uuid = uuid.UUID(job_id)
-    except ValueError as err:
-        raise HTTPException(status_code=400, detail="Invalid job ID format") from err
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail="Invalid job ID format") from error
 
     job = await repo.get_job_by_id(job_uuid)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
     logs = await repo.get_job_logs(job_uuid, limit=200)
-
     job_state = VkFriendsJobState(
         id=str(job.id),
         status=job.status,
@@ -80,7 +92,6 @@ async def get_job(
         xlsx_path=job.xlsx_path,
         created_at=job.created_at,
     )
-
     log_entries = [
         VkFriendsJobLogEntry(
             id=str(log.id),
@@ -91,8 +102,8 @@ async def get_job(
         )
         for log in logs
     ]
-
     return VkFriendsJobDetailResponse(job=job_state, logs=log_entries)
+
 
 @router.get("/jobs/{job_id}/download/xlsx")
 async def download_xlsx(
@@ -101,22 +112,19 @@ async def download_xlsx(
 ) -> FileResponse:
     try:
         job_uuid = uuid.UUID(job_id)
-    except ValueError as err:
-        raise HTTPException(status_code=400, detail="Invalid job ID format") from err
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail="Invalid job ID format") from error
 
     job = await repo.get_job_by_id(job_uuid)
-    if not job or not job.xlsx_path:
+    if not job or not job.xlsx_path or not os.path.exists(job.xlsx_path):
         raise HTTPException(status_code=404, detail="XLSX file not found")
 
-    if not os.path.exists(job.xlsx_path):
-        raise HTTPException(status_code=404, detail="XLSX file not found on disk")
-
-    filename = f"vk_friends_export_{job_id}.xlsx"
     return FileResponse(
         job.xlsx_path,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        filename=filename,
+        filename=f"vk_friends_export_{job_id}.xlsx",
     )
+
 
 @router.get("/jobs/{job_id}/logs/raw")
 async def get_raw_logs(
@@ -125,18 +133,15 @@ async def get_raw_logs(
 ) -> dict:
     try:
         job_uuid = uuid.UUID(job_id)
-    except ValueError as err:
-        raise HTTPException(status_code=400, detail="Invalid job ID format") from err
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail="Invalid job ID format") from error
 
     job = await repo.get_job_by_id(job_uuid)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
     logs = await repo.get_job_logs(job_uuid, limit=500)
-    
-    # Sort chronologically for gateway SSE event stream
     logs_sorted = sorted(logs, key=lambda log_item: log_item.created_at)
-
     return {
         "job": {
             "id": str(job.id),
