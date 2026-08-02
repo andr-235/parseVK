@@ -17,6 +17,7 @@ from app.domain.entities.provider_account import (
     ACCOUNT_STATUS_COOLING_DOWN,
     ACCOUNT_STATUS_INVALID,
     SYSTEM_VK_ACCOUNT_KEY,
+    SYSTEM_VK_CAPABILITY,
     ProviderAccount,
 )
 from app.tasks.account_gate import AccountGate
@@ -27,7 +28,12 @@ def anyio_backend():
     return "asyncio"
 
 
-def _account(*, status=ACCOUNT_STATUS_ACTIVE, cooldown_until=None) -> ProviderAccount:
+def _account(
+    *,
+    status=ACCOUNT_STATUS_ACTIVE,
+    cooldown_until=None,
+    capabilities=None,
+) -> ProviderAccount:
     now = datetime.now(UTC)
     return ProviderAccount(
         id=uuid4(),
@@ -35,7 +41,9 @@ def _account(*, status=ACCOUNT_STATUS_ACTIVE, cooldown_until=None) -> ProviderAc
         provider="vk",
         status=status,
         credential_version="v1",
-        capabilities=[],
+        capabilities=(
+            [SYSTEM_VK_CAPABILITY] if capabilities is None else capabilities
+        ),
         cooldown_until=cooldown_until,
         last_error_code=None,
         last_error_kind=None,
@@ -47,9 +55,6 @@ def _account(*, status=ACCOUNT_STATUS_ACTIVE, cooldown_until=None) -> ProviderAc
 
 
 class RecordingSession:
-    def __init__(self, account):
-        self._account = account
-
     async def __aenter__(self):
         return self
 
@@ -72,10 +77,7 @@ class FakeSessionFactory:
         self._repo = repo
 
     def __call__(self):
-        return RecordingSession(None)
-
-    def repo(self):
-        return self._repo
+        return RecordingSession()
 
 
 def _make_gate(account):
@@ -92,6 +94,15 @@ async def test_active_account_allows_claim():
 
 
 @pytest.mark.anyio
+async def test_active_account_without_vk_capability_is_cached_as_blocked():
+    gate, repo = _make_gate(_account(capabilities=[]))
+
+    assert await gate.can_claim() is False
+    assert await gate.can_claim() is False
+    assert repo.calls == 1
+
+
+@pytest.mark.anyio
 async def test_cached_invalid_short_circuits_without_db_call():
     gate, repo = _make_gate(_account(status=ACCOUNT_STATUS_INVALID))
     assert await gate.can_claim() is False
@@ -103,7 +114,9 @@ async def test_cached_invalid_short_circuits_without_db_call():
 @pytest.mark.anyio
 async def test_cached_cooldown_short_circuits_until_expiry():
     future = datetime.now(UTC) + timedelta(hours=1)
-    gate, repo = _make_gate(_account(status=ACCOUNT_STATUS_COOLING_DOWN, cooldown_until=future))
+    gate, repo = _make_gate(
+        _account(status=ACCOUNT_STATUS_COOLING_DOWN, cooldown_until=future)
+    )
     assert await gate.can_claim() is False
     assert repo.calls == 1
     assert await gate.can_claim() is False
@@ -112,10 +125,12 @@ async def test_cached_cooldown_short_circuits_until_expiry():
 
 @pytest.mark.anyio
 async def test_expired_cooldown_rechecks_db():
-    repo = FakeAccountsRepo(_account(status=ACCOUNT_STATUS_COOLING_DOWN, cooldown_until=None))
+    repo = FakeAccountsRepo(
+        _account(status=ACCOUNT_STATUS_COOLING_DOWN, cooldown_until=None)
+    )
     gate = AccountGate(FakeSessionFactory(repo), lambda _session: repo)
 
-    assert await gate.can_claim() is False  # cooling_down without future cooldown
+    assert await gate.can_claim() is False
     assert repo.calls == 1
 
 
@@ -150,5 +165,7 @@ async def test_invalidate_clears_cached_block():
 @pytest.mark.anyio
 async def test_active_with_future_cooldown_blocks():
     future = datetime.now(UTC) + timedelta(hours=1)
-    gate, _repo = _make_gate(_account(status=ACCOUNT_STATUS_ACTIVE, cooldown_until=future))
+    gate, _repo = _make_gate(
+        _account(status=ACCOUNT_STATUS_ACTIVE, cooldown_until=future)
+    )
     assert await gate.can_claim() is False
