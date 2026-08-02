@@ -29,13 +29,18 @@ stage_deploy_tools() {
   SERVICE_CATALOG_CLI="$stage_root/service_catalog.py"
   LOCAL_RELEASE_SCRIPT="$stage_root/production/local-release.sh"
   STORAGE_GUARD_SCRIPT="$stage_root/production/storage-guard.sh"
+  HEALTH_CHECK_SCRIPT="$stage_root/health-check.sh"
+  HTTP_HEALTH_CHECK_SCRIPT="$stage_root/http-health-check.sh"
   export PRODUCTION_SCRIPTS_DIR SERVICE_CATALOG_CLI LOCAL_RELEASE_SCRIPT STORAGE_GUARD_SCRIPT
+  export HEALTH_CHECK_SCRIPT HTTP_HEALTH_CHECK_SCRIPT
 
   {
     printf 'PRODUCTION_SCRIPTS_DIR=%s\n' "$PRODUCTION_SCRIPTS_DIR"
     printf 'SERVICE_CATALOG_CLI=%s\n' "$SERVICE_CATALOG_CLI"
     printf 'LOCAL_RELEASE_SCRIPT=%s\n' "$LOCAL_RELEASE_SCRIPT"
     printf 'STORAGE_GUARD_SCRIPT=%s\n' "$STORAGE_GUARD_SCRIPT"
+    printf 'HEALTH_CHECK_SCRIPT=%s\n' "$HEALTH_CHECK_SCRIPT"
+    printf 'HTTP_HEALTH_CHECK_SCRIPT=%s\n' "$HTTP_HEALTH_CHECK_SCRIPT"
   } >> "$GITHUB_ENV"
 
   log_info "Deploy tools staged outside shared workspace: $stage_root"
