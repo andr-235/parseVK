@@ -5,8 +5,8 @@ from prometheus_client import REGISTRY
 
 from app.domain.exceptions.vk_api import VkApiAuthError, VkApiRateLimitError
 from app.infrastructure.metrics import vk_metrics
-from app.services.vk_scheduler import FairScheduler
 from app.services.vk_retry_policy import VkRetryPolicy
+from app.services.vk_scheduler import FairScheduler
 
 
 def _sample(name: str, labels: dict) -> float | None:
@@ -17,9 +17,18 @@ def _sample(name: str, labels: dict) -> float | None:
 async def test_observe_request_records_counter_and_duration():
     vk_metrics.observe_request("system-vk", "users.get", "success", 0.25)
 
-    assert _sample("vk_requests_total", {"account_id": "system-vk", "method": "users.get", "outcome": "success"}) == 1.0
-    assert _sample("vk_request_duration_seconds_count", {"account_id": "system-vk", "method": "users.get"}) == 1.0
-    assert _sample("vk_request_duration_seconds_sum", {"account_id": "system-vk", "method": "users.get"}) == 0.25
+    assert _sample(
+        "vk_requests_total",
+        {"account_id": "system-vk", "method": "users.get", "outcome": "success"},
+    ) == 1.0
+    assert _sample(
+        "vk_request_duration_seconds_count",
+        {"account_id": "system-vk", "method": "users.get"},
+    ) == 1.0
+    assert _sample(
+        "vk_request_duration_seconds_sum",
+        {"account_id": "system-vk", "method": "users.get"},
+    ) == 0.25
 
 
 @pytest.mark.anyio
@@ -27,14 +36,27 @@ async def test_observe_request_outcome_and_method_labels():
     vk_metrics.observe_request("acc-2", "wall.get", "auth", 0.1)
     vk_metrics.observe_request("acc-2", "wall.get", "rate_limit", 0.1)
 
-    assert _sample("vk_requests_total", {"account_id": "acc-2", "method": "wall.get", "outcome": "auth"}) == 1.0
-    assert _sample("vk_requests_total", {"account_id": "acc-2", "method": "wall.get", "outcome": "rate_limit"}) == 1.0
+    assert _sample(
+        "vk_requests_total",
+        {"account_id": "acc-2", "method": "wall.get", "outcome": "auth"},
+    ) == 1.0
+    assert _sample(
+        "vk_requests_total",
+        {"account_id": "acc-2", "method": "wall.get", "outcome": "rate_limit"},
+    ) == 1.0
 
 
 @pytest.mark.anyio
 async def test_no_version_label_on_request_metrics():
-    assert vk_metrics._requests_total._labelnames == ("account_id", "method", "outcome")
-    assert vk_metrics._request_duration_seconds._labelnames == ("account_id", "method")
+    assert vk_metrics._requests_total._labelnames == (
+        "account_id",
+        "method",
+        "outcome",
+    )
+    assert vk_metrics._request_duration_seconds._labelnames == (
+        "account_id",
+        "method",
+    )
 
 
 @pytest.mark.anyio
@@ -42,7 +64,10 @@ async def test_observe_rate_limit_retry_records_code_label():
     vk_metrics.observe_rate_limit_retry("system-vk", 6)
     vk_metrics.observe_rate_limit_retry("system-vk", 6)
 
-    assert _sample("vk_rate_limit_retries_total", {"account_id": "system-vk", "code": "6"}) == 2.0
+    assert _sample(
+        "vk_rate_limit_retries_total",
+        {"account_id": "system-vk", "code": "6"},
+    ) == 2.0
 
 
 @pytest.mark.anyio
@@ -50,8 +75,12 @@ async def test_queue_depth_and_wait_metrics():
     vk_metrics.set_scheduler_queue_depth("system-vk", 3)
     vk_metrics.observe_scheduler_wait("system-vk", 0.5)
 
-    assert _sample("vk_scheduler_queue_depth", {"account_id": "system-vk"}) == 3.0
-    assert _sample("vk_scheduler_wait_seconds_count", {"account_id": "system-vk"}) == 1.0
+    assert _sample(
+        "vk_scheduler_queue_depth", {"account_id": "system-vk"}
+    ) == 3.0
+    assert _sample(
+        "vk_scheduler_wait_seconds_count", {"account_id": "system-vk"}
+    ) == 1.0
 
 
 @pytest.mark.anyio
@@ -59,8 +88,14 @@ async def test_account_status_gauge_flips_previous_status_to_zero():
     vk_metrics.set_account_status("system-vk", "active")
     vk_metrics.set_account_status("system-vk", "invalid")
 
-    assert _sample("vk_account_status", {"account_id": "system-vk", "status": "invalid"}) == 1.0
-    assert _sample("vk_account_status", {"account_id": "system-vk", "status": "active"}) == 0.0
+    assert _sample(
+        "vk_account_status",
+        {"account_id": "system-vk", "status": "invalid"},
+    ) == 1.0
+    assert _sample(
+        "vk_account_status",
+        {"account_id": "system-vk", "status": "active"},
+    ) == 0.0
 
 
 @pytest.mark.anyio
@@ -68,8 +103,12 @@ async def test_account_cooldown_gauge_clamps_negative():
     vk_metrics.set_account_cooldown("system-vk", -5)
     vk_metrics.set_account_cooldown("acc-2", 42)
 
-    assert _sample("vk_account_cooldown_seconds", {"account_id": "system-vk"}) == 0.0
-    assert _sample("vk_account_cooldown_seconds", {"account_id": "acc-2"}) == 42.0
+    assert _sample(
+        "vk_account_cooldown_seconds", {"account_id": "system-vk"}
+    ) == 0.0
+    assert _sample(
+        "vk_account_cooldown_seconds", {"account_id": "acc-2"}
+    ) == 42.0
 
 
 @pytest.mark.anyio
