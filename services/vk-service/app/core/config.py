@@ -24,6 +24,13 @@ class Settings(BaseSettings):
     task_timeout_seconds: int = Field(default=1800, ge=60, le=86400)
     task_max_attempts: int = Field(default=3, ge=1, le=10)
     vk_api_timeout_seconds: float = Field(default=20.0, gt=0, le=120)
+    token_file: str = ""
+    target_requests_per_second: float = Field(default=3.0, gt=0)
+    rate_limit_max_retries: int = Field(default=5, ge=0, le=20)
+    retry_max_elapsed_seconds: float = Field(default=300.0, gt=0)
+    short_backoff_base_seconds: float = Field(default=1.0, gt=0)
+    account_cooldown_seconds: int = Field(default=300, ge=0)
+    hard_limit_cooldown_seconds: int = Field(default=3600, ge=0)
     ok_friends_export_dir: str = ".temp/ok-friends"
     vk_friends_export_dir: str = ".temp/vk-friends"
     vk_token: str = Field(default="", repr=False)
@@ -37,8 +44,8 @@ class Settings(BaseSettings):
 
         if self.task_heartbeat_seconds >= self.task_lease_seconds:
             raise ValueError("task heartbeat must be shorter than task lease")
-        if "pytest" not in sys.modules and not self.vk_token:
-            raise ValueError("VK_SERVICE_VK_TOKEN is required")
+        if "pytest" not in sys.modules and not self.token_file and not self.vk_token:
+            raise ValueError("VK_SERVICE_VK_TOKEN or VK_SERVICE_TOKEN_FILE is required")
         return self
 
 

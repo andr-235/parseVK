@@ -3,6 +3,14 @@ from typing import Any
 
 from app.core.config import settings
 
+_REGISTERED_SECRETS: set[str] = set()
+
+
+def register_secret(secret: str) -> None:
+    """Register a runtime-loaded secret (e.g. from a mounted file) for redaction."""
+    if secret and len(secret) > 4:
+        _REGISTERED_SECRETS.add(secret)
+
 
 def redact_secrets(text: Any) -> str:
     """
@@ -26,6 +34,9 @@ def redact_secrets(text: Any) -> str:
         secrets_to_redact.append(settings.ok_application_secret_key)
     if hasattr(settings, "internal_service_token") and settings.internal_service_token:
         secrets_to_redact.append(settings.internal_service_token)
+
+    # Redact runtime-registered secrets (mounted file credentials, etc.)
+    secrets_to_redact.extend(_REGISTERED_SECRETS)
 
     # Redact dynamic sig or access token formats that might match typical base64/hex tokens
     for secret in secrets_to_redact:
