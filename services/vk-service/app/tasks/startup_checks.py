@@ -1,34 +1,20 @@
+"""Legacy fire-and-forget startup credential checks.
+
+VK startup validation lives in :mod:`app.tasks.provider_reconciliation`
+(validated once via the fair scheduler). The OK credentials check below
+stays fire-and-forget as before.
+"""
+
 import asyncio
 import logging
 
-from app.domain.exceptions.vk_api import VkApiAuthError
 from app.infrastructure.ok_client.client import OkApiClient
-from app.infrastructure.vk_client.client import VkApiClient, VkApiConfigurationError
 
 logger = logging.getLogger(__name__)
 
 
 def schedule_startup_checks() -> None:
-    asyncio.create_task(_check_vk_token())
     asyncio.create_task(_check_ok_credentials())
-
-
-async def _check_vk_token() -> None:
-    try:
-        client = VkApiClient()
-        await client._call("users.get", user_ids="1")
-        logger.info("VK token test OK — token is valid")
-    except VkApiAuthError as error:
-        logger.critical(
-            "VK token test FAILED with auth error [%d]: %s. "
-            "The VK application or token is invalid/blocked.",
-            error.code,
-            error.error_msg,
-        )
-    except VkApiConfigurationError as error:
-        logger.warning("VK token test skipped: %s", error)
-    except Exception as error:
-        logger.warning("VK token test could not complete: %s", error)
 
 
 async def _check_ok_credentials() -> None:

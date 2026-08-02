@@ -28,6 +28,7 @@ async def test_health_returns_up():
         "status": "UP",
         "vkTokenConfigured": "no",
         "vkTokenMasked": "",
+        "vkAccountStatus": "unconfigured",
         "okCredentialsConfigured": "no",
         "okTokenMasked": "",
         "kafkaConsumer": "unhealthy",

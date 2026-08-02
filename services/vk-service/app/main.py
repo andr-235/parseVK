@@ -3,7 +3,10 @@ import logging
 from fastapi import FastAPI
 
 from app.api.router_registry import register_routers
+from app.bootstrap import get_provider_account_repository, get_secret_provider
 from app.core.config import mask_token, settings
+from app.domain.entities.provider_account import SYSTEM_VK_ACCOUNT_KEY
+from app.infrastructure.db.session import SessionLocal
 from app.tasks.lifespan import (
     get_consumer_healthy,
     get_publisher_healthy,
@@ -26,7 +29,22 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict[str, str]:
-        vk_token_configured = "yes" if settings.vk_token else "no"
+        vk_display = ""
+        try:
+            credential = get_secret_provider().load()
+        except Exception:
+            credential = None
+        if credential is not None and credential.raw_secret:
+            vk_display = credential.display_version
+        vk_account_status = "unknown"
+        try:
+            async with SessionLocal() as session:
+                account = await get_provider_account_repository(session).get_by_key(
+                    SYSTEM_VK_ACCOUNT_KEY
+                )
+            vk_account_status = account.status if account else "unconfigured"
+        except Exception:
+            pass
         ok_creds_configured = (
             "yes"
             if (
@@ -38,8 +56,9 @@ def create_app() -> FastAPI:
         )
         return {
             "status": "UP",
-            "vkTokenConfigured": vk_token_configured,
-            "vkTokenMasked": mask_token(settings.vk_token) if settings.vk_token else "",
+            "vkTokenConfigured": "yes" if vk_display else "no",
+            "vkTokenMasked": vk_display,
+            "vkAccountStatus": vk_account_status,
             "okCredentialsConfigured": ok_creds_configured,
             "okTokenMasked": mask_token(settings.ok_access_token)
             if settings.ok_access_token
