@@ -43,6 +43,8 @@ class VkTaskRun(Base):
     processed_items: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     total_items: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     execution_sequence: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    provider_account_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    credential_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     available_at: Mapped[datetime] = mapped_column(
