@@ -18,14 +18,17 @@ def anyio_backend():
 
 
 @pytest.mark.anyio
-async def test_health_returns_up():
+async def test_health_reports_unconfigured_provider_as_degraded():
     app = create_app()
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
         response = await client.get("/health")
 
     assert response.status_code == 200
     assert response.json() == {
-        "status": "UP",
+        "status": "DEGRADED",
         "vkTokenConfigured": "no",
         "vkTokenMasked": "",
         "vkAccountStatus": "unconfigured",
@@ -33,7 +36,7 @@ async def test_health_returns_up():
         "okTokenMasked": "",
         "kafkaConsumer": "unhealthy",
         "outboxPublisher": "unhealthy",
-        "taskWorker": "unhealthy",
+        "taskWorker": "blocked",
     }
 
 
@@ -46,7 +49,10 @@ async def test_ready_returns_ready():
         mock_conn = AsyncMock()
         mock_engine.connect.return_value.__aenter__.return_value = mock_conn
 
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+        ) as client:
             response = await client.get("/ready")
 
     assert response.status_code == 200
@@ -60,7 +66,10 @@ async def test_ready_returns_service_unavailable():
     app = create_app()
     with patch("app.infrastructure.db.session.engine") as mock_engine:
         mock_engine.connect.side_effect = Exception("Database connection error")
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+        ) as client:
             response = await client.get("/ready")
 
     assert response.status_code == 503
