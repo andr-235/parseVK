@@ -3,7 +3,7 @@ from pathlib import Path
 
 from app.core.redaction import register_secret
 from app.domain.entities.credentials import CredentialMaterial
-from app.domain.ports.secret_provider import SecretProvider, SecretProviderError
+from app.domain.ports.secret_provider import SecretProviderError
 
 logger = logging.getLogger(__name__)
 
