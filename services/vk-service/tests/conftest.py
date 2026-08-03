@@ -1,11 +1,15 @@
 import asyncio
 import json
+import os
 import sqlite3
 import sys
 from pathlib import Path
 
 import pytest
+from sqlalchemy import BigInteger
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.compiler import compiles
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _service_path import use_service_path
@@ -38,9 +42,6 @@ from app.infrastructure.db.models.vk_ingestion import (  # noqa: F401
     VkIngestionCheckpoint,
     VkPost,
 )
-from sqlalchemy import BigInteger
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-from sqlalchemy.ext.compiler import compiles
 
 
 @compiles(JSONB, "sqlite")
@@ -85,12 +86,10 @@ async def setup_test_database():
         await conn.run_sync(Base.metadata.drop_all)
     await session_module.engine.dispose()
 
-    db_file = Path("test_temp.db")
-    if db_file.exists():
-        try:
-            db_file.unlink()
-        except Exception:
-            pass
+    try:
+        os.remove("test_temp.db")
+    except FileNotFoundError:
+        pass
 
 
 @pytest.fixture
