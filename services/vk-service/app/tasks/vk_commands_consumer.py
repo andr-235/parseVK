@@ -3,10 +3,14 @@
 import json
 import logging
 
-from common.events import TaskEvent, WireEvent
+from common.events import TaskEvent
 from common.kafka.consumer import BaseEventConsumer
-from parsevk_contracts.vk.commands import VkExecutionRequested
-from prometheus_client import Gauge
+from parsevk_contracts.validation import parse_for_consume
+from parsevk_contracts.vk.commands import (
+    CATALOG as VK_COMMAND_CATALOG,
+    VkExecutionRequested,
+)
+from prometheus_client import REGISTRY, Gauge
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.bootstrap import get_task_events_handler
@@ -17,11 +21,20 @@ logger = logging.getLogger(__name__)
 
 CONSUMER_NAME = "vk-service-vk-commands"
 
-_consumer_lag = Gauge(
-    "vk_commands_consumer_lag",
-    "Canonical VK command consumer lag per partition",
-    ["topic", "consumer_group", "partition"],
-)
+
+def _create_lag_gauge() -> Gauge:
+    name = "vk_commands_consumer_lag"
+    try:
+        return Gauge(
+            name,
+            "Canonical VK command consumer lag per partition",
+            ["topic", "consumer_group", "partition"],
+        )
+    except ValueError:
+        return REGISTRY._names_to_collectors[name]  # type: ignore[return-value]
+
+
+_consumer_lag = _create_lag_gauge()
 
 
 class VkExecutionCommandsConsumer(BaseEventConsumer):
@@ -46,45 +59,41 @@ class VkExecutionCommandsConsumer(BaseEventConsumer):
         self,
         raw_value: bytes | str | dict,
     ) -> None:
-        if isinstance(raw_value, bytes):
-            raw_value = raw_value.decode("utf-8")
-        payload = json.loads(raw_value) if isinstance(raw_value, str) else raw_value
-        wire = WireEvent.model_validate(payload)
-        if wire.event_type != "vk.execution.requested":
-            raise ValueError(
-                f"unsupported VK command type: {wire.event_type}"
-            )
-        if wire.event_version != 1:
-            raise ValueError(
-                f"unsupported vk.execution.requested version: {wire.event_version}"
-            )
+        if isinstance(raw_value, dict):
+            value = json.dumps(raw_value).encode("utf-8")
+        elif isinstance(raw_value, str):
+            value = raw_value.encode("utf-8")
+        else:
+            value = raw_value
 
-        command = VkExecutionRequested.model_validate(wire.payload)
+        parsed = parse_for_consume(
+            VK_COMMAND_CATALOG,
+            consumer="vk-service",
+            topic=settings.kafka_topic_vk_commands,
+            value=value,
+        )
+        command = parsed.envelope.payload
+        if not isinstance(command, VkExecutionRequested):
+            raise TypeError(
+                "vk.execution.requested payload resolved to an unexpected model"
+            )
         if not command.owner_user_id:
             raise ValueError("vk.execution.requested requires ownerUserId")
-        if wire.correlation_id != str(command.execution_id):
-            raise ValueError(
-                "vk.execution.requested correlationId must equal executionId"
-            )
-        if wire.aggregate_id != str(command.execution_id):
-            raise ValueError(
-                "vk.execution.requested aggregateId must equal executionId"
-            )
 
-        # PR06A feeds the validated canonical command into the existing aggregate
-        # attachment service. PR06B replaces this transitional translation with
-        # one source-level attachment per command demand.
+        # PR06A feeds the fully validated canonical command into the existing
+        # aggregate attachment service. PR06B removes this bridge and attaches
+        # one physical source collection per command demand.
         group_ids = [
             int(demand.source.external_id)
             for demand in command.demands
         ]
         task_event = TaskEvent.model_validate(
             {
-                "event_id": wire.event_id,
+                "event_id": str(parsed.envelope.message_id),
                 "event_type": "task.created",
                 "event_version": 1,
                 "aggregate_id": str(command.task_id),
-                "correlation_id": wire.correlation_id,
+                "correlation_id": str(parsed.envelope.correlation_id),
                 "payload": {
                     "taskId": str(command.task_id),
                     "ownerUserId": command.owner_user_id,
