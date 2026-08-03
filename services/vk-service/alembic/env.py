@@ -7,6 +7,10 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import settings
 from app.infrastructure.db.base import Base
+from app.infrastructure.db.models.executions import (  # noqa: F401
+    VkExecution,
+    VkExecutionAttempt,
+)
 from app.infrastructure.db.models.ok_friends import (  # noqa: F401
     OkFriendsExportJob,
     OkFriendsJobLog,
@@ -16,7 +20,7 @@ from app.infrastructure.db.models.outbox import OutboxEvent  # noqa: F401
 from app.infrastructure.db.models.provider_accounts import (  # noqa: F401
     VkProviderAccount,
 )
-from app.infrastructure.db.models.tasks import ProcessedEvent, VkTaskRun  # noqa: F401
+from app.infrastructure.db.models.tasks import ProcessedEvent  # noqa: F401
 from app.infrastructure.db.models.vk_friends import (  # noqa: F401
     VkFriendsExportJob,
     VkFriendsJobLog,
