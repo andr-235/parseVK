@@ -53,18 +53,33 @@ def build_collection_identity(
 def _normalize_filters(payload: dict[str, Any]) -> dict[str, Any]:
     ignored = {
         "taskId",
+        "task_id",
         "runId",
+        "run_id",
         "ownerUserId",
+        "owner_user_id",
         "createdAt",
+        "created_at",
         "updatedAt",
+        "updated_at",
         "correlationId",
+        "correlation_id",
         "requestId",
+        "request_id",
+        "source",
+    }
+    plan_fields = {
+        "scope",
+        "mode",
+        "groupIds",
+        "group_ids",
+        "postLimit",
+        "post_limit",
     }
     return {
         key: _normalize_value(value)
         for key, value in sorted(payload.items())
-        if key not in ignored
-        and key not in {"scope", "mode", "groupIds", "postLimit"}
+        if key not in ignored and key not in plan_fields
     }
 
 
