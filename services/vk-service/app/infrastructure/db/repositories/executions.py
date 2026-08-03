@@ -18,8 +18,13 @@ from app.domain.repositories.executions import ExecutionRepository
 from app.infrastructure.db.models.executions import VkExecution, VkExecutionAttempt
 from app.infrastructure.db.models.outbox import OutboxEvent
 from app.infrastructure.db.models.provider_accounts import VkProviderAccount
+from app.infrastructure.db.models.source_collections import (
+    VkCollectionDemand,
+    VkSourceCollection,
+)
 
 EXECUTOR = "vk-service"
+ACTIVE_DEMAND_STATUSES = ("pending", "running")
 
 
 def utcnow() -> datetime:
@@ -126,10 +131,19 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
             VkExecutionAttempt.status == "running",
             VkExecutionAttempt.lease_expires_at <= now,
         )
+        collection_exists = exists().where(
+            VkSourceCollection.execution_id == VkExecution.id
+        )
+        compatible_collection = exists().where(
+            VkSourceCollection.execution_id == VkExecution.id,
+            VkSourceCollection.provider_account_key == account_key,
+            VkSourceCollection.status.in_(("pending", "running")),
+        )
         execution = await self.session.scalar(
             select(VkExecution)
             .where(
                 VkExecution.cancellation_requested_at.is_(None),
+                or_(~collection_exists, compatible_collection),
                 or_(
                     and_(
                         VkExecution.status == "pending",
@@ -155,8 +169,6 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
                 previous.status = "expired"
                 previous.finished_at = now
                 previous.last_error = "lease expired"
-                # Clear the partial unique running-attempt index before the
-                # replacement attempt is inserted in the same transaction.
                 await self.session.flush()
 
         fencing_token = execution.current_fencing_token + 1
@@ -182,32 +194,63 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
         execution.started_at = execution.started_at or now
         execution.updated_at = now
 
-        payload = TaskExecutionStartedPayload(
-            taskId=execution.task_id,
-            runId=execution.run_id,
-            ownerUserId=execution.owner_user_id,
-            executor=EXECUTOR,
-            workerId=worker_id,
-            attempt=attempt.attempt_number,
-            executionSequence=execution.execution_sequence,
-            providerAccountKey=attempt.provider_account_key,
-            credentialVersion=attempt.credential_version,
-            startedAt=now.isoformat(),
-        )
-        self.session.add(
-            OutboxEvent(
-                id=uuid4(),
-                event_type="task.execution_started",
-                aggregate_type="task",
-                aggregate_id=str(execution.task_id),
-                dedupe_key=f"task.execution_started:{execution.id}:{attempt.attempt_number}",
-                payload=payload.model_dump(mode="json", exclude_none=True),
-                status="pending",
-                attempts=0,
-                next_attempt_at=now,
-                created_at=now,
+        collection = await self._collection(execution.id, lock=True)
+        demands = await self._active_demands(execution.id, lock=True)
+        if collection is not None:
+            collection.status = "running"
+            collection.started_at = collection.started_at or now
+            collection.updated_at = now
+
+        if demands:
+            for demand in demands:
+                demand.status = "running"
+                demand.execution_sequence += 1
+                demand.updated_at = now
+                payload = TaskExecutionStartedPayload(
+                    taskId=demand.task_id,
+                    runId=demand.run_id,
+                    ownerUserId=demand.owner_user_id,
+                    executor=EXECUTOR,
+                    workerId=worker_id,
+                    attempt=attempt.attempt_number,
+                    executionSequence=demand.execution_sequence,
+                    providerAccountKey=attempt.provider_account_key,
+                    credentialVersion=attempt.credential_version,
+                    startedAt=now.isoformat(),
+                )
+                self._add_outbox(
+                    event_type="task.execution_started",
+                    task_id=demand.task_id,
+                    dedupe_key=(
+                        f"task.execution_started:{demand.id}:"
+                        f"{attempt.attempt_number}"
+                    ),
+                    payload=payload.model_dump(mode="json", exclude_none=True),
+                    now=now,
+                )
+        else:
+            payload = TaskExecutionStartedPayload(
+                taskId=execution.task_id,
+                runId=execution.run_id,
+                ownerUserId=execution.owner_user_id,
+                executor=EXECUTOR,
+                workerId=worker_id,
+                attempt=attempt.attempt_number,
+                executionSequence=execution.execution_sequence,
+                providerAccountKey=attempt.provider_account_key,
+                credentialVersion=attempt.credential_version,
+                startedAt=now.isoformat(),
             )
-        )
+            self._add_outbox(
+                event_type="task.execution_started",
+                task_id=execution.task_id,
+                dedupe_key=(
+                    f"task.execution_started:{execution.id}:"
+                    f"{attempt.attempt_number}"
+                ),
+                payload=payload.model_dump(mode="json", exclude_none=True),
+                now=now,
+            )
         await self.session.flush()
         return VkExecutionClaim(
             execution=_execution_entity(execution),
@@ -272,6 +315,9 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
         attempt.heartbeat_at = now
         attempt.lease_expires_at = lease_expires_at
         execution.updated_at = now
+        collection = await self._collection(execution.id)
+        if collection is not None:
+            collection.updated_at = now
         await self.session.flush()
         return True
 
@@ -303,32 +349,61 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
         execution.last_error = None
         execution.execution_sequence += 1
         execution.updated_at = now
-        payload = TaskExecutionCompletedPayload(
-            taskId=execution.task_id,
-            runId=execution.run_id,
-            ownerUserId=execution.owner_user_id,
-            executor=EXECUTOR,
-            workerId=attempt.worker_id,
-            executionSequence=execution.execution_sequence,
-            processedItems=processed_items,
-            totalItems=total_items,
-            stats=stats or {},
-            completedAt=now.isoformat(),
-        )
-        self.session.add(
-            OutboxEvent(
-                id=uuid4(),
+
+        collection = await self._collection(execution.id, lock=True)
+        demands = await self._active_demands(execution.id, lock=True)
+        if collection is not None:
+            collection.status = "done"
+            collection.finished_at = now
+            collection.last_error = None
+            collection.updated_at = now
+
+        if demands:
+            for demand in demands:
+                demand.status = "done"
+                demand.finished_at = now
+                demand.last_error = None
+                demand.execution_sequence += 1
+                demand.updated_at = now
+                payload = TaskExecutionCompletedPayload(
+                    taskId=demand.task_id,
+                    runId=demand.run_id,
+                    ownerUserId=demand.owner_user_id,
+                    executor=EXECUTOR,
+                    workerId=attempt.worker_id,
+                    executionSequence=demand.execution_sequence,
+                    processedItems=processed_items,
+                    totalItems=total_items,
+                    stats=stats or {},
+                    completedAt=now.isoformat(),
+                )
+                self._add_outbox(
+                    event_type="task.execution_completed",
+                    task_id=demand.task_id,
+                    dedupe_key=f"task.execution_completed:{demand.id}",
+                    payload=payload.model_dump(mode="json"),
+                    now=now,
+                )
+        else:
+            payload = TaskExecutionCompletedPayload(
+                taskId=execution.task_id,
+                runId=execution.run_id,
+                ownerUserId=execution.owner_user_id,
+                executor=EXECUTOR,
+                workerId=attempt.worker_id,
+                executionSequence=execution.execution_sequence,
+                processedItems=processed_items,
+                totalItems=total_items,
+                stats=stats or {},
+                completedAt=now.isoformat(),
+            )
+            self._add_outbox(
                 event_type="task.execution_completed",
-                aggregate_type="task",
-                aggregate_id=str(execution.task_id),
+                task_id=execution.task_id,
                 dedupe_key=f"task.execution_completed:{execution.id}",
                 payload=payload.model_dump(mode="json"),
-                status="pending",
-                attempts=0,
-                next_attempt_at=now,
-                created_at=now,
+                now=now,
             )
-        )
         await self.session.flush()
         return True
 
@@ -363,34 +438,65 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
         execution.total_items = total_items
         execution.execution_sequence += 1
         execution.updated_at = now
-        payload = TaskExecutionFailedPayload(
-            taskId=execution.task_id,
-            runId=execution.run_id,
-            ownerUserId=execution.owner_user_id,
-            executor=EXECUTOR,
-            workerId=attempt.worker_id,
-            executionSequence=execution.execution_sequence,
-            processedItems=processed_items,
-            totalItems=total_items,
-            stats=stats or {},
-            error=safe_error,
-            failureKind="terminal",
-            failedAt=now.isoformat(),
-        )
-        self.session.add(
-            OutboxEvent(
-                id=uuid4(),
+
+        collection = await self._collection(execution.id, lock=True)
+        demands = await self._active_demands(execution.id, lock=True)
+        if collection is not None:
+            collection.status = "failed"
+            collection.finished_at = now
+            collection.last_error = safe_error
+            collection.updated_at = now
+
+        if demands:
+            for demand in demands:
+                demand.status = "failed"
+                demand.finished_at = now
+                demand.last_error = safe_error
+                demand.execution_sequence += 1
+                demand.updated_at = now
+                payload = TaskExecutionFailedPayload(
+                    taskId=demand.task_id,
+                    runId=demand.run_id,
+                    ownerUserId=demand.owner_user_id,
+                    executor=EXECUTOR,
+                    workerId=attempt.worker_id,
+                    executionSequence=demand.execution_sequence,
+                    processedItems=processed_items,
+                    totalItems=total_items,
+                    stats=stats or {},
+                    error=safe_error,
+                    failureKind="terminal",
+                    failedAt=now.isoformat(),
+                )
+                self._add_outbox(
+                    event_type="task.execution_failed",
+                    task_id=demand.task_id,
+                    dedupe_key=f"task.execution_failed:{demand.id}",
+                    payload=payload.model_dump(mode="json"),
+                    now=now,
+                )
+        else:
+            payload = TaskExecutionFailedPayload(
+                taskId=execution.task_id,
+                runId=execution.run_id,
+                ownerUserId=execution.owner_user_id,
+                executor=EXECUTOR,
+                workerId=attempt.worker_id,
+                executionSequence=execution.execution_sequence,
+                processedItems=processed_items,
+                totalItems=total_items,
+                stats=stats or {},
+                error=safe_error,
+                failureKind="terminal",
+                failedAt=now.isoformat(),
+            )
+            self._add_outbox(
                 event_type="task.execution_failed",
-                aggregate_type="task",
-                aggregate_id=str(execution.task_id),
+                task_id=execution.task_id,
                 dedupe_key=f"task.execution_failed:{execution.id}",
                 payload=payload.model_dump(mode="json"),
-                status="pending",
-                attempts=0,
-                next_attempt_at=now,
-                created_at=now,
+                now=now,
             )
-        )
         await self.session.flush()
         return True
 
@@ -417,6 +523,27 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
         execution.finished_at = now
         execution.last_error = execution.cancellation_reason
         execution.updated_at = now
+
+        collection = await self._collection(execution.id, lock=True)
+        if collection is not None:
+            collection.status = "cancelled"
+            collection.finished_at = now
+            collection.last_error = execution.cancellation_reason
+            collection.updated_at = now
+        for demand in await self._active_demands(execution.id, lock=True):
+            demand.status = "cancelled"
+            demand.finished_at = now
+            demand.cancellation_requested_at = (
+                demand.cancellation_requested_at or now
+            )
+            demand.cancellation_reason = (
+                demand.cancellation_reason
+                or execution.cancellation_reason
+                or "collection cancelled"
+            )
+            demand.last_error = demand.cancellation_reason
+            demand.execution_sequence += 1
+            demand.updated_at = now
         await self.session.flush()
         return True
 
@@ -442,14 +569,98 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
         attempt.status = "abandoned"
         attempt.finished_at = now
         attempt.last_error = error[:2000]
+        collection = await self._collection(execution.id, lock=True)
+        demands = await self._active_demands(execution.id, lock=True)
+
         if execution.cancellation_requested_at is not None:
             execution.status = "cancelled"
             execution.finished_at = now
+            if collection is not None:
+                collection.status = "cancelled"
+                collection.finished_at = now
+                collection.last_error = execution.cancellation_reason or error[:2000]
+            for demand in demands:
+                demand.status = "cancelled"
+                demand.finished_at = now
+                demand.cancellation_requested_at = (
+                    demand.cancellation_requested_at or now
+                )
+                demand.cancellation_reason = (
+                    demand.cancellation_reason
+                    or execution.cancellation_reason
+                    or error[:2000]
+                )
+                demand.last_error = demand.cancellation_reason
+                demand.execution_sequence += 1
+                demand.updated_at = now
         else:
             execution.status = "pending"
             execution.available_at = available_at
+            if collection is not None:
+                collection.status = "pending"
+                collection.last_error = error[:2000]
+            for demand in demands:
+                demand.status = "pending"
+                demand.last_error = error[:2000]
+                demand.updated_at = now
+
         execution.current_attempt_id = None
         execution.last_error = error[:2000]
         execution.updated_at = now
+        if collection is not None:
+            collection.updated_at = now
         await self.session.flush()
         return True
+
+    async def _collection(
+        self, execution_id: UUID, *, lock: bool = False
+    ) -> VkSourceCollection | None:
+        stmt = select(VkSourceCollection).where(
+            VkSourceCollection.execution_id == execution_id
+        )
+        if lock:
+            stmt = stmt.with_for_update()
+        return await self.session.scalar(stmt)
+
+    async def _active_demands(
+        self, execution_id: UUID, *, lock: bool = False
+    ) -> list[VkCollectionDemand]:
+        stmt = (
+            select(VkCollectionDemand)
+            .join(
+                VkSourceCollection,
+                VkSourceCollection.id == VkCollectionDemand.collection_id,
+            )
+            .where(
+                VkSourceCollection.execution_id == execution_id,
+                VkCollectionDemand.status.in_(ACTIVE_DEMAND_STATUSES),
+            )
+            .order_by(VkCollectionDemand.created_at, VkCollectionDemand.id)
+        )
+        if lock:
+            stmt = stmt.with_for_update()
+        return list((await self.session.scalars(stmt)).all())
+
+    def _add_outbox(
+        self,
+        *,
+        event_type: str,
+        task_id: int,
+        dedupe_key: str,
+        payload: dict,
+        now: datetime,
+    ) -> None:
+        self.session.add(
+            OutboxEvent(
+                id=uuid4(),
+                event_type=event_type,
+                aggregate_type="task",
+                aggregate_id=str(task_id),
+                dedupe_key=dedupe_key,
+                payload=payload,
+                status="pending",
+                attempts=0,
+                next_attempt_at=now,
+                created_at=now,
+            )
+        )

@@ -29,13 +29,6 @@ class VkExecution(Base):
         UniqueConstraint("task_id", "run_id", name="uq_vk_executions_task_run"),
         Index("ix_vk_executions_claimable", "status", "available_at"),
         Index("ix_vk_executions_task_id", "task_id"),
-        Index(
-            "uq_vk_executions_active_task",
-            "task_id",
-            unique=True,
-            postgresql_where=text("status IN ('pending', 'running')"),
-            sqlite_where=text("status IN ('pending', 'running')"),
-        ),
     )
 
     id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -52,8 +45,6 @@ class VkExecution(Base):
     total_items: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
-    # The database migration adds the FK after both tables exist. The ORM keeps
-    # this as a plain UUID to avoid a circular metadata dependency in SQLite tests.
     current_attempt_id: Mapped[PyUUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     current_fencing_token: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     cancellation_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

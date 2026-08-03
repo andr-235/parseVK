@@ -35,10 +35,12 @@ class IngestionPipeline:
         tasks_client: TasksClient,
         outbox=None,
         on_error: Callable[[str], str] | None = None,
+        demand_fanout=None,
     ):
         self.collector = collector
         self.tasks_client = tasks_client
         self.outbox = outbox
+        self.demand_fanout = demand_fanout
         self._on_error = on_error or (lambda msg: msg)
 
     async def execute(self, task_run: Any, *, correlation_id: str | None = None) -> IngestionResult:
@@ -48,15 +50,19 @@ class IngestionPipeline:
                 task_run, group_ids, correlation_id=correlation_id
             )
 
-            await self.tasks_client.complete_execution(
-                task_run.task_id,
-                task_run.run_id,
-                result.processed_items,
-                result.processed_items,
-                result.stats(),
-                request_id=task_run.run_id,
-                correlation_id=correlation_id,
-            )
+            # Collection-backed executions record terminal lifecycle only through
+            # the fenced execution repository. Sending an HTTP callback here would
+            # create an external terminal effect before the final fence check.
+            if self.demand_fanout is None:
+                await self.tasks_client.complete_execution(
+                    task_run.task_id,
+                    task_run.run_id,
+                    result.processed_items,
+                    result.processed_items,
+                    result.stats(),
+                    request_id=task_run.run_id,
+                    correlation_id=correlation_id,
+                )
             return result
 
         except VkApiAuthError:
@@ -71,26 +77,35 @@ class IngestionPipeline:
             sanitized_error = self._on_error(str(exc))
             result = self.collector.current_result
 
-            try:
-                await self.tasks_client.fail_execution(
-                    task_run.task_id,
-                    task_run.run_id,
-                    sanitized_error,
-                    result.processed_items,
-                    result.processed_items,
-                    result.stats(),
-                    request_id=task_run.run_id,
-                    correlation_id=correlation_id,
-                )
-            except httpx.HTTPStatusError as callback_exc:
-                self._handle_fail_callback_conflict(callback_exc, task_run, sanitized_error, exc)
+            # The collection runtime lets ExecutionExecutor persist a fenced,
+            # per-demand terminal outbox event after this exception is raised.
+            # The legacy direct runtime keeps its synchronous callback behavior.
+            if self.demand_fanout is None:
+                try:
+                    await self.tasks_client.fail_execution(
+                        task_run.task_id,
+                        task_run.run_id,
+                        sanitized_error,
+                        result.processed_items,
+                        result.processed_items,
+                        result.stats(),
+                        request_id=task_run.run_id,
+                        correlation_id=correlation_id,
+                    )
+                except httpx.HTTPStatusError as callback_exc:
+                    self._handle_fail_callback_conflict(
+                        callback_exc,
+                        task_run,
+                        sanitized_error,
+                        exc,
+                    )
 
-            except (
-                httpx.RequestError,
-                sqlalchemy.exc.DBAPIError,
-                asyncio.CancelledError,
-            ) as callback_exc:
-                raise callback_exc from exc
+                except (
+                    httpx.RequestError,
+                    sqlalchemy.exc.DBAPIError,
+                    asyncio.CancelledError,
+                ) as callback_exc:
+                    raise callback_exc from exc
 
             raise IngestionFailedError(sanitized_error, result) from exc
 

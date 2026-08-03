@@ -12,7 +12,10 @@ from app.infrastructure.db.repositories.executions import SqlAlchemyExecutionRep
 from app.infrastructure.db.repositories.provider_accounts import (
     SqlAlchemyProviderAccountRepository,
 )
-from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsRepository
+from app.infrastructure.db.repositories.source_collections import (
+    SqlAlchemySourceCollectionRepository,
+)
+from app.services.collection_fingerprint import build_collection_identity
 
 
 async def _seed_account(db_session, *, status="active", capabilities=None):
@@ -36,17 +39,31 @@ async def _seed_account(db_session, *, status="active", capabilities=None):
 
 
 async def _create_execution(db_session, *, task_id, run_id):
-    return await SqlAlchemyTaskEventsRepository(db_session).create_execution(
-        task_id=task_id,
-        owner_user_id="user-1",
-        run_id=run_id,
+    identity = build_collection_identity(
+        provider_account_key="system-vk",
         scope="selected",
         mode="recent_posts",
         group_ids=[1],
         post_limit=10,
-        plan_snapshot={"groupIds": [1], "postLimit": 10},
-        parent_execution_id=None,
+        payload={},
     )
+    attachment = await SqlAlchemySourceCollectionRepository(
+        db_session
+    ).attach_demand(
+        task_id=task_id,
+        owner_user_id="user-1",
+        run_id=run_id,
+        provider_account_key=identity.provider_account_key,
+        source_key=identity.source_key,
+        fingerprint=identity.fingerprint,
+        scope="selected",
+        mode="recent_posts",
+        group_ids=[1],
+        post_limit=10,
+        plan_snapshot=identity.normalized_plan,
+    )
+    assert attachment is not None
+    return attachment.execution
 
 
 @pytest.mark.anyio
@@ -203,20 +220,23 @@ async def test_cancellation_is_durable_and_stops_heartbeat(db_session):
     )
     assert claim is not None
 
-    events = SqlAlchemyTaskEventsRepository(db_session)
-    requested = await events.request_cancellation(
+    demands = SqlAlchemySourceCollectionRepository(db_session)
+    requested = await demands.request_cancellation(
         task_id=902,
         run_id="run-902",
         reason="task.cancelled",
     )
-    repeated = await events.request_cancellation(
+    repeated = await demands.request_cancellation(
         task_id=902,
         run_id="run-902",
         reason="task.cancelled",
     )
+    terminal = await demands.get_demand(task_id=902, run_id="run-902")
 
-    assert requested is not None and repeated is not None
-    assert requested.cancellation_requested_at == repeated.cancellation_requested_at
+    assert requested is not None
+    assert repeated is None
+    assert terminal is not None
+    assert terminal.cancellation_requested_at == requested.cancellation_requested_at
     assert not await repository.renew(
         execution_id=execution.id,
         attempt_id=claim.attempt_id,

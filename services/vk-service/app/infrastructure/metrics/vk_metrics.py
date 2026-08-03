@@ -1,10 +1,4 @@
-"""Prometheus metrics for VK provider accounts, scheduler and transport.
-
-Import-safe: only module-level metric registration, no side effects. All VK
-API traffic flows through the fair scheduler, so its hooks observe transport
-calls as well; account lifecycle transitions update gauges from the executor
-guard and the startup reconciliation paths.
-"""
+"""Prometheus metrics for VK provider accounts, scheduling and collections."""
 
 import logging
 from datetime import UTC, datetime
@@ -19,8 +13,31 @@ OUTCOME_RATE_LIMIT = "rate_limit"
 OUTCOME_INFRA = "infra"
 OUTCOME_DOMAIN = "domain"
 
-_DURATION_BUCKETS = (0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, float("inf"))
-_WAIT_BUCKETS = (0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, float("inf"))
+_DURATION_BUCKETS = (
+    0.05,
+    0.1,
+    0.25,
+    0.5,
+    1.0,
+    2.5,
+    5.0,
+    10.0,
+    30.0,
+    60.0,
+    float("inf"),
+)
+_WAIT_BUCKETS = (
+    0.01,
+    0.05,
+    0.1,
+    0.5,
+    1.0,
+    2.0,
+    5.0,
+    10.0,
+    30.0,
+    float("inf"),
+)
 
 _requests_total = Counter(
     "vk_requests_total",
@@ -64,11 +81,26 @@ _provider_account_info = Info(
     "Provider account credential version",
     ["account_id"],
 )
+_collection_demands_total = Counter(
+    "vk_collection_demands_total",
+    "Collection demands attached by coalescing result",
+    ["result"],
+)
+_collection_fanout_events_total = Counter(
+    "vk_collection_fanout_events_total",
+    "Lifecycle events emitted for collection demands",
+    ["event_type"],
+)
 
 _last_status: dict[str, str] = {}
 
 
-def observe_request(account_id: str, method: str, outcome: str, duration_seconds: float) -> None:
+def observe_request(
+    account_id: str,
+    method: str,
+    outcome: str,
+    duration_seconds: float,
+) -> None:
     _requests_total.labels(account_id, method, outcome).inc()
     _request_duration_seconds.labels(account_id, method).observe(duration_seconds)
 
@@ -98,10 +130,25 @@ def set_account_cooldown(account_id: str, seconds: float) -> None:
 
 
 def set_provider_account_info(account_id: str, credential_version: str) -> None:
-    _provider_account_info.labels(account_id).info({"credential_version": credential_version})
+    _provider_account_info.labels(account_id).info(
+        {"credential_version": credential_version}
+    )
 
 
-def cooldown_seconds_until(until: datetime | None, current: datetime | None = None) -> float:
+def observe_collection_demand_attached(*, coalesced: bool) -> None:
+    result = "coalesced" if coalesced else "new_collection"
+    _collection_demands_total.labels(result).inc()
+
+
+def observe_collection_fanout(event_type: str, count: int = 1) -> None:
+    if count > 0:
+        _collection_fanout_events_total.labels(event_type).inc(count)
+
+
+def cooldown_seconds_until(
+    until: datetime | None,
+    current: datetime | None = None,
+) -> float:
     if until is None:
         return 0.0
     now = datetime.now(UTC) if current is None else current

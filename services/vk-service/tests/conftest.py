@@ -29,6 +29,10 @@ from app.infrastructure.db.models.ok_friends import (  # noqa: F401
 )
 from app.infrastructure.db.models.outbox import OutboxEvent  # noqa: F401
 from app.infrastructure.db.models.provider_accounts import VkProviderAccount  # noqa: F401
+from app.infrastructure.db.models.source_collections import (  # noqa: F401
+    VkCollectionDemand,
+    VkSourceCollection,
+)
 from app.infrastructure.db.models.tasks import ProcessedEvent  # noqa: F401
 from app.infrastructure.db.models.vk_friends import (  # noqa: F401
     VkFriendsExportJob,

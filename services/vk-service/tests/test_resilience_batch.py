@@ -60,6 +60,8 @@ class FakeRepository:
     def __init__(self):
         self.processed = set()
         self.executions = []
+        self.collections = []
+        self.demands = []
         self.session = AsyncMock()
         begin_ctx = AsyncMock()
         begin_ctx.__aenter__.return_value = None
@@ -72,50 +74,86 @@ class FakeRepository:
     async def mark_processed(self, consumer_name, event_id, _event_type):
         self.processed.add((consumer_name, event_id))
 
-    async def get_execution(self, task_id, run_id):
-        return next(
+    async def attach_demand(self, **kwargs):
+        existing = next(
             (
-                item
-                for item in self.executions
-                if item.task_id == task_id and item.run_id == run_id
+                demand
+                for demand in self.demands
+                if demand.task_id == kwargs["task_id"]
+                and demand.run_id == kwargs["run_id"]
             ),
             None,
         )
+        if existing is not None:
+            return None
 
-    async def get_active_execution(self, task_id):
-        return next(
+        collection = next(
             (
                 item
-                for item in reversed(self.executions)
-                if item.task_id == task_id and item.status in {"pending", "running"}
+                for item in self.collections
+                if item.provider_account_key == kwargs["provider_account_key"]
+                and item.source_key == kwargs["source_key"]
+                and item.fingerprint == kwargs["fingerprint"]
+                and item.status in {"pending", "running"}
             ),
             None,
         )
+        collection_created = collection is None
+        if collection is None:
+            execution = SimpleNamespace(
+                id=uuid4(),
+                task_id=kwargs["task_id"],
+                owner_user_id=kwargs["owner_user_id"],
+                run_id=kwargs["run_id"],
+                status="pending",
+                scope=kwargs["scope"],
+                mode=kwargs["mode"],
+                group_ids=kwargs["group_ids"],
+                post_limit=kwargs["post_limit"],
+                plan_snapshot=kwargs["plan_snapshot"],
+            )
+            collection = SimpleNamespace(
+                id=uuid4(),
+                execution_id=execution.id,
+                provider_account_key=kwargs["provider_account_key"],
+                source_key=kwargs["source_key"],
+                fingerprint=kwargs["fingerprint"],
+                status="pending",
+            )
+            self.executions.append(execution)
+            self.collections.append(collection)
+        else:
+            execution = next(
+                item for item in self.executions if item.id == collection.execution_id
+            )
 
-    async def get_latest_execution(self, task_id):
-        return next(
-            (item for item in reversed(self.executions) if item.task_id == task_id),
-            None,
-        )
-
-    async def create_execution(self, **kwargs):
-        execution = SimpleNamespace(
+        demand = SimpleNamespace(
             id=uuid4(),
+            collection_id=collection.id,
+            task_id=kwargs["task_id"],
+            run_id=kwargs["run_id"],
+            owner_user_id=kwargs["owner_user_id"],
             status="pending",
-            is_terminal=False,
-            **kwargs,
         )
-        self.executions.append(execution)
-        return execution
+        self.demands.append(demand)
+        return SimpleNamespace(
+            execution=execution,
+            collection=collection,
+            demand=demand,
+            collection_created=collection_created,
+        )
 
     async def request_cancellation(self, **_kwargs):
         return None
 
-    async def fail_pending(self, execution_id, error):
-        execution = next(item for item in self.executions if item.id == execution_id)
-        execution.status = "failed"
-        execution.is_terminal = True
-        execution.last_error = error
+    async def fail_pending_demand(self, *, task_id, run_id, error):
+        demand = next(
+            item
+            for item in self.demands
+            if item.task_id == task_id and item.run_id == run_id
+        )
+        demand.status = "failed"
+        demand.last_error = error
         return True
 
 
@@ -195,5 +233,7 @@ async def test_duplicate_task_event_creates_one_execution():
     assert await handler.handle(event) is not None
     assert await handler.handle(event) is None
     assert len(repository.executions) == 1
+    assert len(repository.collections) == 1
+    assert len(repository.demands) == 1
     assert len(tasks_client.calls) == 1
     assert (handler.consumer_name, event.event_id) in repository.processed

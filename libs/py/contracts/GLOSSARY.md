@@ -10,14 +10,16 @@ Canonical definitions for domain concepts used in ParseVK event contracts.
 
 ## VK-specific concepts
 
-- **VkExecution** — A logical vk-service collection workflow created from one immutable TaskRun plan. It survives worker crashes and may have multiple physical attempts, but reaches a terminal outcome only once.
+- **VkSourceCollection** — One physical VK collection aggregate identified by provider account, normalized source key and exact collection-plan fingerprint. Multiple compatible TaskRuns may share it while it is pending or running. It owns exactly one VkExecution and one canonical ingestion/checkpoint stream.
+- **VkCollectionDemand** — One TaskRun's independent demand attached to a VkSourceCollection. It keeps the TaskRun identity, lifecycle sequence, cancellation and terminal attribution. Cancelling one demand does not cancel the shared collection while another active demand remains.
+- **Collection fingerprint** — A deterministic SHA-256 digest of the provider account, normalized source identity and immutable collection plan. Coalescing requires exact equality; broader or partial matching is forbidden.
+- **VkExecution** — The logical worker execution for one VkSourceCollection. It survives worker crashes and may have multiple physical attempts, but reaches a terminal outcome only once.
 - **VkExecutionAttempt** — One physical worker attempt within a VkExecution. It owns a lease, heartbeat, attempt number and fencing token. New attempts continue from execution checkpoints; they do not create independent checkpoint histories.
 - **Fencing token** — A monotonically increasing number assigned when a new VkExecutionAttempt is claimed. Any attempt with an older token is stale and cannot heartbeat, commit checkpoints, emit terminal effects or change execution state.
-- **VkCollectionDemand** — A vk-service value object describing what to collect from one VK community: wall posts, comments, stats. Owned by vk-service, not tasks-service.
 
 ## Content concepts
 
-- **SourceCollection** — A stored collection of content from a single source (VK community, Telegram channel). Created by content-service after ingestion.
+- **SourceCollection** — A stored collection of content from a single source (VK community, Telegram channel). Created by content-service after ingestion. This is distinct from vk-service's VkSourceCollection orchestration aggregate.
 - **SourceCollectionId** — Unique identifier for a SourceCollection. Used to correlate ingestion receipts with collection requests.
 
 ## Source access concepts

@@ -1,16 +1,11 @@
-import logging
 from datetime import UTC, datetime
-from typing import Any, Dict
+from typing import Any
 
-from sqlalchemy import text
-
-from app.domain.repositories.outbox import OutboxRepository
 from common.events.task_execution_completed import TaskExecutionCompletedPayload
 from common.events.task_execution_failed import TaskExecutionFailedPayload
-from common.events.task_execution_progressed import TaskExecutionProgressedPayload
 from common.events.task_execution_started import TaskExecutionStartedPayload
 
-logger = logging.getLogger(__name__)
+from app.domain.repositories.outbox import OutboxRepository
 
 
 class OutboxService:
@@ -18,7 +13,9 @@ class OutboxService:
         self.repository = repository
         self.session = session
 
-    async def emit_group_collected(self, group: dict, *, correlation_id: str | None = None) -> None:
+    async def emit_group_collected(
+        self, group: dict, *, correlation_id: str | None = None
+    ) -> None:
         vk_group_id = int(group["id"])
         await self.repository.add_event(
             event_type="vk.group_collected",
@@ -28,7 +25,9 @@ class OutboxService:
             payload={"vkGroupId": vk_group_id, "group": group},
         )
 
-    async def emit_group_deleted(self, vk_group_id: int, *, correlation_id: str | None = None) -> None:
+    async def emit_group_deleted(
+        self, vk_group_id: int, *, correlation_id: str | None = None
+    ) -> None:
         await self.repository.add_event(
             event_type="vk.group_deleted",
             aggregate_type="vk_group",
@@ -37,7 +36,13 @@ class OutboxService:
             payload={"vkGroupId": vk_group_id},
         )
 
-    async def emit_post_collected(self, post: dict, *, task_id: int, correlation_id: str | None = None) -> None:
+    async def emit_post_collected(
+        self,
+        post: dict,
+        *,
+        task_id: int,
+        correlation_id: str | None = None,
+    ) -> None:
         owner_id = int(post.get("owner_id", 0))
         post_id = int(post.get("id", 0))
         await self.repository.add_event(
@@ -46,7 +51,12 @@ class OutboxService:
             aggregate_id=f"{owner_id}:{post_id}",
             correlation_id=correlation_id,
             dedupe_key=f"vk.post_collected:{owner_id}:{post_id}",
-            payload={"taskId": task_id, "vkOwnerId": owner_id, "vkPostId": post_id, "post": post},
+            payload={
+                "taskId": task_id,
+                "vkOwnerId": owner_id,
+                "vkPostId": post_id,
+                "post": post,
+            },
         )
 
     async def emit_comments_collected_batch(
@@ -64,7 +74,6 @@ class OutboxService:
         correlation_id: str | None = None,
         source_position: str | None = None,
     ) -> None:
-        import json
         payload = {
             "batchId": batch_id,
             "chunkIndex": chunk_index,
@@ -99,7 +108,6 @@ class OutboxService:
         started_at: str | None = None,
         correlation_id: str | None = None,
     ) -> None:
-        """Emit task.execution_started event via outbox."""
         payload = TaskExecutionStartedPayload(
             taskId=task_id,
             runId=run_id,
@@ -115,7 +123,9 @@ class OutboxService:
             aggregate_type="task",
             aggregate_id=str(task_id),
             correlation_id=correlation_id,
-            dedupe_key=f"task.execution_started:{task_id}:{run_id}:{execution_sequence}",
+            dedupe_key=(
+                f"task.execution_started:{task_id}:{run_id}:{execution_sequence}"
+            ),
             payload=payload.model_dump(mode="json"),
         )
 
@@ -129,11 +139,10 @@ class OutboxService:
         execution_sequence: int,
         processed_items: int,
         total_items: int,
-        stats: Dict[str, Any] | None = None,
+        stats: dict[str, Any] | None = None,
         completed_at: str | None = None,
         correlation_id: str | None = None,
     ) -> None:
-        """Emit task.execution_completed event via outbox."""
         payload = TaskExecutionCompletedPayload(
             taskId=task_id,
             runId=run_id,
@@ -151,7 +160,10 @@ class OutboxService:
             aggregate_type="task",
             aggregate_id=str(task_id),
             correlation_id=correlation_id,
-            dedupe_key=f"task.execution_completed:{task_id}:{run_id}:{execution_sequence}",
+            dedupe_key=(
+                f"task.execution_completed:{task_id}:{run_id}:"
+                f"{execution_sequence}"
+            ),
             payload=payload.model_dump(mode="json"),
         )
 
@@ -165,13 +177,12 @@ class OutboxService:
         execution_sequence: int,
         processed_items: int,
         total_items: int,
-        stats: Dict[str, Any] | None = None,
+        stats: dict[str, Any] | None = None,
         error: str = "",
         failure_kind: str = "terminal",
         failed_at: str | None = None,
         correlation_id: str | None = None,
     ) -> None:
-        """Emit task.execution_failed event via outbox."""
         payload = TaskExecutionFailedPayload(
             taskId=task_id,
             runId=run_id,
@@ -191,62 +202,8 @@ class OutboxService:
             aggregate_type="task",
             aggregate_id=str(task_id),
             correlation_id=correlation_id,
-            dedupe_key=f"task.execution_failed:{task_id}:{run_id}:{execution_sequence}",
-            payload=payload.model_dump(mode="json"),
-        )
-
-    async def emit_execution_progressed(
-        self,
-        task_id: int,
-        run_id: str,
-        owner_user_id: str,
-        executor: str,
-        processed_items: int,
-        total_items: int,
-        progress: float,
-        stats: dict[str, Any] | None = None,
-        occurred_at: str | None = None,
-        correlation_id: str | None = None,
-    ) -> None:
-        """Emit task.execution_progressed event via outbox with durable sequence."""
-        session = self.session or getattr(self.repository, "session", None)
-        if session is None:
-            raise RuntimeError("emit_execution_progressed requires an async SQLAlchemy session")
-
-        result = await session.execute(
-            text("""
-                UPDATE vk_task_runs
-                SET execution_sequence = execution_sequence + 1
-                WHERE run_id = :run_id
-                RETURNING execution_sequence
-            """),
-            {"run_id": run_id},
-        )
-        row = result.one_or_none()
-        if row is None:
-            logger.warning("vk_task_run %s not found, skipping progress event", run_id)
-            return
-
-        execution_sequence = row[0]
-
-        payload = TaskExecutionProgressedPayload(
-            taskId=task_id,
-            runId=run_id,
-            ownerUserId=owner_user_id,
-            executor=executor,
-            executionSequence=execution_sequence,
-            processedItems=processed_items,
-            totalItems=total_items,
-            progress=progress,
-            stats=stats or {},
-            occurredAt=occurred_at or datetime.now(UTC).isoformat(),
-        )
-
-        await self.repository.add_event(
-            event_type="task.execution_progressed",
-            aggregate_type="vk_task",
-            aggregate_id=str(task_id),
-            correlation_id=correlation_id,
-            dedupe_key=f"task.execution_progressed:{task_id}:{run_id}:{execution_sequence}",
+            dedupe_key=(
+                f"task.execution_failed:{task_id}:{run_id}:{execution_sequence}"
+            ),
             payload=payload.model_dump(mode="json"),
         )

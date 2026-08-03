@@ -26,6 +26,7 @@ class DataCollector:
         on_error: Callable[[str], str] | None = None,
         page_committer: Callable[[], Awaitable[None]] | None = None,
         checkpoint_store: IngestionCheckpointStore | None = None,
+        demand_fanout=None,
     ):
         self.adapter = adapter
         self.repository = repository
@@ -33,7 +34,7 @@ class DataCollector:
         self.checkpoint_store = checkpoint_store
         self.page_committer = page_committer
         self.current_result = IngestionResult()
-        self.progress = ProgressReporter(outbox=outbox)
+        self.progress = ProgressReporter(demand_fanout=demand_fanout)
 
         self.group_collector = GroupCollector(
             adapter=adapter,
@@ -206,9 +207,7 @@ class DataCollector:
                     continue
 
                 await self.progress.report(
-                    task_id=task_run.task_id,
-                    run_id=task_run.run_id,
-                    owner_user_id=getattr(task_run, "owner_user_id", None) or "",
+                    task_run,
                     processed=result.processed_items,
                     total=result.processed_items,
                 )

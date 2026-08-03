@@ -18,7 +18,10 @@ from app.infrastructure.db.repositories.checkpoint import (
 from app.infrastructure.db.repositories.provider_accounts import (
     SqlAlchemyProviderAccountRepository,
 )
-from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsRepository
+from app.infrastructure.db.repositories.source_collections import (
+    SqlAlchemySourceCollectionRepository,
+)
+from app.services.collection_fingerprint import build_collection_identity
 from app.services.ingestion.result import IngestionResult
 from app.tasks.execution_control import ExecutionAttemptControl
 from app.tasks.execution_runner import ExecutionAttemptRunner
@@ -98,17 +101,30 @@ async def test_postgres_runner_heartbeats_and_recovers_after_committed_page(
                     credential_version="version-1",
                     capabilities=[SYSTEM_VK_CAPABILITY],
                 )
-                await SqlAlchemyTaskEventsRepository(session).create_execution(
-                    task_id=2860,
-                    owner_user_id="user-1",
-                    run_id="run-2860",
+                identity = build_collection_identity(
+                    provider_account_key="system-vk",
                     scope="selected",
                     mode="recent_posts",
                     group_ids=[1],
                     post_limit=10,
-                    plan_snapshot={"groupIds": [1], "postLimit": 10},
-                    parent_execution_id=None,
+                    payload={},
                 )
+                attachment = await SqlAlchemySourceCollectionRepository(
+                    session
+                ).attach_demand(
+                    task_id=2860,
+                    owner_user_id="user-1",
+                    run_id="run-2860",
+                    provider_account_key=identity.provider_account_key,
+                    source_key=identity.source_key,
+                    fingerprint=identity.fingerprint,
+                    scope="selected",
+                    mode="recent_posts",
+                    group_ids=[1],
+                    post_limit=10,
+                    plan_snapshot=identity.normalized_plan,
+                )
+                assert attachment is not None
 
         execution_store = ExecutionStore(session_factory)
         first = await execution_store.claim(
@@ -141,8 +157,6 @@ async def test_postgres_runner_heartbeats_and_recovers_after_committed_page(
                 await self.attempt_control.ensure_active_in_session(self.session)
                 await self.session.commit()
 
-                # Keep the attempt alive long enough for a real heartbeat from a
-                # second PostgreSQL session, then simulate a process crash.
                 await asyncio.sleep(0.15)
                 raise SimulatedWorkerCrash("crash after committed page")
 
