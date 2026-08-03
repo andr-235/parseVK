@@ -5,13 +5,14 @@ Canonical definitions for domain concepts used in ParseVK event contracts.
 ## Workflow concepts
 
 - **Task** — A user-defined job specification (e.g. "parse VK group durov"). Created via API. Contains target, type, schedule, and configuration. Immutable after creation.
-- **TaskRun** — A single execution attempt of a Task. Created each time a Task is triggered (manually or by schedule). Carries runtime state: pending → running → completed/failed.
+- **TaskRun** — One concrete trigger of a Task with an immutable source/configuration snapshot. Owned by tasks-service and not reused for later retries or changed configuration.
 - **TaskRunSourceDemand** — A per-source work item within a TaskRun. One TaskRun may contain multiple demands (e.g. parse 3 communities). Owned by tasks-service.
 
 ## VK-specific concepts
 
-- **VkExecution** — A vk-service domain entity representing a single VK collection workflow. Created when vk-service receives a `vk.execution.requested` command. One VkExecution maps to one TaskRunSourceDemand.
-- **VkExecutionAttempt** — A single attempt within a VkExecution. If an attempt fails (network error, API limit), vk-service may retry with a new attempt. Each attempt has its own checkpoint state.
+- **VkExecution** — A logical vk-service collection workflow created from one immutable TaskRun plan. It survives worker crashes and may have multiple physical attempts, but reaches a terminal outcome only once.
+- **VkExecutionAttempt** — One physical worker attempt within a VkExecution. It owns a lease, heartbeat, attempt number and fencing token. New attempts continue from execution checkpoints; they do not create independent checkpoint histories.
+- **Fencing token** — A monotonically increasing number assigned when a new VkExecutionAttempt is claimed. Any attempt with an older token is stale and cannot heartbeat, commit checkpoints, emit terminal effects or change execution state.
 - **VkCollectionDemand** — A vk-service value object describing what to collect from one VK community: wall posts, comments, stats. Owned by vk-service, not tasks-service.
 
 ## Content concepts

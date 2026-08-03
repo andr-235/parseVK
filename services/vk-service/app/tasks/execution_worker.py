@@ -5,28 +5,30 @@ from uuid import uuid4
 
 from common.runtime import WorkerHealth
 
-from app.tasks.lease_store import lease_deadline
+from app.tasks.execution_store import lease_deadline
 
-logger = logging.getLogger("vk-service.task-worker")
+logger = logging.getLogger("vk-service.execution-worker")
 
 
-class TaskWorker:
+class ExecutionWorker:
     def __init__(
         self,
         *,
-        lease_store,
+        execution_store,
         executor_factory,
         concurrency: int,
         poll_seconds: float,
         lease_seconds: int,
+        shutdown_grace_seconds: float,
         health: WorkerHealth,
         account_gate=None,
     ):
-        self.lease_store = lease_store
+        self.execution_store = execution_store
         self.executor_factory = executor_factory
         self.concurrency = concurrency
         self.poll_seconds = poll_seconds
         self.lease_seconds = lease_seconds
+        self.shutdown_grace_seconds = shutdown_grace_seconds
         self.health = health
         self.account_gate = account_gate
         self.worker_id = f"vk-{uuid4()}"
@@ -34,7 +36,7 @@ class TaskWorker:
 
     async def run_forever(self) -> None:
         logger.info(
-            "VK task worker starting worker=%s concurrency=%s",
+            "VK execution worker starting worker=%s concurrency=%s",
             self.worker_id,
             self.concurrency,
         )
@@ -46,9 +48,13 @@ class TaskWorker:
                 if not claimed:
                     await asyncio.sleep(self.poll_seconds)
         finally:
-            for task in self._active:
-                task.cancel()
             if self._active:
+                _, pending = await asyncio.wait(
+                    self._active,
+                    timeout=self.shutdown_grace_seconds,
+                )
+                for task in pending:
+                    task.cancel()
                 await asyncio.gather(*self._active, return_exceptions=True)
 
     async def _fill_capacity(self) -> bool:
@@ -56,15 +62,15 @@ class TaskWorker:
         while len(self._active) < self.concurrency:
             if self.account_gate is not None and not await self.account_gate.can_claim():
                 break
-            task_run = await self.lease_store.claim(
+            claim = await self.execution_store.claim(
                 worker_id=self.worker_id,
                 lease_expires_at=lease_deadline(self.lease_seconds),
             )
-            if task_run is None:
+            if claim is None:
                 break
             claimed_any = True
             executor = self.executor_factory(self.worker_id)
-            task = asyncio.create_task(executor.execute(task_run))
+            task = asyncio.create_task(executor.execute(claim))
             self._active.add(task)
         return claimed_any
 
@@ -76,4 +82,4 @@ class TaskWorker:
             with suppress(asyncio.CancelledError):
                 error = task.exception()
                 if error is not None:
-                    logger.error("Unhandled task executor error: %s", error)
+                    logger.error("Unhandled execution executor error: %s", error)

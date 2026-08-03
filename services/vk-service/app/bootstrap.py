@@ -106,6 +106,7 @@ def get_ingestion_service(
     session: AsyncSession,
     *,
     adapter: VkApiPort | None = None,
+    attempt_control=None,
 ) -> IngestionService:
     adapter = adapter or _vk_client
     repository = SqlAlchemyIngestionRepository(session)
@@ -113,13 +114,18 @@ def get_ingestion_service(
     outbox_service = OutboxService(outbox_repo, session=session)
     checkpoint_store = SqlAlchemyIngestionCheckpointStore(session)
 
+    async def commit_page() -> None:
+        if attempt_control is not None:
+            await attempt_control.ensure_active_in_session(session)
+        await session.commit()
+
     collector = DataCollector(
         adapter=adapter,
         repository=repository,
         tasks_client=_tasks_client,
         outbox=outbox_service,
         on_error=redact_secrets,
-        page_committer=session.commit,
+        page_committer=commit_page,
         checkpoint_store=checkpoint_store,
     )
     pipeline = IngestionPipeline(

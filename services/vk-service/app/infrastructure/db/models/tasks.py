@@ -1,17 +1,8 @@
 from datetime import UTC, datetime
 from uuid import UUID as PyUUID
-from uuid import uuid4
 
-from sqlalchemy import (
-    BigInteger,
-    DateTime,
-    Index,
-    Integer,
-    String,
-    Text,
-    UniqueConstraint,
-)
-from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy import BigInteger, DateTime, Index, Integer, Text, UniqueConstraint
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.db.base import Base
@@ -19,48 +10,6 @@ from app.infrastructure.db.base import Base
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
-
-
-class VkTaskRun(Base):
-    __tablename__ = "vk_task_runs"
-    __table_args__ = (
-        UniqueConstraint("task_id", name="uq_vk_task_runs_task_id"),
-        Index("ix_vk_task_runs_task_id", "task_id"),
-        Index("ix_vk_task_runs_claimable", "status", "available_at", "lease_expires_at"),
-    )
-
-    id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    task_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    owner_user_id: Mapped[str] = mapped_column(String(128), nullable=False)
-    run_id: Mapped[str] = mapped_column(String(128), nullable=False)
-    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
-    scope: Mapped[str] = mapped_column(String(32), nullable=False)
-    mode: Mapped[str] = mapped_column(String(64), nullable=False)
-    group_ids: Mapped[list[int]] = mapped_column(ARRAY(BigInteger), nullable=False, default=list)
-    post_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    processed_items: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    total_items: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    execution_sequence: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
-    provider_account_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    credential_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    available_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utcnow
-    )
-    lease_owner: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    lease_expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utcnow
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
-    )
 
 
 class ProcessedEvent(Base):

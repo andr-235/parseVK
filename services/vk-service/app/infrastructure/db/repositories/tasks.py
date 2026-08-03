@@ -1,46 +1,20 @@
 import uuid
 from datetime import UTC, datetime
+from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import desc, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.entities.tasks import VkTaskRun as VkTaskRunEntity
+from app.domain.entities.executions import TERMINAL_EXECUTION_STATUSES
 from app.domain.repositories.tasks import TaskEventsRepository
-from app.infrastructure.db.models.tasks import ProcessedEvent, VkTaskRun
+from app.infrastructure.db.models.executions import VkExecution
+from app.infrastructure.db.models.tasks import ProcessedEvent
+from app.infrastructure.db.repositories.executions import _execution_entity
 
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
-
-
-def _to_task_run_entity(model: VkTaskRun) -> VkTaskRunEntity:
-    return VkTaskRunEntity(
-        id=model.id,
-        task_id=model.task_id,
-        owner_user_id=model.owner_user_id,
-        run_id=model.run_id,
-        status=model.status,
-        scope=model.scope,
-        mode=model.mode,
-        group_ids=list(model.group_ids),
-        post_limit=model.post_limit,
-        started_at=model.started_at,
-        finished_at=model.finished_at,
-        processed_items=model.processed_items,
-        total_items=model.total_items,
-        last_error=model.last_error,
-        attempts=model.attempts,
-        available_at=model.available_at,
-        lease_owner=model.lease_owner,
-        lease_expires_at=model.lease_expires_at,
-        heartbeat_at=model.heartbeat_at,
-        created_at=model.created_at,
-        updated_at=model.updated_at,
-        provider_account_key=model.provider_account_key,
-        credential_version=model.credential_version,
-        execution_sequence=model.execution_sequence,
-    )
 
 
 class SqlAlchemyTaskEventsRepository(TaskEventsRepository):
@@ -81,21 +55,50 @@ class SqlAlchemyTaskEventsRepository(TaskEventsRepository):
         )
         await self.session.execute(stmt)
 
-    async def get_task_run(self, task_id: int) -> VkTaskRunEntity | None:
-        model = await self.session.scalar(select(VkTaskRun).where(VkTaskRun.task_id == task_id))
-        return _to_task_run_entity(model) if model is not None else None
+    async def get_execution(self, task_id: int, run_id: str):
+        model = await self.session.scalar(
+            select(VkExecution).where(
+                VkExecution.task_id == task_id,
+                VkExecution.run_id == run_id,
+            )
+        )
+        return _execution_entity(model) if model is not None else None
 
-    async def create_task_run(
+    async def get_active_execution(self, task_id: int):
+        model = await self.session.scalar(
+            select(VkExecution)
+            .where(
+                VkExecution.task_id == task_id,
+                VkExecution.status.in_(("pending", "running")),
+            )
+            .order_by(desc(VkExecution.created_at))
+            .limit(1)
+        )
+        return _execution_entity(model) if model is not None else None
+
+    async def get_latest_execution(self, task_id: int):
+        model = await self.session.scalar(
+            select(VkExecution)
+            .where(VkExecution.task_id == task_id)
+            .order_by(desc(VkExecution.created_at))
+            .limit(1)
+        )
+        return _execution_entity(model) if model is not None else None
+
+    async def create_execution(
         self,
+        *,
         task_id: int,
         owner_user_id: str,
         run_id: str,
         scope: str,
         mode: str,
         group_ids: list[int],
-        post_limit: int | None = None,
-    ) -> VkTaskRunEntity:
-        task_run = VkTaskRun(
+        post_limit: int | None,
+        plan_snapshot: dict,
+        parent_execution_id: UUID | None,
+    ):
+        model = VkExecution(
             task_id=task_id,
             owner_user_id=owner_user_id,
             run_id=run_id,
@@ -104,19 +107,51 @@ class SqlAlchemyTaskEventsRepository(TaskEventsRepository):
             mode=mode,
             group_ids=group_ids,
             post_limit=post_limit,
+            plan_snapshot=plan_snapshot,
+            parent_execution_id=parent_execution_id,
         )
-        self.session.add(task_run)
+        self.session.add(model)
         await self.session.flush()
-        return _to_task_run_entity(task_run)
+        return _execution_entity(model)
 
-    async def update_task_run(self, task_id: int, **kwargs) -> VkTaskRunEntity | None:
-        model = await self.session.scalar(select(VkTaskRun).where(VkTaskRun.task_id == task_id))
+    async def request_cancellation(
+        self, *, task_id: int, run_id: str | None, reason: str
+    ):
+        stmt = select(VkExecution).where(
+            VkExecution.task_id == task_id,
+            VkExecution.status.in_(("pending", "running")),
+        )
+        if run_id:
+            stmt = stmt.where(VkExecution.run_id == run_id)
+        model = await self.session.scalar(
+            stmt.order_by(desc(VkExecution.created_at)).with_for_update().limit(1)
+        )
         if model is None:
             return None
-        for key, value in kwargs.items():
-            setattr(model, key, value)
+        now = utcnow()
+        if model.cancellation_requested_at is None:
+            model.cancellation_requested_at = now
+            model.cancellation_reason = reason[:2000]
+        if model.status == "pending":
+            model.status = "cancelled"
+            model.finished_at = now
+            model.last_error = reason[:2000]
+        model.updated_at = now
         await self.session.flush()
-        return _to_task_run_entity(model)
+        return _execution_entity(model)
 
-    async def save(self) -> None:
+    async def fail_pending(self, execution_id: UUID, error: str) -> bool:
+        model = await self.session.scalar(
+            select(VkExecution)
+            .where(VkExecution.id == execution_id)
+            .with_for_update()
+        )
+        if model is None or model.status in TERMINAL_EXECUTION_STATUSES:
+            return False
+        now = utcnow()
+        model.status = "failed"
+        model.finished_at = now
+        model.last_error = error[:2000]
+        model.updated_at = now
         await self.session.flush()
+        return True

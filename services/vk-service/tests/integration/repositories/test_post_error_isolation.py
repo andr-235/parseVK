@@ -10,12 +10,50 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from test_ingestion import FakeRepository, FakeTasksClient
-
 from app.domain.exceptions.vk_api import VkApiInfrastructureError
 from app.infrastructure.db.repositories.checkpoint import SqlAlchemyIngestionCheckpointStore
 from app.infrastructure.db.session import SessionLocal
 from app.services.ingestion.collector import DataCollector
+
+
+class FakeRepository:
+    def __init__(self):
+        self.groups = {}
+        self.authors = {}
+        self.posts = {}
+        self.comments = {}
+
+    async def get_active_group_ids(self):
+        return list(self.groups)
+
+    async def upsert_group(self, payload, **_kwargs):
+        self.groups[int(payload["id"])] = dict(payload)
+
+    async def upsert_author(self, payload):
+        self.authors[int(payload["vk_author_id"])] = dict(payload)
+
+    async def upsert_post(self, payload, *, task_id, group_id):
+        key = (int(payload["owner_id"]), int(payload["id"]))
+        self.posts[key] = {**payload, "task_id": task_id, "group_id": group_id}
+
+    async def upsert_comment(self, payload, *, task_id):
+        key = (
+            int(payload["owner_id"]),
+            int(payload["post_id"]),
+            int(payload["id"]),
+        )
+        self.comments[key] = {**payload, "task_id": task_id}
+
+    async def count_comments_for_post(self, owner_id, post_id):
+        return sum(
+            1
+            for comment_owner_id, comment_post_id, _ in self.comments
+            if comment_owner_id == owner_id and comment_post_id == post_id
+        )
+
+
+class FakeTasksClient:
+    pass
 
 
 class ControllableStubVkApiClient:
@@ -41,13 +79,37 @@ class ControllableStubVkApiClient:
     async def get_comments(self, owner_id: int, post_id: int) -> dict:
         if post_id in self._fail_post_ids:
             raise VkApiInfrastructureError(10, f"Failed post {post_id}")
-        return {"items": [{"id": post_id * 10, "owner_id": owner_id, "post_id": post_id, "from_id": 1, "text": "comment"}]}
+        return {
+            "items": [
+                {
+                    "id": post_id * 10,
+                    "owner_id": owner_id,
+                    "post_id": post_id,
+                    "from_id": 1,
+                    "text": "comment",
+                }
+            ]
+        }
 
-    async def iter_comment_pages(self, owner_id: int, post_id: int, start_offset: int = 0, page_size: int = 100):
+    async def iter_comment_pages(
+        self,
+        owner_id: int,
+        post_id: int,
+        start_offset: int = 0,
+        page_size: int = 100,
+    ):
         if post_id in self._fail_post_ids:
             raise VkApiInfrastructureError(10, f"Failed post {post_id}")
         yield {
-            "items": [{"id": post_id * 10, "owner_id": owner_id, "post_id": post_id, "from_id": 1, "text": "comment"}],
+            "items": [
+                {
+                    "id": post_id * 10,
+                    "owner_id": owner_id,
+                    "post_id": post_id,
+                    "from_id": 1,
+                    "text": "comment",
+                }
+            ],
             "profiles": [],
             "groups": [],
         }
@@ -57,7 +119,7 @@ class ControllableStubVkApiClient:
         return [{"id": uid, "first_name": "Test"} for uid in user_ids]
 
 
-def task_run(group_ids=None):
+def execution(group_ids=None):
     return SimpleNamespace(
         task_id=10,
         run_id="run-10",
@@ -75,17 +137,15 @@ def task_run(group_ids=None):
 async def test_three_posts_middle_fails(db_session):
     adapter = ControllableStubVkApiClient(fail_post_ids={2})
     repository = FakeRepository()
-    tasks_client = FakeTasksClient()
     checkpoint_store = SqlAlchemyIngestionCheckpointStore(db_session)
     collector = DataCollector(
         adapter=adapter,
         repository=repository,
-        tasks_client=tasks_client,
+        tasks_client=FakeTasksClient(),
         checkpoint_store=checkpoint_store,
     )
 
-    run = task_run(group_ids=[1])
-    result = await collector.collect(run, [1])
+    result = await collector.collect(execution(group_ids=[1]), [1])
 
     assert result.posts == 3
     assert result.comments == 2
@@ -100,12 +160,9 @@ async def test_three_posts_middle_fails(db_session):
         failed = await new_store.load("run-10", -1, 2)
         completed_third = await new_store.load("run-10", -1, 3)
 
-    assert completed is not None
-    assert completed.status == "completed"
-    assert failed is not None
-    assert failed.status == "failed"
-    assert completed_third is not None
-    assert completed_third.status == "completed"
+    assert completed is not None and completed.status == "completed"
+    assert failed is not None and failed.status == "failed"
+    assert completed_third is not None and completed_third.status == "completed"
 
 
 @pytest.mark.anyio
@@ -114,16 +171,12 @@ async def test_task_level_failure_only_on_systemic():
         async def get_active_group_ids(self):
             raise sqlalchemy.exc.DBAPIError("", None, None)
 
-    adapter = ControllableStubVkApiClient()
-    repository = FailingRepository()
-    tasks_client = FakeTasksClient()
     collector = DataCollector(
-        adapter=adapter,
-        repository=repository,
-        tasks_client=tasks_client,
+        adapter=ControllableStubVkApiClient(),
+        repository=FailingRepository(),
+        tasks_client=FakeTasksClient(),
     )
-
-    run = SimpleNamespace(
+    current = SimpleNamespace(
         task_id=10,
         run_id="run-10",
         scope="all",
@@ -136,62 +189,49 @@ async def test_task_level_failure_only_on_systemic():
     )
 
     with pytest.raises(sqlalchemy.exc.DBAPIError):
-        await collector.get_group_ids(run)
+        await collector.get_group_ids(current)
 
 
 @pytest.mark.anyio
 async def test_result_stats_error_count():
-    adapter = ControllableStubVkApiClient(fail_post_ids={2})
-    repository = FakeRepository()
-    tasks_client = FakeTasksClient()
     collector = DataCollector(
-        adapter=adapter,
-        repository=repository,
-        tasks_client=tasks_client,
+        adapter=ControllableStubVkApiClient(fail_post_ids={2}),
+        repository=FakeRepository(),
+        tasks_client=FakeTasksClient(),
     )
 
-    run = task_run(group_ids=[1])
-    result = await collector.collect(run, [1])
+    stats = (await collector.collect(execution(group_ids=[1]), [1])).stats()
 
-    stats = result.stats()
     assert stats["posts"] == 3
     assert stats["comments"] == 2
     assert stats["errors"] == 1
 
 
 @pytest.mark.anyio
-async def test_task_run_status_not_mutated():
-    adapter = ControllableStubVkApiClient(fail_post_ids={2})
-    repository = FakeRepository()
-    tasks_client = FakeTasksClient()
+async def test_execution_status_not_mutated_by_collector():
     collector = DataCollector(
-        adapter=adapter,
-        repository=repository,
-        tasks_client=tasks_client,
+        adapter=ControllableStubVkApiClient(fail_post_ids={2}),
+        repository=FakeRepository(),
+        tasks_client=FakeTasksClient(),
     )
+    current = execution(group_ids=[1])
 
-    run = task_run(group_ids=[1])
-    run.status = "running"
-    await collector.collect(run, [1])
+    await collector.collect(current, [1])
 
-    assert run.status == "running"
+    assert current.status == "running"
 
 
 @pytest.mark.anyio
 async def test_checkpoint_completed_for_successful_failed_for_failed(db_session):
-    adapter = ControllableStubVkApiClient(fail_post_ids={2})
-    repository = FakeRepository()
-    tasks_client = FakeTasksClient()
     checkpoint_store = SqlAlchemyIngestionCheckpointStore(db_session)
     collector = DataCollector(
-        adapter=adapter,
-        repository=repository,
-        tasks_client=tasks_client,
+        adapter=ControllableStubVkApiClient(fail_post_ids={2}),
+        repository=FakeRepository(),
+        tasks_client=FakeTasksClient(),
         checkpoint_store=checkpoint_store,
     )
 
-    run = task_run(group_ids=[1])
-    await collector.collect(run, [1])
+    await collector.collect(execution(group_ids=[1]), [1])
     await db_session.commit()
 
     async with SessionLocal() as new_session:

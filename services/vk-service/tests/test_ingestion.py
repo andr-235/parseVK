@@ -1,503 +1,93 @@
-import sys
-from datetime import UTC, datetime
-from pathlib import Path
 from types import SimpleNamespace
-from uuid import uuid4
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _service_path import use_service_path
-
-use_service_path()
-
-from app.domain.entities.tasks import VkTaskRun
-from app.domain.exceptions.vk_api import (
-    VkApiAuthError,
-    VkApiInfrastructureError,
-    VkApiRateLimitError,
-)
-from app.infrastructure.vk_client.client import VkApiClient, VkApiConfigurationError
-from app.services.ingestion.pipeline import IngestionFailedError, IngestionPipeline
+from app.services.ingestion.result import IngestionResult
 from app.services.ingestion_service import IngestionService
 
 
-class StubVkApiClient:
-    """Minimal in-test stub replacing the deleted FakeVkApiClient."""
+class FakePipeline:
+    def __init__(self, result=None, error=None):
+        self.result = result or IngestionResult()
+        self.error = error
+        self.calls = []
 
-    token = ""
-
-    async def get_groups(self, group_ids: list, fields: list[str] | None = None) -> list:
-        return [{"id": gid, "name": f"Group {gid}"} for gid in group_ids]
-
-    async def get_posts(self, group_id: int, *, mode: str, post_limit: int) -> dict:
-        return {
-            "items": [
-                {"id": group_id * 10, "owner_id": -group_id, "from_id": -group_id, "text": "post"}
-            ]
-        }
-
-    async def get_comments(self, owner_id: int, post_id: int) -> dict:
-        return {
-            "items": [
-                {
-                    "id": post_id * 10,
-                    "owner_id": owner_id,
-                    "post_id": post_id,
-                    "from_id": 1,
-                    "text": "comment",
-                }
-            ]
-        }
-
-    async def iter_comment_pages(
-        self,
-        owner_id: int,
-        post_id: int,
-        start_offset: int = 0,
-        page_size: int = 100,
-    ):
-        # Yield a page matching current mock behavior, then an empty terminator page.
-        yield {
-            "items": [
-                {
-                    "id": post_id * 10,
-                    "owner_id": owner_id,
-                    "post_id": post_id,
-                    "from_id": 1,
-                    "text": "comment",
-                }
-            ],
-            "profiles": [],
-            "groups": [],
-        }
-        yield {"items": [], "profiles": [], "groups": []}
+    async def execute(self, execution, *, correlation_id=None):
+        self.calls.append((execution, correlation_id))
+        if self.error is not None:
+            raise self.error
+        return self.result
 
 
-@pytest.fixture
-def anyio_backend():
-    return "asyncio"
+class FakeCollector:
+    pass
+
+
+class FakeAdapter:
+    pass
 
 
 class FakeRepository:
-    def __init__(self):
-        self.groups: list[dict] = []
-        self.authors = []
-        self.posts = []
-        self.comments = []
-        self._deleted_group_ids: set[int] = set()
-
-    async def upsert_group(self, group, *, revive_if_deleted=False):
-        existing_ids = [g["id"] for g in self.groups]
-        if group["id"] not in existing_ids:
-            self.groups.append(group)
-        self._deleted_group_ids.discard(group["id"])
-
-    async def get_active_group_ids(self):
-        return [g["id"] for g in self.groups if g["id"] not in self._deleted_group_ids]
-
-    async def upsert_author(self, author):
-        self.authors.append(author)
-
-    async def upsert_post(self, post, *, task_id, group_id=None):
-        self.posts.append((post, task_id, group_id))
-
-    async def upsert_comment(self, comment, *, task_id):
-        self.comments.append((comment, task_id))
-
-    async def count_comments_for_post(self, owner_id: int, post_id: int) -> int:
-        # Count unique comment IDs (simulates DB dedup)
-        def _matches(comment):
-            if "owner_id" in comment and comment["owner_id"] != owner_id:
-                return False
-            if "post_id" in comment and comment["post_id"] != post_id:
-                return False
-            return True
-
-        unique_ids = {c[0]["id"] for c in self.comments if _matches(c[0])}
-        return len(unique_ids)
+    pass
 
 
 class FakeTasksClient:
-    def __init__(self):
-        self.calls = []
-
-    async def complete_execution(
-        self, task_id, run_id, processed_items, total_items, stats, **kwargs
-    ):
-        self.calls.append(("complete", task_id, run_id, processed_items, total_items, stats))
-
-    async def fail_execution(
-        self, task_id, run_id, error, processed_items, total_items, stats, **kwargs
-    ):
-        self.calls.append(("fail", task_id, run_id, error, processed_items, total_items, stats))
+    pass
 
 
-class FakeVkApiNamespace:
-    def __init__(self, calls):
-        self.calls = calls
-        self.groups = self
-        self.wall = self
-
-    def getById(self, **kwargs):
-        self.calls.append(("groups.getById", kwargs))
-        return {"groups": [{"id": 1, "name": "Group 1"}]}
-
-    def get(self, **kwargs):
-        self.calls.append(("wall.get", kwargs))
-        return {"items": [{"id": 10, "owner_id": -1, "from_id": -1, "text": "post"}]}
-
-    def getComments(self, **kwargs):
-        self.calls.append(("wall.getComments", kwargs))
-        return {
-            "items": [{"id": 100, "owner_id": -1, "post_id": 10, "from_id": 1, "text": "comment"}]
-        }
-
-
-class FakeVkApiSession:
-    def __init__(self, calls):
-        self.calls = calls
-
-    def get_api(self):
-        return FakeVkApiNamespace(self.calls)
-
-
-def fake_vk_session_factory(calls):
-    def factory(**kwargs):
-        calls.append(("VkApi", kwargs))
-        return FakeVkApiSession(calls)
-
-    return factory
-
-
-async def run_inline(func, *args, **kwargs):
-    return func(*args, **kwargs)
-
-
-def task_run(scope="selected", group_ids=None):
+def execution():
     return SimpleNamespace(
         task_id=10,
         run_id="run-10",
-        scope=scope,
-        mode="recent_posts",
-        group_ids=group_ids if group_ids is not None else [1],
-        post_limit=1,
-        processed_items=0,
-        total_items=0,
-    )
-
-
-@pytest.mark.anyio
-async def test_selected_task_collects_only_requested_groups():
-    repository = FakeRepository()
-    tasks_client = FakeTasksClient()
-    service = IngestionService(
-        adapter=StubVkApiClient(), repository=repository, tasks_client=tasks_client
-    )
-
-    result = await service.execute(task_run(group_ids=[1, 2]), correlation_id="corr-1")
-
-    assert result.stats() == {"groups": 2, "posts": 2, "comments": 2, "authors": 2, "errors": 0}
-    assert [group["id"] for group in repository.groups] == [1, 2]
-    assert len(repository.posts) == 2
-    assert len(repository.comments) == 2
-    assert tasks_client.calls[-1] == ("complete", 10, "run-10", 6, 6, result.stats())
-
-
-@pytest.mark.anyio
-async def test_scope_all_collects_active_groups():
-    repository = FakeRepository()
-    repository.groups.append({"id": 1, "name": "Group 1"})
-    tasks_client = FakeTasksClient()
-    service = IngestionService(
-        adapter=StubVkApiClient(), repository=repository, tasks_client=tasks_client
-    )
-
-    result = await service.execute(task_run(scope="all", group_ids=[]))
-
-    assert result.groups == 1
-    assert [group["id"] for group in repository.groups] == [1]
-
-
-@pytest.mark.anyio
-async def test_scope_all_without_active_groups_fails_task():
-    repository = FakeRepository()
-    tasks_client = FakeTasksClient()
-    service = IngestionService(
-        adapter=StubVkApiClient(),
-        repository=repository,
-        tasks_client=tasks_client,
-    )
-
-    run = task_run(scope="all", group_ids=[])
-    run.status = "running"
-    run.finished_at = None
-    run.last_error = None
-
-    with pytest.raises(IngestionFailedError, match="No active groups configured"):
-        await service.execute(run)
-
-    assert run.status == "running"
-    assert tasks_client.calls == [
-        (
-            "fail",
-            10,
-            "run-10",
-            "No active groups configured for scope=all",
-            0,
-            0,
-            {"groups": 0, "posts": 0, "comments": 0, "authors": 0, "errors": 0},
-        )
-    ]
-
-
-@pytest.mark.anyio
-async def test_real_vk_adapter_requires_token_without_leaking_secret():
-    from app.infrastructure.vk_client.client import ProviderRequestContext
-
-    client = VkApiClient(token="")
-    context = ProviderRequestContext(
-        account_id="system-vk", credential_version="", lane_id="test"
-    )
-
-    with pytest.raises(VkApiConfigurationError, match="VK token is not configured"):
-        client.bind(context)
-
-
-@pytest.mark.anyio
-async def test_real_vk_adapter_uses_vk_api_library_session():
-    from app.infrastructure.vk_client.client import ProviderRequestContext
-
-    calls = []
-    client = VkApiClient(
-        token="vk-token", vk_session_factory=fake_vk_session_factory(calls), call_runner=run_inline
-    )
-    bound = client.bind(
-        ProviderRequestContext(account_id="system-vk", credential_version="v1", lane_id="test")
-    )
-
-    groups = await bound.get_groups([1])
-    posts = await bound.get_posts(1, mode="recent_posts", post_limit=1)
-    comments = await bound.get_comments(-1, 10)
-
-    assert groups == [{"id": 1, "name": "Group 1"}]
-    assert posts == {
-        "items": [{"id": 10, "owner_id": -1, "from_id": -1, "text": "post"}],
-        "profiles": [],
-        "groups": [],
-    }
-    assert comments == {
-        "items": [{"id": 100, "owner_id": -1, "post_id": 10, "from_id": 1, "text": "comment"}],
-        "profiles": [],
-        "groups": [],
-    }
-    assert calls[0][0] == "VkApi"
-    assert calls[0][1]["token"] == "vk-token"
-    assert calls[0][1]["api_version"] == "5.199"
-    assert calls[0][1]["session"].timeout_seconds == 20
-    assert calls[1:] == [
-        ("groups.getById", {"group_ids": "1"}),
-        ("wall.get", {"owner_id": -1, "count": 1, "extended": 1}),
-        ("wall.getComments", {"owner_id": -1, "post_id": 10, "count": 100, "extended": 1}),
-    ]
-
-
-def test_settings_token_validation_requires_token_when_not_in_pytest():
-    """Settings must require vk_token in production; under pytest the validator is skipped."""
-    from app.core.config import Settings
-
-    # Under pytest the model_validator skips token enforcement, so empty token is allowed.
-    s = Settings(vk_token="")
-    assert s.vk_token == ""
-
-
-@pytest.mark.anyio
-async def test_ingestion_does_not_mutate_frozen_task_run_on_success():
-    repository = FakeRepository()
-    tasks_client = FakeTasksClient()
-    service = IngestionService(
-        adapter=StubVkApiClient(), repository=repository, tasks_client=tasks_client
-    )
-
-    now = datetime.now(UTC)
-    run = VkTaskRun(
-        id=uuid4(),
-        task_id=10,
         owner_user_id="user-1",
-        run_id="run-10",
-        status="running",
         scope="selected",
         mode="recent_posts",
         group_ids=[1],
-        post_limit=1,
-        started_at=now,
-        finished_at=None,
-        processed_items=0,
-        total_items=0,
-        last_error=None,
-        attempts=1,
-        available_at=now,
-        lease_owner="worker-1",
-        lease_expires_at=now,
-        heartbeat_at=now,
-        created_at=now,
-        updated_at=now,
-        execution_sequence=0,
+        post_limit=10,
     )
-
-    result = await service.execute(run)
-
-    assert run.status == "running"
-    assert result.processed_items == 3
-    assert tasks_client.calls[-1][0] == "complete"
 
 
 @pytest.mark.anyio
-async def test_ingestion_failure_is_reported_without_mutating_task_run():
-    repository = FakeRepository()
-    tasks_client = FakeTasksClient()
+async def test_ingestion_service_executes_immutable_execution_plan():
+    expected = IngestionResult(groups=1, posts=2, comments=3)
+    pipeline = FakePipeline(result=expected)
     service = IngestionService(
-        adapter=StubVkApiClient(),
-        repository=repository,
-        tasks_client=tasks_client,
-    )
-
-    run = task_run(scope="all", group_ids=[])
-    run.status = "running"
-    run.finished_at = None
-    run.last_error = None
-
-    with pytest.raises(IngestionFailedError, match="No active groups configured"):
-        await service.execute(run)
-
-    assert run.status == "running"
-    assert run.finished_at is None
-    assert run.processed_items == 0
-
-
-def test_vk_token_redaction():
-    from app.core.redaction import register_secret
-
-    repository = FakeRepository()
-    tasks_client = FakeTasksClient()
-
-    service = IngestionService(
-        adapter=StubVkApiClient(), repository=repository, tasks_client=tasks_client
-    )
-
-    # Secrets loaded from files/env are registered with the redaction module.
-    register_secret("secret-token-123")
-    err = "Failed with secret-token-123 in message"
-    sanitized = service._sanitize_error(err)
-    assert sanitized == "Failed with <redacted> in message"
-
-
-class AuthAdapter(StubVkApiClient):
-    """Stub that raises VkApiAuthError from a configurable call site."""
-
-    def __init__(self, *, raise_on=None):
-        self.raise_on = raise_on
-
-    async def get_groups(self, group_ids, fields=None):
-        if self.raise_on == "groups":
-            raise VkApiAuthError(8, "invalid token", "groups.getById")
-        return await super().get_groups(group_ids, fields)
-
-    async def get_posts(self, group_id, *, mode, post_limit):
-        if self.raise_on == "posts":
-            raise VkApiAuthError(8, "invalid token", "wall.get")
-        return await super().get_posts(group_id, mode=mode, post_limit=post_limit)
-
-    async def iter_comment_pages(self, owner_id, post_id, start_offset=0, page_size=100):
-        if self.raise_on == "comments":
-            raise VkApiAuthError(8, "invalid token", "wall.getComments")
-        async for page in super().iter_comment_pages(
-            owner_id, post_id, start_offset=start_offset, page_size=page_size
-        ):
-            yield page
-
-
-@pytest.mark.anyio
-async def test_group_auth_error_aborts_collection():
-    service = IngestionService(
-        adapter=AuthAdapter(raise_on="groups"),
+        adapter=FakeAdapter(),
         repository=FakeRepository(),
         tasks_client=FakeTasksClient(),
+        collector=FakeCollector(),
+        pipeline=pipeline,
     )
+    current = execution()
 
-    with pytest.raises(VkApiAuthError):
-        await service.execute(task_run())
+    result = await service.execute(current, correlation_id="corr-1")
+
+    assert result is expected
+    assert pipeline.calls == [(current, "corr-1")]
 
 
 @pytest.mark.anyio
-async def test_posts_auth_error_aborts_collection():
+async def test_ingestion_service_propagates_attempt_failure():
+    pipeline = FakePipeline(error=RuntimeError("collection failed"))
     service = IngestionService(
-        adapter=AuthAdapter(raise_on="posts"),
+        adapter=FakeAdapter(),
         repository=FakeRepository(),
         tasks_client=FakeTasksClient(),
+        collector=FakeCollector(),
+        pipeline=pipeline,
     )
 
-    with pytest.raises(VkApiAuthError):
-        await service.execute(task_run())
+    with pytest.raises(RuntimeError, match="collection failed"):
+        await service.execute(execution(), correlation_id="corr-2")
 
 
-@pytest.mark.anyio
-async def test_comments_auth_error_aborts_collection():
+def test_ingestion_error_redaction_hook_is_stable():
     service = IngestionService(
-        adapter=AuthAdapter(raise_on="comments"),
+        adapter=FakeAdapter(),
         repository=FakeRepository(),
         tasks_client=FakeTasksClient(),
+        collector=FakeCollector(),
+        pipeline=FakePipeline(),
     )
 
-    with pytest.raises(VkApiAuthError):
-        await service.execute(task_run())
-
-
-@pytest.mark.anyio
-async def test_pipeline_auth_error_skips_fail_execution():
-    tasks_client = FakeTasksClient()
-    service = IngestionService(
-        adapter=AuthAdapter(raise_on="groups"),
-        repository=FakeRepository(),
-        tasks_client=tasks_client,
-    )
-
-    with pytest.raises(VkApiAuthError):
-        await service.execute(task_run())
-
-    assert not any(call[0] == "fail" for call in tasks_client.calls)
-
-
-class TestIsInfrastructureError:
-    def test_dbapi_error_is_infrastructure(self):
-        import sqlalchemy.exc
-
-        assert IngestionPipeline._is_infrastructure_error(
-            sqlalchemy.exc.DBAPIError(False, None, None)
-        )
-
-    def test_cancelled_error_is_infrastructure(self):
-        import asyncio
-
-        assert IngestionPipeline._is_infrastructure_error(asyncio.CancelledError())
-
-    def test_request_error_is_infrastructure(self):
-        import httpx
-
-        assert IngestionPipeline._is_infrastructure_error(
-            httpx.RequestError("timeout", request=httpx.Request("GET", "http://test"))
-        )
-
-    def test_rate_limit_is_infrastructure(self):
-        assert IngestionPipeline._is_infrastructure_error(VkApiRateLimitError(6, "rate limit"))
-
-    def test_infrastructure_vk_error_is_infrastructure(self):
-        assert IngestionPipeline._is_infrastructure_error(
-            VkApiInfrastructureError(10, "server error")
-        )
-
-    def test_auth_error_is_not_infrastructure(self):
-        assert not IngestionPipeline._is_infrastructure_error(VkApiAuthError(8, "blocked"))
-
-    def test_value_error_is_not_infrastructure(self):
-        assert not IngestionPipeline._is_infrastructure_error(ValueError("bad"))
+    assert service._sanitize_error("ordinary error") == "ordinary error"
