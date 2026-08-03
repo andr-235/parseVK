@@ -5,8 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-from common.outbox import OutboxMessage
-from common.outbox import OutboxPublisher as CommonOutboxPublisher
+from common.outbox import OutboxMessage, OutboxPublisher as CommonOutboxPublisher
 from parsevk_contracts.validation import prepare_for_publish
 from parsevk_contracts.vk.commands import (
     CATALOG as VK_COMMAND_CATALOG,
