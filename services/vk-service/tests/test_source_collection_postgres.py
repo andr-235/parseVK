@@ -25,6 +25,7 @@ from app.infrastructure.db.repositories.provider_accounts import (
 from app.infrastructure.db.repositories.source_collections import (
     SqlAlchemySourceCollectionRepository,
 )
+from app.services.collection_fingerprint import CollectionIdentity
 from app.services.collection_fingerprint import build_collection_identity
 from app.tasks.execution_store import ExecutionStore
 
@@ -89,7 +90,11 @@ async def test_concurrent_demands_share_collection_and_recover_one_execution():
             payload={},
         )
 
-        async def attach(task_id: int, run_id: str):
+        async def attach(
+            task_id: int,
+            run_id: str,
+            collection_identity: CollectionIdentity,
+        ):
             async with session_factory() as session:
                 async with session.begin():
                     return await SqlAlchemySourceCollectionRepository(
@@ -98,19 +103,21 @@ async def test_concurrent_demands_share_collection_and_recover_one_execution():
                         task_id=task_id,
                         owner_user_id=f"user-{task_id}",
                         run_id=run_id,
-                        provider_account_key=identity.provider_account_key,
-                        source_key=identity.source_key,
-                        fingerprint=identity.fingerprint,
+                        provider_account_key=(
+                            collection_identity.provider_account_key
+                        ),
+                        source_key=collection_identity.source_key,
+                        fingerprint=collection_identity.fingerprint,
                         scope="selected",
                         mode="recent_posts",
-                        group_ids=[777],
-                        post_limit=10,
-                        plan_snapshot=identity.normalized_plan,
+                        group_ids=collection_identity.normalized_plan["groupIds"],
+                        post_limit=collection_identity.normalized_plan["postLimit"],
+                        plan_snapshot=collection_identity.normalized_plan,
                     )
 
         first_attachment, second_attachment = await asyncio.gather(
-            attach(2870, "run-2870"),
-            attach(2871, "run-2871"),
+            attach(2870, "run-2870", identity),
+            attach(2871, "run-2871", identity),
         )
         assert first_attachment is not None
         assert second_attachment is not None
@@ -195,6 +202,29 @@ async def test_concurrent_demands_share_collection_and_recover_one_execution():
                 "2870",
                 "2871",
             }
+
+        different_identity = build_collection_identity(
+            provider_account_key="system-vk",
+            scope="selected",
+            mode="recent_posts",
+            group_ids=[778],
+            post_limit=10,
+            payload={},
+        )
+        same_task_results = await asyncio.gather(
+            attach(2872, "run-2872-a", identity),
+            attach(2872, "run-2872-b", different_identity),
+        )
+        assert sum(result is not None for result in same_task_results) == 1
+
+        async with session_factory() as session:
+            active_for_task = await session.scalar(
+                select(func.count(VkCollectionDemand.id)).where(
+                    VkCollectionDemand.task_id == 2872,
+                    VkCollectionDemand.status.in_(("pending", "running")),
+                )
+            )
+            assert active_for_task == 1
     finally:
         if engine is not None:
             await engine.dispose()
