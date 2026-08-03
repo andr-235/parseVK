@@ -5,6 +5,7 @@ from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 
 from common.events import decode_payload
+from common.kafka.message_identity import message_identity
 from common.kafka.producer import send_to_dlq
 from common.kafka.repository import ProcessedEventRepository
 
@@ -35,17 +36,6 @@ class BaseEventConsumer(ABC):
         )
         self._lag_gauge = lag_gauge
         self._pending_resume_tasks: set[asyncio.Task] = set()
-
-    @staticmethod
-    def _message_identity(
-        payload: dict | None,
-    ) -> tuple[str | None, str]:
-        """Read identity from legacy WireEvent or canonical contract envelope."""
-        if not payload:
-            return None, ""
-        event_id = payload.get("event_id") or payload.get("messageId")
-        event_type = payload.get("event_type") or payload.get("messageType") or ""
-        return (str(event_id) if event_id else None), str(event_type)
 
     def _build_dlq_headers(
         self,
@@ -109,7 +99,7 @@ class BaseEventConsumer(ABC):
     async def _skip_due_to_retry_backoff(self, raw_value: bytes) -> bool:
         """Check durable retry state before processing a message."""
         payload = decode_payload(raw_value)
-        event_id, event_type = self._message_identity(payload)
+        event_id, event_type = message_identity(payload)
         if not event_id:
             return False
         async with self.session_factory() as session:
@@ -157,7 +147,7 @@ class BaseEventConsumer(ABC):
         from aiokafka import TopicPartition
 
         payload = decode_payload(message.value)
-        event_id, event_type = self._message_identity(payload)
+        event_id, event_type = message_identity(payload)
         if event_id:
             async with self.session_factory() as session:
                 async with session.begin():
