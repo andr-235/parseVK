@@ -29,6 +29,13 @@ class VkExecution(Base):
         UniqueConstraint("task_id", "run_id", name="uq_vk_executions_task_run"),
         Index("ix_vk_executions_claimable", "status", "available_at"),
         Index("ix_vk_executions_task_id", "task_id"),
+        Index(
+            "uq_vk_executions_active_task",
+            "task_id",
+            unique=True,
+            postgresql_where=text("status IN ('pending', 'running')"),
+            sqlite_where=text("status IN ('pending', 'running')"),
+        ),
     )
 
     id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
