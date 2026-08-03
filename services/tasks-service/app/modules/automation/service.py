@@ -14,11 +14,24 @@ logger = logging.getLogger(__name__)
 
 
 class AutomationService:
-    def __init__(self, *, session, repository, tasks, outbox):
+    def __init__(
+        self,
+        *,
+        session,
+        repository,
+        tasks,
+        outbox,
+        source_adapter_factory=SourceCompatAdapter,
+        freezer=freeze_task_run,
+        command_publisher=add_vk_execution_command,
+    ):
         self.session = session
         self.repository = repository
         self.tasks = tasks
         self.outbox = outbox
+        self.source_adapter_factory = source_adapter_factory
+        self.freezer = freezer
+        self.command_publisher = command_publisher
 
     async def get_settings(self, owner_user_id: str) -> dict:
         settings = await self.repository.get_or_create_settings(owner_user_id)
@@ -144,7 +157,7 @@ class AutomationService:
         )
 
         try:
-            source_adapter = SourceCompatAdapter(self.session)
+            source_adapter = self.source_adapter_factory(self.session)
             if task.scope == "all":
                 # Resolve the currently active source set for this concrete run.
                 # Do not clone historical links from a completed scope=all task.
@@ -155,7 +168,7 @@ class AutomationService:
                     list(base_task.group_ids or []),
                 )
                 await self._clone_task_sources(base_task, task)
-            run_meta = await freeze_task_run(self.session, task)
+            run_meta = await self.freezer(self.session, task)
         except (TaskRunFreezeError, RuntimeError) as exc:
             logger.error(
                 "TaskRun freeze failed for automation task_id=%s: %s",
@@ -184,7 +197,7 @@ class AutomationService:
             dedupe_key=f"task.automation_run_requested:{task.id}",
             payload=payload,
         )
-        await add_vk_execution_command(
+        await self.command_publisher(
             self.session,
             self.outbox,
             task,
