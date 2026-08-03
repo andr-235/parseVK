@@ -15,14 +15,11 @@ from app.bootstrap import (
 from app.core.config import settings
 from app.domain.exceptions.vk_api import VkApiAuthError
 from app.infrastructure.db.session import SessionLocal
-from app.tasks import (
-    TaskEventsConsumer,
-    VkExecutionCommandsConsumer,
-    publish_outbox_forever,
-)
+from app.tasks import TaskEventsConsumer, publish_outbox_forever
 from app.tasks.provider_reconciliation import reconcile_provider_account
 from app.tasks.startup_checks import schedule_startup_checks
 from app.tasks.task_runtime import build_execution_worker
+from app.tasks.vk_commands_consumer import VkExecutionCommandsConsumer
 
 logger = logging.getLogger(__name__)
 
