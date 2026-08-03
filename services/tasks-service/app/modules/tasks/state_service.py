@@ -5,6 +5,7 @@ Validates transitions and publishes outbox events for downstream consumers.
 """
 
 import logging
+from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +21,7 @@ from app.modules.tasks.exceptions import TaskConflictError, TaskNotFoundError
 from app.modules.tasks.mapper import task_to_response
 from app.modules.tasks.repository import TasksRepository
 from app.modules.tasks.task_run import TaskRunFreezeError, freeze_task_run
+from app.modules.tasks.vk_command import add_vk_execution_command
 
 logger = logging.getLogger(__name__)
 
@@ -61,13 +63,9 @@ class TaskStateService:
                 task_id=task_id,
                 current_status=task.status,
             )
-        if not task.execution_run_id:
-            raise TaskConflictError(
-                "Cannot resume task without an execution run",
-                task_id=task_id,
-                current_status=task.status,
-            )
 
+        previous_run_id = task.execution_run_id
+        task.execution_run_id = str(uuid4())
         task.status = "pending"
         task.error = None
         task.last_execution_sequence = 0
@@ -92,6 +90,7 @@ class TaskStateService:
                 event_data={
                     "taskId": str(task.id),
                     "runId": task.execution_run_id,
+                    "previousRunId": previous_run_id,
                 },
             )
         )
@@ -101,6 +100,12 @@ class TaskStateService:
             aggregate_id=str(task.id),
             dedupe_key=f"task.resumed:{task.id}:{task.execution_run_id}",
             payload=task_request_payload(task, owner_user_id, run_meta),
+        )
+        await add_vk_execution_command(
+            self.session,
+            self.outbox,
+            task,
+            run_meta,
         )
         task = await self.repository.touch_task(task)
         await self.outbox.add_event(
