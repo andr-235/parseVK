@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -28,6 +29,18 @@ def utcnow() -> datetime:
     return datetime.now(UTC)
 
 
+def _as_utc(value: datetime | None) -> datetime | None:
+    if value is None or value.tzinfo is not None:
+        return value
+    return value.replace(tzinfo=UTC)
+
+
+def _group_ids(value) -> list[int]:
+    if isinstance(value, str):
+        return [int(item) for item in json.loads(value)]
+    return [int(item) for item in (value or [])]
+
+
 def _execution_entity(model: VkExecution) -> VkExecutionEntity:
     return VkExecutionEntity(
         id=model.id,
@@ -37,23 +50,23 @@ def _execution_entity(model: VkExecution) -> VkExecutionEntity:
         status=model.status,
         scope=model.scope,
         mode=model.mode,
-        group_ids=list(model.group_ids or []),
+        group_ids=_group_ids(model.group_ids),
         post_limit=model.post_limit,
         plan_snapshot=dict(model.plan_snapshot or {}),
         processed_items=model.processed_items,
         total_items=model.total_items,
         last_error=model.last_error,
-        available_at=model.available_at,
+        available_at=_as_utc(model.available_at),
         current_attempt_id=model.current_attempt_id,
         current_fencing_token=model.current_fencing_token,
-        cancellation_requested_at=model.cancellation_requested_at,
+        cancellation_requested_at=_as_utc(model.cancellation_requested_at),
         cancellation_reason=model.cancellation_reason,
         parent_execution_id=model.parent_execution_id,
         execution_sequence=model.execution_sequence,
-        started_at=model.started_at,
-        finished_at=model.finished_at,
-        created_at=model.created_at,
-        updated_at=model.updated_at,
+        started_at=_as_utc(model.started_at),
+        finished_at=_as_utc(model.finished_at),
+        created_at=_as_utc(model.created_at),
+        updated_at=_as_utc(model.updated_at),
     )
 
 
@@ -67,10 +80,10 @@ def _attempt_entity(model: VkExecutionAttempt) -> VkExecutionAttemptEntity:
         status=model.status,
         provider_account_key=model.provider_account_key,
         credential_version=model.credential_version,
-        lease_expires_at=model.lease_expires_at,
-        heartbeat_at=model.heartbeat_at,
-        started_at=model.started_at,
-        finished_at=model.finished_at,
+        lease_expires_at=_as_utc(model.lease_expires_at),
+        heartbeat_at=_as_utc(model.heartbeat_at),
+        started_at=_as_utc(model.started_at),
+        finished_at=_as_utc(model.finished_at),
         last_error=model.last_error,
     )
 
