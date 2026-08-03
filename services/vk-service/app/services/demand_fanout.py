@@ -30,6 +30,8 @@ class DemandLifecycleFanout:
             demands = await self.collection_repository.list_active_demands(execution_id)
             if demands:
                 return demands
+            if await self.collection_repository.has_collection(execution_id):
+                return []
         return [
             SimpleNamespace(
                 id=None,
