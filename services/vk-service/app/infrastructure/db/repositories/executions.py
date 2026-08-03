@@ -8,11 +8,8 @@ from common.events.task_execution_started import TaskExecutionStartedPayload
 from sqlalchemy import and_, exists, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.entities.executions import (
-    VkExecution as VkExecutionEntity,
-    VkExecutionAttempt as VkExecutionAttemptEntity,
-    VkExecutionClaim,
-)
+from app.domain.entities import executions as execution_entities
+from app.domain.entities.executions import VkExecutionClaim
 from app.domain.entities.provider_account import (
     ACCOUNT_STATUS_ACTIVE,
     SYSTEM_VK_CAPABILITY,
@@ -41,8 +38,8 @@ def _group_ids(value) -> list[int]:
     return [int(item) for item in (value or [])]
 
 
-def _execution_entity(model: VkExecution) -> VkExecutionEntity:
-    return VkExecutionEntity(
+def _execution_entity(model: VkExecution) -> execution_entities.VkExecution:
+    return execution_entities.VkExecution(
         id=model.id,
         task_id=model.task_id,
         owner_user_id=model.owner_user_id,
@@ -70,8 +67,8 @@ def _execution_entity(model: VkExecution) -> VkExecutionEntity:
     )
 
 
-def _attempt_entity(model: VkExecutionAttempt) -> VkExecutionAttemptEntity:
-    return VkExecutionAttemptEntity(
+def _attempt_entity(model: VkExecutionAttempt) -> execution_entities.VkExecutionAttempt:
+    return execution_entities.VkExecutionAttempt(
         id=model.id,
         execution_id=model.execution_id,
         attempt_number=model.attempt_number,
