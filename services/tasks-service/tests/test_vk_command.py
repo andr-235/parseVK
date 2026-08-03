@@ -111,6 +111,7 @@ async def test_add_vk_command_persists_camel_case_payload(monkeypatch):
     assert command is not None
     call = outbox.add_event.await_args.kwargs
     assert call["event_type"] == "vk.execution.requested"
+    assert call["event_version"] == 2
     assert call["aggregate_id"] == str(command.execution_id)
     assert call["correlation_id"] == str(command.execution_id)
     assert call["payload"]["taskRunId"] == str(run_id)
