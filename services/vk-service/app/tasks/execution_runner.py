@@ -4,7 +4,7 @@ import asyncio
 import inspect
 from datetime import UTC, datetime, timedelta
 
-from app.tasks.execution_control import FencedVkApiClient
+from app.tasks.execution_control import FenceLostError, FencedVkApiClient
 
 
 class ExecutionAttemptRunner:
@@ -81,3 +81,4 @@ class ExecutionAttemptRunner:
             )
             if not renewed:
                 await control.ensure_active()
+                raise FenceLostError("execution lease could not be renewed")
