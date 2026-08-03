@@ -32,10 +32,17 @@ class TasksCrudService:
         session: AsyncSession,
         repository: TasksRepository,
         outbox: OutboxService,
+        *,
+        source_adapter_factory=SourceCompatAdapter,
+        freezer=freeze_task_run,
+        command_publisher=add_vk_execution_command,
     ):
         self.session = session
         self.repository = repository
         self.outbox = outbox
+        self.source_adapter_factory = source_adapter_factory
+        self.freezer = freezer
+        self.command_publisher = command_publisher
 
     async def create_parse_task(
         self,
@@ -77,10 +84,10 @@ class TasksCrudService:
             )
         )
 
-        source_adapter = SourceCompatAdapter(self.session)
+        source_adapter = self.source_adapter_factory(self.session)
         try:
             await source_adapter.ensure_normalized_sources(task, group_ids)
-            run_meta = await freeze_task_run(self.session, task)
+            run_meta = await self.freezer(self.session, task)
         except (TaskRunFreezeError, RuntimeError) as exc:
             logger.error(
                 "TaskRun freeze failed for task_id=%s: %s",
@@ -98,7 +105,7 @@ class TasksCrudService:
             dedupe_key=f"task.created:{task.id}",
             payload=task_request_payload(task, owner_user_id, run_meta),
         )
-        await add_vk_execution_command(
+        await self.command_publisher(
             self.session,
             self.outbox,
             task,
