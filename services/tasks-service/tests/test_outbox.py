@@ -228,7 +228,8 @@ async def test_tasks_service_outbox_events_include_frozen_run_metadata():
     service.state.repository.add_audit = AsyncMock()
     service.state.repository.touch_task = AsyncMock(return_value=task_mock)
 
-    async def freeze_resumed(_session, task):
+    async def freeze_resumed(_session, task, previous_run_id):
+        assert previous_run_id == initial_run_id
         return {
             "taskRunId": task.execution_run_id,
             "sourceSetRevision": 6,
