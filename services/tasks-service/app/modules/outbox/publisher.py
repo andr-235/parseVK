@@ -53,6 +53,14 @@ def dlq_topic_for_event(message: OutboxMessage, settings) -> str:
     return settings.kafka_topic_tasks_dlq
 
 
+def _as_utc(value: datetime | None) -> datetime:
+    if value is None:
+        return datetime.now(UTC)
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
 class OutboxPublisher(CommonOutboxPublisher):
     """Publish legacy task events and strict canonical VK commands."""
 
@@ -82,7 +90,7 @@ class OutboxPublisher(CommonOutboxPublisher):
             schema_version=event.event_version,
             producer="tasks-service",
             message_id=event.id,
-            occurred_at=event.created_at or datetime.now(UTC),
+            occurred_at=_as_utc(event.created_at),
             correlation_id=correlation_id,
             causation_id=None,
             payload=command.model_dump(mode="python"),
