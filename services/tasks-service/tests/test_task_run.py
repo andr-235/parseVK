@@ -380,13 +380,15 @@ async def test_resume_creates_run_for_legacy_task_without_run_id():
     )
     outbox = SimpleNamespace(add_event=AsyncMock())
     command_publisher = AsyncMock()
-    freezer = AsyncMock(
-        side_effect=lambda session, current_task, previous_id: {
+
+    async def freeze_legacy(session, current_task, previous_id):
+        return {
             "taskRunId": current_task.execution_run_id,
             "sourceSetRevision": 1,
             "snapshotSha256": "b" * 64,
         }
-    )
+
+    freezer = AsyncMock(side_effect=freeze_legacy)
     service = TaskStateService(
         AsyncMock(),
         repository,
