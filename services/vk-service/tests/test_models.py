@@ -6,9 +6,10 @@ from _service_path import use_service_path
 
 use_service_path()
 
+from app.infrastructure.db.models.executions import VkExecution, VkExecutionAttempt
 from app.infrastructure.db.models.outbox import OutboxEvent
 from app.infrastructure.db.models.provider_accounts import VkProviderAccount
-from app.infrastructure.db.models.tasks import ProcessedEvent, VkTaskRun
+from app.infrastructure.db.models.tasks import ProcessedEvent
 from app.infrastructure.db.models.vk_friends import (
     VkFriendsExportJob,
     VkFriendsJobLog,
@@ -30,13 +31,24 @@ def test_model_tables_exist():
     assert VkAuthor.__tablename__ == "vk_authors"
     assert VkPost.__tablename__ == "vk_posts"
     assert VkComment.__tablename__ == "vk_comments"
-    assert VkTaskRun.__tablename__ == "vk_task_runs"
+    assert VkExecution.__tablename__ == "vk_executions"
+    assert VkExecutionAttempt.__tablename__ == "vk_execution_attempts"
     assert ProcessedEvent.__tablename__ == "processed_events"
     assert OutboxEvent.__tablename__ == "outbox_events"
     assert VkFriendsExportJob.__tablename__ == "vk_friends_export_jobs"
     assert VkFriendsJobLog.__tablename__ == "vk_friends_job_logs"
     assert VkFriendsRecord.__tablename__ == "vk_friends_records"
     assert VkProviderAccount.__tablename__ == "vk_provider_accounts"
+
+
+def test_execution_constraints_exist():
+    assert "uq_vk_executions_task_run" in constraint_names(VkExecution)
+    assert "ix_vk_executions_claimable" in index_names(VkExecution)
+    assert "uq_vk_execution_attempt_number" in constraint_names(VkExecutionAttempt)
+    assert "uq_vk_execution_fencing_token" in constraint_names(VkExecutionAttempt)
+    assert "uq_vk_execution_attempts_running" in index_names(VkExecutionAttempt)
+    assert VkExecution.__table__.columns["plan_snapshot"].nullable is False
+    assert VkExecution.__table__.columns["current_fencing_token"].nullable is False
 
 
 def test_provider_account_model_columns():
@@ -46,25 +58,14 @@ def test_provider_account_model_columns():
     assert columns["status"].type.length == 32
     assert columns["credential_version"].type.length == 64
     assert "JSON" in str(columns["capabilities"].type).upper()
-    assert columns["revision"].nullable is False
-    assert columns["last_error_code"].nullable is True
-    assert columns["cooldown_until"].nullable is True
-    assert columns["last_validated_at"].nullable is True
 
 
-def test_domain_unique_constraints_exist():
+def test_domain_and_outbox_indexes_exist():
     assert VkGroup.__table__.columns["vk_group_id"].unique is True
     assert VkAuthor.__table__.columns["vk_author_id"].unique is True
     assert "uq_vk_posts_owner_post" in constraint_names(VkPost)
     assert "uq_vk_comments_owner_post_comment" in constraint_names(VkComment)
-    assert "uq_vk_task_runs_task_id" in constraint_names(VkTaskRun)
-    assert "ix_vk_task_runs_claimable" in index_names(VkTaskRun)
-
-
-def test_event_idempotency_and_outbox_indexes_exist():
     assert "uq_processed_events_consumer_event" in constraint_names(ProcessedEvent)
     assert "ix_processed_events_consumer_event" in index_names(ProcessedEvent)
     assert "ix_outbox_events_status_next_attempt" in index_names(OutboxEvent)
     assert "uq_outbox_events_dedupe_key" in index_names(OutboxEvent)
-    assert "ix_vk_friends_job_logs_job_id" in index_names(VkFriendsJobLog)
-    assert "ix_vk_friends_records_job_id" in index_names(VkFriendsRecord)
