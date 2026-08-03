@@ -9,7 +9,7 @@ from common.outbox import OutboxMessage, OutboxPublisher as CommonOutboxPublishe
 from parsevk_contracts.validation import prepare_for_publish
 from parsevk_contracts.vk.commands import (
     CATALOG as VK_COMMAND_CATALOG,
-    VkExecutionRequested,
+    VkExecutionRequestedV2,
 )
 
 from app.db.models import OutboxEvent
@@ -26,6 +26,7 @@ __all__ = [
 
 MAX_OUTBOX_ATTEMPTS = 5
 VK_EXECUTION_REQUESTED = "vk.execution.requested"
+VK_EXECUTION_REQUESTED_VERSION = 2
 
 
 def kafka_key_for_event(
@@ -67,8 +68,12 @@ class OutboxPublisher(CommonOutboxPublisher):
         if event.event_type != VK_EXECUTION_REQUESTED:
             await super()._publish_event(event)
             return
+        if event.event_version != VK_EXECUTION_REQUESTED_VERSION:
+            raise ValueError(
+                "tasks-service publishes vk.execution.requested only as schema v2"
+            )
 
-        command = VkExecutionRequested.model_validate(event.payload)
+        command = VkExecutionRequestedV2.model_validate(event.payload)
         if not event.correlation_id:
             raise ValueError(
                 "vk.execution.requested outbox row requires correlation_id"
