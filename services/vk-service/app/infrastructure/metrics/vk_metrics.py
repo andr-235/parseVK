@@ -86,11 +86,6 @@ _collection_demands_total = Counter(
     "Collection demands attached by coalescing result",
     ["result"],
 )
-_collection_demand_cancellations_total = Counter(
-    "vk_collection_demand_cancellations_total",
-    "Demand cancellations by effect on the physical collection",
-    ["collection_action"],
-)
 _collection_fanout_events_total = Counter(
     "vk_collection_fanout_events_total",
     "Lifecycle events emitted for collection demands",
@@ -143,11 +138,6 @@ def set_provider_account_info(account_id: str, credential_version: str) -> None:
 def observe_collection_demand_attached(*, coalesced: bool) -> None:
     result = "coalesced" if coalesced else "new_collection"
     _collection_demands_total.labels(result).inc()
-
-
-def observe_collection_demand_cancelled(*, collection_stopped: bool) -> None:
-    action = "stopped" if collection_stopped else "continued"
-    _collection_demand_cancellations_total.labels(action).inc()
 
 
 def observe_collection_fanout(event_type: str, count: int = 1) -> None:
