@@ -4,8 +4,10 @@ import pytest
 from sqlalchemy import select
 
 from app.domain.entities.provider_account import SYSTEM_VK_CAPABILITY
+from app.domain.repositories.checkpoint import CheckpointData
 from app.infrastructure.db.models.executions import VkExecutionAttempt
 from app.infrastructure.db.models.outbox import OutboxEvent
+from app.infrastructure.db.repositories.checkpoint import SqlAlchemyIngestionCheckpointStore
 from app.infrastructure.db.repositories.executions import SqlAlchemyExecutionRepository
 from app.infrastructure.db.repositories.provider_accounts import (
     SqlAlchemyProviderAccountRepository,
@@ -119,6 +121,69 @@ async def test_stale_attempt_cannot_heartbeat_or_complete(db_session):
         await db_session.scalars(
             select(OutboxEvent).where(
                 OutboxEvent.event_type == "task.execution_completed"
+            )
+        )
+    ).all()
+    assert len(terminal_events) == 1
+
+
+@pytest.mark.anyio
+async def test_crash_recovery_reuses_checkpoint_and_emits_one_terminal_event(db_session):
+    await _seed_account(db_session)
+    await _create_execution(db_session, task_id=905, run_id="run-905")
+    repository = SqlAlchemyExecutionRepository(db_session)
+    checkpoint_store = SqlAlchemyIngestionCheckpointStore(db_session)
+
+    first = await repository.claim_next(
+        worker_id="worker-before-crash",
+        lease_expires_at=datetime.now(UTC) - timedelta(seconds=1),
+    )
+    assert first is not None
+    await checkpoint_store.save(
+        CheckpointData(
+            run_id=first.run_id,
+            owner_id=-1,
+            post_id=10,
+            task_id=first.task_id,
+            group_id=1,
+            next_offset=200,
+            processed_comments=200,
+            status="in_progress",
+        )
+    )
+    await db_session.flush()
+
+    second = await repository.claim_next(
+        worker_id="worker-after-crash",
+        lease_expires_at=datetime.now(UTC) + timedelta(minutes=1),
+    )
+    assert second is not None
+    checkpoint = await checkpoint_store.load(second.run_id, -1, 10)
+
+    assert second.execution_id == first.execution_id
+    assert second.attempt_number == first.attempt_number + 1
+    assert checkpoint is not None
+    assert checkpoint.next_offset == 200
+    assert checkpoint.processed_comments == 200
+    assert not await repository.complete(
+        execution_id=first.execution_id,
+        attempt_id=first.attempt_id,
+        fencing_token=first.fencing_token,
+        processed_items=999,
+        total_items=999,
+    )
+    assert await repository.complete(
+        execution_id=second.execution_id,
+        attempt_id=second.attempt_id,
+        fencing_token=second.fencing_token,
+        processed_items=250,
+        total_items=250,
+    )
+    terminal_events = (
+        await db_session.scalars(
+            select(OutboxEvent).where(
+                OutboxEvent.event_type == "task.execution_completed",
+                OutboxEvent.aggregate_id == "905",
             )
         )
     ).all()
