@@ -307,7 +307,7 @@ jobs:
             --output-dir release-manifest
 
       - name: Upload immutable release manifest
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: release-manifest-${{ needs.gate.outputs.target_sha }}
           path: release-manifest/

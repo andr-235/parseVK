@@ -91,7 +91,7 @@ jobs:
             > "$RUNNER_TEMP/deployment-target.json"
 
       - name: Upload deployment target context
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: production-deploy-target-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/deployment-target.json
@@ -378,7 +378,7 @@ jobs:
 
       - name: Upload deployment execution context
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: production-deploy-execution-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/deployment-execution.json
