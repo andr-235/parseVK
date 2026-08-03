@@ -7,7 +7,7 @@ from common.kafka.consumer import BaseEventConsumer
 from parsevk_contracts.validation import parse_for_consume
 from parsevk_contracts.vk.commands import (
     CATALOG as VK_COMMAND_CATALOG,
-    VkExecutionRequested,
+    VkExecutionRequestedV2,
 )
 from prometheus_client import Gauge, REGISTRY
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -19,6 +19,7 @@ from app.infrastructure.db.models.tasks import ProcessedEvent
 logger = logging.getLogger(__name__)
 
 CONSUMER_NAME = "vk-service-vk-commands"
+VK_EXECUTION_REQUESTED_VERSION = 2
 
 
 def _create_lag_gauge() -> Gauge:
@@ -37,7 +38,7 @@ _consumer_lag = _create_lag_gauge()
 
 
 class VkExecutionCommandsConsumer(BaseEventConsumer):
-    consumer_group = "vk-service-vk-commands-v1"
+    consumer_group = "vk-service-vk-commands-v2"
     consumer_name = CONSUMER_NAME
     dlq_topic = settings.kafka_topic_vk_commands_dlq
 
@@ -61,13 +62,15 @@ class VkExecutionCommandsConsumer(BaseEventConsumer):
             topic=settings.kafka_topic_vk_commands,
             value=raw_value,
         )
-        command = parsed.envelope.payload
-        if not isinstance(command, VkExecutionRequested):
-            raise TypeError(
-                "vk.execution.requested payload resolved to an unexpected model"
+        if parsed.contract.schema_version != VK_EXECUTION_REQUESTED_VERSION:
+            raise ValueError(
+                "active VK runtime requires vk.execution.requested schema v2"
             )
-        if not command.owner_user_id:
-            raise ValueError("vk.execution.requested requires ownerUserId")
+        command = parsed.envelope.payload
+        if not isinstance(command, VkExecutionRequestedV2):
+            raise TypeError(
+                "vk.execution.requested v2 resolved to an unexpected model"
+            )
 
         # PR06A feeds the fully validated canonical command into the existing
         # aggregate attachment service. PR06B removes this bridge and attaches
