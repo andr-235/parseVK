@@ -17,11 +17,12 @@ class TaskRunFreezeError(Exception):
 
 
 def _config_snapshot(task: Task) -> dict:
-    """Capture execution configuration without legacy source selectors."""
+    """Capture the immutable physical collection configuration."""
     return {
         "scope": task.scope,
         "mode": task.mode,
         "postLimit": task.post_limit,
+        "taskRevision": task.revision,
     }
 
 
@@ -34,21 +35,28 @@ def _run_meta(run: TaskRun) -> dict:
 
 
 async def freeze_task_run(
-    session: AsyncSession, task: Task, sources_repo=None
-) -> dict | None:
+    session: AsyncSession,
+    task: Task,
+    sources_repo=None,
+) -> dict:
     """Freeze one concrete snapshot and return its event metadata.
 
     The operation is idempotent by ``execution_run_id``. Retry/resume of the
-    same run returns the stored metadata and never reads live task sources or
+    same run returns stored metadata and never reads live task sources or
     configuration again. Source selection comes only from normalized
-    ``task_sources`` relations; legacy ``group_ids`` is intentionally excluded.
+    ``task_sources`` relations; legacy ``group_ids`` is excluded from the
+    immutable runtime snapshot.
     """
     if not task.execution_run_id:
-        return None
+        raise TaskRunFreezeError(
+            f"Task {task.id} has no execution_run_id"
+        )
     try:
         run_id = UUID(task.execution_run_id)
     except ValueError as exc:
-        raise TaskRunFreezeError(f"Invalid execution_run_id: {task.execution_run_id}") from exc
+        raise TaskRunFreezeError(
+            f"Invalid execution_run_id: {task.execution_run_id}"
+        ) from exc
 
     existing = await session.get(TaskRun, run_id)
     if existing is not None:
@@ -56,7 +64,15 @@ async def freeze_task_run(
             raise TaskRunFreezeError(
                 f"TaskRun {run_id} belongs to task {existing.task_id}, not {task.id}"
             )
-        logger.info("TaskRun snapshot reused: task_run_id=%s task_id=%s", run_id, task.id)
+        if not existing.snapshot_sha256 or not existing.source_set_snapshot:
+            raise TaskRunFreezeError(
+                f"TaskRun {run_id} exists without a complete frozen snapshot"
+            )
+        logger.info(
+            "TaskRun snapshot reused: task_run_id=%s task_id=%s",
+            run_id,
+            task.id,
+        )
         return _run_meta(existing)
 
     if sources_repo is None:
@@ -64,7 +80,14 @@ async def freeze_task_run(
 
         sources_repo = SourcesRepository(session)
     links = await sources_repo.list_task_sources(task.id)
-    sources = await sources_repo.list_sources_by_ids(link.source_id for link in links)
+    sources = await sources_repo.list_sources_by_ids(
+        link.source_id for link in links
+    )
+    if not sources:
+        raise TaskRunFreezeError(
+            f"Task {task.id} has no normalized sources to freeze"
+        )
+
     source_set_snapshot = [
         {
             "sourceId": str(source.id),
@@ -78,7 +101,10 @@ async def freeze_task_run(
         for source in sources
     ]
     config_snapshot = _config_snapshot(task)
-    source_set_revision = task.revision
+    source_set_revision = max(
+        [int(task.revision or 0)]
+        + [int(source.revision or 0) for source in sources]
+    )
     sha = snapshot_sha256(
         {
             "config": config_snapshot,
