@@ -12,6 +12,8 @@ from app.services.task_events_service import TaskEventsService
 class FakeRepository:
     def __init__(self):
         self.processed = set()
+        self.collections = []
+        self.demands = []
         self.executions = []
         self.session = AsyncMock()
         begin_ctx = AsyncMock()
@@ -25,69 +27,122 @@ class FakeRepository:
     async def mark_processed(self, consumer_name, event_id, _event_type):
         self.processed.add((consumer_name, event_id))
 
-    async def get_execution(self, task_id, run_id):
-        return next(
+    async def attach_demand(self, **kwargs):
+        if any(
+            item.task_id == kwargs["task_id"] and item.run_id == kwargs["run_id"]
+            for item in self.demands
+        ):
+            return None
+        if any(
+            item.task_id == kwargs["task_id"]
+            and item.status in {"pending", "running"}
+            for item in self.demands
+        ):
+            return None
+
+        collection = next(
             (
                 item
-                for item in self.executions
-                if item.task_id == task_id and item.run_id == run_id
+                for item in self.collections
+                if item.provider_account_key == kwargs["provider_account_key"]
+                and item.source_key == kwargs["source_key"]
+                and item.fingerprint == kwargs["fingerprint"]
+                and item.status in {"pending", "running"}
             ),
             None,
         )
+        created = collection is None
+        if created:
+            execution = SimpleNamespace(
+                id=uuid4(),
+                task_id=kwargs["task_id"],
+                owner_user_id=kwargs["owner_user_id"],
+                run_id=kwargs["run_id"],
+                status="pending",
+                scope=kwargs["scope"],
+                mode=kwargs["mode"],
+                group_ids=kwargs["group_ids"],
+                post_limit=kwargs["post_limit"],
+                plan_snapshot=kwargs["plan_snapshot"],
+                parent_execution_id=None,
+                cancellation_requested_at=None,
+                cancellation_reason=None,
+            )
+            collection = SimpleNamespace(
+                id=uuid4(),
+                execution_id=execution.id,
+                provider_account_key=kwargs["provider_account_key"],
+                source_key=kwargs["source_key"],
+                fingerprint=kwargs["fingerprint"],
+                status="pending",
+            )
+            self.executions.append(execution)
+            self.collections.append(collection)
+        else:
+            execution = next(
+                item for item in self.executions if item.id == collection.execution_id
+            )
 
-    async def get_active_execution(self, task_id):
-        return next(
-            (
-                item
-                for item in reversed(self.executions)
-                if item.task_id == task_id and item.status in {"pending", "running"}
-            ),
-            None,
-        )
-
-    async def get_latest_execution(self, task_id):
-        return next(
-            (item for item in reversed(self.executions) if item.task_id == task_id),
-            None,
-        )
-
-    async def create_execution(self, **kwargs):
-        execution = SimpleNamespace(
+        demand = SimpleNamespace(
             id=uuid4(),
-            status="pending",
-            is_terminal=False,
-            cancellation_requested_at=None,
+            collection_id=collection.id,
+            task_id=kwargs["task_id"],
+            run_id=kwargs["run_id"],
+            owner_user_id=kwargs["owner_user_id"],
+            status="running" if collection.status == "running" else "pending",
             cancellation_reason=None,
-            **kwargs,
         )
-        self.executions.append(execution)
-        return execution
+        self.demands.append(demand)
+        return SimpleNamespace(
+            collection=collection,
+            demand=demand,
+            execution=execution,
+            collection_created=created,
+        )
 
     async def request_cancellation(self, *, task_id, run_id, reason):
-        execution = next(
+        demand = next(
             (
                 item
-                for item in reversed(self.executions)
+                for item in reversed(self.demands)
                 if item.task_id == task_id
                 and item.status in {"pending", "running"}
                 and (run_id is None or item.run_id == run_id)
             ),
             None,
         )
-        if execution is None:
+        if demand is None:
             return None
-        execution.cancellation_requested_at = object()
-        execution.cancellation_reason = reason
-        if execution.status == "pending":
-            execution.status = "cancelled"
-            execution.is_terminal = True
-        return execution
+        demand.status = "cancelled"
+        demand.cancellation_reason = reason
+        remaining = [
+            item
+            for item in self.demands
+            if item.collection_id == demand.collection_id
+            and item.status in {"pending", "running"}
+        ]
+        if not remaining:
+            collection = next(
+                item for item in self.collections if item.id == demand.collection_id
+            )
+            execution = next(
+                item for item in self.executions if item.id == collection.execution_id
+            )
+            execution.cancellation_requested_at = object()
+            execution.cancellation_reason = reason
+            if execution.status == "pending":
+                execution.status = "cancelled"
+                collection.status = "cancelled"
+        return demand
 
-    async def fail_pending(self, execution_id, error):
-        execution = next(item for item in self.executions if item.id == execution_id)
-        execution.status = "failed"
-        execution.is_terminal = True
-        execution.last_error = error
+    async def fail_pending_demand(self, *, task_id, run_id, error):
+        demand = next(
+            item
+            for item in self.demands
+            if item.task_id == task_id and item.run_id == run_id
+        )
+        demand.status = "failed"
+        demand.last_error = error
         return True
 
 
@@ -110,14 +165,16 @@ def event(
     *,
     correlation_id="corr-1",
     run_id=None,
+    group_ids=None,
+    post_limit=10,
 ):
     payload = {
         "taskId": str(task_id),
-        "ownerUserId": "user-1",
+        "ownerUserId": f"user-{task_id}",
         "scope": "selected",
         "mode": "recent_posts",
-        "groupIds": [1],
-        "postLimit": 10,
+        "groupIds": group_ids or [1],
+        "postLimit": post_limit,
     }
     if run_id:
         payload["runId"] = run_id
@@ -134,20 +191,51 @@ def event(
 
 
 @pytest.mark.anyio
-async def test_created_event_creates_immutable_execution_and_starts_task():
+async def test_created_event_creates_collection_demand_and_starts_task():
     repository = FakeRepository()
     client = FakeTasksClient()
-    task_event = event(run_id="run-1")
 
-    result = await TaskEventsService(repository, client).handle(task_event)
+    result = await TaskEventsService(repository, client).handle(
+        event(run_id="run-1")
+    )
 
     assert result.status == "pending"
     assert result.plan_snapshot["groupIds"] == [1]
+    assert len(repository.collections) == 1
+    assert len(repository.demands) == 1
     assert client.calls[0][0:2] == (1, "run-1")
 
 
 @pytest.mark.anyio
-async def test_duplicate_event_does_not_create_or_start_twice():
+async def test_exact_compatible_demands_share_one_collection():
+    repository = FakeRepository()
+    client = FakeTasksClient()
+    service = TaskEventsService(repository, client)
+
+    first = await service.handle(event(task_id=1, run_id="run-1"))
+    second = await service.handle(event(task_id=2, run_id="run-2"))
+
+    assert first.id == second.id
+    assert len(repository.collections) == 1
+    assert len(repository.executions) == 1
+    assert len(repository.demands) == 2
+    assert [call[:2] for call in client.calls] == [(1, "run-1"), (2, "run-2")]
+
+
+@pytest.mark.anyio
+async def test_fingerprint_mismatch_creates_separate_collection():
+    repository = FakeRepository()
+    service = TaskEventsService(repository, FakeTasksClient())
+
+    first = await service.handle(event(task_id=1, run_id="run-1", post_limit=10))
+    second = await service.handle(event(task_id=2, run_id="run-2", post_limit=20))
+
+    assert first.id != second.id
+    assert len(repository.collections) == 2
+
+
+@pytest.mark.anyio
+async def test_duplicate_event_does_not_attach_or_start_twice():
     repository = FakeRepository()
     client = FakeTasksClient()
     task_event = event(run_id="run-1")
@@ -156,111 +244,67 @@ async def test_duplicate_event_does_not_create_or_start_twice():
     await service.handle(task_event)
     assert await service.handle(task_event) is None
 
-    assert len(repository.executions) == 1
+    assert len(repository.demands) == 1
     assert len(client.calls) == 1
 
 
 @pytest.mark.anyio
-async def test_terminal_execution_is_not_reopened_and_resume_creates_child():
+async def test_new_run_is_ignored_while_task_has_active_demand():
     repository = FakeRepository()
-    terminal = await repository.create_execution(
-        task_id=1,
-        owner_user_id="user-1",
-        run_id="old-run",
-        scope="selected",
-        mode="recent_posts",
-        group_ids=[1],
-        post_limit=10,
-        plan_snapshot={},
-        parent_execution_id=None,
-    )
-    terminal.status = "failed"
-    terminal.is_terminal = True
     client = FakeTasksClient()
+    service = TaskEventsService(repository, client)
 
-    result = await TaskEventsService(repository, client).handle(
-        event(event_type="task.resumed", run_id="new-run")
-    )
-
-    assert terminal.status == "failed"
-    assert result.run_id == "new-run"
-    assert result.parent_execution_id == terminal.id
-
-
-@pytest.mark.anyio
-async def test_new_run_is_ignored_while_an_execution_is_active():
-    repository = FakeRepository()
-    await repository.create_execution(
-        task_id=1,
-        owner_user_id="user-1",
-        run_id="active-run",
-        scope="selected",
-        mode="recent_posts",
-        group_ids=[1],
-        post_limit=10,
-        plan_snapshot={},
-        parent_execution_id=None,
-    )
-    client = FakeTasksClient()
-
-    result = await TaskEventsService(repository, client).handle(
-        event(run_id="other-run")
-    )
+    await service.handle(event(task_id=1, run_id="active-run"))
+    result = await service.handle(event(task_id=1, run_id="other-run"))
 
     assert result is None
-    assert client.calls == []
+    assert len(repository.demands) == 1
+    assert len(client.calls) == 1
 
 
 @pytest.mark.anyio
-async def test_pending_cancellation_is_durable_and_idempotent():
+async def test_cancelling_one_demand_keeps_shared_collection_running():
     repository = FakeRepository()
-    execution = await repository.create_execution(
-        task_id=1,
-        owner_user_id="user-1",
-        run_id="run-1",
-        scope="selected",
-        mode="recent_posts",
-        group_ids=[1],
-        post_limit=10,
-        plan_snapshot={},
-        parent_execution_id=None,
-    )
     service = TaskEventsService(repository, FakeTasksClient())
+    await service.handle(event(task_id=1, run_id="run-1"))
+    await service.handle(event(task_id=2, run_id="run-2"))
+    repository.collections[0].status = "running"
+    repository.executions[0].status = "running"
+    repository.demands[0].status = "running"
+    repository.demands[1].status = "running"
 
-    first = await service.handle(event(event_type="task.cancelled", run_id="run-1"))
-    second = await service.handle(event(event_type="task.cancelled", run_id="run-1"))
+    cancelled = await service.handle(
+        event(event_type="task.cancelled", task_id=1, run_id="run-1")
+    )
 
-    assert first.status == "cancelled"
-    assert execution.cancellation_reason == "task.cancelled"
-    assert second is None
+    assert cancelled.status == "cancelled"
+    assert repository.demands[1].status == "running"
+    assert repository.executions[0].cancellation_requested_at is None
 
 
 @pytest.mark.anyio
-async def test_running_cancellation_requests_cooperative_stop():
+async def test_last_cancelled_demand_requests_collection_stop():
     repository = FakeRepository()
-    execution = await repository.create_execution(
-        task_id=1,
-        owner_user_id="user-1",
-        run_id="run-1",
-        scope="selected",
-        mode="recent_posts",
-        group_ids=[1],
-        post_limit=10,
-        plan_snapshot={},
-        parent_execution_id=None,
-    )
-    execution.status = "running"
+    service = TaskEventsService(repository, FakeTasksClient())
+    await service.handle(event(task_id=1, run_id="run-1"))
+    await service.handle(event(task_id=2, run_id="run-2"))
+    repository.collections[0].status = "running"
+    repository.executions[0].status = "running"
+    repository.demands[0].status = "running"
+    repository.demands[1].status = "running"
 
-    result = await TaskEventsService(repository, FakeTasksClient()).handle(
-        event(event_type="task.deleted", run_id="run-1")
+    await service.handle(
+        event(event_type="task.cancelled", task_id=1, run_id="run-1")
+    )
+    await service.handle(
+        event(event_type="task.cancelled", task_id=2, run_id="run-2")
     )
 
-    assert result.status == "running"
-    assert result.cancellation_requested_at is not None
+    assert repository.executions[0].cancellation_requested_at is not None
 
 
 @pytest.mark.anyio
-async def test_409_marks_unclaimed_execution_terminal_failed():
+async def test_409_fails_only_rejected_demand():
     repository = FakeRepository()
     client = FakeTasksClient()
     response = httpx.Response(
@@ -274,15 +318,17 @@ async def test_409_marks_unclaimed_execution_terminal_failed():
         response=response,
     )
 
-    result = await TaskEventsService(repository, client).handle(event(run_id="run-1"))
+    result = await TaskEventsService(repository, client).handle(
+        event(run_id="run-1")
+    )
 
     assert result is None
-    assert repository.executions[0].status == "failed"
-    assert "already running" in repository.executions[0].last_error
+    assert repository.demands[0].status == "failed"
+    assert "already running" in repository.demands[0].last_error
 
 
 @pytest.mark.anyio
-async def test_transient_http_error_leaves_execution_pending():
+async def test_transient_http_error_leaves_demand_pending():
     repository = FakeRepository()
     client = FakeTasksClient()
     response = httpx.Response(
@@ -299,5 +345,5 @@ async def test_transient_http_error_leaves_execution_pending():
     with pytest.raises(httpx.HTTPStatusError):
         await TaskEventsService(repository, client).handle(task_event)
 
-    assert repository.executions[0].status == "pending"
+    assert repository.demands[0].status == "pending"
     assert ("vk-service", task_event.event_id) in repository.processed
