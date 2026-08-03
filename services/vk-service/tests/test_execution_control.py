@@ -11,8 +11,8 @@ from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsReposit
 from app.tasks.execution_control import (
     ExecutionAttemptControl,
     ExecutionCancellationRequested,
-    FenceLostError,
     FencedVkApiClient,
+    FenceLostError,
 )
 
 
