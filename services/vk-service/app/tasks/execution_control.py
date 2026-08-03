@@ -21,16 +21,23 @@ class ExecutionAttemptControl:
         self.session_factory = session_factory
 
     async def ensure_active(self) -> None:
+        """Check ownership without taking locks held across external work."""
         async with self.session_factory() as session:
             async with session.begin():
-                await self.ensure_active_in_session(session)
+                await self._ensure_active(session, lock=False)
 
     async def ensure_active_in_session(self, session) -> None:
-        execution = await session.scalar(
-            select(VkExecution)
-            .where(VkExecution.id == self.claim.execution_id)
-            .with_for_update()
+        """Fence a pending database commit in the transaction being committed."""
+        await self._ensure_active(session, lock=True)
+
+    async def _ensure_active(self, session, *, lock: bool) -> None:
+        execution_query = select(VkExecution).where(
+            VkExecution.id == self.claim.execution_id
         )
+        if lock:
+            execution_query = execution_query.with_for_update()
+        execution = await session.scalar(execution_query)
+
         if execution is None:
             observe_fence_rejected("guard_missing_execution")
             raise FenceLostError("execution no longer exists")
@@ -45,13 +52,17 @@ class ExecutionAttemptControl:
         ):
             observe_fence_rejected("guard_execution")
             raise FenceLostError("execution fencing token is no longer current")
-        attempt = await session.scalar(
-            select(VkExecutionAttempt)
-            .where(VkExecutionAttempt.id == self.claim.attempt_id)
-            .with_for_update()
+
+        attempt_query = select(VkExecutionAttempt).where(
+            VkExecutionAttempt.id == self.claim.attempt_id
         )
+        if lock:
+            attempt_query = attempt_query.with_for_update()
+        attempt = await session.scalar(attempt_query)
+
         if (
             attempt is None
+            or attempt.execution_id != self.claim.execution_id
             or attempt.status != "running"
             or attempt.fencing_token != self.claim.fencing_token
         ):
@@ -69,6 +80,7 @@ class FencedVkApiClient:
     def __getattr__(self, name):
         target = getattr(self._inner, name)
         if name == "iter_comment_pages":
+
             def guarded_iterator(*args, **kwargs) -> AsyncIterator[dict]:
                 return self._guard_iterator(target, *args, **kwargs)
 
@@ -87,8 +99,17 @@ class FencedVkApiClient:
         return guarded
 
     async def _guard_iterator(self, target, *args, **kwargs):
-        await self._control.ensure_active()
-        async for item in target(*args, **kwargs):
-            await self._control.ensure_active()
-            yield item
-        await self._control.ensure_active()
+        iterator = target(*args, **kwargs).__aiter__()
+        try:
+            while True:
+                await self._control.ensure_active()
+                try:
+                    item = await anext(iterator)
+                except StopAsyncIteration:
+                    return
+                await self._control.ensure_active()
+                yield item
+        finally:
+            close = getattr(iterator, "aclose", None)
+            if close is not None:
+                await close()

@@ -25,6 +25,8 @@ When the current attempt lease expires, the next claim transaction:
 
 Ingestion resumes from the last committed `vk_ingestion_checkpoints` position. A stale attempt may finish an in-flight VK request, but fencing is checked again before the page transaction commits, so it cannot advance the checkpoint or publish terminal effects.
 
+Non-transactional checks before and after VK requests use short read-only transactions. `SELECT ... FOR UPDATE` is reserved for the page or final database transaction immediately before commit, so heartbeat and cancellation are not blocked by network work.
+
 ## Cancellation and shutdown
 
 `task.cancelled` and `task.deleted` persist `cancellation_requested_at` and a reason. Repeated cancellation is idempotent.
@@ -32,7 +34,7 @@ Ingestion resumes from the last committed `vk_ingestion_checkpoints` position. A
 The active attempt checks cancellation:
 
 - before and after VK requests;
-- at every comment-page boundary;
+- before every request made by an asynchronous page iterator;
 - inside the same database transaction before a page or final result commits.
 
 A pending execution is cancelled immediately. A running execution stops cooperatively and records one terminal cancellation.
@@ -54,11 +56,14 @@ Available metrics:
 
 - `vk_execution_attempt_started_total`;
 - `vk_execution_attempt_recovered_total`;
+- `vk_execution_attempt_released_total`;
 - `vk_execution_lease_expired_total`;
 - `vk_execution_fence_rejected_total{operation}`;
 - `vk_execution_cancellation_requested_total`;
 - `vk_execution_terminal_total{outcome}`;
 - `vk_execution_active_attempts`.
+
+A recovery and lease-expiry observation is recorded only when the immediately previous physical attempt was persisted as `expired`. Graceful shutdown and provider-driven releases are counted as releases, not lease expiries. The active-attempt gauge follows executor lifetime and is decremented on every exit path, including stale-fence rejection.
 
 Recommended alerts:
 

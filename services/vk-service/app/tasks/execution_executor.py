@@ -8,6 +8,10 @@ from app.domain.exceptions.provider_account import (
     ProviderCredentialChangedError,
 )
 from app.domain.exceptions.vk_api import VkApiAuthError
+from app.infrastructure.metrics.execution_metrics import (
+    observe_attempt_active_started,
+    observe_attempt_finished,
+)
 from app.services.ingestion.pipeline import IngestionFailedError
 from app.tasks.execution_control import (
     ExecutionAttemptControl,
@@ -62,12 +66,22 @@ class ExecutionExecutor:
         )
 
     async def execute(self, claim) -> None:
+        observe_attempt_active_started()
+        try:
+            await self._execute_claim(claim)
+        finally:
+            # A claimed attempt stops being active on every path, including
+            # stale-fence rejection and unexpected task cancellation.
+            observe_attempt_finished()
+
+    async def _execute_claim(self, claim) -> None:
         control = ExecutionAttemptControl(
             claim=claim,
             session_factory=self.session_factory,
         )
         logger.info(
-            "Claimed VK execution execution_id=%s run_id=%s attempt=%s fence=%s worker=%s",
+            "Claimed VK execution execution_id=%s run_id=%s "
+            "attempt=%s fence=%s worker=%s",
             claim.execution_id,
             claim.run_id,
             claim.attempt_number,
@@ -99,7 +113,8 @@ class ExecutionExecutor:
             await self._cancel_if_requested(claim)
         except FenceLostError:
             logger.warning(
-                "Stale execution attempt stopped execution_id=%s attempt_id=%s fence=%s",
+                "Stale execution attempt stopped execution_id=%s "
+                "attempt_id=%s fence=%s",
                 claim.execution_id,
                 claim.attempt_id,
                 claim.fencing_token,

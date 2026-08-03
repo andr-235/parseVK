@@ -10,6 +10,10 @@ _attempt_recovered_total = Counter(
     "vk_execution_attempt_recovered_total",
     "VK executions recovered by a newer attempt",
 )
+_attempt_released_total = Counter(
+    "vk_execution_attempt_released_total",
+    "VK execution attempts released without a terminal outcome",
+)
 _lease_expired_total = Counter(
     "vk_execution_lease_expired_total",
     "VK execution attempts whose lease expired",
@@ -36,10 +40,17 @@ _active_attempts = Gauge(
 
 def observe_attempt_started(*, recovered: bool) -> None:
     _attempt_started_total.inc()
-    _active_attempts.inc()
     if recovered:
         _attempt_recovered_total.inc()
         _lease_expired_total.inc()
+
+
+def observe_attempt_active_started() -> None:
+    _active_attempts.inc()
+
+
+def observe_attempt_finished() -> None:
+    _active_attempts.dec()
 
 
 def observe_fence_rejected(operation: str) -> None:
@@ -52,8 +63,7 @@ def observe_cancellation_requested() -> None:
 
 def observe_terminal(outcome: str) -> None:
     _terminal_total.labels(outcome).inc()
-    _active_attempts.dec()
 
 
 def observe_attempt_released() -> None:
-    _active_attempts.dec()
+    _attempt_released_total.inc()

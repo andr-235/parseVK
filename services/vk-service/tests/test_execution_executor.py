@@ -1,6 +1,6 @@
 import asyncio
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -159,6 +159,16 @@ async def test_cancellation_wins_race_with_failure():
 @pytest.mark.anyio
 async def test_executor_does_not_finalize_after_fence_loss(monkeypatch):
     monkeypatch.setattr(ExecutionAttemptControl, "ensure_active", AsyncMock())
+    active_started = MagicMock()
+    active_finished = MagicMock()
+    monkeypatch.setattr(
+        "app.tasks.execution_executor.observe_attempt_active_started",
+        active_started,
+    )
+    monkeypatch.setattr(
+        "app.tasks.execution_executor.observe_attempt_finished",
+        active_finished,
+    )
     store = FakeStore()
     executor = build_executor(store)
     executor.runner.run = AsyncMock(side_effect=FenceLostError("stale"))
@@ -166,6 +176,8 @@ async def test_executor_does_not_finalize_after_fence_loss(monkeypatch):
     await executor.execute(claim())
 
     assert store.calls == []
+    active_started.assert_called_once_with()
+    active_finished.assert_called_once_with()
 
 
 @pytest.mark.anyio

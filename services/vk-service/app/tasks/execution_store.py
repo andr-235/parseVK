@@ -1,5 +1,8 @@
 from datetime import UTC, datetime, timedelta
 
+from sqlalchemy import exists, select
+
+from app.infrastructure.db.models.executions import VkExecutionAttempt
 from app.infrastructure.db.repositories.executions import SqlAlchemyExecutionRepository
 from app.infrastructure.metrics.execution_metrics import (
     observe_attempt_released,
@@ -14,11 +17,31 @@ class ExecutionStore:
         self.session_factory = session_factory
 
     async def claim(self, *, worker_id: str, lease_expires_at: datetime):
-        claim = await self._call(
-            "claim_next", worker_id=worker_id, lease_expires_at=lease_expires_at
-        )
+        async with self.session_factory() as session:
+            async with session.begin():
+                repository = SqlAlchemyExecutionRepository(session)
+                claim = await repository.claim_next(
+                    worker_id=worker_id,
+                    lease_expires_at=lease_expires_at,
+                )
+                recovered = False
+                if claim is not None and claim.attempt_number > 1:
+                    recovered = bool(
+                        await session.scalar(
+                            select(
+                                exists().where(
+                                    VkExecutionAttempt.execution_id
+                                    == claim.execution_id,
+                                    VkExecutionAttempt.attempt_number
+                                    == claim.attempt_number - 1,
+                                    VkExecutionAttempt.status == "expired",
+                                )
+                            )
+                        )
+                    )
+
         if claim is not None:
-            observe_attempt_started(recovered=claim.attempt_number > 1)
+            observe_attempt_started(recovered=recovered)
         return claim
 
     async def renew(self, **kwargs) -> bool:

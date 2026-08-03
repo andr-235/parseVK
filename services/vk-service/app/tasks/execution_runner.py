@@ -46,6 +46,10 @@ class ExecutionAttemptRunner:
             await asyncio.gather(ingestion_task, heartbeat_task, return_exceptions=True)
 
     async def _run_ingestion(self, claim, control):
+        # Startup fencing must not lock the execution row in the ingestion
+        # transaction. External VK calls and heartbeats use independent sessions.
+        await control.ensure_active()
+
         async with self.session_factory() as session:
             adapter = self.adapter_factory(session, claim)
             if inspect.isawaitable(adapter):
@@ -57,8 +61,9 @@ class ExecutionAttemptRunner:
                 attempt_control=control,
             )
             try:
-                await control.ensure_active_in_session(session)
                 result = await service.execute(claim, correlation_id=claim.run_id)
+                # The final fence is locked in the same transaction as the data
+                # being committed, so a replacement attempt cannot race the write.
                 await control.ensure_active_in_session(session)
                 await session.commit()
                 return result
