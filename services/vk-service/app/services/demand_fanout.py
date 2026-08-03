@@ -5,6 +5,8 @@ import httpx
 from common.events.task_execution_progressed import TaskExecutionProgressedPayload
 from sqlalchemy import text
 
+from app.infrastructure.metrics.vk_metrics import observe_collection_fanout
+
 logger = logging.getLogger("vk-service.demand-fanout")
 
 
@@ -47,7 +49,8 @@ class DemandLifecycleFanout:
         stats: dict,
         correlation_id: str | None,
     ) -> None:
-        for demand in await self.active_demands(task_run):
+        demands = await self.active_demands(task_run)
+        for demand in demands:
             await self.tasks_client.complete_execution(
                 demand.task_id,
                 demand.run_id,
@@ -57,6 +60,7 @@ class DemandLifecycleFanout:
                 request_id=demand.run_id,
                 correlation_id=correlation_id or demand.run_id,
             )
+        observe_collection_fanout("complete_callback", len(demands))
 
     async def fail_callbacks(
         self,
@@ -68,7 +72,8 @@ class DemandLifecycleFanout:
         stats: dict,
         correlation_id: str | None,
     ) -> None:
-        for demand in await self.active_demands(task_run):
+        demands = await self.active_demands(task_run)
+        for demand in demands:
             try:
                 await self.tasks_client.fail_execution(
                     demand.task_id,
@@ -88,6 +93,7 @@ class DemandLifecycleFanout:
                     demand.task_id,
                     demand.run_id,
                 )
+        observe_collection_fanout("fail_callback", len(demands))
 
     async def report_progress(
         self,
@@ -97,8 +103,9 @@ class DemandLifecycleFanout:
         total_items: int,
         occurred_at: str,
     ) -> None:
+        demands = await self.active_demands(task_run)
         progress = processed_items / total_items if total_items > 0 else 0.0
-        for demand in await self.active_demands(task_run):
+        for demand in demands:
             sequence = await self._next_sequence(demand)
             payload = TaskExecutionProgressedPayload(
                 taskId=demand.task_id,
@@ -122,6 +129,7 @@ class DemandLifecycleFanout:
                 ),
                 payload=payload.model_dump(mode="json"),
             )
+        observe_collection_fanout("progress", len(demands))
 
     async def _next_sequence(self, demand) -> int:
         if demand.id is None:
