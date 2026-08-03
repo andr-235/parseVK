@@ -159,10 +159,7 @@ async def freeze_task_run(
         for source in sources
     ]
     config_snapshot = _config_snapshot(task)
-    source_set_revision = max(
-        [int(task.revision or 0)]
-        + [int(source.revision or 0) for source in sources]
-    )
+    source_set_revision = int(task.revision or 0)
     snapshot_hash = snapshot_sha256(
         {
             "config": config_snapshot,
