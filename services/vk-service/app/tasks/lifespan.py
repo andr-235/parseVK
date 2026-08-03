@@ -15,7 +15,11 @@ from app.bootstrap import (
 from app.core.config import settings
 from app.domain.exceptions.vk_api import VkApiAuthError
 from app.infrastructure.db.session import SessionLocal
-from app.tasks import TaskEventsConsumer, publish_outbox_forever
+from app.tasks import (
+    TaskEventsConsumer,
+    VkExecutionCommandsConsumer,
+    publish_outbox_forever,
+)
 from app.tasks.provider_reconciliation import reconcile_provider_account
 from app.tasks.startup_checks import schedule_startup_checks
 from app.tasks.task_runtime import build_execution_worker
@@ -27,7 +31,11 @@ _publisher_healthy: list[bool] = [False]
 _execution_worker_health = WorkerHealth()
 
 
-async def supervise(name: str, coro_factory, health_flag: list[bool] | None = None):
+async def supervise(
+    name: str,
+    coro_factory,
+    health_flag: list[bool] | None = None,
+):
     retry_delay = 1
     while True:
         try:
@@ -72,7 +80,10 @@ async def lifespan(app: FastAPI):
             display_version = credential.display_version
     except Exception:
         pass
-    logger.info("VK service starting, token=%s", display_version or "(not set)")
+    logger.info(
+        "VK service starting, token=%s",
+        display_version or "(not set)",
+    )
     schedule_startup_checks()
 
     async def run_startup_reconciliation():
@@ -89,53 +100,84 @@ async def lifespan(app: FastAPI):
         logger.error("startup reconciliation failed: %s", error)
 
     session_factory: async_sessionmaker = SessionLocal
-    consumer = TaskEventsConsumer(session_factory=session_factory)
-    consumer_task = None
-    publisher_task = None
-    execution_worker_task = None
-
-    async def run_consumer():
-        await consumer.run_forever()
-
-    async def run_publisher():
-        await publish_outbox_forever(session_factory)
+    consumers = []
+    background_tasks: list[asyncio.Task] = []
 
     if settings.kafka_consumer_enabled:
-        consumer_task = asyncio.create_task(
-            supervise("Kafka consumer", run_consumer, health_flag=_consumer_healthy)
-        )
+        if settings.vk_commands_consumer_enabled:
+            consumers.append(
+                (
+                    "VK command consumer",
+                    VkExecutionCommandsConsumer(
+                        session_factory=session_factory
+                    ),
+                )
+            )
+        elif settings.legacy_task_events_enabled:
+            consumers.append(
+                (
+                    "Legacy task-events consumer",
+                    TaskEventsConsumer(session_factory=session_factory),
+                )
+            )
+        else:
+            logger.warning(
+                "Kafka consumer enabled but no VK command path is active"
+            )
     else:
-        logger.info("VK Kafka consumer disabled by configuration")
+        logger.info("VK Kafka consumers disabled by configuration")
+
+    for name, consumer in consumers:
+        background_tasks.append(
+            asyncio.create_task(
+                supervise(
+                    name,
+                    consumer.run_forever,
+                    health_flag=_consumer_healthy,
+                )
+            )
+        )
+
     if settings.outbox_publish_enabled:
-        publisher_task = asyncio.create_task(
-            supervise("Outbox publisher", run_publisher, health_flag=_publisher_healthy)
+        background_tasks.append(
+            asyncio.create_task(
+                supervise(
+                    "Outbox publisher",
+                    lambda: publish_outbox_forever(session_factory),
+                    health_flag=_publisher_healthy,
+                )
+            )
         )
     else:
         logger.info("VK outbox publisher disabled by configuration")
+
     if settings.task_worker_enabled:
         execution_worker = build_execution_worker(
-            session_factory, _execution_worker_health
+            session_factory,
+            _execution_worker_health,
         )
-        execution_worker_task = asyncio.create_task(
-            supervise_worker(
-                "VK execution worker",
-                execution_worker.run_forever,
-                health=_execution_worker_health,
+        background_tasks.append(
+            asyncio.create_task(
+                supervise_worker(
+                    "VK execution worker",
+                    execution_worker.run_forever,
+                    health=_execution_worker_health,
+                )
             )
         )
     else:
         logger.info("VK execution worker disabled by configuration")
+
     try:
         yield
     finally:
-        for task in (consumer_task, publisher_task, execution_worker_task):
-            if task:
-                task.cancel()
-        for task in (consumer_task, publisher_task, execution_worker_task):
-            if task:
-                with suppress(asyncio.CancelledError):
-                    await task
-        await consumer.stop()
+        for task in background_tasks:
+            task.cancel()
+        for task in background_tasks:
+            with suppress(asyncio.CancelledError):
+                await task
+        for _, consumer in consumers:
+            await consumer.stop()
 
 
 def get_consumer_healthy() -> bool:
