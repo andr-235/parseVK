@@ -155,6 +155,9 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
                 previous.status = "expired"
                 previous.finished_at = now
                 previous.last_error = "lease expired"
+                # Clear the partial unique running-attempt index before the
+                # replacement attempt is inserted in the same transaction.
+                await self.session.flush()
 
         fencing_token = execution.current_fencing_token + 1
         attempt = VkExecutionAttempt(
