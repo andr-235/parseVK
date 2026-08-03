@@ -147,6 +147,35 @@ async def test_last_cancelled_demand_cancels_pending_collection(db_session):
 
 
 @pytest.mark.anyio
+async def test_late_demand_gets_started_for_current_attempt(db_session):
+    await _seed_account(db_session)
+    first = await _attach(db_session, task_id=1013, run_id="run-1013")
+    assert first is not None
+    execution_repository = SqlAlchemyExecutionRepository(db_session)
+    claim = await execution_repository.claim_next(
+        worker_id="worker-late-join",
+        lease_expires_at=datetime.now(UTC) + timedelta(minutes=1),
+    )
+    assert claim is not None
+
+    late = await _attach(db_session, task_id=1014, run_id="run-1014")
+
+    assert late is not None
+    assert late.collection_created is False
+    assert late.collection.id == first.collection.id
+    assert late.demand.status == "running"
+    assert late.demand.execution_sequence == 1
+    started_events = (
+        await db_session.scalars(
+            select(OutboxEvent)
+            .where(OutboxEvent.event_type == "task.execution_started")
+            .order_by(OutboxEvent.aggregate_id)
+        )
+    ).all()
+    assert [event.aggregate_id for event in started_events] == ["1013", "1014"]
+
+
+@pytest.mark.anyio
 async def test_completion_is_fanned_out_to_each_active_demand(db_session):
     await _seed_account(db_session)
     first = await _attach(db_session, task_id=1009, run_id="run-1009")
