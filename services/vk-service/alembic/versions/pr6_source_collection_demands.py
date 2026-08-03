@@ -17,6 +17,8 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    op.drop_index("uq_vk_executions_active_task", table_name="vk_executions")
+
     op.create_table(
         "vk_source_collections",
         sa.Column("id", UUID(as_uuid=True), primary_key=True),
@@ -181,3 +183,11 @@ def downgrade() -> None:
         "ix_vk_source_collections_execution", table_name="vk_source_collections"
     )
     op.drop_table("vk_source_collections")
+
+    op.create_index(
+        "uq_vk_executions_active_task",
+        "vk_executions",
+        ["task_id"],
+        unique=True,
+        postgresql_where=sa.text("status IN ('pending', 'running')"),
+    )
