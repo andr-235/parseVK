@@ -121,7 +121,6 @@ def get_ingestion_service(
     demand_fanout = DemandLifecycleFanout(
         session=session,
         collection_repository=collection_repository,
-        tasks_client=_tasks_client,
         outbox=outbox_service,
     )
 
