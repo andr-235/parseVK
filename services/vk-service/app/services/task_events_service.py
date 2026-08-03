@@ -15,6 +15,7 @@ from common.events import (
 from app.domain.entities.executions import VkExecution
 from app.domain.entities.source_collections import CollectionDemand
 from app.domain.repositories.tasks import TaskEventsRepository
+from app.infrastructure.metrics.vk_metrics import observe_collection_demand_attached
 from app.infrastructure.tasks_client.client import TasksClient
 from app.services.collection_fingerprint import build_collection_identity
 
@@ -74,6 +75,9 @@ class TaskEventsService:
         if attachment is None:
             return None
 
+        observe_collection_demand_attached(
+            coalesced=not attachment.collection_created
+        )
         demand = attachment.demand
         try:
             await self.tasks_client.start_execution(
