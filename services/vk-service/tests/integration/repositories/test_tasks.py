@@ -1,46 +1,75 @@
-import uuid
+from uuid import uuid4
 
 import pytest
+
 from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsRepository
 
 
 @pytest.mark.anyio
-async def test_tasks_repository_flow(db_session):
-    repo = SqlAlchemyTaskEventsRepository(db_session)
-    
-    event_id = uuid.uuid4()
-    # 1. Is Processed (should be False)
-    processed = await repo.is_processed("consumer-1", event_id)
-    assert processed is False
-    
-    # 2. Mark Processed
-    await repo.mark_processed("consumer-1", event_id, "task.created")
-    
-    # 3. Is Processed (should be True now)
-    processed = await repo.is_processed("consumer-1", event_id)
-    assert processed is True
-    
-    # 4. Get Task Run (should be None)
-    run = await repo.get_task_run(456)
-    assert run is None
-    
-    # 5. Create Task Run
-    run = await repo.create_task_run(
+async def test_task_events_repository_flow(db_session):
+    repository = SqlAlchemyTaskEventsRepository(db_session)
+    event_id = uuid4()
+
+    assert not await repository.is_processed("consumer-1", event_id)
+    await repository.mark_processed("consumer-1", event_id, "task.created")
+    assert await repository.is_processed("consumer-1", event_id)
+
+    assert await repository.get_execution(456, "run-1") is None
+    execution = await repository.create_execution(
         task_id=456,
         owner_user_id="user-1",
         run_id="run-1",
-        scope="wall",
-        mode="all",
+        scope="selected",
+        mode="recent_posts",
         group_ids=[123],
-        post_limit=10
+        post_limit=10,
+        plan_snapshot={"groupIds": [123], "postLimit": 10},
+        parent_execution_id=None,
     )
-    assert run.task_id == 456
-    assert run.status == "pending"
-    
-    # 6. Fetch again
-    run_fetched = await repo.get_task_run(456)
-    assert run_fetched is not None
-    assert run_fetched.run_id == "run-1"
-    
-    # 7. Save
-    await repo.save()
+
+    assert execution.task_id == 456
+    assert execution.status == "pending"
+    assert execution.group_ids == [123]
+
+    fetched = await repository.get_execution(456, "run-1")
+    assert fetched is not None
+    assert fetched.id == execution.id
+    assert fetched.plan_snapshot["groupIds"] == [123]
+    assert (await repository.get_active_execution(456)).id == execution.id
+    assert (await repository.get_latest_execution(456)).id == execution.id
+
+
+@pytest.mark.anyio
+async def test_pending_cancellation_is_idempotent(db_session):
+    repository = SqlAlchemyTaskEventsRepository(db_session)
+    execution = await repository.create_execution(
+        task_id=457,
+        owner_user_id="user-1",
+        run_id="run-2",
+        scope="selected",
+        mode="recent_posts",
+        group_ids=[123],
+        post_limit=10,
+        plan_snapshot={"groupIds": [123]},
+        parent_execution_id=None,
+    )
+
+    first = await repository.request_cancellation(
+        task_id=457,
+        run_id="run-2",
+        reason="task.cancelled",
+    )
+    second = await repository.request_cancellation(
+        task_id=457,
+        run_id="run-2",
+        reason="task.cancelled",
+    )
+
+    assert first is not None
+    assert first.status == "cancelled"
+    assert first.cancellation_reason == "task.cancelled"
+    assert second is None
+    terminal = await repository.get_execution(457, "run-2")
+    assert terminal is not None
+    assert terminal.id == execution.id
+    assert terminal.status == "cancelled"
