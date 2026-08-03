@@ -1,8 +1,15 @@
 import asyncio
+from datetime import UTC, datetime
+from uuid import uuid4
 
 import pytest
 from task_executor_fakes import FakeLeaseStore, build_executor, task_run
 
+from app.domain.entities.provider_account import (
+    SYSTEM_VK_ACCOUNT_KEY,
+    ProviderAccount,
+)
+from app.domain.exceptions.vk_api import VkApiAuthError
 from app.services.ingestion.result import IngestionResult
 
 
@@ -88,3 +95,153 @@ async def test_completion_recording_failure_releases_task_for_retry():
 
     assert any(call[0] == "release" for call in leases.calls)
     assert not any(call[0] == "done" for call in leases.calls)
+
+
+def _account(*, credential_version: str = "fake-version") -> ProviderAccount:
+    now = datetime.now(UTC)
+    return ProviderAccount(
+        id=uuid4(),
+        account_key=SYSTEM_VK_ACCOUNT_KEY,
+        provider="vk",
+        status="active",
+        credential_version=credential_version,
+        capabilities=[],
+        cooldown_until=None,
+        last_error_code=None,
+        last_error_kind=None,
+        last_validated_at=None,
+        revision=1,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+class RecordingAccounts:
+    def __init__(self, account):
+        self.account = account
+        self.transitions = []
+
+    async def get_by_key(self, account_key):
+        assert account_key == SYSTEM_VK_ACCOUNT_KEY
+        return self.account
+
+    async def transition_to_invalid(
+        self,
+        account_id,
+        credential_version,
+        *,
+        error_code=None,
+        error_kind=None,
+    ):
+        self.transitions.append(
+            (account_id, credential_version, error_code, error_kind)
+        )
+        return credential_version == self.account.credential_version
+
+
+class FakeGate:
+    def __init__(self, allowed=True):
+        self.allowed = allowed
+        self.invalidated = False
+
+    async def can_claim(self):
+        return self.allowed
+
+    def invalidate(self):
+        self.invalidated = True
+
+
+@pytest.mark.anyio
+async def test_executor_auth_error_releases_blocked_and_marks_account_invalid():
+    account = _account()
+
+    class Service:
+        async def execute(self, _task_run, **_kwargs):
+            raise VkApiAuthError(8, "invalid token", "users.get")
+
+    leases = FakeLeaseStore()
+    accounts = RecordingAccounts(account)
+    gate = FakeGate()
+    executor = build_executor(
+        Service(),
+        leases,
+        provider_accounts_factory=lambda _session: accounts,
+        account_gate=gate,
+    )
+
+    await executor.execute(task_run())
+
+    assert accounts.transitions == [
+        (account.id, "fake-version", 8, "auth")
+    ]
+    assert gate.invalidated is True
+    release = next(call for call in leases.calls if call[0] == "release")
+    assert release[1]["error"] == "provider_account_invalid"
+    assert not any(call[0] == "failed" for call in leases.calls)
+    assert not any(call[0] == "done" for call in leases.calls)
+
+
+@pytest.mark.anyio
+async def test_stale_attempt_cannot_invalidate_rotated_credential():
+    account = _account(credential_version="new-version")
+
+    class Service:
+        async def execute(self, _task_run, **_kwargs):
+            raise VkApiAuthError(8, "old token invalid", "users.get")
+
+    leases = FakeLeaseStore()
+    accounts = RecordingAccounts(account)
+    gate = FakeGate()
+    executor = build_executor(
+        Service(),
+        leases,
+        provider_accounts_factory=lambda _session: accounts,
+        account_gate=gate,
+    )
+
+    await executor.execute(task_run())
+
+    assert accounts.transitions == [
+        (account.id, "fake-version", 8, "auth")
+    ]
+    assert gate.invalidated is False
+    assert any(call[0] == "release" for call in leases.calls)
+    assert not any(call[0] == "failed" for call in leases.calls)
+
+
+@pytest.mark.anyio
+async def test_executor_blocked_when_account_inactive_without_vk_calls():
+    called = asyncio.Event()
+
+    class Service:
+        async def execute(self, _task_run, **_kwargs):
+            called.set()
+
+    leases = FakeLeaseStore()
+    gate = FakeGate(allowed=False)
+    executor = build_executor(
+        Service(),
+        leases,
+        account_gate=gate,
+    )
+
+    await executor.execute(task_run())
+
+    assert not called.is_set()
+    release = next(call for call in leases.calls if call[0] == "release")
+    assert release[1]["error"] == "provider_account_blocked"
+    assert not any(call[0] == "failed" for call in leases.calls)
+
+
+@pytest.mark.anyio
+async def test_executor_auth_error_does_not_emit_terminal_failure():
+    class Service:
+        async def execute(self, _task_run, **_kwargs):
+            raise VkApiAuthError(5, "access denied", "groups.getById")
+
+    leases = FakeLeaseStore()
+
+    await build_executor(Service(), leases).execute(task_run())
+
+    assert not any(call[0] == "failed" for call in leases.calls)
+    assert any(call[0] == "release" for call in leases.calls)

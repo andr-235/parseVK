@@ -29,7 +29,9 @@ def task_run(*, attempts: int = 1) -> VkTaskRun:
         heartbeat_at=now,
         created_at=now,
         updated_at=now,
-        execution_sequence=0,
+        provider_account_key="system-vk",
+        credential_version="fake-version",
+        execution_sequence=1,
     )
 
 
@@ -69,8 +71,30 @@ class FakeSession:
         return None
 
 
+class FakeVkClient:
+    credential_version = "fake-version"
+
+    def __init__(self):
+        self.bound_contexts = []
+
+    def bind_snapshot(self, context):
+        self.bound_contexts.append(context)
+        return object()
+
+    bind = bind_snapshot
+
+
+class FakeProviderAccounts:
+    account = None
+
+    async def get_by_key(self, account_key):
+        return self.account
+
+
 def build_executor(service, lease_store, **overrides):
     options = {
+        "vk_client": FakeVkClient(),
+        "provider_accounts_factory": lambda _session: FakeProviderAccounts(),
         "lease_seconds": 1,
         "heartbeat_seconds": 0.01,
         "timeout_seconds": 1,
@@ -81,6 +105,6 @@ def build_executor(service, lease_store, **overrides):
         worker_id="worker-1",
         lease_store=lease_store,
         session_factory=FakeSession,
-        ingestion_factory=lambda _session: service,
+        ingestion_factory=lambda _session, adapter: service,
         **options,
     )

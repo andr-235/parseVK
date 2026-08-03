@@ -1,7 +1,5 @@
 """task.execution_started event payload schema."""
 
-from typing import Any
-
 from pydantic import BaseModel, ConfigDict
 
 
@@ -17,6 +15,8 @@ class TaskExecutionStartedV1(BaseModel):
     workerId: str
     attempt: int
     executionSequence: int
+    providerAccountKey: str | None = None
+    credentialVersion: str | None = None
     startedAt: str | None = None
 
 

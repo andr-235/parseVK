@@ -29,6 +29,13 @@
 | `REALTIME_RETENTION_HOURS` | `24` | Event retention window |
 | `VK_SERVICE_VK_BATCH_EVENTS_ENABLED` | `true` | Enable batch events |
 | `VK_SERVICE_VK_LEGACY_COMMENT_EVENTS_ENABLED` | `true` | Legacy per-comment events |
+| `VK_SERVICE_TOKEN_FILE` | — | Path to the mounted VK token file (preferred secret source, see below) |
+| `VK_SERVICE_TARGET_REQUESTS_PER_SECOND` | `3.0` | Scheduler rate target per account |
+| `VK_SERVICE_RATE_LIMIT_MAX_RETRIES` | `5` | Retry budget for transient/rate-limit errors |
+| `VK_SERVICE_RETRY_MAX_ELAPSED_SECONDS` | `300` | Overall retry window for a request |
+| `VK_SERVICE_SHORT_BACKOFF_BASE_SECONDS` | `1.0` | Base exponential backoff delay |
+| `VK_SERVICE_ACCOUNT_COOLDOWN_SECONDS` | `300` | Account cooldown after flood errors (code 6) |
+| `VK_SERVICE_HARD_LIMIT_COOLDOWN_SECONDS` | `3600` | Account cooldown after hard limit (code 29) |
 | `CONTENT_CONTENT_PROJECTION_EVENTS_ENABLED` | `true` | Projection events |
 | `VITE_REALTIME_ENABLED` | `true` | Frontend SSE connection |
 | `VPN_SERVICE_TELEGRAM_URL` | SOCKS5-прокси для Telegram |
@@ -71,6 +78,20 @@ FASTAPI_INTERNAL_SERVICE_TOKEN=dev-internal-token
 быть длиннее heartbeat; просроченный lease автоматически подхватывается другим worker.
 `VK_SERVICE_TASK_TIMEOUT_SECONDS` ограничивает полное время одной задачи, а
 `VK_SERVICE_VK_API_TIMEOUT_SECONDS` — отдельный сетевой вызов VK.
+
+## VK credentials: precedence and fallback
+
+Приоритет источника секрета VK (см. `services/vk-service/docs/vk-provider-accounts.md`):
+
+1. `VK_SERVICE_TOKEN_FILE` — путь к смонтированному файлу с токеном (предпочтительный путь, Docker secrets / mounted volume).
+2. `VK_SERVICE_VK_TOKEN` — **deprecated** legacy env-путь. Если задан только он, сервис логирует deprecation-warning — fallback **не молчаливый**.
+3. Если не задано ни одного — сервис падает на старте с `VK_SERVICE_VK_TOKEN or VK_SERVICE_TOKEN_FILE is required`.
+
+На старте сервис выполняет reconciliation: валидирует токен один раз (`users.get`), обновляет
+запись `vk_provider_accounts` (статус `active`/`invalid`/`cooling_down`/`disabled`) и метрику
+`/health` `vkAccountStatus`. Невалидный токен не роняет контейнер, но воркер не берёт новые
+задачи, пока аккаунт не вернётся в `active` (см. playbook по ротации токена в
+`services/vk-service/docs/vk-provider-accounts.md`).
 
 ## See Also
 

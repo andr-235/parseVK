@@ -46,3 +46,18 @@ class TaskFinalizer:
             available_at=datetime.now(UTC) + timedelta(seconds=delay),
         )
         logger.warning("Released task_id=%s for retry in %ss", task_run.task_id, delay)
+
+    async def release_blocked(self, task_run: VkTaskRun, reason: str) -> None:
+        """Release to pending with no retry backoff (provider-blocked path)."""
+        await self.lease_store.release(
+            task_id=task_run.task_id,
+            run_id=task_run.run_id,
+            worker_id=self.worker_id,
+            error=reason[:2000],
+            available_at=datetime.now(UTC),
+        )
+        logger.warning(
+            "Released task_id=%s without retry backoff (reason=%s)",
+            task_run.task_id,
+            reason,
+        )

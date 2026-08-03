@@ -1,91 +1,215 @@
-import logging
-from collections.abc import AsyncIterator
-from datetime import datetime
+"""VK API facade with immutable provider-bound client instances."""
 
-from app.domain.ports.vk_api import VkApiPort
-from app.infrastructure.vk_client.base import VkApiBaseClient, VkApiConfigurationError
+import logging
+
+from app.core.config import settings
+from app.domain.entities.credentials import CredentialMaterial
+from app.infrastructure.vk_client.base import (
+    ProviderContextMissingError,
+    ProviderRequestContext,
+    _VkApiCallSurface,
+    current_request_context,
+    request_context,
+)
 from app.infrastructure.vk_client.friends import FriendsClient
 from app.infrastructure.vk_client.groups import GroupsClient
 from app.infrastructure.vk_client.posts import PostsClient
+from app.infrastructure.vk_client.transport import VkApiConfigurationError, VkTransport
 from app.infrastructure.vk_client.users import UsersClient
-
-# Re-export for backward compatibility
-VkApiAdapter = VkApiPort
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["VkApiClient", "VkApiAdapter", "VkApiConfigurationError"]
+__all__ = [
+    "VkApiClient",
+    "BoundVkApiClient",
+    "ProviderRequestContext",
+    "ProviderContextMissingError",
+    "CredentialVersionMismatchError",
+    "current_request_context",
+    "VkApiConfigurationError",
+]
 
 
-class VkApiClient(VkApiBaseClient):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class CredentialVersionMismatchError(VkApiConfigurationError):
+    """Raised when audited attempt metadata and loaded secret disagree."""
+
+
+class VkApiClient(_VkApiCallSurface):
+    """Shared facade owning the scheduler and transport.
+
+    ``bind`` remains compatible with legacy callers that supply opaque version
+    labels. Digest-shaped metadata is still checked. Runtime and HTTP execution
+    use ``bind_snapshot`` and always require an exact persisted version match.
+    """
+
+    def __init__(
+        self,
+        *,
+        secret_provider=None,
+        scheduler=None,
+        transport: VkTransport | None = None,
+        token: str | None = None,
+        vk_session_factory=None,
+        call_runner=None,
+    ):
+        if scheduler is None:
+            from app.services.vk_retry_policy import VkRetryPolicy
+            from app.services.vk_scheduler import FairScheduler
+
+            scheduler = FairScheduler(VkRetryPolicy(settings))
+        self._secret_provider = secret_provider
+        self._transport = transport or VkTransport(
+            vk_session_factory=vk_session_factory,
+            call_runner=call_runner,
+        )
+        self._scheduler = scheduler
+        self._fallback_credential = (
+            CredentialMaterial.from_secret(token) if token else None
+        )
         self._groups = GroupsClient(self._call)
         self._posts = PostsClient(self._call)
         self._users = UsersClient(self._call)
         self._friends = FriendsClient(self._call)
 
-    async def get_groups(self, group_ids: list[int], fields: list[str] | None = None) -> list[dict]:
-        return await self._groups.get_groups(group_ids, fields=fields)
+    def bind(self, context: ProviderRequestContext) -> "BoundVkApiClient":
+        """Bind legacy callers while validating real SHA-256 version labels."""
+        credential = self._resolve_credential()
+        if len(context.credential_version) == 64:
+            self._ensure_version_matches(credential, context)
+        return self._build_bound(credential, context)
 
-    async def search_groups_by_region(self, *, query: str | None = None) -> list[dict]:
-        return await self._groups.search_groups_by_region(query=query)
+    def bind_snapshot(
+        self, context: ProviderRequestContext
+    ) -> "BoundVkApiClient":
+        """Bind the current secret only when it matches persisted metadata."""
+        credential = self._resolve_credential()
+        self._ensure_version_matches(credential, context)
+        return self._build_bound(credential, context)
 
-    async def get_posts(self, group_id: int, *, mode: str, post_limit: int | None) -> dict:
-        return await self._posts.get_posts(group_id, mode=mode, post_limit=post_limit)
-
-    async def get_comments(self, owner_id: int, post_id: int) -> dict:
-        return await self._posts.get_comments(owner_id, post_id)
-
-    async def iter_comment_pages(
+    def bind_credential(
         self,
-        owner_id: int,
-        post_id: int,
-        start_offset: int = 0,
-        page_size: int = 100,
-        max_retries: int = 3,
-        max_rate_limit_retries: int = 5,
-        thread_items_count: int = 0,
-    ) -> AsyncIterator[dict]:
-        async for page in self._posts.iter_comment_pages(
-            owner_id,
-            post_id,
-            start_offset=start_offset,
-            page_size=page_size,
-            max_retries=max_retries,
-            max_rate_limit_retries=max_rate_limit_retries,
-            thread_items_count=thread_items_count,
-        ):
-            yield page
+        credential: CredentialMaterial,
+        context: ProviderRequestContext,
+    ) -> "BoundVkApiClient":
+        """Bind exact material, used by isolated candidate validation."""
+        self._ensure_version_matches(credential, context)
+        return self._build_bound(credential, context)
 
-    async def get_author_comments_for_post(
-        self,
-        owner_id: int,
-        post_id: int,
-        author_vk_id: int,
-        baseline: datetime | None = None,
-        batch_size: int = 100,
-        max_pages: int = 10,
-        thread_items_count: int = 10,
-    ) -> list[dict]:
-        return await self._posts.get_author_comments_for_post(
-            owner_id,
-            post_id,
-            author_vk_id,
-            baseline=baseline,
-            batch_size=batch_size,
-            max_pages=max_pages,
-            thread_items_count=thread_items_count,
+    def bind_current(self, account_id: str, lane_id: str) -> "BoundVkApiClient":
+        credential = self._resolve_credential()
+        return self._build_bound(
+            credential,
+            ProviderRequestContext(
+                account_id=account_id,
+                credential_version=credential.version_digest,
+                lane_id=lane_id,
+            ),
         )
 
-    async def get_user_photos(self, user_id: int, count: int = 100, offset: int = 0) -> list[dict]:
-        return await self._users.get_user_photos(user_id, count=count, offset=offset)
+    @staticmethod
+    def _ensure_version_matches(
+        credential: CredentialMaterial,
+        context: ProviderRequestContext,
+    ) -> None:
+        if context.credential_version == credential.version_digest:
+            return
+        expected = context.credential_version[:12] or "(missing)"
+        raise CredentialVersionMismatchError(
+            "provider credential version mismatch for "
+            f"{context.account_id}: expected {expected}, "
+            f"loaded {credential.display_version}"
+        )
 
-    async def get_users(self, user_ids: list[int], fields: list[str]) -> list[dict]:
-        return await self._users.get_users(user_ids, fields)
+    def _build_bound(
+        self,
+        credential: CredentialMaterial,
+        context: ProviderRequestContext,
+    ) -> "BoundVkApiClient":
+        logger.debug(
+            "binding vk client account=%s lane=%s credential=%s",
+            context.account_id,
+            context.lane_id,
+            credential.display_version,
+        )
+        return BoundVkApiClient(
+            scheduler=self._scheduler,
+            transport=self._transport,
+            credential=credential,
+            context=context,
+        )
 
-    async def friends_get(self, **params) -> dict:
-        return await self._friends.friends_get(**params)
+    def _resolve_credential(self) -> CredentialMaterial:
+        if self._secret_provider is not None:
+            return self._secret_provider.load()
+        if self._fallback_credential is not None:
+            return self._fallback_credential
+        raise VkApiConfigurationError("VK token is not configured")
 
-    async def test_token(self) -> dict:
-        return await self._users.test_token()
+    @property
+    def credential_version(self) -> str:
+        return self._resolve_credential().version_digest
+
+    @property
+    def display_version(self) -> str:
+        return self._resolve_credential().display_version
+
+    async def _call(self, method: str, **params) -> dict:
+        logger.warning(
+            "unbound VkApiClient used for %s; bind with provider context first",
+            method,
+        )
+        raise ProviderContextMissingError(
+            f"unbound VkApiClient used for {method}; bind with a "
+            "ProviderRequestContext first"
+        )
+
+
+class BoundVkApiClient(_VkApiCallSurface):
+    """Immutable per-task facade with fixed context and credential material."""
+
+    def __init__(
+        self,
+        *,
+        scheduler,
+        transport: VkTransport,
+        credential: CredentialMaterial,
+        context: ProviderRequestContext,
+    ):
+        self._scheduler = scheduler
+        self._transport = transport
+        self._credential = credential
+        self._context = context
+        self._groups = GroupsClient(self._call)
+        self._posts = PostsClient(self._call)
+        self._users = UsersClient(self._call)
+        self._friends = FriendsClient(self._call)
+
+    @property
+    def context(self) -> ProviderRequestContext:
+        return self._context
+
+    @property
+    def credential_version(self) -> str:
+        return self._credential.version_digest
+
+    @property
+    def display_version(self) -> str:
+        return self._credential.display_version
+
+    async def _call(self, method: str, **params) -> dict:
+        with request_context(self._context):
+
+            async def transport_call():
+                return await self._transport.call(
+                    self._credential,
+                    method,
+                    **params,
+                )
+
+            transport_call.method = method
+            transport_call.credential_version = self._context.credential_version
+            return await self._scheduler.execute(
+                self._context.account_id,
+                self._context.lane_id,
+                transport_call,
+            )

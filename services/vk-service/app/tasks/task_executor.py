@@ -1,16 +1,25 @@
+"""Executes claimed VK tasks with provider-account awareness and finalization."""
+
 import asyncio
 import logging
-from datetime import UTC, datetime, timedelta
 
 from app.domain.entities.tasks import VkTaskRun
+from app.domain.exceptions.provider_account import (
+    ProviderAccountBlockedError,
+    ProviderCredentialChangedError,
+)
+from app.domain.exceptions.vk_api import VkApiAuthError
 from app.services.ingestion.pipeline import IngestionFailedError
+from app.tasks.provider_account_guard import (
+    block_account_version,
+    ensure_provider_available,
+    mark_account_invalid,
+)
 from app.tasks.task_finalizer import TaskFinalizer
+from app.tasks.task_run_runner import LeaseLostError, TaskRunRunner
+from app.tasks.vk_client_binding import bind_task_vk_client
 
 logger = logging.getLogger("vk-service.task-worker")
-
-
-class LeaseLostError(RuntimeError):
-    pass
 
 
 class TaskExecutor:
@@ -21,20 +30,34 @@ class TaskExecutor:
         lease_store,
         session_factory,
         ingestion_factory,
+        vk_client,
+        provider_accounts_factory,
         lease_seconds: int,
         heartbeat_seconds: int,
         timeout_seconds: int,
         max_attempts: int,
+        account_gate=None,
     ):
         self.worker_id = worker_id
         self.lease_store = lease_store
         self.session_factory = session_factory
-        self.ingestion_factory = ingestion_factory
-        self.lease_seconds = lease_seconds
-        self.heartbeat_seconds = heartbeat_seconds
+        self.provider_accounts_factory = provider_accounts_factory
         self.timeout_seconds = timeout_seconds
         self.max_attempts = max_attempts
+        self.account_gate = account_gate
         self.finalizer = TaskFinalizer(worker_id=worker_id, lease_store=lease_store)
+        self.runner = TaskRunRunner(
+            lease_store=lease_store,
+            session_factory=session_factory,
+            ingestion_factory=ingestion_factory,
+            worker_id=worker_id,
+            lease_seconds=lease_seconds,
+            heartbeat_seconds=heartbeat_seconds,
+            timeout_seconds=timeout_seconds,
+            adapter_factory=lambda _session, task_run: bind_task_vk_client(
+                vk_client, task_run
+            ),
+        )
 
     async def execute(self, task_run: VkTaskRun) -> None:
         logger.info(
@@ -48,7 +71,8 @@ class TaskExecutor:
             await self.finalizer.fail(task_run, "Task lease recovery attempts exhausted")
             return
         try:
-            result = await self._run_guarded(task_run)
+            await ensure_provider_available(self.account_gate)
+            result = await self.runner.run(task_run)
             await self._mark_done(
                 task_run,
                 processed_items=result.processed_items,
@@ -77,6 +101,52 @@ class TaskExecutor:
             )
         except asyncio.CancelledError:
             raise
+        except VkApiAuthError as error:
+            await mark_account_invalid(
+                self.session_factory,
+                self.provider_accounts_factory,
+                self.account_gate,
+                error,
+                credential_version=task_run.credential_version or "",
+            )
+            await self.finalizer.release_blocked(task_run, "provider_account_invalid")
+            logger.warning(
+                "VK provider account invalid for task_id=%s run_id=%s (code=%s); "
+                "released without retry",
+                task_run.task_id,
+                task_run.run_id,
+                error.code,
+            )
+        except ProviderCredentialChangedError as error:
+            await block_account_version(
+                self.session_factory,
+                self.provider_accounts_factory,
+                self.account_gate,
+                credential_version=task_run.credential_version or "",
+                error_code=None,
+                error_kind="credential_changed",
+            )
+            await self.finalizer.release_blocked(
+                task_run,
+                "provider_credential_changed",
+            )
+            logger.warning(
+                "Provider credential changed for task_id=%s run_id=%s: %s",
+                task_run.task_id,
+                task_run.run_id,
+                error,
+            )
+        except ProviderAccountBlockedError as error:
+            await self.finalizer.release_blocked(
+                task_run,
+                "provider_account_blocked",
+            )
+            logger.warning(
+                "Provider account blocked for task_id=%s run_id=%s: %s",
+                task_run.task_id,
+                task_run.run_id,
+                error,
+            )
         except Exception as exc:
             await self.finalizer.fail(task_run, str(exc) or type(exc).__name__)
 
@@ -112,46 +182,3 @@ class TaskExecutor:
                 task_run,
                 f"completion recording failed: {exc}",
             )
-
-    async def _run_guarded(self, task_run: VkTaskRun):
-        ingestion_task = asyncio.create_task(self._run_ingestion(task_run))
-        heartbeat_task = asyncio.create_task(self._heartbeat(task_run))
-        try:
-            async with asyncio.timeout(self.timeout_seconds):
-                done, _ = await asyncio.wait(
-                    {ingestion_task, heartbeat_task}, return_when=asyncio.FIRST_COMPLETED
-                )
-                if heartbeat_task in done:
-                    await heartbeat_task
-                return await ingestion_task
-        finally:
-            for task in (ingestion_task, heartbeat_task):
-                if not task.done():
-                    task.cancel()
-            await asyncio.gather(ingestion_task, heartbeat_task, return_exceptions=True)
-
-    async def _run_ingestion(self, task_run: VkTaskRun):
-        async with self.session_factory() as session:
-            service = self.ingestion_factory(session)
-            try:
-                result = await service.execute(task_run, correlation_id=task_run.run_id)
-                await session.commit()
-                return result
-            except asyncio.CancelledError:
-                await session.rollback()
-                raise
-            except Exception:
-                await session.rollback()
-                raise
-
-    async def _heartbeat(self, task_run: VkTaskRun) -> None:
-        while True:
-            await asyncio.sleep(self.heartbeat_seconds)
-            renewed = await self.lease_store.renew(
-                task_id=task_run.task_id,
-                run_id=task_run.run_id,
-                worker_id=self.worker_id,
-                lease_expires_at=datetime.now(UTC) + timedelta(seconds=self.lease_seconds),
-            )
-            if not renewed:
-                raise LeaseLostError(f"Lease lost for task {task_run.task_id}")

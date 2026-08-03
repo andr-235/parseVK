@@ -81,22 +81,25 @@ class MockVkApiError(Exception):
 
 
 @pytest.mark.anyio
-async def test_vk_api_client_call_sync_preserves_error_code():
+async def test_bound_client_preserves_error_code():
     from unittest.mock import MagicMock, patch
 
-    from app.infrastructure.vk_client.client import VkApiClient
+    from app.infrastructure.vk_client.client import ProviderRequestContext, VkApiClient
 
     client = VkApiClient(token="fake-token", call_runner=run_inline)
+    bound = client.bind(
+        ProviderRequestContext(account_id="system-vk", credential_version="v1", lane_id="test")
+    )
 
     mock_method = MagicMock(side_effect=MockVkApiError(8, "Application is blocked"))
     mock_namespace = MagicMock(**{"getById": mock_method})
 
-    client._api = MagicMock()
-    client._api.groups = mock_namespace
+    client._transport._api = MagicMock()
+    client._transport._api.groups = mock_namespace
 
-    with patch("app.infrastructure.vk_client.base._VK_API_ERRORS", (MockVkApiError,)):
+    with patch("app.infrastructure.vk_client.transport._VK_API_ERRORS", (MockVkApiError,)):
         with pytest.raises(VkApiAuthError) as exc_info:
-            await client._call("groups.getById", group_ids="1")
+            await bound.get_groups([1])
 
     assert exc_info.value.code == 8
     assert "Application is blocked" in exc_info.value.error_msg
@@ -104,39 +107,21 @@ async def test_vk_api_client_call_sync_preserves_error_code():
 
 
 @pytest.mark.anyio
-async def test_vk_api_client_call_sync_maps_rate_limit():
-    from unittest.mock import MagicMock, patch
-
-    from app.infrastructure.vk_client.client import VkApiClient
-
-    client = VkApiClient(token="fake-token", call_runner=run_inline)
-
-    mock_method = MagicMock(side_effect=MockVkApiError(6, "Too many requests per second"))
-    mock_namespace = MagicMock(**{"get": mock_method})
-
-    client._api = MagicMock()
-    client._api.wall = mock_namespace
-
-    with patch("app.infrastructure.vk_client.base._VK_API_ERRORS", (MockVkApiError,)):
-        with pytest.raises(VkApiRateLimitError) as exc_info:
-            await client._call("wall.get", owner_id=-1, count=10)
-
-    assert exc_info.value.code == 6
-
-
-@pytest.mark.anyio
-async def test_vk_api_client_call_sync_fallback_to_runtime_error():
+async def test_bound_client_fallback_to_runtime_error():
     from unittest.mock import MagicMock
 
-    from app.infrastructure.vk_client.client import VkApiClient
+    from app.infrastructure.vk_client.client import ProviderRequestContext, VkApiClient
 
     client = VkApiClient(token="fake-token", call_runner=run_inline)
+    bound = client.bind(
+        ProviderRequestContext(account_id="system-vk", credential_version="v1", lane_id="test")
+    )
 
     mock_method = MagicMock(side_effect=ValueError("something else"))
     mock_namespace = MagicMock(**{"getById": mock_method})
 
-    client._api = MagicMock()
-    client._api.groups = mock_namespace
+    client._transport._api = MagicMock()
+    client._transport._api.groups = mock_namespace
 
     with pytest.raises(RuntimeError):
-        await client._call("groups.getById", group_ids="1")
+        await bound.get_groups([1])

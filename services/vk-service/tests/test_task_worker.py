@@ -2,8 +2,9 @@ import asyncio
 from types import SimpleNamespace
 
 import pytest
-from app.tasks.task_worker import TaskWorker
 from common.runtime import WorkerHealth
+
+from app.tasks.task_worker import TaskWorker
 
 
 class FakeLeaseStore:
@@ -48,4 +49,61 @@ async def test_worker_enforces_configured_concurrency():
     assert max_active == 2
 
     gate.set()
+    await asyncio.gather(*worker._active)
+
+
+class BlockingGate:
+    def __init__(self, allowed: bool = True):
+        self.allowed = allowed
+        self.checks = 0
+
+    async def can_claim(self) -> bool:
+        self.checks += 1
+        return self.allowed
+
+
+class NoopExecutor:
+    async def execute(self, _task_run):
+        pass
+
+
+@pytest.mark.anyio
+async def test_worker_stops_claiming_when_gate_blocks():
+    store = FakeLeaseStore(3)
+    gate = BlockingGate(allowed=False)
+    worker = TaskWorker(
+        lease_store=store,
+        executor_factory=lambda _worker_id: NoopExecutor(),
+        concurrency=2,
+        poll_seconds=0.01,
+        lease_seconds=60,
+        health=WorkerHealth(),
+        account_gate=gate,
+    )
+
+    assert await worker._fill_capacity() is False
+
+    assert gate.checks == 1
+    assert worker._active == set()
+    assert len(store.queue) == 3
+
+
+@pytest.mark.anyio
+async def test_worker_queries_gate_per_claim_slot():
+    store = FakeLeaseStore(3)
+    gate = BlockingGate(allowed=True)
+    worker = TaskWorker(
+        lease_store=store,
+        executor_factory=lambda _worker_id: NoopExecutor(),
+        concurrency=2,
+        poll_seconds=0.01,
+        lease_seconds=60,
+        health=WorkerHealth(),
+        account_gate=gate,
+    )
+
+    assert await worker._fill_capacity()
+
+    assert gate.checks == 2
+    assert len(worker._active) == 2
     await asyncio.gather(*worker._active)

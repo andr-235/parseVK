@@ -1,117 +1,130 @@
-import asyncio
-import logging
-from collections.abc import Callable
-from typing import Any
+"""Shared call surface, request context and compat exports for the VK client.
 
-try:
-    import vk_api
-    from vk_api.exceptions import ApiError as VkApiLibraryError
+The legacy token/session logic moved to ``app.infrastructure.vk_client.transport``
+(Task 8); this module hosts the common VkApiPort delegation used by the
+unbound ``VkApiClient`` and per-task ``BoundVkApiClient`` facades.
+"""
 
-    _VK_API_ERRORS = (VkApiLibraryError,)
-except ImportError:  # pragma: no cover
-    vk_api = None
-    _VK_API_ERRORS = ()
+from contextlib import contextmanager
+from contextvars import ContextVar
+from dataclasses import dataclass
+from datetime import datetime
 
-from app.core.config import settings
-from app.core.redaction import redact_secrets
-from app.domain.exceptions.vk_api import map_vk_error, VkApiInfrastructureError
-from app.domain.ports.vk_api import VkApiPort
-from app.infrastructure.vk_client.session import TimeoutSession
+from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
+from app.infrastructure.vk_client.transport import VkApiConfigurationError
 
-logger = logging.getLogger("vk-service.vk_client")
-
-VK_API_VERSION = "5.199"
-
-# Backward-compatible alias: VkApiAdapter is the same as VkApiPort.
-# The canonical name is VkApiPort (domain layer).
-VkApiAdapter = VkApiPort
+__all__ = [
+    "_VkApiCallSurface",
+    "ProviderRequestContext",
+    "ProviderContextMissingError",
+    "request_context",
+    "current_request_context",
+    "VkApiAdapter",
+    "VkApiConfigurationError",
+]
 
 
-class VkApiConfigurationError(RuntimeError):
-    pass
+@dataclass(frozen=True)
+class ProviderRequestContext:
+    """Immutable per-task context: account, credential version and scheduling lane."""
+
+    account_id: str
+    credential_version: str
+    lane_id: str
 
 
-class VkApiBaseClient:
-    def __init__(
+class ProviderContextMissingError(RuntimeError):
+    """Raised when the unbound shared client is used for a VK API call."""
+
+
+_CURRENT_CONTEXT: ContextVar[ProviderRequestContext | None] = ContextVar(
+    "vk_request_context", default=None
+)
+
+
+def current_request_context() -> ProviderRequestContext | None:
+    """ContextVar accessor for logs/tracing only — never the execution contract."""
+    return _CURRENT_CONTEXT.get()
+
+
+@contextmanager
+def request_context(context: ProviderRequestContext):
+    """Set the tracing context for the duration of a bound call."""
+    token = _CURRENT_CONTEXT.set(context)
+    try:
+        yield
+    finally:
+        _CURRENT_CONTEXT.reset(token)
+
+
+class _VkApiCallSurface:
+    """Delegating call surface shared by the facade and bound clients.
+
+    Concrete classes must provide ``_groups``, ``_posts``, ``_users`` and
+    ``_friends`` sub-clients with the ``_call(method, **params)`` hook.
+    """
+
+    async def get_groups(self, group_ids: list[int], fields: list[str] | None = None) -> list[dict]:
+        return await self._groups.get_groups(group_ids, fields=fields)
+
+    async def search_groups_by_region(self, *, query: str | None = None) -> list[dict]:
+        return await self._groups.search_groups_by_region(query=query)
+
+    async def get_posts(self, group_id: int, *, mode: str, post_limit: int | None) -> dict:
+        return await self._posts.get_posts(group_id, mode=mode, post_limit=post_limit)
+
+    async def get_comments(self, owner_id: int, post_id: int) -> dict:
+        return await self._posts.get_comments(owner_id, post_id)
+
+    async def iter_comment_pages(
         self,
-        *,
-        token: str | None = None,
-        vk_session_factory: Callable[..., Any] | None = None,
-        call_runner: Callable[..., Any] | None = None,
+        owner_id: int,
+        post_id: int,
+        start_offset: int = 0,
+        page_size: int = 100,
+        max_retries: int = 3,
+        max_rate_limit_retries: int = 5,
+        thread_items_count: int = 0,
     ):
-        self.token = token if token is not None else settings.vk_token
-        self._vk_session_factory = vk_session_factory or self._default_vk_session_factory
-        self._call_runner = call_runner or self._execute_in_thread
-        self._api: Any = None
-        self._api_lock = asyncio.Lock()
-        self._request_lock = asyncio.Lock()
+        async for page in self._posts.iter_comment_pages(
+            owner_id,
+            post_id,
+            start_offset=start_offset,
+            page_size=page_size,
+            max_retries=max_retries,
+            max_rate_limit_retries=max_rate_limit_retries,
+            thread_items_count=thread_items_count,
+        ):
+            yield page
 
-    def _default_vk_session_factory(self, **kwargs) -> Any:
-        if vk_api is None:
-            raise VkApiConfigurationError("vk_api package is not installed")
-        return vk_api.VkApi(**kwargs)
+    async def get_author_comments_for_post(
+        self,
+        owner_id: int,
+        post_id: int,
+        author_vk_id: int,
+        baseline: datetime | None = None,
+        batch_size: int = 100,
+        max_pages: int = 10,
+        thread_items_count: int = 10,
+    ) -> list[dict]:
+        return await self._posts.get_author_comments_for_post(
+            owner_id,
+            post_id,
+            author_vk_id,
+            baseline=baseline,
+            batch_size=batch_size,
+            max_pages=max_pages,
+            thread_items_count=thread_items_count,
+        )
 
-    def _session_kwargs(self) -> dict[str, Any]:
-        return {
-            "token": self.token,
-            "api_version": VK_API_VERSION,
-            "session": TimeoutSession(settings.vk_api_timeout_seconds),
-        }
+    async def get_user_photos(self, user_id: int, count: int = 100, offset: int = 0) -> list[dict]:
+        return await self._users.get_user_photos(user_id, count=count, offset=offset)
 
-    def _resolve_api(self) -> Any:
-        """Resolve and cache the VK API object (synchronous, called from thread)."""
-        if not self.token:
-            raise VkApiConfigurationError("VK token is not configured")
-        session = self._vk_session_factory(**self._session_kwargs())
-        return session.get_api()
+    async def get_users(self, user_ids: list[int], fields: list[str]) -> list[dict]:
+        return await self._users.get_users(user_ids, fields)
 
-    def _call_sync(self, method: str, **params) -> dict:
-        namespace, _, method_name = method.partition(".")
-        if not method_name:
-            raise ValueError(
-                f"Invalid VK API method format: '{method}'. Expected 'namespace.method'."
-            )
+    async def friends_get(self, **params) -> dict:
+        return await self._friends.friends_get(**params)
 
-        api = self._api
-        api_namespace = getattr(api, namespace, None)
-        if api_namespace is None:
-            raise ValueError(f"Unknown VK API namespace: '{namespace}'")
-
-        api_method = getattr(api_namespace, method_name, None)
-        if api_method is None:
-            raise ValueError(f"Unknown VK API method: '{method}'")
-
-        try:
-            return api_method(**params)
-        except _VK_API_ERRORS as exc:
-            code = exc.code
-            msg = exc.error.get("error_msg", "Unknown error")
-            logger.warning("VK API error [%d]: %s (method=%s)", code, msg, method)
-            raise map_vk_error(code, redact_secrets(msg), method) from exc
-        except Exception as exc:
-            from httpx import RequestError as HttpxRequestError
-            msg = self._safe_error_message(exc)
-            if isinstance(exc, (ConnectionError, TimeoutError, HttpxRequestError, OSError)):
-                raise VkApiInfrastructureError(0, msg) from exc
-            raise RuntimeError(msg) from exc
-
-    async def _call(self, method: str, **params) -> dict:
-        # Thread-safe lazy initialization using double-checked locking.
-        if self._api is None:
-            async with self._api_lock:
-                if self._api is None:
-                    if not self.token:
-                        raise VkApiConfigurationError("VK token is not configured")
-                    session = self._vk_session_factory(**self._session_kwargs())
-                    self._api = session.get_api()
-
-        # vk_api reuses one requests.Session, which is not safe for concurrent threads.
-        async with self._request_lock:
-            return await self._call_runner(self._call_sync, method, **params)
-
-    async def _execute_in_thread(self, sync_function: Callable, *args, **kwargs) -> Any:
-        return await asyncio.to_thread(sync_function, *args, **kwargs)
-
-    def _safe_error_message(self, exc: Exception) -> str:
-        message = str(exc) or "VK API error"
-        return redact_secrets(message)
+    async def test_token(self) -> dict:
+        return await self._users.test_token()

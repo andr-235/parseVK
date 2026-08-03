@@ -2,17 +2,22 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import and_, or_, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.domain.entities.tasks import VkTaskRun as VkTaskRunEntity
-from app.domain.repositories.task_queue import TaskQueueRepository
-from app.infrastructure.db.models.outbox import OutboxEvent
-from app.infrastructure.db.models.tasks import VkTaskRun
-from app.infrastructure.db.repositories.tasks import _to_task_run_entity
 from common.events.task_execution_completed import TaskExecutionCompletedPayload
 from common.events.task_execution_failed import TaskExecutionFailedPayload
 from common.events.task_execution_started import TaskExecutionStartedPayload
+from sqlalchemy import and_, or_, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.domain.entities.provider_account import (
+    ACCOUNT_STATUS_ACTIVE,
+    SYSTEM_VK_CAPABILITY,
+)
+from app.domain.entities.tasks import VkTaskRun as VkTaskRunEntity
+from app.domain.repositories.task_queue import TaskQueueRepository
+from app.infrastructure.db.models.outbox import OutboxEvent
+from app.infrastructure.db.models.provider_accounts import VkProviderAccount
+from app.infrastructure.db.models.tasks import VkTaskRun
+from app.infrastructure.db.repositories.tasks import _to_task_run_entity
 
 logger = logging.getLogger("vk-service")
 
@@ -28,9 +33,28 @@ class SqlAlchemyTaskQueueRepository(TaskQueueRepository):
         self.session = session
 
     async def claim_next(
-        self, *, worker_id: str, lease_expires_at: datetime
+        self,
+        *,
+        worker_id: str,
+        lease_expires_at: datetime,
+        account_key: str = "system-vk",
     ) -> VkTaskRunEntity | None:
         now = utcnow()
+        account = await self.session.scalar(
+            select(VkProviderAccount)
+            .where(
+                VkProviderAccount.account_key == account_key,
+                VkProviderAccount.status == ACCOUNT_STATUS_ACTIVE,
+                or_(
+                    VkProviderAccount.cooldown_until.is_(None),
+                    VkProviderAccount.cooldown_until <= now,
+                ),
+            )
+            .with_for_update()
+        )
+        if account is None or SYSTEM_VK_CAPABILITY not in (account.capabilities or []):
+            return None
+
         model = await self.session.scalar(
             select(VkTaskRun)
             .where(
@@ -66,6 +90,8 @@ class SqlAlchemyTaskQueueRepository(TaskQueueRepository):
         model.status = "running"
         model.attempts += 1
         model.execution_sequence += 1
+        model.provider_account_key = account.account_key
+        model.credential_version = account.credential_version
         model.lease_owner = worker_id
         model.lease_expires_at = lease_expires_at
         model.heartbeat_at = now
@@ -81,6 +107,8 @@ class SqlAlchemyTaskQueueRepository(TaskQueueRepository):
             workerId=worker_id,
             attempt=model.attempts,
             executionSequence=model.execution_sequence,
+            providerAccountKey=model.provider_account_key,
+            credentialVersion=model.credential_version,
             startedAt=now.isoformat(),
         )
         self.session.add(
@@ -89,8 +117,11 @@ class SqlAlchemyTaskQueueRepository(TaskQueueRepository):
                 event_type="task.execution_started",
                 aggregate_type="task",
                 aggregate_id=str(model.task_id),
-                dedupe_key=f"task.execution_started:{model.task_id}:{model.run_id}:{model.execution_sequence}",
-                payload=payload.model_dump(mode="json"),
+                dedupe_key=(
+                    f"task.execution_started:{model.task_id}:"
+                    f"{model.run_id}:{model.execution_sequence}"
+                ),
+                payload=payload.model_dump(mode="json", exclude_none=True),
                 status="pending",
                 attempts=0,
                 next_attempt_at=now,
@@ -142,7 +173,11 @@ class SqlAlchemyTaskQueueRepository(TaskQueueRepository):
                 lease_expires_at=None,
                 updated_at=now,
             )
-            .returning(VkTaskRun.task_id, VkTaskRun.owner_user_id, VkTaskRun.execution_sequence)
+            .returning(
+                VkTaskRun.task_id,
+                VkTaskRun.owner_user_id,
+                VkTaskRun.execution_sequence,
+            )
         )
         row = result.one_or_none()
         if row is None:
@@ -167,7 +202,9 @@ class SqlAlchemyTaskQueueRepository(TaskQueueRepository):
                 event_type="task.execution_completed",
                 aggregate_type="task",
                 aggregate_id=str(task_id),
-                dedupe_key=f"task.execution_completed:{task_id}:{run_id}:{execution_sequence}",
+                dedupe_key=(
+                    f"task.execution_completed:{task_id}:{run_id}:{execution_sequence}"
+                ),
                 payload=payload.model_dump(mode="json"),
                 status="pending",
                 attempts=0,
@@ -207,7 +244,11 @@ class SqlAlchemyTaskQueueRepository(TaskQueueRepository):
                 lease_expires_at=None,
                 updated_at=now,
             )
-            .returning(VkTaskRun.task_id, VkTaskRun.owner_user_id, VkTaskRun.execution_sequence)
+            .returning(
+                VkTaskRun.task_id,
+                VkTaskRun.owner_user_id,
+                VkTaskRun.execution_sequence,
+            )
         )
         row = result.one_or_none()
         if row is None:
@@ -234,7 +275,9 @@ class SqlAlchemyTaskQueueRepository(TaskQueueRepository):
                 event_type="task.execution_failed",
                 aggregate_type="task",
                 aggregate_id=str(task_id),
-                dedupe_key=f"task.execution_failed:{task_id}:{run_id}:{execution_sequence}",
+                dedupe_key=(
+                    f"task.execution_failed:{task_id}:{run_id}:{execution_sequence}"
+                ),
                 payload=payload.model_dump(mode="json"),
                 status="pending",
                 attempts=0,
@@ -266,7 +309,9 @@ class SqlAlchemyTaskQueueRepository(TaskQueueRepository):
             updated_at=utcnow(),
         )
 
-    async def _update_owned(self, task_id: int, run_id: str, worker_id: str, **values) -> bool:
+    async def _update_owned(
+        self, task_id: int, run_id: str, worker_id: str, **values
+    ) -> bool:
         result = await self.session.execute(
             update(VkTaskRun)
             .where(

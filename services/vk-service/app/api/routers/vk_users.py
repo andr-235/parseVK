@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from app.api.dependencies import get_vk_client_dep
-from app.core.config import settings
+from app.core.redaction import redact_secrets
 from app.core.security import require_internal_token
 from app.domain.exceptions.vk_api import VkApiAuthError
 from app.domain.ports.vk_api import VkApiPort
@@ -52,24 +52,30 @@ async def get_users(
 async def test_vk_token(
     client: VkApiPort = Depends(get_vk_client_dep),
 ):
+    display_version = getattr(client, "display_version", None) or ""
     try:
         await client.test_token()
-        return {"status": "ok", "vkTokenMasked": _mask(settings.vk_token)}
-    except VkApiAuthError as e:
+        return {
+            "status": "ok",
+            "displayVersion": display_version,
+            "vkTokenMasked": _mask(display_version),
+        }
+    except VkApiAuthError as error:
         raise HTTPException(
             status_code=400,
             detail={
                 "status": "auth_error",
-                "code": e.code,
-                "error": e.error_msg,
-                "vkTokenMasked": _mask(settings.vk_token),
+                "code": error.code,
+                "error": redact_secrets(error.error_msg),
+                "displayVersion": display_version,
+                "vkTokenMasked": _mask(display_version),
             },
-        )
-    except Exception as e:
+        ) from error
+    except Exception as error:
         raise HTTPException(
             status_code=500,
             detail={
                 "status": "error",
-                "error": str(e),
+                "error": redact_secrets(str(error)),
             },
-        )
+        ) from error

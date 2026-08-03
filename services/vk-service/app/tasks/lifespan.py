@@ -7,10 +7,16 @@ from common.runtime import supervise as supervise_worker
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.core.config import mask_token, settings
+from app.bootstrap import (
+    get_provider_account_repository,
+    get_secret_provider,
+    get_vk_client,
+)
+from app.core.config import settings
 from app.domain.exceptions.vk_api import VkApiAuthError
 from app.infrastructure.db.session import SessionLocal
 from app.tasks import TaskEventsConsumer, publish_outbox_forever
+from app.tasks.provider_reconciliation import reconcile_provider_account
 from app.tasks.startup_checks import schedule_startup_checks
 from app.tasks.task_runtime import build_task_worker
 
@@ -45,21 +51,43 @@ async def supervise(name: str, coro_factory, health_flag: list[bool] | None = No
             if health_flag is not None:
                 health_flag[0] = False
             break
-        except Exception as e:
+        except Exception as error:
             if health_flag is not None:
                 health_flag[0] = False
-            logger.error("%s crashed: %s. Restarting in %ds...", name, e, retry_delay)
+            logger.error(
+                "%s crashed: %s. Restarting in %ds...",
+                name,
+                error,
+                retry_delay,
+            )
             await asyncio.sleep(retry_delay)
             retry_delay = min(retry_delay * 2, 30)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info(
-        "VK service starting, token=%s",
-        mask_token(settings.vk_token) if settings.vk_token else "(not set)",
-    )
+    display_version = ""
+    try:
+        credential = get_secret_provider().load()
+        if credential.raw_secret:
+            display_version = credential.display_version
+    except Exception:
+        pass
+    logger.info("VK service starting, token=%s", display_version or "(not set)")
     schedule_startup_checks()
+
+    async def run_startup_reconciliation():
+        async with SessionLocal.begin() as session:
+            return await reconcile_provider_account(
+                get_vk_client(),
+                get_secret_provider(),
+                get_provider_account_repository(session),
+            )
+
+    try:
+        await run_startup_reconciliation()
+    except Exception as error:
+        logger.error("startup reconciliation failed: %s", error)
 
     session_factory: async_sessionmaker = SessionLocal
     consumer = TaskEventsConsumer(session_factory=session_factory)
@@ -88,7 +116,11 @@ async def lifespan(app: FastAPI):
     if settings.task_worker_enabled:
         task_worker = build_task_worker(session_factory, _task_worker_health)
         task_worker_task = asyncio.create_task(
-            supervise_worker("VK task worker", task_worker.run_forever, health=_task_worker_health)
+            supervise_worker(
+                "VK task worker",
+                task_worker.run_forever,
+                health=_task_worker_health,
+            )
         )
     else:
         logger.info("VK task worker disabled by configuration")

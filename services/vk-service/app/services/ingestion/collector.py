@@ -2,6 +2,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+from app.domain.exceptions.vk_api import VkApiAuthError
 from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
 from app.domain.repositories.checkpoint import CheckpointData, IngestionCheckpointStore
 from app.infrastructure.tasks_client.client import TasksClient
@@ -71,6 +72,8 @@ class DataCollector:
         for group_id in group_ids:
             try:
                 await self.group_collector.collect_group(group_id, correlation_id=correlation_id)
+            except VkApiAuthError:
+                raise
             except Exception as error:
                 sanitized_error = self._on_error(str(error))
                 result.errors.append({"group_id": group_id, "error": sanitized_error})
@@ -85,6 +88,8 @@ class DataCollector:
                     author_profiles,
                     correlation_id=correlation_id,
                 )
+            except VkApiAuthError:
+                raise
             except Exception as error:
                 sanitized_error = self._on_error(str(error))
                 result.errors.append({"group_id": group_id, "error": sanitized_error})
@@ -178,6 +183,8 @@ class DataCollector:
                         )
                     if self.page_committer is not None:
                         await self.page_committer()
+                except VkApiAuthError:
+                    raise
                 except Exception as error:
                     sanitized_error = self._on_error(str(error))
                     logger.error(

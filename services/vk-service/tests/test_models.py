@@ -7,6 +7,7 @@ from _service_path import use_service_path
 use_service_path()
 
 from app.infrastructure.db.models.outbox import OutboxEvent
+from app.infrastructure.db.models.provider_accounts import VkProviderAccount
 from app.infrastructure.db.models.tasks import ProcessedEvent, VkTaskRun
 from app.infrastructure.db.models.vk_friends import (
     VkFriendsExportJob,
@@ -35,6 +36,20 @@ def test_model_tables_exist():
     assert VkFriendsExportJob.__tablename__ == "vk_friends_export_jobs"
     assert VkFriendsJobLog.__tablename__ == "vk_friends_job_logs"
     assert VkFriendsRecord.__tablename__ == "vk_friends_records"
+    assert VkProviderAccount.__tablename__ == "vk_provider_accounts"
+
+
+def test_provider_account_model_columns():
+    columns = VkProviderAccount.__table__.columns
+    assert "uq_vk_provider_accounts_account_key" in constraint_names(VkProviderAccount)
+    assert str(columns["id"].type).startswith("UUID")
+    assert columns["status"].type.length == 32
+    assert columns["credential_version"].type.length == 64
+    assert "JSON" in str(columns["capabilities"].type).upper()
+    assert columns["revision"].nullable is False
+    assert columns["last_error_code"].nullable is True
+    assert columns["cooldown_until"].nullable is True
+    assert columns["last_validated_at"].nullable is True
 
 
 def test_domain_unique_constraints_exist():
