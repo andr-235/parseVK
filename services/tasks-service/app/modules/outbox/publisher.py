@@ -2,9 +2,16 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
-from common.outbox import OutboxMessage, OutboxPublisher
+from common.outbox import OutboxMessage
+from common.outbox import OutboxPublisher as CommonOutboxPublisher
+from parsevk_contracts.validation import prepare_for_publish
+from parsevk_contracts.vk.commands import (
+    CATALOG as VK_COMMAND_CATALOG,
+    VkExecutionRequested,
+)
 
 from app.db.models import OutboxEvent
 from app.modules.outbox.repository import OutboxRepository as TasksOutboxRepository
@@ -22,7 +29,11 @@ MAX_OUTBOX_ATTEMPTS = 5
 VK_EXECUTION_REQUESTED = "vk.execution.requested"
 
 
-def kafka_key_for_event(event_type: str, payload: dict, aggregate_id: str) -> str:
+def kafka_key_for_event(
+    event_type: str,
+    payload: dict,
+    aggregate_id: str,
+) -> str:
     if event_type == "task.automation_settings_updated":
         return str(payload["ownerUserId"])
     if event_type == VK_EXECUTION_REQUESTED:
@@ -42,15 +53,62 @@ def dlq_topic_for_event(message: OutboxMessage, settings) -> str:
     return settings.kafka_topic_tasks_dlq
 
 
+class OutboxPublisher(CommonOutboxPublisher):
+    """Publish legacy task events and strict canonical VK commands."""
+
+    async def _publish_event(self, event: OutboxMessage) -> None:
+        if event.event_type != VK_EXECUTION_REQUESTED:
+            await super()._publish_event(event)
+            return
+
+        command = VkExecutionRequested.model_validate(event.payload)
+        if not event.correlation_id:
+            raise ValueError(
+                "vk.execution.requested outbox row requires correlation_id"
+            )
+        correlation_id = UUID(str(event.correlation_id))
+        if correlation_id != command.execution_id:
+            raise ValueError(
+                "vk.execution.requested correlation_id must equal executionId"
+            )
+        if str(event.aggregate_id) != str(command.execution_id):
+            raise ValueError(
+                "vk.execution.requested aggregate_id must equal executionId"
+            )
+
+        prepared = prepare_for_publish(
+            VK_COMMAND_CATALOG,
+            message_type=event.event_type,
+            schema_version=event.event_version,
+            producer="tasks-service",
+            message_id=event.id,
+            occurred_at=event.created_at or datetime.now(UTC),
+            correlation_id=correlation_id,
+            causation_id=None,
+            payload=command.model_dump(mode="python"),
+        )
+        if prepared.topic != self._topic_for(event):
+            raise ValueError(
+                "configured VK command topic does not match contract catalog"
+            )
+        key = prepared.partition_key or str(command.execution_id)
+        await self.producer.send_and_wait(
+            prepared.topic,
+            key=key.encode("utf-8"),
+            value=prepared.value,
+            headers=list(prepared.headers),
+        )
+
+
 class TasksOutboxRepositoryAdapter:
-    """Adapts tasks-service OutboxRepository to common OutboxRepository protocol."""
+    """Adapt tasks-service OutboxRepository to the shared protocol."""
 
     def __init__(self, inner: TasksOutboxRepository):
         self._inner = inner
 
     async def claim_batch(self, limit: int = 100) -> list[OutboxMessage]:
         events = await self._inner.lock_pending(limit=limit)
-        return [_to_message(e) for e in events]
+        return [_to_message(event) for event in events]
 
     async def mark_published(self, event_id: UUID) -> None:
         event = await self._inner.get(event_id)
