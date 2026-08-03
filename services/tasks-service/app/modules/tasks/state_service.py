@@ -20,7 +20,10 @@ from app.modules.tasks.event_payloads import (
 from app.modules.tasks.exceptions import TaskConflictError, TaskNotFoundError
 from app.modules.tasks.mapper import task_to_response
 from app.modules.tasks.repository import TasksRepository
-from app.modules.tasks.task_run import TaskRunFreezeError, freeze_task_run
+from app.modules.tasks.task_run import (
+    TaskRunFreezeError,
+    freeze_resumed_task_run,
+)
 from app.modules.tasks.vk_command import add_vk_execution_command
 
 logger = logging.getLogger(__name__)
@@ -34,7 +37,7 @@ class TaskStateService:
         session: AsyncSession,
         repository: TasksRepository,
         outbox: OutboxService,
-        freezer=freeze_task_run,
+        freezer=freeze_resumed_task_run,
         command_publisher=add_vk_execution_command,
     ):
         self.session = session
@@ -72,7 +75,11 @@ class TaskStateService:
         task.error = None
         task.last_execution_sequence = 0
         try:
-            run_meta = await self.freezer(self.session, task)
+            run_meta = await self.freezer(
+                self.session,
+                task,
+                previous_run_id,
+            )
         except TaskRunFreezeError as exc:
             logger.error(
                 "TaskRun freeze failed on resume for task_id=%s: %s",
