@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from common.events.task_execution_started import TaskExecutionStartedPayload
-from sqlalchemy import desc, func, select, text
+from sqlalchemy import desc, exists, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.entities.executions import TERMINAL_EXECUTION_STATUSES
@@ -323,6 +323,17 @@ class SqlAlchemySourceCollectionRepository:
             )
         ).all()
         return [_demand_entity(model) for model in models]
+
+    async def has_collection(self, execution_id: UUID) -> bool:
+        return bool(
+            await self.session.scalar(
+                select(
+                    exists().where(
+                        VkSourceCollection.execution_id == execution_id
+                    )
+                )
+            )
+        )
 
     async def get_demand(
         self, *, task_id: int, run_id: str
