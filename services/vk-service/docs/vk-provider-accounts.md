@@ -69,6 +69,10 @@ The raw secret never appears in output; error payloads are sanitized through red
   backoff and account cooldowns (flood code 6, hard limit code 29);
 - auth errors are never retried.
 
+The supported deployment topology for this phase is one `system-vk` account and one active
+`vk-service` replica. Multiple active replicas or a distributed rate limiter are outside the
+scope of issue #285.
+
 ## Prometheus metric contract
 
 Exposed on the standard `/metrics` endpoint alongside `prometheus-fastapi-instrumentator`.
@@ -87,3 +91,53 @@ Exposed on the standard `/metrics` endpoint alongside `prometheus-fastapi-instru
 `outcome` ∈ `success | auth | rate_limit | infra | domain`. The credential version appears
 **only** in `vk_provider_account_info` and structured logs — never as a label on request
 counters.
+
+## Alert impact and recommended signals
+
+The change introduces provider-account and scheduler signals that should be wired into the
+existing Prometheus/Alertmanager deployment. The exact thresholds may be tuned after the
+production observation window, but the following conditions are the minimum operational set:
+
+| Condition | Suggested severity | Operator action |
+|-----------|--------------------|-----------------|
+| `system-vk` is not `active` for 5 minutes | critical | Check `/health`, run `account-status`, validate a candidate token and rotate the mounted secret if needed. |
+| `vk_account_cooldown_seconds{account_id="system-vk"} > 0` for 10 minutes | warning | Inspect VK rate-limit codes and reduce the configured target request rate if cooldowns repeat. |
+| Increase in `vk_rate_limit_retries_total` over 15 minutes | warning | Compare code 6/29 frequency, queue depth and request rate; verify that retries remain within budget. |
+| Sustained scheduler queue depth or wait-time growth for 15 minutes | warning | Check for a blocked account, slow VK responses, an oversized workload or an incorrectly high input rate. |
+| No successful VK requests while pending VK work exists | critical | Verify account status, worker health, lease ownership and scheduler progress. |
+
+Alert payloads must include only `account_id`, status, method and VK error category/code. Raw
+credentials and full exception strings must never be included in labels, annotations or traces.
+
+## Rollback and legacy-removal preconditions
+
+### Rollback procedure
+
+1. Stop the `vk-service` replica before changing credential configuration.
+2. Keep the `vk_provider_accounts` migration applied. The table is additive and does not
+   require rollback to restore the previous credential source.
+3. Unset `VK_SERVICE_TOKEN_FILE` and provide the existing token through the deprecated
+   `VK_SERVICE_VK_TOKEN` environment variable.
+4. Start exactly one `vk-service` replica and verify `/health`, `account-status` and task claims.
+5. If the provider account remains `invalid`, validate the credential with the CLI and rotate it;
+   do not bypass the account gate or write the raw token to the database.
+6. Preserve the new metrics and audit columns during the rollback window so attempts remain
+   attributable and operators can compare the legacy and mounted-file paths.
+
+The compatibility fallback changes only the secret source. It does not disable the provider
+account gate, credential-version audit, scheduler fairness or retry safeguards.
+
+### Preconditions for removing the legacy env fallback
+
+The deprecated `VK_SERVICE_VK_TOKEN` path may be deleted only after all of the following are true:
+
+- production uses `VK_SERVICE_TOKEN_FILE` exclusively;
+- at least one full credential rotation has been completed through candidate validation and
+  startup reconciliation;
+- the agreed observation window completes with no unexplained task loss, restart loop or token
+  leakage;
+- account-status, cooldown, retry and queue alerts are enabled and tested;
+- rollback documentation and secret-mount deployment instructions have been exercised;
+- no deployment manifests, CI jobs or operator runbooks still reference the legacy variable;
+- issue #285 is merged and the dependent execution-attempt work no longer requires the legacy
+  path for compatibility testing.
