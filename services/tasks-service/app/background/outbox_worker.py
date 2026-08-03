@@ -7,6 +7,7 @@ idempotently before publication begins.
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 
 from aiokafka import AIOKafkaProducer
 from aiokafka.admin import AIOKafkaAdminClient, NewTopic
@@ -18,6 +19,8 @@ from app.core.config import settings
 from app.db.session import SessionLocal
 
 logger = logging.getLogger(__name__)
+
+TopicProvisioner = Callable[[], Awaitable[None]]
 
 
 async def ensure_vk_command_topics() -> None:
@@ -60,9 +63,14 @@ async def ensure_vk_command_topics() -> None:
         await admin.close()
 
 
-async def publish_outbox_forever(health: WorkerHealth) -> None:
-    """Background worker: create producer once, publish outbox events every 2s."""
-    await ensure_vk_command_topics()
+async def publish_outbox_forever(
+    health: WorkerHealth,
+    *,
+    topic_provisioner: TopicProvisioner | None = None,
+) -> None:
+    """Create one producer and publish outbox events every two seconds."""
+    if topic_provisioner is not None:
+        await topic_provisioner()
     producer = AIOKafkaProducer(
         bootstrap_servers=settings.kafka_bootstrap_servers
     )
