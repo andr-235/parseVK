@@ -73,6 +73,7 @@ class VkExecutionRequested(ContractModel):
     task_id: Annotated[int, Field(gt=0)]
     task_run_id: UUID
     execution_id: UUID
+    owner_user_id: str | None = None
     demands: Annotated[tuple[VkSourceDemandRequest, ...], Field(min_length=1)]
     post_selection: PostSelection
     comment_selection: CommentSelection
@@ -97,7 +98,7 @@ class VkExecutionRequested(ContractModel):
         return self
 
 
-# ── Contract definition ───────────────────────────────────────────────────────
+# ── Contract definition ────────────────────────────────────────────────────────
 
 
 VK_EXECUTION_REQUESTED = MessageContract(
