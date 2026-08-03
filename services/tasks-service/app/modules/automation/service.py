@@ -145,11 +145,16 @@ class AutomationService:
 
         try:
             source_adapter = SourceCompatAdapter(self.session)
-            await source_adapter.ensure_normalized_sources(
-                base_task,
-                list(base_task.group_ids or []),
-            )
-            await self._clone_task_sources(base_task, task)
+            if task.scope == "all":
+                # Resolve the currently active source set for this concrete run.
+                # Do not clone historical links from a completed scope=all task.
+                await source_adapter.ensure_normalized_sources(task, [])
+            else:
+                await source_adapter.ensure_normalized_sources(
+                    base_task,
+                    list(base_task.group_ids or []),
+                )
+                await self._clone_task_sources(base_task, task)
             run_meta = await freeze_task_run(self.session, task)
         except (TaskRunFreezeError, RuntimeError) as exc:
             logger.error(
@@ -201,7 +206,7 @@ class AutomationService:
         base_task: Task,
         new_task: Task,
     ) -> None:
-        """Copy the already resolved source set into the new automation task."""
+        """Copy the already resolved selected source set into a new run."""
         from app.modules.sources.repository import SourcesRepository
 
         sources_repo = SourcesRepository(self.session)
