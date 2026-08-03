@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     task_worker_poll_seconds: float = Field(default=1.0, gt=0, le=60)
     task_lease_seconds: int = Field(default=90, ge=30, le=3600)
     task_heartbeat_seconds: int = Field(default=20, ge=5, le=300)
+    task_shutdown_grace_seconds: float = Field(default=20.0, ge=0, le=300)
     task_timeout_seconds: int = Field(default=1800, ge=60, le=86400)
     task_max_attempts: int = Field(default=3, ge=1, le=10)
     vk_api_timeout_seconds: float = Field(default=20.0, gt=0, le=120)
@@ -39,11 +40,11 @@ class Settings(BaseSettings):
     ok_application_secret_key: str = Field(default="", repr=False)
 
     @model_validator(mode="after")
-    def validate_vk_token(self) -> "Settings":
+    def validate_runtime(self) -> "Settings":
         import sys
 
-        if self.task_heartbeat_seconds >= self.task_lease_seconds:
-            raise ValueError("task heartbeat must be shorter than task lease")
+        if self.task_heartbeat_seconds * 3 > self.task_lease_seconds:
+            raise ValueError("task lease must be at least three heartbeat intervals")
         if "pytest" not in sys.modules and not self.token_file and not self.vk_token:
             raise ValueError("VK_SERVICE_VK_TOKEN or VK_SERVICE_TOKEN_FILE is required")
         return self
