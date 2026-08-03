@@ -89,18 +89,14 @@ class ExecutionExecutor:
                 total_items=result.processed_items,
                 stats=result.stats(),
             )
-            if not recorded:
+            if not recorded and not await self._cancel_if_requested(claim):
                 logger.warning(
                     "Completion rejected by fence execution_id=%s attempt_id=%s",
                     claim.execution_id,
                     claim.attempt_id,
                 )
         except ExecutionCancellationRequested:
-            await self.execution_store.cancel(
-                execution_id=claim.execution_id,
-                attempt_id=claim.attempt_id,
-                fencing_token=claim.fencing_token,
-            )
+            await self._cancel_if_requested(claim)
         except FenceLostError:
             logger.warning(
                 "Stale execution attempt stopped execution_id=%s attempt_id=%s fence=%s",
@@ -174,12 +170,24 @@ class ExecutionExecutor:
             total_items=total_items,
             stats=stats or {},
         )
-        if not recorded:
+        if not recorded and not await self._cancel_if_requested(claim):
             logger.warning(
                 "Failure rejected by fence execution_id=%s attempt_id=%s",
                 claim.execution_id,
                 claim.attempt_id,
             )
+
+    async def _cancel_if_requested(self, claim) -> bool:
+        """Let a durable cancellation win a race with terminal recording.
+
+        A stale attempt is still safe: its cancellation write is rejected by the
+        same attempt id and fencing token checks.
+        """
+        return await self.execution_store.cancel(
+            execution_id=claim.execution_id,
+            attempt_id=claim.attempt_id,
+            fencing_token=claim.fencing_token,
+        )
 
     async def _release(self, claim, reason: str) -> None:
         await self.execution_store.release(
