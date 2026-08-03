@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -18,8 +19,25 @@ def anyio_backend():
 
 
 @pytest.mark.anyio
-async def test_health_reports_unconfigured_provider_as_degraded():
+async def test_health_reports_unconfigured_provider_as_degraded(monkeypatch):
+    class EmptyProviderRepository:
+        async def get_by_key(self, _account_key):
+            return None
+
+    class MissingSecretProvider:
+        def load(self):
+            raise RuntimeError("secret is not configured")
+
+    monkeypatch.setattr(
+        "app.main.get_provider_account_repository",
+        lambda _session: EmptyProviderRepository(),
+    )
+    monkeypatch.setattr(
+        "app.main.get_secret_provider",
+        lambda: MissingSecretProvider(),
+    )
     app = create_app()
+
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
@@ -42,8 +60,6 @@ async def test_health_reports_unconfigured_provider_as_degraded():
 
 @pytest.mark.anyio
 async def test_ready_returns_ready():
-    from unittest.mock import AsyncMock, patch
-
     app = create_app()
     with patch("app.infrastructure.db.session.engine") as mock_engine:
         mock_conn = AsyncMock()
@@ -61,8 +77,6 @@ async def test_ready_returns_ready():
 
 @pytest.mark.anyio
 async def test_ready_returns_service_unavailable():
-    from unittest.mock import patch
-
     app = create_app()
     with patch("app.infrastructure.db.session.engine") as mock_engine:
         mock_engine.connect.side_effect = Exception("Database connection error")
