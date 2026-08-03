@@ -176,6 +176,38 @@ async def test_late_demand_gets_started_for_current_attempt(db_session):
 
 
 @pytest.mark.anyio
+async def test_rejected_late_demand_does_not_stop_shared_work(db_session):
+    await _seed_account(db_session)
+    first = await _attach(db_session, task_id=1015, run_id="run-1015")
+    assert first is not None
+    execution_repository = SqlAlchemyExecutionRepository(db_session)
+    claim = await execution_repository.claim_next(
+        worker_id="worker-rejected-late-join",
+        lease_expires_at=datetime.now(UTC) + timedelta(minutes=1),
+    )
+    assert claim is not None
+    late = await _attach(db_session, task_id=1016, run_id="run-1016")
+    assert late is not None and late.demand.status == "running"
+
+    repository = SqlAlchemySourceCollectionRepository(db_session)
+    assert await repository.fail_pending_demand(
+        task_id=1016,
+        run_id="run-1016",
+        error="tasks-service rejected demand",
+    )
+
+    rejected = await repository.get_demand(task_id=1016, run_id="run-1016")
+    leader = await repository.get_demand(task_id=1015, run_id="run-1015")
+    execution = await db_session.get(VkExecution, first.execution.id)
+    collection = await db_session.get(VkSourceCollection, first.collection.id)
+    assert rejected is not None and rejected.status == "failed"
+    assert leader is not None and leader.status == "running"
+    assert execution.status == "running"
+    assert execution.cancellation_requested_at is None
+    assert collection.status == "running"
+
+
+@pytest.mark.anyio
 async def test_completion_is_fanned_out_to_each_active_demand(db_session):
     await _seed_account(db_session)
     first = await _attach(db_session, task_id=1009, run_id="run-1009")
