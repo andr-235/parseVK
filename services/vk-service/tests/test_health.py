@@ -36,7 +36,7 @@ async def test_health_reports_unconfigured_provider_as_degraded():
         "okTokenMasked": "",
         "kafkaConsumer": "unhealthy",
         "outboxPublisher": "unhealthy",
-        "taskWorker": "blocked",
+        "executionWorker": "blocked",
     }
 
 
