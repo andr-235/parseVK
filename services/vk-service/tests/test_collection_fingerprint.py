@@ -1,14 +1,18 @@
 from app.services.collection_fingerprint import build_collection_identity
 
 
-def test_fingerprint_is_stable_for_order_only_changes():
+def test_fingerprint_is_stable_for_order_and_trigger_metadata():
     first = build_collection_identity(
         provider_account_key="system-vk",
         scope="selected",
         mode="recent_posts",
         group_ids=[3, 1, 3, 2],
         post_limit=10,
-        payload={"tags": ["b", "a"], "runId": "run-1"},
+        payload={
+            "tags": ["b", "a"],
+            "runId": "run-1",
+            "source": "manual",
+        },
     )
     second = build_collection_identity(
         provider_account_key="system-vk",
@@ -16,7 +20,11 @@ def test_fingerprint_is_stable_for_order_only_changes():
         mode="recent_posts",
         group_ids=[2, 1, 3],
         post_limit=10,
-        payload={"runId": "run-2", "tags": ["a", "b"]},
+        payload={
+            "run_id": "run-2",
+            "source": "automation",
+            "tags": ["a", "b"],
+        },
     )
 
     assert first.source_key == "vk:groups:1,2,3"
@@ -58,9 +66,14 @@ def test_fingerprint_requires_exact_account_source_and_plan_match():
         payload={},
     )
 
-    assert len({
-        base.fingerprint,
-        different_account.fingerprint,
-        different_source.fingerprint,
-        different_plan.fingerprint,
-    }) == 4
+    assert (
+        len(
+            {
+                base.fingerprint,
+                different_account.fingerprint,
+                different_source.fingerprint,
+                different_plan.fingerprint,
+            }
+        )
+        == 4
+    )
