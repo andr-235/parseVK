@@ -45,9 +45,9 @@ class VkExecution(Base):
     total_items: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
-    current_attempt_id: Mapped[PyUUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("vk_execution_attempts.id", ondelete="SET NULL"), nullable=True
-    )
+    # The database migration adds the FK after both tables exist. The ORM keeps
+    # this as a plain UUID to avoid a circular metadata dependency in SQLite tests.
+    current_attempt_id: Mapped[PyUUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     current_fencing_token: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     cancellation_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     cancellation_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
