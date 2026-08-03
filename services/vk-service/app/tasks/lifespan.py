@@ -18,13 +18,13 @@ from app.infrastructure.db.session import SessionLocal
 from app.tasks import TaskEventsConsumer, publish_outbox_forever
 from app.tasks.provider_reconciliation import reconcile_provider_account
 from app.tasks.startup_checks import schedule_startup_checks
-from app.tasks.task_runtime import build_task_worker
+from app.tasks.task_runtime import build_execution_worker
 
 logger = logging.getLogger(__name__)
 
 _consumer_healthy: list[bool] = [False]
 _publisher_healthy: list[bool] = [False]
-_task_worker_health = WorkerHealth()
+_execution_worker_health = WorkerHealth()
 
 
 async def supervise(name: str, coro_factory, health_flag: list[bool] | None = None):
@@ -42,8 +42,7 @@ async def supervise(name: str, coro_factory, health_flag: list[bool] | None = No
             break
         except VkApiAuthError as error:
             logger.critical(
-                "%s failed with VK API auth error [%d]: %s. "
-                "VK application token may be blocked or invalid. Stopping retries.",
+                "%s failed with VK API auth error [%d]: %s. Stopping retries.",
                 name,
                 error.code,
                 error.error_msg,
@@ -93,7 +92,7 @@ async def lifespan(app: FastAPI):
     consumer = TaskEventsConsumer(session_factory=session_factory)
     consumer_task = None
     publisher_task = None
-    task_worker_task = None
+    execution_worker_task = None
 
     async def run_consumer():
         await consumer.run_forever()
@@ -114,23 +113,25 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("VK outbox publisher disabled by configuration")
     if settings.task_worker_enabled:
-        task_worker = build_task_worker(session_factory, _task_worker_health)
-        task_worker_task = asyncio.create_task(
+        execution_worker = build_execution_worker(
+            session_factory, _execution_worker_health
+        )
+        execution_worker_task = asyncio.create_task(
             supervise_worker(
-                "VK task worker",
-                task_worker.run_forever,
-                health=_task_worker_health,
+                "VK execution worker",
+                execution_worker.run_forever,
+                health=_execution_worker_health,
             )
         )
     else:
-        logger.info("VK task worker disabled by configuration")
+        logger.info("VK execution worker disabled by configuration")
     try:
         yield
     finally:
-        for task in (consumer_task, publisher_task, task_worker_task):
+        for task in (consumer_task, publisher_task, execution_worker_task):
             if task:
                 task.cancel()
-        for task in (consumer_task, publisher_task, task_worker_task):
+        for task in (consumer_task, publisher_task, execution_worker_task):
             if task:
                 with suppress(asyncio.CancelledError):
                     await task
@@ -145,5 +146,5 @@ def get_publisher_healthy() -> bool:
     return _publisher_healthy[0]
 
 
-def get_task_worker_healthy() -> bool:
-    return _task_worker_health.is_healthy
+def get_execution_worker_healthy() -> bool:
+    return _execution_worker_health.is_healthy
