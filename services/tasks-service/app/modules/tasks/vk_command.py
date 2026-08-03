@@ -71,6 +71,9 @@ async def build_vk_execution_requested(
     post_limit = int(run.config_snapshot.get("postLimit") or 0)
     if post_limit < 1:
         raise RuntimeError(f"TaskRun {task_run_id} has invalid post limit")
+    task_revision = int(run.config_snapshot.get("taskRevision") or 0)
+    if task_revision < 0:
+        raise RuntimeError(f"TaskRun {task_run_id} has invalid task revision")
 
     execution_id = execution_id_for_run(task_run_id)
     return VkExecutionRequested(
@@ -87,10 +90,7 @@ async def build_vk_execution_requested(
             mode="all",
             include_thread_replies=True,
         ),
-        task_revision=max(
-            int(run.config_snapshot.get("taskRevision") or 0),
-            int(task.revision or 0),
-        ),
+        task_revision=task_revision,
         source_set_revision=int(run.source_set_revision),
         snapshot_sha256=run.snapshot_sha256,
     )
