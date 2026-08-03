@@ -4,7 +4,7 @@ import asyncio
 import inspect
 from datetime import UTC, datetime, timedelta
 
-from app.tasks.execution_control import FenceLostError, FencedVkApiClient
+from app.tasks.execution_control import FencedVkApiClient, FenceLostError
 
 
 class ExecutionAttemptRunner:
