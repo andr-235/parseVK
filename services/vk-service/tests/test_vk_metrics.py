@@ -121,6 +121,28 @@ async def test_provider_account_info_carries_version():
     ) == 1.0
 
 
+def test_collection_demand_metrics_distinguish_new_and_coalesced():
+    new_labels = {"result": "new_collection"}
+    shared_labels = {"result": "coalesced"}
+    before_new = _sample("vk_collection_demands_total", new_labels) or 0.0
+    before_shared = _sample("vk_collection_demands_total", shared_labels) or 0.0
+
+    vk_metrics.observe_collection_demand_attached(coalesced=False)
+    vk_metrics.observe_collection_demand_attached(coalesced=True)
+
+    assert _sample("vk_collection_demands_total", new_labels) == before_new + 1
+    assert _sample("vk_collection_demands_total", shared_labels) == before_shared + 1
+
+
+def test_collection_fanout_metric_records_event_count():
+    labels = {"event_type": "progress-test"}
+    before = _sample("vk_collection_fanout_events_total", labels) or 0.0
+
+    vk_metrics.observe_collection_fanout("progress-test", 3)
+
+    assert _sample("vk_collection_fanout_events_total", labels) == before + 3
+
+
 @pytest.mark.anyio
 async def test_scheduler_metrics_hook_reports_method_and_outcome():
     scheduler = FairScheduler(VkRetryPolicy(_settings()))
