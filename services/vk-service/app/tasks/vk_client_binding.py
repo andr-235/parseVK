@@ -1,4 +1,4 @@
-"""Bind shared VK clients to an immutable provider credential snapshot."""
+"""Bind VK clients to the immutable credential snapshot of one attempt."""
 
 import logging
 from datetime import UTC, datetime
@@ -14,7 +14,7 @@ from app.infrastructure.vk_client.client import (
     ProviderRequestContext,
 )
 
-logger = logging.getLogger("vk-service.task-worker")
+logger = logging.getLogger("vk-service.execution-worker")
 
 
 def _bind(vk_client, account_key: str, credential_version: str, lane_id: str):
@@ -38,17 +38,16 @@ def _bind(vk_client, account_key: str, credential_version: str, lane_id: str):
         ) from error
 
 
-def bind_task_vk_client(vk_client, task_run) -> BoundVkApiClient:
-    """Bind one execution to the provider credential captured during claim."""
-    if not task_run.provider_account_key or not task_run.credential_version:
+def bind_execution_vk_client(vk_client, claim) -> BoundVkApiClient:
+    if not claim.provider_account_key or not claim.credential_version:
         raise ProviderAccountBlockedError(
-            "task execution has no provider credential snapshot"
+            "execution attempt has no provider credential snapshot"
         )
     return _bind(
         vk_client,
-        task_run.provider_account_key,
-        task_run.credential_version,
-        task_run.run_id,
+        claim.provider_account_key,
+        claim.credential_version,
+        str(claim.execution_id),
     )
 
 
@@ -58,7 +57,6 @@ async def bind_system_vk_client(
     session,
     lane_id: str,
 ) -> BoundVkApiClient:
-    """Load and bind the executable system account for an HTTP/background lane."""
     account = await provider_accounts_factory(session).get_by_key(
         SYSTEM_VK_ACCOUNT_KEY
     )
