@@ -9,6 +9,10 @@ use_service_path()
 from app.infrastructure.db.models.executions import VkExecution, VkExecutionAttempt
 from app.infrastructure.db.models.outbox import OutboxEvent
 from app.infrastructure.db.models.provider_accounts import VkProviderAccount
+from app.infrastructure.db.models.source_collections import (
+    VkCollectionDemand,
+    VkSourceCollection,
+)
 from app.infrastructure.db.models.tasks import ProcessedEvent
 from app.infrastructure.db.models.vk_friends import (
     VkFriendsExportJob,
@@ -33,6 +37,8 @@ def test_model_tables_exist():
     assert VkComment.__tablename__ == "vk_comments"
     assert VkExecution.__tablename__ == "vk_executions"
     assert VkExecutionAttempt.__tablename__ == "vk_execution_attempts"
+    assert VkSourceCollection.__tablename__ == "vk_source_collections"
+    assert VkCollectionDemand.__tablename__ == "vk_collection_demands"
     assert ProcessedEvent.__tablename__ == "processed_events"
     assert OutboxEvent.__tablename__ == "outbox_events"
     assert VkFriendsExportJob.__tablename__ == "vk_friends_export_jobs"
@@ -50,6 +56,23 @@ def test_execution_constraints_exist():
     assert "uq_vk_execution_attempts_running" in index_names(VkExecutionAttempt)
     assert VkExecution.__table__.columns["plan_snapshot"].nullable is False
     assert VkExecution.__table__.columns["current_fencing_token"].nullable is False
+
+
+def test_collection_constraints_exist():
+    assert "uq_vk_source_collections_execution" in constraint_names(
+        VkSourceCollection
+    )
+    assert "uq_vk_source_collections_active_fingerprint" in index_names(
+        VkSourceCollection
+    )
+    assert "uq_vk_collection_demands_task_run" in constraint_names(
+        VkCollectionDemand
+    )
+    assert "uq_vk_collection_demands_active_task" in index_names(
+        VkCollectionDemand
+    )
+    assert VkSourceCollection.__table__.columns["fingerprint"].nullable is False
+    assert VkCollectionDemand.__table__.columns["execution_sequence"].nullable is False
 
 
 def test_provider_account_model_columns():
