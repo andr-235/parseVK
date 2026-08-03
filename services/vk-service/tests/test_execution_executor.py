@@ -15,20 +15,29 @@ from app.tasks.execution_executor import ExecutionExecutor
 
 
 class FakeStore:
-    def __init__(self):
+    def __init__(
+        self,
+        *,
+        complete_result=True,
+        fail_result=True,
+        cancel_result=True,
+    ):
         self.calls = []
+        self.complete_result = complete_result
+        self.fail_result = fail_result
+        self.cancel_result = cancel_result
 
     async def complete(self, **kwargs):
         self.calls.append(("complete", kwargs))
-        return True
+        return self.complete_result
 
     async def fail(self, **kwargs):
         self.calls.append(("fail", kwargs))
-        return True
+        return self.fail_result
 
     async def cancel(self, **kwargs):
         self.calls.append(("cancel", kwargs))
-        return True
+        return self.cancel_result
 
     async def release(self, **kwargs):
         self.calls.append(("release", kwargs))
@@ -120,6 +129,31 @@ async def test_executor_turns_durable_cancellation_into_terminal_cancel(monkeypa
             },
         )
     ]
+
+
+@pytest.mark.anyio
+async def test_cancellation_wins_race_with_completion(monkeypatch):
+    monkeypatch.setattr(ExecutionAttemptControl, "ensure_active", AsyncMock())
+    store = FakeStore(complete_result=False, cancel_result=True)
+    executor = build_executor(store)
+    executor.runner.run = AsyncMock(return_value=IngestionResult(groups=1))
+    current = claim()
+
+    await executor.execute(current)
+
+    assert [name for name, _ in store.calls] == ["complete", "cancel"]
+    assert store.calls[-1][1]["fencing_token"] == current.fencing_token
+
+
+@pytest.mark.anyio
+async def test_cancellation_wins_race_with_failure():
+    store = FakeStore(fail_result=False, cancel_result=True)
+    executor = build_executor(store)
+    current = claim()
+
+    await executor._fail(current, "late failure")
+
+    assert [name for name, _ in store.calls] == ["fail", "cancel"]
 
 
 @pytest.mark.anyio
