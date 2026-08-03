@@ -54,7 +54,11 @@ def make_task(
     )
 
 
-def make_source(source_id, external_id: str, revision: int = 2):
+def make_source(
+    source_id: UUID,
+    external_id: str,
+    revision: int = 2,
+):
     return SimpleNamespace(
         id=source_id,
         provider="vk",
@@ -65,7 +69,7 @@ def make_source(source_id, external_id: str, revision: int = 2):
     )
 
 
-def make_link(source_id):
+def make_link(source_id: UUID):
     return SimpleNamespace(source_id=source_id, kind="target")
 
 
