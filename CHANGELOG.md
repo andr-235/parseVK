@@ -1,3 +1,10 @@
+# [0.90.0](https://github.com/andr-235/parseVK/compare/v0.89.0...v0.90.0) (2026-08-03)
+
+
+### Features
+
+* **vk:** coalesce source collection demands ([#410](https://github.com/andr-235/parseVK/issues/410)) ([f337dfe](https://github.com/andr-235/parseVK/commit/f337dfe6397aee8dc57ebf91fcc0d877aae71c26))
+
 # [0.89.0](https://github.com/andr-235/parseVK/compare/v0.88.0...v0.89.0) (2026-08-03)
 
 
