@@ -14,6 +14,9 @@ from app.infrastructure.db.repositories.outbox import SqlAlchemyOutboxRepository
 from app.infrastructure.db.repositories.provider_accounts import (
     SqlAlchemyProviderAccountRepository,
 )
+from app.infrastructure.db.repositories.source_collections import (
+    SqlAlchemySourceCollectionRepository,
+)
 from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsRepository
 from app.infrastructure.db.repositories.vk_friends import SqlAlchemyVkFriendsRepository
 from app.infrastructure.metrics.vk_metrics import (
@@ -113,6 +116,7 @@ def get_ingestion_service(
     outbox_repo = SqlAlchemyOutboxRepository(session)
     outbox_service = OutboxService(outbox_repo, session=session)
     checkpoint_store = SqlAlchemyIngestionCheckpointStore(session)
+    collection_repository = SqlAlchemySourceCollectionRepository(session)
 
     async def commit_page() -> None:
         if attempt_control is not None:
@@ -127,12 +131,14 @@ def get_ingestion_service(
         on_error=redact_secrets,
         page_committer=commit_page,
         checkpoint_store=checkpoint_store,
+        collection_repository=collection_repository,
     )
     pipeline = IngestionPipeline(
         collector=collector,
         tasks_client=_tasks_client,
         outbox=outbox_service,
         on_error=redact_secrets,
+        collection_repository=collection_repository,
     )
     return IngestionService(
         adapter=adapter,
@@ -146,7 +152,12 @@ def get_ingestion_service(
 
 def get_task_events_handler(session: AsyncSession) -> TaskEventsService:
     repository = SqlAlchemyTaskEventsRepository(session)
-    return TaskEventsService(repository=repository, tasks_client=_tasks_client)
+    collection_repository = SqlAlchemySourceCollectionRepository(session)
+    return TaskEventsService(
+        repository=repository,
+        collection_repository=collection_repository,
+        tasks_client=_tasks_client,
+    )
 
 
 def get_vk_groups_service(session: AsyncSession) -> VkGroupsService:
