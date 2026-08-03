@@ -1,6 +1,5 @@
 import logging
 from types import SimpleNamespace
-from uuid import UUID
 
 import httpx
 from common.events.task_execution_progressed import TaskExecutionProgressedPayload
@@ -132,7 +131,7 @@ class DemandLifecycleFanout:
                 """
                 UPDATE vk_collection_demands
                 SET execution_sequence = execution_sequence + 1,
-                    updated_at = now()
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE id = :demand_id
                   AND status IN ('pending', 'running')
                 RETURNING execution_sequence
@@ -144,7 +143,3 @@ class DemandLifecycleFanout:
         if row is None:
             raise RuntimeError(f"active collection demand {demand.id} disappeared")
         return int(row[0])
-
-
-def execution_id(value) -> UUID | None:
-    return getattr(value, "execution_id", None)
