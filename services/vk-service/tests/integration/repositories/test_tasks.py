@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsRepository
 
@@ -37,6 +38,36 @@ async def test_task_events_repository_flow(db_session):
     assert fetched.plan_snapshot["groupIds"] == [123]
     assert (await repository.get_active_execution(456)).id == execution.id
     assert (await repository.get_latest_execution(456)).id == execution.id
+
+
+@pytest.mark.anyio
+async def test_only_one_active_execution_is_allowed_per_task(db_session):
+    repository = SqlAlchemyTaskEventsRepository(db_session)
+    await repository.create_execution(
+        task_id=458,
+        owner_user_id="user-1",
+        run_id="run-a",
+        scope="selected",
+        mode="recent_posts",
+        group_ids=[123],
+        post_limit=10,
+        plan_snapshot={"groupIds": [123]},
+        parent_execution_id=None,
+    )
+
+    with pytest.raises(IntegrityError):
+        async with db_session.begin_nested():
+            await repository.create_execution(
+                task_id=458,
+                owner_user_id="user-1",
+                run_id="run-b",
+                scope="selected",
+                mode="recent_posts",
+                group_ids=[123],
+                post_limit=10,
+                plan_snapshot={"groupIds": [123]},
+                parent_execution_id=None,
+            )
 
 
 @pytest.mark.anyio
