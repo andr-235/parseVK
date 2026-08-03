@@ -274,7 +274,7 @@ class SqlAlchemySourceCollectionRepository:
         context = await self._lock_demand_context(
             task_id=task_id,
             run_id=run_id,
-            statuses=("pending",),
+            statuses=ACTIVE_DEMAND_STATUSES,
         )
         if context is None:
             return False
@@ -295,15 +295,26 @@ class SqlAlchemySourceCollectionRepository:
                 VkCollectionDemand.status.in_(ACTIVE_DEMAND_STATUSES),
             )
         )
-        if int(remaining or 0) == 0 and execution.status == "pending":
-            execution.status = "failed"
-            execution.last_error = safe_error
-            execution.finished_at = now
-            execution.updated_at = now
-            collection.status = "failed"
-            collection.last_error = safe_error
-            collection.finished_at = now
-            collection.updated_at = now
+        if int(remaining or 0) == 0:
+            if execution.status == "pending":
+                execution.status = "failed"
+                execution.last_error = safe_error
+                execution.finished_at = now
+                execution.updated_at = now
+                collection.status = "failed"
+                collection.last_error = safe_error
+                collection.finished_at = now
+                collection.updated_at = now
+            elif execution.status == "running":
+                execution.cancellation_requested_at = (
+                    execution.cancellation_requested_at or now
+                )
+                execution.cancellation_reason = (
+                    execution.cancellation_reason or safe_error
+                )
+                execution.updated_at = now
+                collection.last_error = safe_error
+                collection.updated_at = now
         await self.session.flush()
         return True
 
