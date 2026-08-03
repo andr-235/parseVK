@@ -67,7 +67,9 @@ def upgrade() -> None:
         sa.Column("run_id", sa.String(128), nullable=False),
         sa.Column("owner_user_id", sa.String(128), nullable=False),
         sa.Column("status", sa.String(32), nullable=False),
-        sa.Column("execution_sequence", sa.BigInteger(), nullable=False, server_default="0"),
+        sa.Column(
+            "execution_sequence", sa.BigInteger(), nullable=False, server_default="0"
+        ),
         sa.Column("cancellation_requested_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("cancellation_reason", sa.Text(), nullable=True),
         sa.Column("last_error", sa.Text(), nullable=True),
@@ -113,8 +115,8 @@ def upgrade() -> None:
             e.id,
             e.id,
             COALESCE(a.provider_account_key, 'system-vk'),
-            'legacy:execution:' || e.id::text,
-            md5(e.id::text || ':source') || md5(e.id::text || ':plan'),
+            'legacy-execution-' || e.id::text,
+            md5(e.id::text || '-source') || md5(e.id::text || '-plan'),
             e.status,
             e.plan_snapshot,
             e.started_at,
@@ -134,7 +136,7 @@ def upgrade() -> None:
             cancellation_reason, last_error, created_at, updated_at, finished_at
         )
         SELECT
-            md5(e.id::text || ':demand')::uuid,
+            md5(e.id::text || '-demand')::uuid,
             e.id,
             e.task_id,
             e.run_id,
