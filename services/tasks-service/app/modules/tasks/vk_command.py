@@ -8,7 +8,7 @@ from parsevk_contracts.vk.commands import (
     CommentSelection,
     PostSelection,
     SourceReference,
-    VkExecutionRequested,
+    VkExecutionRequestedV2,
     VkSourceDemandRequest,
 )
 from sqlalchemy import select
@@ -19,6 +19,7 @@ from app.db.models import Task, TaskRun, TaskRunSourceDemand
 from app.modules.outbox.service import OutboxService
 
 VK_EXECUTION_REQUESTED = "vk.execution.requested"
+VK_EXECUTION_REQUESTED_VERSION = 2
 
 
 def execution_id_for_run(task_run_id: UUID) -> UUID:
@@ -30,7 +31,7 @@ async def build_vk_execution_requested(
     session: AsyncSession,
     task: Task,
     task_run_id: UUID,
-) -> VkExecutionRequested:
+) -> VkExecutionRequestedV2:
     run = await session.get(TaskRun, task_run_id)
     if run is None or run.task_id != task.id:
         raise RuntimeError(
@@ -76,7 +77,7 @@ async def build_vk_execution_requested(
         raise RuntimeError(f"TaskRun {task_run_id} has invalid task revision")
 
     execution_id = execution_id_for_run(task_run_id)
-    return VkExecutionRequested(
+    return VkExecutionRequestedV2(
         task_id=task.id,
         task_run_id=task_run_id,
         execution_id=execution_id,
@@ -101,7 +102,7 @@ async def add_vk_execution_command(
     outbox: OutboxService,
     task: Task,
     run_meta: dict | None,
-) -> VkExecutionRequested | None:
+) -> VkExecutionRequestedV2 | None:
     """Append the canonical command in the active task transaction."""
     if not settings.vk_commands_publish_enabled:
         return None
@@ -115,10 +116,11 @@ async def add_vk_execution_command(
     execution_id = str(command.execution_id)
     await outbox.add_event(
         event_type=VK_EXECUTION_REQUESTED,
+        event_version=VK_EXECUTION_REQUESTED_VERSION,
         aggregate_type="vk_execution",
         aggregate_id=execution_id,
         correlation_id=execution_id,
-        dedupe_key=f"{VK_EXECUTION_REQUESTED}:{execution_id}",
+        dedupe_key=f"{VK_EXECUTION_REQUESTED}:v2:{execution_id}",
         payload=command.to_wire(),
     )
     return command
