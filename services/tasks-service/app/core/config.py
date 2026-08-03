@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     kafka_topic_vk_commands: str = "parsevk.vk.commands"
     kafka_topic_vk_commands_dlq: str = "parsevk.vk.commands.dlq"
     outbox_publish_enabled: bool = False
-    vk_commands_publish_enabled: bool = False
+    vk_commands_publish_enabled: bool = True
     automation_scheduler_enabled: bool = False
     kafka_consumer_enabled: bool = False
     sources_api_enabled: bool = False
