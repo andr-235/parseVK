@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 from sqlalchemy import select
 
 from app.infrastructure.db.models.executions import VkExecution, VkExecutionAttempt
+from app.infrastructure.metrics.execution_metrics import observe_fence_rejected
 
 
 class FenceLostError(RuntimeError):
@@ -31,6 +32,7 @@ class ExecutionAttemptControl:
             .with_for_update()
         )
         if execution is None:
+            observe_fence_rejected("guard_missing_execution")
             raise FenceLostError("execution no longer exists")
         if execution.cancellation_requested_at is not None:
             raise ExecutionCancellationRequested(
@@ -41,6 +43,7 @@ class ExecutionAttemptControl:
             or execution.current_attempt_id != self.claim.attempt_id
             or execution.current_fencing_token != self.claim.fencing_token
         ):
+            observe_fence_rejected("guard_execution")
             raise FenceLostError("execution fencing token is no longer current")
         attempt = await session.scalar(
             select(VkExecutionAttempt)
@@ -52,6 +55,7 @@ class ExecutionAttemptControl:
             or attempt.status != "running"
             or attempt.fencing_token != self.claim.fencing_token
         ):
+            observe_fence_rejected("guard_attempt")
             raise FenceLostError("execution attempt is no longer active")
 
 
