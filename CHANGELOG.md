@@ -1,3 +1,15 @@
+# [0.88.0](https://github.com/andr-235/parseVK/compare/v0.87.2...v0.88.0) (2026-08-03)
+
+
+### Bug Fixes
+
+* **ci:** isolate deploy tools from self-hosted workspace ([#404](https://github.com/andr-235/parseVK/issues/404)) ([ae74854](https://github.com/andr-235/parseVK/commit/ae748543be57d4baa4e5869027ddabe7053fbddd))
+
+
+### Features
+
+* **vk:** introduce provider accounts and fair request scheduler ([#405](https://github.com/andr-235/parseVK/issues/405)) ([ada85fd](https://github.com/andr-235/parseVK/commit/ada85fd625d10b2b733fb41841d0674f5f112c28)), closes [#285](https://github.com/andr-235/parseVK/issues/285)
+
 ## [0.87.2](https://github.com/andr-235/parseVK/compare/v0.87.1...v0.87.2) (2026-08-02)
 
 
