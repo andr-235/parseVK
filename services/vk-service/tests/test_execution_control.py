@@ -7,7 +7,10 @@ from app.infrastructure.db.repositories.executions import SqlAlchemyExecutionRep
 from app.infrastructure.db.repositories.provider_accounts import (
     SqlAlchemyProviderAccountRepository,
 )
-from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsRepository
+from app.infrastructure.db.repositories.source_collections import (
+    SqlAlchemySourceCollectionRepository,
+)
+from app.services.collection_fingerprint import build_collection_identity
 from app.tasks.execution_control import (
     ExecutionAttemptControl,
     ExecutionCancellationRequested,
@@ -25,19 +28,30 @@ async def _claim(db_session, *, expired=False):
             credential_version="version-1",
             capabilities=[SYSTEM_VK_CAPABILITY],
         )
-    events = SqlAlchemyTaskEventsRepository(db_session)
-    if await events.get_execution(10, "run-10") is None:
-        await events.create_execution(
-            task_id=10,
-            owner_user_id="user-1",
-            run_id="run-10",
+    demands = SqlAlchemySourceCollectionRepository(db_session)
+    if await demands.get_demand(task_id=10, run_id="run-10") is None:
+        identity = build_collection_identity(
+            provider_account_key="system-vk",
             scope="selected",
             mode="recent_posts",
             group_ids=[1],
             post_limit=10,
-            plan_snapshot={"groupIds": [1]},
-            parent_execution_id=None,
+            payload={},
         )
+        attachment = await demands.attach_demand(
+            task_id=10,
+            owner_user_id="user-1",
+            run_id="run-10",
+            provider_account_key=identity.provider_account_key,
+            source_key=identity.source_key,
+            fingerprint=identity.fingerprint,
+            scope="selected",
+            mode="recent_posts",
+            group_ids=[1],
+            post_limit=10,
+            plan_snapshot=identity.normalized_plan,
+        )
+        assert attachment is not None
     return await SqlAlchemyExecutionRepository(db_session).claim_next(
         worker_id="same-worker",
         lease_expires_at=(
@@ -63,7 +77,7 @@ async def test_commit_guard_rejects_stale_attempt_with_same_worker_id(db_session
 async def test_commit_guard_reports_durable_cancellation(db_session):
     claim = await _claim(db_session)
     assert claim is not None
-    await SqlAlchemyTaskEventsRepository(db_session).request_cancellation(
+    await SqlAlchemySourceCollectionRepository(db_session).request_cancellation(
         task_id=10,
         run_id="run-10",
         reason="task.cancelled",
@@ -165,7 +179,6 @@ async def test_fenced_iterator_checks_before_and_after_every_page_request():
     pages = [page async for page in client.iter_comment_pages(1, 2)]
 
     assert pages == [{"items": [1]}, {"items": [2]}]
-    # Before and after both yielded requests, plus the final checked __anext__.
     assert control.checks == 5
 
 
