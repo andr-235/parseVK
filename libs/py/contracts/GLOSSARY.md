@@ -47,5 +47,5 @@ Canonical definitions for domain concepts used in ParseVK event contracts.
 - **PartitionKey** — A deterministic string computed from payload fields. Used for Kafka partition assignment. Composite keys use `:` separator. Defined per contract in the catalog.
 - **schemaVersion** — Positive integer identifying the version of the message schema. Starts at 1 for each messageType. Consumers reject unknown schemaVersion — no fallback to older versions.
 - **Producer** — A named service that publishes messages of a given messageType. Listed in the contract catalog. Validated at publish time.
-- **Consumer** — A named service that consumes messages of a given messageType. Listed in the contract catalog. Validated at publish time.
+- **Consumer** — A named service that consumes messages of a given messageType. Listed in the contract catalog. Validated at consume time.
 - **Contract compatibility** — Defines the evolution policy for a message schema. Currently only `backward` is supported: a consumer running the new schema can read data written with the old schema.
