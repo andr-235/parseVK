@@ -1,9 +1,4 @@
-"""Outbox publisher — re-exports the shared OutboxPublisher from common library.
-
-The shared publisher speaks the common OutboxRepository protocol. The local
-OutboxRepository works with SQLAlchemy OutboxEvent models, so an adapter is
-provided to bridge the two.
-"""
+"""Outbox publisher adapters and routing for tasks-service."""
 
 from __future__ import annotations
 
@@ -18,16 +13,33 @@ __all__ = [
     "OutboxPublisher",
     "TasksOutboxRepositoryAdapter",
     "kafka_key_for_event",
+    "topic_for_event",
+    "dlq_topic_for_event",
     "MAX_OUTBOX_ATTEMPTS",
 ]
 
 MAX_OUTBOX_ATTEMPTS = 5
+VK_EXECUTION_REQUESTED = "vk.execution.requested"
 
 
 def kafka_key_for_event(event_type: str, payload: dict, aggregate_id: str) -> str:
     if event_type == "task.automation_settings_updated":
         return str(payload["ownerUserId"])
+    if event_type == VK_EXECUTION_REQUESTED:
+        return str(payload["executionId"])
     return str(payload.get("taskId") or aggregate_id)
+
+
+def topic_for_event(message: OutboxMessage, settings) -> str:
+    if message.event_type == VK_EXECUTION_REQUESTED:
+        return settings.kafka_topic_vk_commands
+    return settings.kafka_topic_tasks
+
+
+def dlq_topic_for_event(message: OutboxMessage, settings) -> str:
+    if message.event_type == VK_EXECUTION_REQUESTED:
+        return settings.kafka_topic_vk_commands_dlq
+    return settings.kafka_topic_tasks_dlq
 
 
 class TasksOutboxRepositoryAdapter:
@@ -49,7 +61,11 @@ class TasksOutboxRepositoryAdapter:
         event = await self._inner.get(event_id)
         if event is None:
             return False
-        await self._inner.mark_failed(event, error, max_attempts=MAX_OUTBOX_ATTEMPTS)
+        await self._inner.mark_failed(
+            event,
+            error,
+            max_attempts=MAX_OUTBOX_ATTEMPTS,
+        )
         return event.attempts >= MAX_OUTBOX_ATTEMPTS
 
 
