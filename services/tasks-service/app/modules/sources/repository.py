@@ -44,7 +44,9 @@ class SourcesRepository:
         await self.session.flush()
         return source
 
-    async def list_sources(self, owner_user_id: str) -> tuple[list[MonitoringSource], int]:
+    async def list_sources(
+        self, owner_user_id: str
+    ) -> tuple[list[MonitoringSource], int]:
         linked_to_owner = exists(
             select(1)
             .select_from(TaskSource)
@@ -67,6 +69,27 @@ class SourcesRepository:
         sources = list(result)
         return sources, len(sources)
 
+    async def list_active_sources(
+        self,
+        *,
+        provider: str = "vk",
+        source_type: str = "community",
+    ) -> list[MonitoringSource]:
+        """Return the concrete active source set used to freeze scope=all."""
+        result = await self.session.scalars(
+            select(MonitoringSource)
+            .where(
+                MonitoringSource.provider == provider,
+                MonitoringSource.source_type == source_type,
+                MonitoringSource.status == "active",
+            )
+            .order_by(
+                MonitoringSource.external_id.asc(),
+                MonitoringSource.id.asc(),
+            )
+        )
+        return list(result)
+
     async def link_task_source(
         self, task_id: int, source_id: UUID, kind: str = "target"
     ) -> TaskSource:
@@ -79,7 +102,9 @@ class SourcesRepository:
         await self.session.refresh(link)
         return link
 
-    async def get_task_source(self, task_id: int, source_id: UUID) -> TaskSource | None:
+    async def get_task_source(
+        self, task_id: int, source_id: UUID
+    ) -> TaskSource | None:
         return await self.session.scalar(
             select(TaskSource).where(
                 TaskSource.task_id == task_id,
@@ -95,7 +120,9 @@ class SourcesRepository:
         )
         return list(result)
 
-    async def list_sources_for_task(self, task_id: int) -> list[MonitoringSource]:
+    async def list_sources_for_task(
+        self, task_id: int
+    ) -> list[MonitoringSource]:
         result = await self.session.scalars(
             select(MonitoringSource)
             .join(TaskSource, TaskSource.source_id == MonitoringSource.id)
@@ -109,7 +136,9 @@ class SourcesRepository:
         )
         return list(result)
 
-    async def list_sources_by_ids(self, source_ids: Iterable[UUID]) -> list[MonitoringSource]:
+    async def list_sources_by_ids(
+        self, source_ids: Iterable[UUID]
+    ) -> list[MonitoringSource]:
         ids = list(source_ids)
         if not ids:
             return []
