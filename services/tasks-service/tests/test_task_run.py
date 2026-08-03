@@ -15,7 +15,6 @@ from _service_path import use_service_path
 use_service_path()
 
 from app.db.models import TaskRun, TaskRunSourceDemand
-from app.modules.tasks.exceptions import TaskConflictError
 from app.modules.tasks.state_service import TaskStateService
 from app.modules.tasks.task_run import TaskRunFreezeError, freeze_task_run
 
@@ -246,9 +245,57 @@ async def test_freeze_invalid_run_id_raises():
 
 
 @pytest.mark.asyncio
-async def test_resume_keeps_same_run_id_and_reuses_snapshot():
-    run_id = str(uuid4())
-    task = make_task(run_id=run_id, status="failed")
+async def test_resume_creates_new_run_and_publishes_child_command(monkeypatch):
+    previous_run_id = str(uuid4())
+    task = make_task(run_id=previous_run_id, status="failed")
+    repository = SimpleNamespace(
+        get_task_for_update=AsyncMock(return_value=task),
+        add_audit=AsyncMock(),
+        touch_task=AsyncMock(return_value=task),
+    )
+    outbox = SimpleNamespace(add_event=AsyncMock())
+    freezer = AsyncMock()
+    command_publisher = AsyncMock()
+    monkeypatch.setattr(
+        "app.modules.tasks.state_service.add_vk_execution_command",
+        command_publisher,
+    )
+
+    async def freeze_child(session, current_task):
+        return {
+            "taskRunId": current_task.execution_run_id,
+            "sourceSetRevision": 6,
+            "snapshotSha256": "a" * 64,
+        }
+
+    freezer.side_effect = freeze_child
+    service = TaskStateService(
+        AsyncMock(),
+        repository,
+        outbox,
+        freezer=freezer,
+    )
+
+    await service.resume_task("user-1", 42)
+
+    assert task.execution_run_id != previous_run_id
+    freezer.assert_awaited_once_with(service.session, task)
+    command_publisher.assert_awaited_once()
+    resumed = next(
+        call
+        for call in outbox.add_event.await_args_list
+        if call.kwargs["event_type"] == "task.resumed"
+    )
+    assert resumed.kwargs["payload"]["runId"] == task.execution_run_id
+    assert resumed.kwargs["payload"]["snapshotSha256"] == "a" * 64
+    audit = repository.add_audit.await_args.args[0]
+    assert audit.event_data["previousRunId"] == previous_run_id
+
+
+@pytest.mark.asyncio
+async def test_resume_creates_run_when_legacy_run_id_is_missing(monkeypatch):
+    task = make_task(status="failed")
+    task.execution_run_id = None
     repository = SimpleNamespace(
         get_task_for_update=AsyncMock(return_value=task),
         add_audit=AsyncMock(),
@@ -256,11 +303,15 @@ async def test_resume_keeps_same_run_id_and_reuses_snapshot():
     )
     outbox = SimpleNamespace(add_event=AsyncMock())
     freezer = AsyncMock(
-        return_value={
-            "taskRunId": run_id,
-            "sourceSetRevision": 6,
-            "snapshotSha256": "a" * 64,
+        side_effect=lambda session, current_task: {
+            "taskRunId": current_task.execution_run_id,
+            "sourceSetRevision": 1,
+            "snapshotSha256": "b" * 64,
         }
+    )
+    monkeypatch.setattr(
+        "app.modules.tasks.state_service.add_vk_execution_command",
+        AsyncMock(),
     )
     service = TaskStateService(
         AsyncMock(),
@@ -271,28 +322,4 @@ async def test_resume_keeps_same_run_id_and_reuses_snapshot():
 
     await service.resume_task("user-1", 42)
 
-    assert task.execution_run_id == run_id
-    freezer.assert_awaited_once_with(service.session, task)
-    resumed = next(
-        call
-        for call in outbox.add_event.await_args_list
-        if call.kwargs["event_type"] == "task.resumed"
-    )
-    assert resumed.kwargs["payload"]["snapshotSha256"] == "a" * 64
-
-
-@pytest.mark.asyncio
-async def test_resume_without_run_is_rejected():
-    task = make_task(status="failed")
-    task.execution_run_id = None
-    repository = SimpleNamespace(
-        get_task_for_update=AsyncMock(return_value=task)
-    )
-    service = TaskStateService(
-        AsyncMock(),
-        repository,
-        SimpleNamespace(),
-    )
-
-    with pytest.raises(TaskConflictError):
-        await service.resume_task("user-1", 42)
+    assert task.execution_run_id is not None
