@@ -1,10 +1,11 @@
 from datetime import UTC, datetime
-from typing import Any, Dict
+from typing import Any
 
-from app.domain.repositories.outbox import OutboxRepository
 from common.events.task_execution_completed import TaskExecutionCompletedPayload
 from common.events.task_execution_failed import TaskExecutionFailedPayload
 from common.events.task_execution_started import TaskExecutionStartedPayload
+
+from app.domain.repositories.outbox import OutboxRepository
 
 
 class OutboxService:
@@ -138,7 +139,7 @@ class OutboxService:
         execution_sequence: int,
         processed_items: int,
         total_items: int,
-        stats: Dict[str, Any] | None = None,
+        stats: dict[str, Any] | None = None,
         completed_at: str | None = None,
         correlation_id: str | None = None,
     ) -> None:
@@ -176,7 +177,7 @@ class OutboxService:
         execution_sequence: int,
         processed_items: int,
         total_items: int,
-        stats: Dict[str, Any] | None = None,
+        stats: dict[str, Any] | None = None,
         error: str = "",
         failure_kind: str = "terminal",
         failed_at: str | None = None,
