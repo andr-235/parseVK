@@ -50,15 +50,10 @@ class IngestionPipeline:
                 task_run, group_ids, correlation_id=correlation_id
             )
 
-            if self.demand_fanout is not None:
-                await self.demand_fanout.complete_callbacks(
-                    task_run,
-                    processed_items=result.processed_items,
-                    total_items=result.processed_items,
-                    stats=result.stats(),
-                    correlation_id=correlation_id,
-                )
-            else:
+            # Collection-backed executions record terminal lifecycle only through
+            # the fenced execution repository. Sending an HTTP callback here would
+            # create an external terminal effect before the final fence check.
+            if self.demand_fanout is None:
                 await self.tasks_client.complete_execution(
                     task_run.task_id,
                     task_run.run_id,
@@ -82,17 +77,11 @@ class IngestionPipeline:
             sanitized_error = self._on_error(str(exc))
             result = self.collector.current_result
 
-            try:
-                if self.demand_fanout is not None:
-                    await self.demand_fanout.fail_callbacks(
-                        task_run,
-                        error=sanitized_error,
-                        processed_items=result.processed_items,
-                        total_items=result.processed_items,
-                        stats=result.stats(),
-                        correlation_id=correlation_id,
-                    )
-                else:
+            # The collection runtime lets ExecutionExecutor persist a fenced,
+            # per-demand terminal outbox event after this exception is raised.
+            # The legacy direct runtime keeps its synchronous callback behavior.
+            if self.demand_fanout is None:
+                try:
                     await self.tasks_client.fail_execution(
                         task_run.task_id,
                         task_run.run_id,
@@ -103,15 +92,20 @@ class IngestionPipeline:
                         request_id=task_run.run_id,
                         correlation_id=correlation_id,
                     )
-            except httpx.HTTPStatusError as callback_exc:
-                self._handle_fail_callback_conflict(callback_exc, task_run, sanitized_error, exc)
+                except httpx.HTTPStatusError as callback_exc:
+                    self._handle_fail_callback_conflict(
+                        callback_exc,
+                        task_run,
+                        sanitized_error,
+                        exc,
+                    )
 
-            except (
-                httpx.RequestError,
-                sqlalchemy.exc.DBAPIError,
-                asyncio.CancelledError,
-            ) as callback_exc:
-                raise callback_exc from exc
+                except (
+                    httpx.RequestError,
+                    sqlalchemy.exc.DBAPIError,
+                    asyncio.CancelledError,
+                ) as callback_exc:
+                    raise callback_exc from exc
 
             raise IngestionFailedError(sanitized_error, result) from exc
 
