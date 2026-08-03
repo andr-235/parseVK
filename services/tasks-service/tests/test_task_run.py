@@ -245,7 +245,7 @@ async def test_freeze_invalid_run_id_raises():
 
 
 @pytest.mark.asyncio
-async def test_resume_creates_new_run_and_publishes_child_command(monkeypatch):
+async def test_resume_creates_new_run_and_publishes_child_command():
     previous_run_id = str(uuid4())
     task = make_task(run_id=previous_run_id, status="failed")
     repository = SimpleNamespace(
@@ -256,10 +256,6 @@ async def test_resume_creates_new_run_and_publishes_child_command(monkeypatch):
     outbox = SimpleNamespace(add_event=AsyncMock())
     freezer = AsyncMock()
     command_publisher = AsyncMock()
-    monkeypatch.setattr(
-        "app.modules.tasks.state_service.add_vk_execution_command",
-        command_publisher,
-    )
 
     async def freeze_child(session, current_task):
         return {
@@ -274,13 +270,23 @@ async def test_resume_creates_new_run_and_publishes_child_command(monkeypatch):
         repository,
         outbox,
         freezer=freezer,
+        command_publisher=command_publisher,
     )
 
     await service.resume_task("user-1", 42)
 
     assert task.execution_run_id != previous_run_id
     freezer.assert_awaited_once_with(service.session, task)
-    command_publisher.assert_awaited_once()
+    command_publisher.assert_awaited_once_with(
+        service.session,
+        outbox,
+        task,
+        {
+            "taskRunId": task.execution_run_id,
+            "sourceSetRevision": 6,
+            "snapshotSha256": "a" * 64,
+        },
+    )
     resumed = next(
         call
         for call in outbox.add_event.await_args_list
@@ -293,7 +299,7 @@ async def test_resume_creates_new_run_and_publishes_child_command(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_resume_creates_run_when_legacy_run_id_is_missing(monkeypatch):
+async def test_resume_creates_run_when_legacy_run_id_is_missing():
     task = make_task(status="failed")
     task.execution_run_id = None
     repository = SimpleNamespace(
@@ -309,17 +315,16 @@ async def test_resume_creates_run_when_legacy_run_id_is_missing(monkeypatch):
             "snapshotSha256": "b" * 64,
         }
     )
-    monkeypatch.setattr(
-        "app.modules.tasks.state_service.add_vk_execution_command",
-        AsyncMock(),
-    )
+    command_publisher = AsyncMock()
     service = TaskStateService(
         AsyncMock(),
         repository,
         outbox,
         freezer=freezer,
+        command_publisher=command_publisher,
     )
 
     await service.resume_task("user-1", 42)
 
     assert task.execution_run_id is not None
+    command_publisher.assert_awaited_once()
