@@ -10,8 +10,8 @@ from app.domain.entities.provider_account import SYSTEM_VK_ACCOUNT_KEY
 from app.infrastructure.db.session import SessionLocal
 from app.tasks.lifespan import (
     get_consumer_healthy,
+    get_execution_worker_healthy,
     get_publisher_healthy,
-    get_task_worker_healthy,
     lifespan,
 )
 
@@ -51,12 +51,12 @@ def create_app() -> FastAPI:
 
         provider_ready = account is not None and account.can_execute_vk
         if not settings.task_worker_enabled:
-            task_worker_status = "disabled"
+            execution_worker_status = "disabled"
         elif not provider_ready:
-            task_worker_status = "blocked"
+            execution_worker_status = "blocked"
         else:
-            task_worker_status = (
-                "healthy" if get_task_worker_healthy() else "unhealthy"
+            execution_worker_status = (
+                "healthy" if get_execution_worker_healthy() else "unhealthy"
             )
 
         ok_creds_configured = (
@@ -85,7 +85,7 @@ def create_app() -> FastAPI:
             "outboxPublisher": (
                 "healthy" if get_publisher_healthy() else "unhealthy"
             ),
-            "taskWorker": task_worker_status,
+            "executionWorker": execution_worker_status,
         }
 
     @app.get("/ready")
