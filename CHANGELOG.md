@@ -1,3 +1,37 @@
+# [0.89.0](https://github.com/andr-235/parseVK/compare/v0.88.0...v0.89.0) (2026-08-03)
+
+
+### Bug Fixes
+
+* **vk:** add active execution uniqueness migration ([76d8fc6](https://github.com/andr-235/parseVK/commit/76d8fc6db05e4a91511d1f13b121ca6c96f1be6c))
+* **vk:** avoid circular execution metadata dependency ([5a0a309](https://github.com/andr-235/parseVK/commit/5a0a309cbb533cb51a2929a75c4c19a439114095))
+* **vk:** decode SQLite array representations ([76e754b](https://github.com/andr-235/parseVK/commit/76e754b31d5472b22c5de84661651a3f2e4ce84f))
+* **vk:** enforce one active execution per task ([9b22ff6](https://github.com/andr-235/parseVK/commit/9b22ff61f28b524a9b16f01392612eb17003b6f5))
+* **vk:** flush expired attempt before replacement ([98e7585](https://github.com/andr-235/parseVK/commit/98e7585d67ed64774599083aabd82d4652e23fb9))
+* **vk:** let cancellation win terminal write races ([0eec776](https://github.com/andr-235/parseVK/commit/0eec7765ecaf9151732cc983496452855f27c190))
+* **vk:** normalize execution values across database dialects ([76cce88](https://github.com/andr-235/parseVK/commit/76cce88ab6cfdb2da69c5e4a720f8b4321c9a6d7))
+* **vk:** remove fencing deadlocks and cover crash recovery ([9b662d0](https://github.com/andr-235/parseVK/commit/9b662d035c0faf939bd1ac316c7bfe99c85db7a2))
+* **vk:** stop attempt immediately after lease loss ([251feeb](https://github.com/andr-235/parseVK/commit/251feebbf5c77789ebcff93e6d10d4e28052b684))
+
+
+### Features
+
+* **vk:** add attempt fencing control ([e82351c](https://github.com/andr-235/parseVK/commit/e82351c0cd965c0a619d7447436744da3ace416b))
+* **vk:** add execution attempt runner ([451f811](https://github.com/andr-235/parseVK/commit/451f81182ae6c27a6a9f80455fc70b35157ca35c))
+* **vk:** add execution attempts, leases and fencing ([#406](https://github.com/andr-235/parseVK/issues/406)) ([862f42f](https://github.com/andr-235/parseVK/commit/862f42f8a0fddcfb669d4a81a62d6287fdfd9e55))
+* **vk:** add execution domain entities ([7398842](https://github.com/andr-235/parseVK/commit/73988422691f05a9f3a5e71b20cd4ef598074ba0))
+* **vk:** add execution persistence models ([80a8ae9](https://github.com/andr-235/parseVK/commit/80a8ae97d9204e466ded153d48352c964a23cf9e))
+* **vk:** add execution recovery metrics ([e2c14a4](https://github.com/andr-235/parseVK/commit/e2c14a4f39f0ac99f0116270ed27e71456ed8592))
+* **vk:** add execution store ([d2b3c3c](https://github.com/andr-235/parseVK/commit/d2b3c3c0a757acd05729ceb14fabded41cd8a1ff))
+* **vk:** add execution worker ([97063ba](https://github.com/andr-235/parseVK/commit/97063baf716f47516038f05729fc13eda34fb112))
+* **vk:** add fenced execution executor ([1235525](https://github.com/andr-235/parseVK/commit/1235525d00cecb40861acd50769ede012dda9066))
+* **vk:** configure execution shutdown and lease safety ([83b32db](https://github.com/andr-235/parseVK/commit/83b32dba6b123ee55843587854229a1b63d9aed2))
+* **vk:** define execution repository contract ([0d79bbe](https://github.com/andr-235/parseVK/commit/0d79bbe1131e571163fbd5f000779f669d131dc4))
+* **vk:** implement fenced execution repository ([d3af2f3](https://github.com/andr-235/parseVK/commit/d3af2f3778ec3ad27a34a8fa9d568e10769aab05))
+* **vk:** instrument execution attempt lifecycle ([49aaa45](https://github.com/andr-235/parseVK/commit/49aaa45ada2dba892f68379a3533c4426dfaf398))
+* **vk:** migrate task runs to fenced executions ([47dc65f](https://github.com/andr-235/parseVK/commit/47dc65f5af9022a536b6ff9f7ff382137ca7a99f))
+* **vk:** observe execution fence rejections ([ba9cac2](https://github.com/andr-235/parseVK/commit/ba9cac234cbdc8559aea977462568065cbd7672e))
+
 # [0.88.0](https://github.com/andr-235/parseVK/compare/v0.87.2...v0.88.0) (2026-08-03)
 
 
