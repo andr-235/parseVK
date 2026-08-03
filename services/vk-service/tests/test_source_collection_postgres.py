@@ -25,8 +25,10 @@ from app.infrastructure.db.repositories.provider_accounts import (
 from app.infrastructure.db.repositories.source_collections import (
     SqlAlchemySourceCollectionRepository,
 )
-from app.services.collection_fingerprint import CollectionIdentity
-from app.services.collection_fingerprint import build_collection_identity
+from app.services.collection_fingerprint import (
+    CollectionIdentity,
+    build_collection_identity,
+)
 from app.tasks.execution_store import ExecutionStore
 
 
