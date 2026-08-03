@@ -2,12 +2,13 @@ import logging
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from app.core.config import settings as app_settings
 from app.db.models import Task, TaskAuditLog, TaskAutomationSettings
 from app.modules.automation.schemas import AutomationSettingsUpdate
 from app.modules.tasks.event_payloads import task_request_payload
 from app.modules.tasks.mapper import task_to_response
+from app.modules.tasks.source_compat import SourceCompatAdapter
 from app.modules.tasks.task_run import TaskRunFreezeError, freeze_task_run
+from app.modules.tasks.vk_command import add_vk_execution_command
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,10 @@ class AutomationService:
                 aggregate_id=owner_user_id,
                 task_id=None,
                 event_type="task.automation_settings_updated",
-                event_data={"enabled": settings.enabled, "postLimit": settings.post_limit},
+                event_data={
+                    "enabled": settings.enabled,
+                    "postLimit": settings.post_limit,
+                },
             )
         )
         await self.outbox.add_event(
@@ -57,7 +61,10 @@ class AutomationService:
                 "postLimit": settings.post_limit,
             },
         )
-        logger.info("Published automation_settings_updated outbox event for user %s", owner_user_id)
+        logger.info(
+            "Published automation_settings_updated outbox event for user %s",
+            owner_user_id,
+        )
         return await self._settings_response(owner_user_id, settings)
 
     async def run(
@@ -71,9 +78,15 @@ class AutomationService:
             return {
                 "started": False,
                 "reason": "Есть активная automation-задача",
-                "settings": await self._settings_response(owner_user_id, settings),
+                "settings": await self._settings_response(
+                    owner_user_id,
+                    settings,
+                ),
             }
-        base_task = await self.repository.find_latest_completed_reusable_task(owner_user_id)
+
+        base_task = await self.repository.find_latest_completed_reusable_task(
+            owner_user_id
+        )
         if base_task is None:
             await self.tasks.add_audit(
                 TaskAuditLog(
@@ -88,15 +101,13 @@ class AutomationService:
             return {
                 "started": False,
                 "reason": "Нет завершённых задач для повторного запуска",
-                "settings": await self._settings_response(owner_user_id, settings),
+                "settings": await self._settings_response(
+                    owner_user_id,
+                    settings,
+                ),
             }
+
         execution_run_id = str(uuid4())
-        logger.debug(
-            "[AutomationService.run] Creating task owner_user_id=%s base_task_id=%s execution_run_id=%s",
-            owner_user_id,
-            base_task.id,
-            execution_run_id,
-        )
         task = await self.tasks.create_task(
             Task(
                 owner_user_id=owner_user_id,
@@ -117,7 +128,7 @@ class AutomationService:
             )
         )
         logger.info(
-            "[AutomationService.run] Created automation task id=%s with execution_run_id=%s",
+            "Created automation task id=%s execution_run_id=%s",
             task.id,
             task.execution_run_id,
         )
@@ -131,16 +142,24 @@ class AutomationService:
                 event_data={"taskId": str(task.id), "source": "automation"},
             )
         )
-        run_meta = None
-        if app_settings.source_compat_write_enabled:
+
+        try:
+            source_adapter = SourceCompatAdapter(self.session)
+            await source_adapter.ensure_normalized_sources(
+                base_task,
+                list(base_task.group_ids or []),
+            )
             await self._clone_task_sources(base_task, task)
-            try:
-                run_meta = await freeze_task_run(self.session, task)
-            except TaskRunFreezeError as exc:
-                logger.error(
-                    "TaskRun freeze failed for automation task_id=%s: %s", task.id, exc, exc_info=True
-                )
-                raise
+            run_meta = await freeze_task_run(self.session, task)
+        except (TaskRunFreezeError, RuntimeError) as exc:
+            logger.error(
+                "TaskRun freeze failed for automation task_id=%s: %s",
+                task.id,
+                exc,
+                exc_info=True,
+            )
+            raise
+
         await self.tasks.add_audit(
             TaskAuditLog(
                 owner_user_id=owner_user_id,
@@ -152,10 +171,6 @@ class AutomationService:
             )
         )
         payload = task_request_payload(task, owner_user_id, run_meta)
-        logger.debug(
-            "[AutomationService.run] Publishing automation run requested payload=%s",
-            payload,
-        )
         await self.outbox.add_event(
             event_type="task.automation_run_requested",
             aggregate_type="task",
@@ -164,25 +179,29 @@ class AutomationService:
             dedupe_key=f"task.automation_run_requested:{task.id}",
             payload=payload,
         )
-        logger.info(
-            "[AutomationService.run] Published automation run requested for task_id=%s with full contract",
-            task.id,
+        await add_vk_execution_command(
+            self.session,
+            self.outbox,
+            task,
+            run_meta,
         )
         await self.repository.update_last_run_at(settings)
         return {
             "started": True,
             "reason": None,
-            "settings": await self._settings_response(owner_user_id, settings),
+            "settings": await self._settings_response(
+                owner_user_id,
+                settings,
+            ),
             "task": task_to_response(task),
         }
 
-    async def _clone_task_sources(self, base_task: Task, new_task: Task) -> None:
-        """Clone TaskSource rows from base_task into the new automation task.
-
-        Automation creates tasks directly via the repository, bypassing the
-        compat adapter — without cloning, the frozen snapshot would be empty
-        while group_ids is populated (plan Task 9 note).
-        """
+    async def _clone_task_sources(
+        self,
+        base_task: Task,
+        new_task: Task,
+    ) -> None:
+        """Copy the already resolved source set into the new automation task."""
         from app.modules.sources.repository import SourcesRepository
 
         sources_repo = SourcesRepository(self.session)
@@ -191,54 +210,102 @@ class AutomationService:
             source = await sources_repo.get_source_by_id(link.source_id)
             if source is None:
                 continue
-            await sources_repo.link_task_source(new_task.id, source.id, link.kind)
+            await sources_repo.link_task_source(
+                new_task.id,
+                source.id,
+                link.kind,
+            )
         logger.debug(
             "Cloned task sources for automation: base_task=%s new_task=%s count=%d",
-            base_task.id, new_task.id, len(links),
+            base_task.id,
+            new_task.id,
+            len(links),
         )
 
-    async def check_and_run_due(self, settings: TaskAutomationSettings, _now: datetime | None = None) -> None:
+    async def check_and_run_due(
+        self,
+        settings: TaskAutomationSettings,
+        _now: datetime | None = None,
+    ) -> None:
         if not settings.enabled:
             return
         now_utc = _now if _now is not None else datetime.now(UTC)
-        local_today = now_utc - timedelta(minutes=settings.timezone_offset_minutes)
-        local_scheduled = local_today.replace(
-            hour=settings.run_hour, minute=settings.run_minute, second=0, microsecond=0
+        local_today = now_utc - timedelta(
+            minutes=settings.timezone_offset_minutes
         )
-        utc_scheduled = local_scheduled + timedelta(minutes=settings.timezone_offset_minutes)
+        local_scheduled = local_today.replace(
+            hour=settings.run_hour,
+            minute=settings.run_minute,
+            second=0,
+            microsecond=0,
+        )
+        utc_scheduled = local_scheduled + timedelta(
+            minutes=settings.timezone_offset_minutes
+        )
         if utc_scheduled > now_utc:
             return
         last_run = settings.last_run_at
-        if last_run is not None and last_run.replace(tzinfo=UTC) >= utc_scheduled:
-            logger.info("Skipped: already ran today for user %s", settings.owner_user_id)
+        if (
+            last_run is not None
+            and last_run.replace(tzinfo=UTC) >= utc_scheduled
+        ):
+            logger.info(
+                "Skipped: already ran today for user %s",
+                settings.owner_user_id,
+            )
             return
-        if await self.repository.has_active_automation_task(settings.owner_user_id):
-            logger.info("Active task in progress, skipping automation for user %s", settings.owner_user_id)
+        if await self.repository.has_active_automation_task(
+            settings.owner_user_id
+        ):
+            logger.info(
+                "Active task in progress, skipping automation for user %s",
+                settings.owner_user_id,
+            )
             return
-        logger.info("Triggered automation run for user %s", settings.owner_user_id)
+        logger.info(
+            "Triggered automation run for user %s",
+            settings.owner_user_id,
+        )
         await self.run(settings.owner_user_id)
 
-    async def _settings_response(self, owner_user_id: str, settings) -> dict:
+    async def _settings_response(
+        self,
+        owner_user_id: str,
+        settings,
+    ) -> dict:
         return {
             "enabled": settings.enabled,
             "runHour": settings.run_hour,
             "runMinute": settings.run_minute,
             "postLimit": settings.post_limit,
             "timezoneOffsetMinutes": settings.timezone_offset_minutes,
-            "lastRunAt": settings.last_run_at.isoformat() if settings.last_run_at else None,
+            "lastRunAt": (
+                settings.last_run_at.isoformat()
+                if settings.last_run_at
+                else None
+            ),
             "nextRunAt": self._next_run_at(settings),
-            "isRunning": await self.repository.has_active_automation_task(owner_user_id),
+            "isRunning": await self.repository.has_active_automation_task(
+                owner_user_id
+            ),
         }
 
     def _next_run_at(self, settings) -> str | None:
         if not settings.enabled:
             return None
         now = datetime.now(UTC)
-        local_now = now - timedelta(minutes=settings.timezone_offset_minutes)
+        local_now = now - timedelta(
+            minutes=settings.timezone_offset_minutes
+        )
         local_next = local_now.replace(
-            hour=settings.run_hour, minute=settings.run_minute, second=0, microsecond=0
+            hour=settings.run_hour,
+            minute=settings.run_minute,
+            second=0,
+            microsecond=0,
         )
         if local_next <= local_now:
             local_next += timedelta(days=1)
-        utc_next = local_next + timedelta(minutes=settings.timezone_offset_minutes)
+        utc_next = local_next + timedelta(
+            minutes=settings.timezone_offset_minutes
+        )
         return utc_next.isoformat().replace("+00:00", "Z")
