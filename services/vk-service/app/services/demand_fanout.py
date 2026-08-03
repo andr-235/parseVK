@@ -1,27 +1,28 @@
-import logging
 from types import SimpleNamespace
 
-import httpx
 from common.events.task_execution_progressed import TaskExecutionProgressedPayload
 from sqlalchemy import text
 
 from app.infrastructure.metrics.vk_metrics import observe_collection_fanout
 
-logger = logging.getLogger("vk-service.demand-fanout")
-
 
 class DemandLifecycleFanout:
+    """Fan out non-terminal lifecycle updates to active collection demands.
+
+    Terminal completion and failure are deliberately not delivered over HTTP
+    here. They are emitted only by the fenced execution repository as durable
+    per-demand outbox events after the current attempt wins the terminal write.
+    """
+
     def __init__(
         self,
         *,
         session,
         collection_repository,
-        tasks_client,
         outbox,
     ):
         self.session = session
         self.collection_repository = collection_repository
-        self.tasks_client = tasks_client
         self.outbox = outbox
 
     async def active_demands(self, task_run) -> list:
@@ -41,70 +42,6 @@ class DemandLifecycleFanout:
                 execution_sequence=getattr(task_run, "execution_sequence", 0),
             )
         ]
-
-    async def complete_callbacks(
-        self,
-        task_run,
-        *,
-        processed_items: int,
-        total_items: int,
-        stats: dict,
-        correlation_id: str | None,
-    ) -> None:
-        demands = await self.active_demands(task_run)
-        for demand in demands:
-            try:
-                await self.tasks_client.complete_execution(
-                    demand.task_id,
-                    demand.run_id,
-                    processed_items,
-                    total_items,
-                    stats,
-                    request_id=demand.run_id,
-                    correlation_id=correlation_id or demand.run_id,
-                )
-            except httpx.HTTPError as exc:
-                logger.warning(
-                    "Complete callback failed task_id=%s run_id=%s error=%s; "
-                    "durable terminal event will be retried through outbox",
-                    demand.task_id,
-                    demand.run_id,
-                    type(exc).__name__,
-                )
-        observe_collection_fanout("complete_callback", len(demands))
-
-    async def fail_callbacks(
-        self,
-        task_run,
-        *,
-        error: str,
-        processed_items: int,
-        total_items: int,
-        stats: dict,
-        correlation_id: str | None,
-    ) -> None:
-        demands = await self.active_demands(task_run)
-        for demand in demands:
-            try:
-                await self.tasks_client.fail_execution(
-                    demand.task_id,
-                    demand.run_id,
-                    error,
-                    processed_items,
-                    total_items,
-                    stats,
-                    request_id=demand.run_id,
-                    correlation_id=correlation_id or demand.run_id,
-                )
-            except httpx.HTTPError as exc:
-                logger.warning(
-                    "Fail callback failed task_id=%s run_id=%s error=%s; "
-                    "durable terminal event will be retried through outbox",
-                    demand.task_id,
-                    demand.run_id,
-                    type(exc).__name__,
-                )
-        observe_collection_fanout("fail_callback", len(demands))
 
     async def report_progress(
         self,
