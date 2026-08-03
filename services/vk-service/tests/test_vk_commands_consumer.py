@@ -131,4 +131,4 @@ async def test_command_with_wrong_correlation_is_rejected():
     )
 
     with pytest.raises(Exception, match="correlationId"):
-        await consumer.handle_message(payload)
+        await consumer.handle_message(json.dumps(payload).encode("utf-8"))
