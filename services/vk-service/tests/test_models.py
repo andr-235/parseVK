@@ -44,6 +44,7 @@ def test_model_tables_exist():
 def test_execution_constraints_exist():
     assert "uq_vk_executions_task_run" in constraint_names(VkExecution)
     assert "ix_vk_executions_claimable" in index_names(VkExecution)
+    assert "uq_vk_executions_active_task" in index_names(VkExecution)
     assert "uq_vk_execution_attempt_number" in constraint_names(VkExecutionAttempt)
     assert "uq_vk_execution_fencing_token" in constraint_names(VkExecutionAttempt)
     assert "uq_vk_execution_attempts_running" in index_names(VkExecutionAttempt)
