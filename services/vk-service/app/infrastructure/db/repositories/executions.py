@@ -1,6 +1,5 @@
-import uuid
 from datetime import UTC, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from common.events.task_execution_completed import TaskExecutionCompletedPayload
 from common.events.task_execution_failed import TaskExecutionFailedPayload
@@ -175,7 +174,7 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
         )
         self.session.add(
             OutboxEvent(
-                id=uuid.uuid4(),
+                id=uuid4(),
                 event_type="task.execution_started",
                 aggregate_type="task",
                 aggregate_id=str(execution.task_id),
@@ -296,7 +295,7 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
         )
         self.session.add(
             OutboxEvent(
-                id=uuid.uuid4(),
+                id=uuid4(),
                 event_type="task.execution_completed",
                 aggregate_type="task",
                 aggregate_id=str(execution.task_id),
@@ -358,7 +357,7 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
         )
         self.session.add(
             OutboxEvent(
-                id=uuid.uuid4(),
+                id=uuid4(),
                 event_type="task.execution_failed",
                 aggregate_type="task",
                 aggregate_id=str(execution.task_id),
