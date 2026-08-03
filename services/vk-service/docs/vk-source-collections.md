@@ -62,10 +62,17 @@ lifecycle remains independent:
 - claim emits `task.execution_started` for every active demand;
 - a late demand joining a running collection receives its own started event;
 - progress updates increment each demand's own execution sequence;
-- tasks-service completion and failure callbacks are sent per active demand;
-- terminal outbox events are persisted per demand;
+- completion and failure are persisted as one durable outbox event per demand;
+- terminal outbox events are written only after the current attempt passes the
+  fencing check inside the terminal database transaction;
 - shared collection failure records the same physical error against every
   remaining active demand.
+
+Synchronous completion or failure HTTP callbacks are intentionally not sent by
+the collection runtime. An external callback before the final fence check could
+let a stale worker change TaskRun state after a replacement attempt had already
+claimed the execution. `tasks-service` consumes the durable terminal events and
+remains the lifecycle authority.
 
 A shared collection with zero active demands has zero fan-out. It never falls
 back to the original TaskRun identity.
@@ -126,11 +133,10 @@ sum(rate(vk_collection_demands_total[15m]))
 
 ### `vk_collection_fanout_events_total{event_type}`
 
-Values currently include:
-
-- `progress`;
-- `complete_callback`;
-- `fail_callback`.
+The collection runtime currently records `progress` fan-out. Terminal fan-out is
+counted by the existing execution terminal metrics because it is persisted in
+the fenced execution transaction rather than delivered through a separate
+callback path.
 
 Labels deliberately exclude TaskRun ids, collection ids and fingerprints to
 avoid unbounded Prometheus cardinality.
@@ -143,7 +149,9 @@ Investigate when any of the following persists:
   to zero, indicating consumer or transaction failure;
 - exact duplicate workload is expected but the coalescing ratio remains near
   zero, indicating fingerprint divergence;
-- fan-out callbacks stop while executions continue completing;
+- progress fan-out stops while active collections continue processing;
+- terminal execution metrics increase but tasks-service does not consume the
+  corresponding durable lifecycle events;
 - PostgreSQL reports unique-index violations or advisory-lock wait growth;
 - expired execution attempts increase together with long-running active
   collections.
