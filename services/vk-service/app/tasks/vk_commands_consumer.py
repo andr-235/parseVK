@@ -1,6 +1,5 @@
 """Kafka consumer for canonical ``vk.execution.requested`` commands."""
 
-import json
 import logging
 
 from common.events import TaskEvent
@@ -55,22 +54,12 @@ class VkExecutionCommandsConsumer(BaseEventConsumer):
             lag_gauge=_consumer_lag,
         )
 
-    async def handle_message(
-        self,
-        raw_value: bytes | str | dict,
-    ) -> None:
-        if isinstance(raw_value, dict):
-            value = json.dumps(raw_value).encode("utf-8")
-        elif isinstance(raw_value, str):
-            value = raw_value.encode("utf-8")
-        else:
-            value = raw_value
-
+    async def handle_message(self, raw_value: bytes) -> None:
         parsed = parse_for_consume(
             VK_COMMAND_CATALOG,
             consumer="vk-service",
             topic=settings.kafka_topic_vk_commands,
-            value=value,
+            value=raw_value,
         )
         command = parsed.envelope.payload
         if not isinstance(command, VkExecutionRequested):
