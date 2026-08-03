@@ -53,7 +53,7 @@ jobs:
           }
 
       - name: Checkout trusted release resolver
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.workflow_sha }}
           sparse-checkout: |
@@ -67,7 +67,7 @@ jobs:
         run: cp trusted-release-resolver/.github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"
 
       - name: Checkout validated release
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.target_sha }}
           fetch-depth: 0

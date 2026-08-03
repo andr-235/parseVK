@@ -44,7 +44,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v5
       - name: Run release workflow contracts
         run: bash scripts/test-release-workflow.sh
@@ -70,7 +70,7 @@ jobs:
       matrix: ${{ steps.matrix.outputs.value }}
     steps:
       - name: Checkout trusted release resolver
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.workflow_sha }}
           sparse-checkout: |
@@ -84,7 +84,7 @@ jobs:
         run: cp trusted-release-resolver/.github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"
 
       - name: Checkout current main
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -191,7 +191,7 @@ jobs:
           echo "Publication authorized for release $TARGET_SHA by coordinator $COORDINATOR_RUN_ID"
 
       - name: Checkout validated release commit
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ steps.release.outputs.target_sha }}
           fetch-depth: 0
@@ -251,7 +251,7 @@ jobs:
       statuses: write
     steps:
       - name: Checkout trusted release resolver
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.workflow_sha }}
           sparse-checkout: |
@@ -265,7 +265,7 @@ jobs:
         run: cp trusted-release-resolver/.github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"
 
       - name: Checkout validated release commit
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.gate.outputs.target_sha }}
           fetch-depth: 0

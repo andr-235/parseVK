@@ -35,7 +35,7 @@ jobs:
       deploy: ${{ steps.quality.outputs.deploy }}
     steps:
       - name: Checkout release history and resolver
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
           fetch-depth: 0
@@ -156,7 +156,7 @@ jobs:
 
     steps:
       - name: Checkout validated code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
           ref: ${{ needs.gate.outputs.target_sha }}

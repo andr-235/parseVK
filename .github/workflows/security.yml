@@ -46,7 +46,7 @@ jobs:
 
       - name: Checkout trusted release resolver
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.workflow_sha }}
           sparse-checkout: |
@@ -61,7 +61,7 @@ jobs:
         run: cp trusted-release-resolver/.github/scripts/latest_release.py "$RUNNER_TEMP/latest_release.py"
 
       - name: Checkout security target
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_sha || github.sha }}
@@ -124,7 +124,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_sha || github.sha }}
       - uses: actions/dependency-review-action@v4
@@ -135,7 +135,7 @@ jobs:
     name: Scan Frontend Dependencies
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_sha || github.sha }}
 
@@ -221,7 +221,7 @@ jobs:
     name: Scan for Secrets
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: ${{ github.event_name == 'workflow_dispatch' && 2 || 0 }}
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_sha || github.sha }}

@@ -31,7 +31,7 @@ jobs:
       contracts_changed: ${{ steps.filter.outputs.contracts_changed }}
       quality_workflow_changed: ${{ steps.filter.outputs.quality_workflow_changed }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -152,7 +152,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.frontend_changed == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
       - name: Install dependencies
@@ -168,7 +168,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.frontend_changed == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
       - name: Install dependencies
@@ -184,7 +184,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.python_changed == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
@@ -230,7 +230,7 @@ jobs:
     name: Validate Service Catalog
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Test catalog CLI
         run: python3 .github/scripts/test_service_catalog.py -v
       - name: Test Alembic graph validator
@@ -242,7 +242,7 @@ jobs:
     name: Validate Alembic graphs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Validate Alembic revision graphs
         run: python3 .github/scripts/validate_alembic_graphs.py
 
@@ -250,7 +250,7 @@ jobs:
     name: Validate Production Release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Validate deploy workflow contracts
         run: bash scripts/test-deploy-workflow.sh
       - name: Validate production shell syntax
@@ -270,7 +270,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.frontend_changed == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
       - name: Install dependencies
@@ -286,7 +286,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.common_changed == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -337,7 +337,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.contracts_changed == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
@@ -413,7 +413,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.contracts_changed == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
