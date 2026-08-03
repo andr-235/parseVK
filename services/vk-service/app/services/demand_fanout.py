@@ -53,15 +53,24 @@ class DemandLifecycleFanout:
     ) -> None:
         demands = await self.active_demands(task_run)
         for demand in demands:
-            await self.tasks_client.complete_execution(
-                demand.task_id,
-                demand.run_id,
-                processed_items,
-                total_items,
-                stats,
-                request_id=demand.run_id,
-                correlation_id=correlation_id or demand.run_id,
-            )
+            try:
+                await self.tasks_client.complete_execution(
+                    demand.task_id,
+                    demand.run_id,
+                    processed_items,
+                    total_items,
+                    stats,
+                    request_id=demand.run_id,
+                    correlation_id=correlation_id or demand.run_id,
+                )
+            except httpx.HTTPError as exc:
+                logger.warning(
+                    "Complete callback failed task_id=%s run_id=%s error=%s; "
+                    "durable terminal event will be retried through outbox",
+                    demand.task_id,
+                    demand.run_id,
+                    type(exc).__name__,
+                )
         observe_collection_fanout("complete_callback", len(demands))
 
     async def fail_callbacks(
@@ -87,13 +96,13 @@ class DemandLifecycleFanout:
                     request_id=demand.run_id,
                     correlation_id=correlation_id or demand.run_id,
                 )
-            except httpx.HTTPStatusError as exc:
-                if exc.response.status_code != 409:
-                    raise
+            except httpx.HTTPError as exc:
                 logger.warning(
-                    "Fail callback conflict task_id=%s run_id=%s",
+                    "Fail callback failed task_id=%s run_id=%s error=%s; "
+                    "durable terminal event will be retried through outbox",
                     demand.task_id,
                     demand.run_id,
+                    type(exc).__name__,
                 )
         observe_collection_fanout("fail_callback", len(demands))
 
