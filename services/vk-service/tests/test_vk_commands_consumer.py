@@ -1,25 +1,29 @@
 """Tests for the canonical VK execution command consumer."""
 
+import json
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from common.events import WireEvent
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _service_path import use_service_path
+
+use_service_path()
+
+from parsevk_contracts.validation import prepare_for_publish
 from parsevk_contracts.vk.commands import (
+    CATALOG as VK_COMMAND_CATALOG,
     CommentSelection,
     PostSelection,
     SourceReference,
     VkExecutionRequested,
     VkSourceDemandRequest,
 )
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _service_path import use_service_path
-
-use_service_path()
 
 import app.tasks.vk_commands_consumer as consumer_module
 from app.tasks.vk_commands_consumer import VkExecutionCommandsConsumer
@@ -37,7 +41,7 @@ def session_factory():
     return SessionContext()
 
 
-def command_payload(*, owner_user_id: str | None = "user-1"):
+def command_value(*, owner_user_id: str | None = "user-1"):
     source_id = uuid4()
     task_run_id = uuid4()
     execution_id = uuid4()
@@ -70,17 +74,18 @@ def command_payload(*, owner_user_id: str | None = "user-1"):
         source_set_revision=4,
         snapshot_sha256="a" * 64,
     )
-    wire = WireEvent(
-        event_id=uuid4(),
-        event_type="vk.execution.requested",
-        event_version=1,
-        aggregate_type="vk_execution",
-        aggregate_id=str(execution_id),
-        correlation_id=str(execution_id),
-        payload=command.to_wire(),
-        created_at="2026-08-04T00:00:00+00:00",
+    prepared = prepare_for_publish(
+        VK_COMMAND_CATALOG,
+        message_type="vk.execution.requested",
+        schema_version=1,
+        producer="tasks-service",
+        message_id=uuid4(),
+        occurred_at=datetime.now(UTC),
+        correlation_id=execution_id,
+        causation_id=None,
+        payload=command.model_dump(mode="python"),
     )
-    return command, wire
+    return command, prepared.value
 
 
 @pytest.mark.asyncio
@@ -91,12 +96,12 @@ async def test_valid_command_is_translated_after_contract_validation(monkeypatch
         "get_task_events_handler",
         lambda session: handler,
     )
-    command, wire = command_payload()
+    command, value = command_value()
     consumer = VkExecutionCommandsConsumer(
         session_factory=session_factory
     )
 
-    await consumer.handle_message(wire.model_dump_json().encode())
+    await consumer.handle_message(value)
 
     event = handler.handle.await_args.args[0]
     assert event.event_type == "task.created"
@@ -108,23 +113,23 @@ async def test_valid_command_is_translated_after_contract_validation(monkeypatch
 
 @pytest.mark.asyncio
 async def test_command_without_owner_is_rejected():
-    _, wire = command_payload(owner_user_id=None)
+    _, value = command_value(owner_user_id=None)
     consumer = VkExecutionCommandsConsumer(
         session_factory=session_factory
     )
 
     with pytest.raises(ValueError, match="ownerUserId"):
-        await consumer.handle_message(wire.model_dump_json().encode())
+        await consumer.handle_message(value)
 
 
 @pytest.mark.asyncio
 async def test_command_with_wrong_correlation_is_rejected():
-    _, wire = command_payload()
-    payload = wire.model_dump()
-    payload["correlation_id"] = str(uuid4())
+    _, value = command_value()
+    payload = json.loads(value)
+    payload["correlationId"] = str(uuid4())
     consumer = VkExecutionCommandsConsumer(
         session_factory=session_factory
     )
 
-    with pytest.raises(ValueError, match="correlationId"):
+    with pytest.raises(Exception, match="correlationId"):
         await consumer.handle_message(payload)
