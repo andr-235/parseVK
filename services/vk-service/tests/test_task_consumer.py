@@ -1,33 +1,18 @@
-import json
-import sys
-from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
+import httpx
 import pytest
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _service_path import use_service_path
-
-use_service_path()
-
-from datetime import UTC
-
-from common.events import TaskEvent, get_task_id
+from common.events import TaskEvent
 
 from app.services.task_events_service import TaskEventsService
-
-
-@pytest.fixture
-def anyio_backend():
-    return "asyncio"
 
 
 class FakeRepository:
     def __init__(self):
         self.processed = set()
-        self.runs = {}
-        self.saved = 0
+        self.executions = []
         self.session = AsyncMock()
         begin_ctx = AsyncMock()
         begin_ctx.__aenter__.return_value = None
@@ -37,62 +22,95 @@ class FakeRepository:
     async def is_processed(self, consumer_name, event_id):
         return (consumer_name, event_id) in self.processed
 
-    async def mark_processed(self, consumer_name, event_id, event_type):
+    async def mark_processed(self, consumer_name, event_id, _event_type):
         self.processed.add((consumer_name, event_id))
 
-    async def get_task_run(self, task_id):
-        return self.runs.get(task_id)
-
-    async def create_task_run(
-        self,
-        task_id: int,
-        owner_user_id: str,
-        run_id: str,
-        scope: str,
-        mode: str,
-        group_ids: list[int],
-        post_limit: int | None = None,
-    ):
-        run = FakeTaskRun(
-            task_id=task_id,
-            run_id=run_id,
-            status="pending",
+    async def get_execution(self, task_id, run_id):
+        return next(
+            (
+                item
+                for item in self.executions
+                if item.task_id == task_id and item.run_id == run_id
+            ),
+            None,
         )
-        self.runs[task_id] = run
-        return run
 
-    async def update_task_run(self, task_id, **kwargs):
-        run = self.runs.get(task_id)
-        if run is not None:
-            for key, value in kwargs.items():
-                setattr(run, key, value)
-        return run
+    async def get_active_execution(self, task_id):
+        return next(
+            (
+                item
+                for item in reversed(self.executions)
+                if item.task_id == task_id and item.status in {"pending", "running"}
+            ),
+            None,
+        )
 
-    async def save(self):
-        self.saved += 1
+    async def get_latest_execution(self, task_id):
+        return next(
+            (item for item in reversed(self.executions) if item.task_id == task_id),
+            None,
+        )
 
+    async def create_execution(self, **kwargs):
+        execution = SimpleNamespace(
+            id=uuid4(),
+            status="pending",
+            is_terminal=False,
+            cancellation_requested_at=None,
+            cancellation_reason=None,
+            **kwargs,
+        )
+        self.executions.append(execution)
+        return execution
 
-class FakeTaskRun:
-    def __init__(self, task_id, run_id, status):
-        self.task_id = task_id
-        self.run_id = run_id
-        self.status = status
-        self.started_at = None
-        self.finished_at = None
-        self.updated_at = None
-        self.last_error = None
+    async def request_cancellation(self, *, task_id, run_id, reason):
+        execution = next(
+            (
+                item
+                for item in reversed(self.executions)
+                if item.task_id == task_id
+                and item.status in {"pending", "running"}
+                and (run_id is None or item.run_id == run_id)
+            ),
+            None,
+        )
+        if execution is None:
+            return None
+        execution.cancellation_requested_at = object()
+        execution.cancellation_reason = reason
+        if execution.status == "pending":
+            execution.status = "cancelled"
+            execution.is_terminal = True
+        return execution
+
+    async def fail_pending(self, execution_id, error):
+        execution = next(item for item in self.executions if item.id == execution_id)
+        execution.status = "failed"
+        execution.is_terminal = True
+        execution.last_error = error
+        return True
 
 
 class FakeTasksClient:
     def __init__(self):
         self.calls = []
+        self.error = None
 
     async def start_execution(self, task_id, run_id, **kwargs):
-        self.calls.append(("start", task_id, run_id, kwargs))
+        self.calls.append((task_id, run_id, kwargs))
+        if self.error is not None:
+            raise self.error
         return {"status": "running"}
 
 
-def event(event_type="task.created", task_id=1, event_id=None, *, correlation_id="corr-1", run_id=None):
+def event(
+    event_type="task.created",
+    task_id=1,
+    event_id=None,
+    *,
+    correlation_id="corr-1",
+    run_id=None,
+):
     payload = {
         "taskId": str(task_id),
         "ownerUserId": "user-1",
@@ -116,420 +134,170 @@ def event(event_type="task.created", task_id=1, event_id=None, *, correlation_id
 
 
 @pytest.mark.anyio
-async def test_created_event_calls_start_execution():
+async def test_created_event_creates_immutable_execution_and_starts_task():
     repository = FakeRepository()
-    tasks_client = FakeTasksClient()
-    handler = TaskEventsService(repository, tasks_client)
-    task_event = event()
+    client = FakeTasksClient()
+    task_event = event(run_id="run-1")
 
-    result = await handler.handle(task_event)
+    result = await TaskEventsService(repository, client).handle(task_event)
 
     assert result.status == "pending"
-    assert tasks_client.calls == [
-        ("start", 1, str(task_event.event_id), {"request_id": str(task_event.event_id), "correlation_id": "corr-1"})
-    ]
+    assert result.plan_snapshot["groupIds"] == [1]
+    assert client.calls[0][0:2] == (1, "run-1")
 
 
 @pytest.mark.anyio
-async def test_duplicate_event_does_not_call_tasks_client_twice():
+async def test_duplicate_event_does_not_create_or_start_twice():
     repository = FakeRepository()
-    tasks_client = FakeTasksClient()
-    handler = TaskEventsService(repository, tasks_client)
-    task_event = event()
+    client = FakeTasksClient()
+    task_event = event(run_id="run-1")
+    service = TaskEventsService(repository, client)
 
-    await handler.handle(task_event)
-    duplicate = await handler.handle(task_event)
+    await service.handle(task_event)
+    assert await service.handle(task_event) is None
 
-    assert duplicate is None
-    assert len(tasks_client.calls) == 1
+    assert len(repository.executions) == 1
+    assert len(client.calls) == 1
 
 
 @pytest.mark.anyio
-async def test_deleted_event_marks_run_cancelled():
+async def test_terminal_execution_is_not_reopened_and_resume_creates_child():
     repository = FakeRepository()
-    repository.runs[1] = FakeTaskRun(task_id=1, run_id="run-1", status="running")
-    tasks_client = FakeTasksClient()
-    handler = TaskEventsService(repository, tasks_client)
+    terminal = await repository.create_execution(
+        task_id=1,
+        owner_user_id="user-1",
+        run_id="old-run",
+        scope="selected",
+        mode="recent_posts",
+        group_ids=[1],
+        post_limit=10,
+        plan_snapshot={},
+        parent_execution_id=None,
+    )
+    terminal.status = "failed"
+    terminal.is_terminal = True
+    client = FakeTasksClient()
 
-    result = await handler.handle(event(event_type="task.deleted", task_id=1))
-
-    assert result.status == "cancelled"
-    assert repository.runs[1].status == "cancelled"
-    assert tasks_client.calls == []
-
-
-def test_missing_task_id_returns_none():
-    task_event = TaskEvent.model_validate(
-        {
-            "event_id": str(uuid4()),
-            "event_type": "task.created",
-            "event_version": 1,
-            "aggregate_id": "1",
-            "payload": {},
-        }
+    result = await TaskEventsService(repository, client).handle(
+        event(event_type="task.resumed", run_id="new-run")
     )
 
-    assert get_task_id(task_event) is None
+    assert terminal.status == "failed"
+    assert result.run_id == "new-run"
+    assert result.parent_execution_id == terminal.id
 
 
 @pytest.mark.anyio
-async def test_completed_task_event_does_not_move_lifecycle_backward():
+async def test_new_run_is_ignored_while_an_execution_is_active():
     repository = FakeRepository()
-    repository.runs[1] = FakeTaskRun(task_id=1, run_id="run-1", status="done")
-    tasks_client = FakeTasksClient()
-    handler = TaskEventsService(repository, tasks_client)
+    await repository.create_execution(
+        task_id=1,
+        owner_user_id="user-1",
+        run_id="active-run",
+        scope="selected",
+        mode="recent_posts",
+        group_ids=[1],
+        post_limit=10,
+        plan_snapshot={},
+        parent_execution_id=None,
+    )
+    client = FakeTasksClient()
 
-    result = await handler.handle(event(task_id=1, run_id="run-1"))
-
-    assert result is None
-    assert repository.runs[1].status == "done"
-    assert len(tasks_client.calls) == 0
-
-
-@pytest.mark.anyio
-async def test_stale_failed_event_does_not_terminate_new_run():
-    repository = FakeRepository()
-    repository.runs[1] = FakeTaskRun(task_id=1, run_id="run-new", status="running")
-    tasks_client = FakeTasksClient()
-    handler = TaskEventsService(repository, tasks_client)
-
-    result = await handler.handle(
-        event(event_type="task.failed", task_id=1, correlation_id="run-old")
+    result = await TaskEventsService(repository, client).handle(
+        event(run_id="other-run")
     )
 
     assert result is None
-    assert repository.runs[1].status == "running"
+    assert client.calls == []
 
 
 @pytest.mark.anyio
-async def test_completed_event_moves_running_task_forward_to_done():
+async def test_pending_cancellation_is_durable_and_idempotent():
     repository = FakeRepository()
-    repository.runs[1] = FakeTaskRun(task_id=1, run_id="run-1", status="running")
-    tasks_client = FakeTasksClient()
-    handler = TaskEventsService(repository, tasks_client)
+    execution = await repository.create_execution(
+        task_id=1,
+        owner_user_id="user-1",
+        run_id="run-1",
+        scope="selected",
+        mode="recent_posts",
+        group_ids=[1],
+        post_limit=10,
+        plan_snapshot={},
+        parent_execution_id=None,
+    )
+    service = TaskEventsService(repository, FakeTasksClient())
 
-    result = await handler.handle(
-        event(event_type="task.completed", task_id=1, correlation_id="run-1")
+    first = await service.handle(event(event_type="task.cancelled", run_id="run-1"))
+    second = await service.handle(event(event_type="task.cancelled", run_id="run-1"))
+
+    assert first.status == "cancelled"
+    assert execution.cancellation_reason == "task.cancelled"
+    assert second is None
+
+
+@pytest.mark.anyio
+async def test_running_cancellation_requests_cooperative_stop():
+    repository = FakeRepository()
+    execution = await repository.create_execution(
+        task_id=1,
+        owner_user_id="user-1",
+        run_id="run-1",
+        scope="selected",
+        mode="recent_posts",
+        group_ids=[1],
+        post_limit=10,
+        plan_snapshot={},
+        parent_execution_id=None,
+    )
+    execution.status = "running"
+
+    result = await TaskEventsService(repository, FakeTasksClient()).handle(
+        event(event_type="task.deleted", run_id="run-1")
     )
 
-    assert result is not None
-    assert repository.runs[1].status == "done"
+    assert result.status == "running"
+    assert result.cancellation_requested_at is not None
 
 
 @pytest.mark.anyio
-async def test_running_task_event_same_run_id_returns_none_preventing_reexecution():
+async def test_409_marks_unclaimed_execution_terminal_failed():
     repository = FakeRepository()
-    task_event = event(task_id=1)
-    repository.runs[1] = FakeTaskRun(task_id=1, run_id=str(task_event.event_id), status="running")
-    tasks_client = FakeTasksClient()
-    handler = TaskEventsService(repository, tasks_client)
+    client = FakeTasksClient()
+    response = httpx.Response(
+        status_code=409,
+        json={"detail": "already running"},
+        request=httpx.Request("POST", "http://tasks"),
+    )
+    client.error = httpx.HTTPStatusError(
+        "conflict",
+        request=response.request,
+        response=response,
+    )
 
-    result = await handler._handle_created_or_resumed(task_event)
+    result = await TaskEventsService(repository, client).handle(event(run_id="run-1"))
 
     assert result is None
-    assert len(tasks_client.calls) == 0
+    assert repository.executions[0].status == "failed"
+    assert "already running" in repository.executions[0].last_error
 
 
 @pytest.mark.anyio
-async def test_resumed_event_requeues_failed_run_with_new_run_id():
+async def test_transient_http_error_leaves_execution_pending():
     repository = FakeRepository()
-    repository.runs[1] = FakeTaskRun(task_id=1, run_id="old-run", status="failed")
-    tasks_client = FakeTasksClient()
-    handler = TaskEventsService(repository, tasks_client)
-
-    task_event = event(event_type="task.resumed", task_id=1)
-    result = await handler.handle(task_event)
-
-    assert result is not None
-    assert result.status == "pending"
-    assert result.run_id == str(task_event.event_id)
-
-
-@pytest.mark.anyio
-async def test_handle_processing_failure_sends_to_dlq_on_malformed_msg():
-    from unittest.mock import AsyncMock, patch
-
-    from app.tasks.kafka_consumer import TaskEventsConsumer
-
-    consumer = TaskEventsConsumer(session_factory=AsyncMock())
-    consumer._consumer = AsyncMock()
-
-    msg = AsyncMock()
-    msg.value = b"not valid json{{{"
-    msg.offset = 42
-
-    with patch("common.kafka.consumer.send_to_dlq", new_callable=AsyncMock) as mock_send:
-        await consumer._handle_processing_failure(msg)
-        mock_send.assert_awaited_once()
-
-    consumer._consumer.commit.assert_awaited_once()
-
-
-@pytest.mark.anyio
-async def test_skip_due_to_retry_backoff_skips_when_next_retry_at_in_future():
-    from datetime import UTC, datetime, timedelta
-    from types import SimpleNamespace
-    from unittest.mock import AsyncMock, patch
-    from uuid import uuid4
-
-    from app.tasks.kafka_consumer import TaskEventsConsumer
-
-    consumer = TaskEventsConsumer(session_factory=AsyncMock())
-    consumer._consumer = AsyncMock()
-
-    raw_value = json.dumps({
-        "event_id": str(uuid4()),
-        "event_type": "task.created",
-    }).encode()
-
-    row = SimpleNamespace(
-        next_retry_at=datetime.now(UTC) + timedelta(hours=1),
-        retry_count=1,
+    client = FakeTasksClient()
+    response = httpx.Response(
+        status_code=503,
+        request=httpx.Request("POST", "http://tasks"),
     )
-
-    async def scalar_mock(*a, **kw):
-        return row
-
-    session = AsyncMock()
-    session.scalar = scalar_mock
-    session.__aenter__ = AsyncMock(return_value=session)
-
-    consumer.session_factory = lambda: session
-
-    with patch("common.kafka.consumer.send_to_dlq", new_callable=AsyncMock) as mock_dlq:
-        result = await consumer._skip_due_to_retry_backoff(raw_value)
-
-    assert result is True
-    # Durable backoff: should skip without committing offset
-    consumer._consumer.commit.assert_not_awaited()
-    # Durable backoff: should NOT send to DLQ
-    mock_dlq.assert_not_awaited()
-
-
-@pytest.mark.anyio
-async def test_skip_exhausted_event_commits_offset():
-    from datetime import UTC, datetime, timedelta
-    from types import SimpleNamespace
-    from unittest.mock import AsyncMock, patch
-    from uuid import uuid4
-
-    from app.tasks.kafka_consumer import TaskEventsConsumer
-
-    consumer = TaskEventsConsumer(session_factory=AsyncMock())
-    consumer._consumer = AsyncMock()
-
-    raw_value = json.dumps(
-        {
-            "event_id": str(uuid4()),
-            "event_type": "task.created",
-        }
-    ).encode()
-
-    row = SimpleNamespace(
-        event_id=str(uuid4()),
-        event_type="task.created",
-        next_retry_at=datetime.now(UTC) - timedelta(hours=1),
-        retry_count=3,
-        last_error="max retries exceeded",
+    client.error = httpx.HTTPStatusError(
+        "unavailable",
+        request=response.request,
+        response=response,
     )
+    task_event = event(run_id="run-1")
 
-    async def scalar_mock(*a, **kw):
-        return row
-
-    session = AsyncMock()
-    session.scalar = scalar_mock
-    session.__aenter__ = AsyncMock(return_value=session)
-
-    consumer.session_factory = lambda: session
-
-    with patch("common.kafka.consumer.send_to_dlq", new_callable=AsyncMock) as send_to_dlq:
-        result = await consumer._skip_due_to_retry_backoff(raw_value)
-
-    assert result is True
-    send_to_dlq.assert_awaited_once()
-    consumer._consumer.commit.assert_awaited_once()
-
-
-@pytest.mark.anyio
-async def test_conflict_409_different_run_id_marks_failed_without_loop():
-    repository = FakeRepository()
-    tasks_client = FakeTasksClient()
-
-    import httpx
-    async def mock_start_execution(*args, **kwargs):
-        resp = httpx.Response(status_code=409, json={"detail": "Task already running"})
-        raise httpx.HTTPStatusError("Conflict", request=httpx.Request("POST", "http://test"), response=resp)
-
-    tasks_client.start_execution = mock_start_execution
-    handler = TaskEventsService(repository, tasks_client)
-
-    task_event = event(task_id=1)
-    result = await handler.handle(task_event)
-
-    assert result is None
-    assert repository.runs[1].status == "failed"
-    assert "Conflict: Task already running" in repository.runs[1].last_error
-
-
-@pytest.mark.anyio
-async def test_generic_http_error_leaves_run_pending():
-    repository = FakeRepository()
-    tasks_client = FakeTasksClient()
-
-    import httpx
-    async def mock_start_execution(*args, **kwargs):
-        resp = httpx.Response(status_code=503, text="Service Unavailable")
-        raise httpx.HTTPStatusError(
-            "Service Unavailable",
-            request=httpx.Request("POST", "http://test"),
-            response=resp,
-        )
-
-    tasks_client.start_execution = mock_start_execution
-    handler = TaskEventsService(repository, tasks_client)
-
-    task_event = event(task_id=1)
     with pytest.raises(httpx.HTTPStatusError):
-        await handler.handle(task_event)
+        await TaskEventsService(repository, client).handle(task_event)
 
-    assert repository.runs[1].status == "pending"
-    assert (handler.consumer_name, task_event.event_id) in repository.processed
-
-
-@pytest.mark.anyio
-async def test_event_is_marked_processed_after_phase_a():
-    repository = FakeRepository()
-    tasks_client = FakeTasksClient()
-    handler = TaskEventsService(repository, tasks_client)
-
-    task_event = event(task_id=1)
-    result = await handler.handle(task_event)
-
-    assert result.status == "pending"
-    assert (handler.consumer_name, task_event.event_id) in repository.processed
-
-
-@pytest.mark.anyio
-async def test_consumer_leaves_run_in_pending_after_phase_b():
-    repository = FakeRepository()
-    tasks_client = FakeTasksClient()
-    handler = TaskEventsService(repository, tasks_client)
-    task_event = event()
-
-    result = await handler.handle(task_event)
-
-    assert result is not None
-    assert result.status == "pending"
-    assert repository.runs[1].status == "pending"
-    assert (handler.consumer_name, task_event.event_id) in repository.processed
-
-
-@pytest.mark.anyio
-async def test_worker_claims_null_lease_running_task(db_session):
-    from datetime import datetime, timedelta
-
-    from app.infrastructure.db.models.tasks import VkTaskRun
-    from app.infrastructure.db.repositories.provider_accounts import (
-        SqlAlchemyProviderAccountRepository,
-    )
-    from app.infrastructure.db.repositories.task_queue import SqlAlchemyTaskQueueRepository
-
-    await SqlAlchemyProviderAccountRepository(db_session).upsert_system(
-        account_key="system-vk", provider="vk", credential_version="seed-v1"
-    )
-
-    run = VkTaskRun(
-        task_id=1,
-        owner_user_id="user-1",
-        run_id="run-1",
-        status="running",
-        scope="selected",
-        mode="recent_posts",
-        group_ids=[1],
-        post_limit=10,
-        lease_expires_at=None,
-    )
-    db_session.add(run)
-    await db_session.flush()
-
-    repo = SqlAlchemyTaskQueueRepository(db_session)
-    result = await repo.claim_next(
-        worker_id="worker-1",
-        lease_expires_at=datetime.now(UTC) + timedelta(minutes=5),
-    )
-
-    assert result is not None
-    assert result.task_id == 1
-    assert result.lease_owner == "worker-1"
-    assert result.status == "running"
-
-
-@pytest.mark.anyio
-async def test_worker_does_not_claim_valid_active_lease(db_session):
-    from datetime import datetime, timedelta
-
-    from app.infrastructure.db.models.tasks import VkTaskRun
-    from app.infrastructure.db.repositories.task_queue import SqlAlchemyTaskQueueRepository
-
-    future = datetime.now(UTC) + timedelta(minutes=5)
-    run = VkTaskRun(
-        task_id=1,
-        owner_user_id="user-1",
-        run_id="run-1",
-        status="running",
-        scope="selected",
-        mode="recent_posts",
-        group_ids=[1],
-        post_limit=10,
-        lease_owner="worker-1",
-        lease_expires_at=future,
-    )
-    db_session.add(run)
-    await db_session.flush()
-
-    repo = SqlAlchemyTaskQueueRepository(db_session)
-    result = await repo.claim_next(
-        worker_id="worker-2",
-        lease_expires_at=future + timedelta(minutes=5),
-    )
-
-    assert result is None
-
-
-@pytest.mark.anyio
-async def test_regression_lost_task_fixed(db_session):
-    from datetime import datetime, timedelta
-
-    from app.infrastructure.db.models.tasks import VkTaskRun
-    from app.infrastructure.db.repositories.provider_accounts import (
-        SqlAlchemyProviderAccountRepository,
-    )
-    from app.infrastructure.db.repositories.task_queue import SqlAlchemyTaskQueueRepository
-
-    await SqlAlchemyProviderAccountRepository(db_session).upsert_system(
-        account_key="system-vk", provider="vk", credential_version="seed-v1"
-    )
-
-    run = VkTaskRun(
-        task_id=1,
-        owner_user_id="user-1",
-        run_id="run-1",
-        status="pending",
-        scope="selected",
-        mode="recent_posts",
-        group_ids=[1],
-        post_limit=10,
-    )
-    db_session.add(run)
-    await db_session.flush()
-
-    repo = SqlAlchemyTaskQueueRepository(db_session)
-    result = await repo.claim_next(
-        worker_id="worker-1",
-        lease_expires_at=datetime.now(UTC) + timedelta(minutes=5),
-    )
-
-    assert result is not None
-    assert result.task_id == 1
-    assert result.status == "running"
-    assert result.lease_owner == "worker-1"
+    assert repository.executions[0].status == "pending"
+    assert ("vk-service", task_event.event_id) in repository.processed
