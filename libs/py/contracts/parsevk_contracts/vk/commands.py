@@ -10,13 +10,9 @@ from pydantic import Field, StringConstraints, field_validator, model_validator
 from parsevk_contracts._base import ContractModel
 from parsevk_contracts.catalog import ContractCatalog, MessageContract, PartitionKeySpec
 
-# ── Type aliases ──────────────────────────────────────────────────────────────
-
 Sha256Hex = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{64}$")]
 NegativeOwnerId = Annotated[int, Field(lt=0)]
 PositiveExternalId = Annotated[str, StringConstraints(pattern=r"^[1-9][0-9]*$")]
-
-# ── Models ────────────────────────────────────────────────────────────────────
 
 
 class SourceReference(ContractModel):
@@ -68,12 +64,11 @@ class CommentSelection(ContractModel):
 
 
 class VkExecutionRequested(ContractModel):
-    """Command payload: request VK execution for one or more sources."""
+    """Version 1 command payload retained unchanged for compatibility."""
 
     task_id: Annotated[int, Field(gt=0)]
     task_run_id: UUID
     execution_id: UUID
-    owner_user_id: str | None = None
     demands: Annotated[tuple[VkSourceDemandRequest, ...], Field(min_length=1)]
     post_selection: PostSelection
     comment_selection: CommentSelection
@@ -83,7 +78,6 @@ class VkExecutionRequested(ContractModel):
 
     @model_validator(mode="after")
     def validate_unique_demand_ids(self) -> Self:
-        """All demand_ids must be unique within a single request."""
         demand_ids = [d.demand_id for d in self.demands]
         if len(demand_ids) != len(set(demand_ids)):
             raise ValueError("Duplicate demand_id found in demands")
@@ -91,28 +85,45 @@ class VkExecutionRequested(ContractModel):
 
     @model_validator(mode="after")
     def validate_unique_source_ids(self) -> Self:
-        """All source_ids must be unique within a single request."""
         source_ids = [d.source.source_id for d in self.demands]
         if len(source_ids) != len(set(source_ids)):
             raise ValueError("Duplicate source_id found in demands")
         return self
 
 
-# ── Contract definition ────────────────────────────────────────────────────────
+class VkExecutionRequestedV2(VkExecutionRequested):
+    """Owner-attributed command payload used by the active runtime."""
 
+    owner_user_id: Annotated[str, StringConstraints(min_length=1)]
+
+
+_COMMON_CONTRACT = {
+    "message_type": "vk.execution.requested",
+    "topic": "parsevk.vk.commands",
+    "producers": frozenset({"tasks-service"}),
+    "consumers": frozenset({"vk-service"}),
+    "partition_key": PartitionKeySpec(paths=("payload.executionId",)),
+    "correlation_required": True,
+    "correlation_path": "payload.executionId",
+    "causation_policy": "forbidden",
+    "compatibility": "backward",
+}
 
 VK_EXECUTION_REQUESTED = MessageContract(
-    message_type="vk.execution.requested",
     schema_version=1,
     payload_model=VkExecutionRequested,
-    topic="parsevk.vk.commands",
-    producers=frozenset({"tasks-service"}),
-    consumers=frozenset({"vk-service"}),
-    partition_key=PartitionKeySpec(paths=("payload.executionId",)),
-    correlation_required=True,
-    correlation_path="payload.executionId",
-    causation_policy="forbidden",
-    compatibility="backward",
+    **_COMMON_CONTRACT,
 )
 
-CATALOG = ContractCatalog.from_contracts((VK_EXECUTION_REQUESTED,))
+VK_EXECUTION_REQUESTED_V2 = MessageContract(
+    schema_version=2,
+    payload_model=VkExecutionRequestedV2,
+    **_COMMON_CONTRACT,
+)
+
+CATALOG = ContractCatalog.from_contracts(
+    (
+        VK_EXECUTION_REQUESTED,
+        VK_EXECUTION_REQUESTED_V2,
+    )
+)
