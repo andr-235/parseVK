@@ -19,8 +19,8 @@ class Settings(BaseSettings):
     kafka_topic_vk_commands_dlq: str = "parsevk.vk.commands.dlq"
     kafka_topic_vk: str = "parsevk.vk.events"
     kafka_consumer_enabled: bool = False
-    vk_commands_consumer_enabled: bool = False
-    legacy_task_events_enabled: bool = True
+    vk_commands_consumer_enabled: bool = True
+    legacy_task_events_enabled: bool = False
     outbox_publish_enabled: bool = False
     task_worker_enabled: bool = True
     vk_batch_events_enabled: bool = True
