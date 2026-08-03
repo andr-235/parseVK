@@ -34,8 +34,17 @@ def _as_utc(value: datetime | None) -> datetime | None:
 
 def _group_ids(value) -> list[int]:
     if isinstance(value, str):
-        return [int(item) for item in json.loads(value)]
-    return [int(item) for item in (value or [])]
+        serialized = value
+    elif (
+        isinstance(value, list)
+        and value
+        and value[0] == "["
+        and value[-1] == "]"
+    ):
+        serialized = "".join(value)
+    else:
+        return [int(item) for item in (value or [])]
+    return [int(item) for item in json.loads(serialized)]
 
 
 def _execution_entity(model: VkExecution) -> execution_entities.VkExecution:
