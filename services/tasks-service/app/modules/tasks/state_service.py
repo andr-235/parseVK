@@ -35,11 +35,13 @@ class TaskStateService:
         repository: TasksRepository,
         outbox: OutboxService,
         freezer=freeze_task_run,
+        command_publisher=add_vk_execution_command,
     ):
         self.session = session
         self.repository = repository
         self.outbox = outbox
         self.freezer = freezer
+        self.command_publisher = command_publisher
 
     async def resume_task(
         self,
@@ -101,7 +103,7 @@ class TaskStateService:
             dedupe_key=f"task.resumed:{task.id}:{task.execution_run_id}",
             payload=task_request_payload(task, owner_user_id, run_meta),
         )
-        await add_vk_execution_command(
+        await self.command_publisher(
             self.session,
             self.outbox,
             task,
