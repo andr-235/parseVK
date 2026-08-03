@@ -452,7 +452,7 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Download commit review plan
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ai-review-plan-${{ github.run_id }}
           path: .ai-review-runtime
@@ -460,7 +460,7 @@ jobs:
       - name: Download validated commit results
         if: needs.plan.outputs.count != '0'
         continue-on-error: true
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: ai-review-commit-${{ github.run_id }}-*
           path: .ai-review-runtime/commit-results
@@ -555,7 +555,7 @@ jobs:
       - name: Download validated result
         id: result
         continue-on-error: true
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ai-review-result-${{ github.run_id }}
           path: .ai-review-runtime
