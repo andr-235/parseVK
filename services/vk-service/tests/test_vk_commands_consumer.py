@@ -85,7 +85,6 @@ def execution_value():
     prepared = prepare_for_publish(
         VK_COMMAND_CATALOG,
         message_type="vk.execution.requested",
-        schema_version=1,
         producer="tasks-service",
         message_id=uuid4(),
         occurred_at=datetime.now(UTC),
@@ -107,7 +106,6 @@ def cancellation_value(command: VkExecutionRequested):
     prepared = prepare_for_publish(
         VK_COMMAND_CATALOG,
         message_type="vk.execution.cancel_requested",
-        schema_version=1,
         producer="tasks-service",
         message_id=uuid4(),
         occurred_at=datetime.now(UTC),
@@ -115,7 +113,7 @@ def cancellation_value(command: VkExecutionRequested):
         causation_id=None,
         payload=cancellation.model_dump(mode="python"),
     )
-    return prepared.value
+    return cancellation, prepared.value
 
 
 @pytest.mark.asyncio
@@ -150,8 +148,7 @@ async def test_valid_command_attaches_source_demands_directly(monkeypatch):
 
     await VkExecutionCommandsConsumer(session_factory=session_factory).handle_message(value)
 
-    repository.attach_command.assert_awaited_once()
-    assert repository.attach_command.await_args.args[0] == command
+    repository.attach_command.assert_awaited_once_with(command)
     repository.emit_rejection.assert_not_awaited()
     inbox.mark_processed.assert_awaited_once()
 
@@ -178,17 +175,45 @@ async def test_cancellation_command_uses_canonical_repository(monkeypatch):
         lambda session: repository,
     )
     command, _ = execution_value()
+    cancellation, value = cancellation_value(command)
 
-    await VkExecutionCommandsConsumer(session_factory=session_factory).handle_message(
-        cancellation_value(command)
-    )
+    await VkExecutionCommandsConsumer(session_factory=session_factory).handle_message(value)
 
-    repository.request_cancellation.assert_awaited_once_with(
-        task_id=command.task_id,
-        run_id=str(command.task_run_id),
-        reason="user_cancelled",
-    )
+    repository.request_cancellation.assert_awaited_once_with(cancellation)
     repository.attach_command.assert_not_awaited()
+    inbox.mark_processed.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_orphan_cancellation_is_retried_not_marked_processed(monkeypatch):
+    inbox = SimpleNamespace(
+        is_processed=AsyncMock(return_value=False),
+        mark_processed=AsyncMock(),
+    )
+    repository = SimpleNamespace(
+        attach_command=AsyncMock(),
+        emit_rejection=AsyncMock(),
+        request_cancellation=AsyncMock(return_value=None),
+    )
+    monkeypatch.setattr(
+        consumer_module,
+        "SqlAlchemyTaskEventsRepository",
+        lambda session: inbox,
+    )
+    monkeypatch.setattr(
+        consumer_module,
+        "CanonicalVkCommandRepository",
+        lambda session: repository,
+    )
+    command, _ = execution_value()
+    _, value = cancellation_value(command)
+
+    with pytest.raises(RuntimeError, match="no matching TaskRun binding"):
+        await VkExecutionCommandsConsumer(session_factory=session_factory).handle_message(
+            value
+        )
+
+    inbox.mark_processed.assert_not_awaited()
 
 
 @pytest.mark.asyncio
