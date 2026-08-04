@@ -7,7 +7,7 @@ from parsevk_contracts.validation import parse_for_consume
 from parsevk_contracts.vk.commands import CATALOG as VK_COMMAND_CATALOG
 from parsevk_contracts.vk.commands import (
     VkExecutionCancelRequested,
-    VkExecutionRequested,
+    VkExecutionRequestedV2,
 )
 from prometheus_client import REGISTRY, Gauge
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -78,7 +78,7 @@ class VkExecutionCommandsConsumer(BaseEventConsumer):
                     parsed.envelope.message_id,
                 ):
                     return
-                if isinstance(command, VkExecutionRequested):
+                if isinstance(command, VkExecutionRequestedV2):
                     result = await repository.attach_command(command)
                     outcome = result.outcome
                     attachments = result.attachments
@@ -96,7 +96,7 @@ class VkExecutionCommandsConsumer(BaseEventConsumer):
                     outcome = "cancelled" if cancelled is not None else "not_found"
                 else:
                     raise TypeError(
-                        "VK command resolved to an unexpected payload model"
+                        "vk-service accepts vk.execution.requested only as schema v2"
                     )
                 await inbox.mark_processed(
                     self.consumer_name,
