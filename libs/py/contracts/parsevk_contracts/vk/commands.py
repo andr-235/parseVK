@@ -16,7 +16,7 @@ PositiveExternalId = Annotated[str, StringConstraints(pattern=r"^[1-9][0-9]*$")]
 
 
 class SourceReference(ContractModel):
-    """Reference to a VK community source."""
+    """Reference to one VK community source."""
 
     source_id: UUID
     provider: Literal["vk"]
@@ -26,7 +26,6 @@ class SourceReference(ContractModel):
 
     @model_validator(mode="after")
     def validate_vk_identity(self) -> Self:
-        """VK community ownerId must equal negative externalId."""
         if self.owner_id != -int(self.external_id):
             raise ValueError(
                 "VK community ownerId must equal negative externalId: "
@@ -36,22 +35,18 @@ class SourceReference(ContractModel):
 
 
 class VkSourceDemandRequest(ContractModel):
-    """A single source collection demand within an execution request."""
+    """A single immutable source demand within an execution request."""
 
     demand_id: UUID
     source: SourceReference
 
 
 class PostSelection(ContractModel):
-    """Post collection strategy."""
-
     strategy: Literal["latestByPublishedAt"]
     limit_per_source: Annotated[int, Field(ge=1, le=100)]
 
 
 class CommentSelection(ContractModel):
-    """Comment collection strategy."""
-
     mode: Literal["all"]
     include_thread_replies: Literal[True]
 
@@ -64,11 +59,12 @@ class CommentSelection(ContractModel):
 
 
 class VkExecutionRequested(ContractModel):
-    """Command payload: request VK execution for one or more sources."""
+    """Canonical command for one immutable TaskRun and its source demands."""
 
     task_id: Annotated[int, Field(gt=0)]
     task_run_id: UUID
     execution_id: UUID
+    owner_user_id: Annotated[str, StringConstraints(min_length=1)]
     demands: Annotated[tuple[VkSourceDemandRequest, ...], Field(min_length=1)]
     post_selection: PostSelection
     comment_selection: CommentSelection
@@ -77,29 +73,29 @@ class VkExecutionRequested(ContractModel):
     snapshot_sha256: Sha256Hex
 
     @model_validator(mode="after")
-    def validate_unique_demand_ids(self) -> Self:
-        demand_ids = [d.demand_id for d in self.demands]
+    def validate_unique_demands_and_sources(self) -> Self:
+        demand_ids = [demand.demand_id for demand in self.demands]
         if len(demand_ids) != len(set(demand_ids)):
             raise ValueError("Duplicate demand_id found in demands")
-        return self
-
-    @model_validator(mode="after")
-    def validate_unique_source_ids(self) -> Self:
-        source_ids = [d.source.source_id for d in self.demands]
+        source_ids = [demand.source.source_id for demand in self.demands]
         if len(source_ids) != len(set(source_ids)):
             raise ValueError("Duplicate source_id found in demands")
         return self
 
 
-class VkExecutionRequestedV2(VkExecutionRequested):
-    """Owner-attributed command payload used by the canonical rollout."""
+class VkExecutionCancelRequested(ContractModel):
+    """Canonical cancellation command for one immutable TaskRun."""
 
+    task_id: Annotated[int, Field(gt=0)]
+    task_run_id: UUID
+    execution_id: UUID
     owner_user_id: Annotated[str, StringConstraints(min_length=1)]
+    reason: Annotated[str, StringConstraints(min_length=1, max_length=2000)]
 
 
 VK_EXECUTION_REQUESTED = MessageContract(
     message_type="vk.execution.requested",
-    schema_version=1,
+    schema_version=2,
     payload_model=VkExecutionRequested,
     topic="parsevk.vk.commands",
     producers=frozenset({"tasks-service"}),
@@ -108,13 +104,13 @@ VK_EXECUTION_REQUESTED = MessageContract(
     correlation_required=True,
     correlation_path="payload.executionId",
     causation_policy="forbidden",
-    compatibility="backward",
+    compatibility="none",
 )
 
-VK_EXECUTION_REQUESTED_V2 = MessageContract(
-    message_type="vk.execution.requested",
-    schema_version=2,
-    payload_model=VkExecutionRequestedV2,
+VK_EXECUTION_CANCEL_REQUESTED = MessageContract(
+    message_type="vk.execution.cancel_requested",
+    schema_version=1,
+    payload_model=VkExecutionCancelRequested,
     topic="parsevk.vk.commands",
     producers=frozenset({"tasks-service"}),
     consumers=frozenset({"vk-service"}),
@@ -122,12 +118,12 @@ VK_EXECUTION_REQUESTED_V2 = MessageContract(
     correlation_required=True,
     correlation_path="payload.executionId",
     causation_policy="forbidden",
-    compatibility="backward",
+    compatibility="none",
 )
 
 CATALOG = ContractCatalog.from_contracts(
     (
         VK_EXECUTION_REQUESTED,
-        VK_EXECUTION_REQUESTED_V2,
+        VK_EXECUTION_CANCEL_REQUESTED,
     )
 )
