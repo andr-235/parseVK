@@ -8,7 +8,7 @@ from parsevk_contracts.vk.commands import (
     CommentSelection,
     PostSelection,
     SourceReference,
-    VkExecutionRequestedV2,
+    VkExecutionRequested,
     VkSourceDemandRequest,
 )
 from sqlalchemy import select
@@ -23,7 +23,7 @@ VK_EXECUTION_REQUESTED_VERSION = 2
 
 
 def execution_id_for_run(task_run_id: UUID) -> UUID:
-    """Return a stable VK execution id for one immutable TaskRun."""
+    """Return a stable command execution id for one immutable TaskRun."""
     return uuid5(NAMESPACE_URL, f"parsevk:vk-execution:{task_run_id}")
 
 
@@ -31,7 +31,7 @@ async def build_vk_execution_requested(
     session: AsyncSession,
     task: Task,
     task_run_id: UUID,
-) -> VkExecutionRequestedV2:
+) -> VkExecutionRequested:
     run = await session.get(TaskRun, task_run_id)
     if run is None or run.task_id != task.id:
         raise RuntimeError(
@@ -77,7 +77,7 @@ async def build_vk_execution_requested(
         raise RuntimeError(f"TaskRun {task_run_id} has invalid task revision")
 
     execution_id = execution_id_for_run(task_run_id)
-    return VkExecutionRequestedV2(
+    return VkExecutionRequested(
         task_id=task.id,
         task_run_id=task_run_id,
         execution_id=execution_id,
@@ -102,7 +102,7 @@ async def add_vk_execution_command(
     outbox: OutboxService,
     task: Task,
     run_meta: dict | None,
-) -> VkExecutionRequestedV2 | None:
+) -> VkExecutionRequested | None:
     """Append the canonical command in the active task transaction."""
     if not settings.vk_commands_publish_enabled:
         return None
@@ -120,7 +120,7 @@ async def add_vk_execution_command(
         aggregate_type="vk_execution",
         aggregate_id=execution_id,
         correlation_id=execution_id,
-        dedupe_key=f"{VK_EXECUTION_REQUESTED}:v2:{execution_id}",
+        dedupe_key=f"{VK_EXECUTION_REQUESTED}:{execution_id}",
         payload=command.to_wire(),
     )
     return command
