@@ -103,9 +103,8 @@ class TestCanonicalPayload:
 
 class TestCatalogAndProducer:
     def test_contract_registration_and_partition_key(self) -> None:
-        contract = CATALOG.get("vk.execution.requested", 1)
+        contract = CATALOG.get("vk.execution.requested")
         assert contract is VK_EXECUTION_REQUESTED
-        assert contract.compatibility == "none"
         value = payload()
         assert contract.partition_key is not None
         assert contract.partition_key.compute(value) == str(value.execution_id)
@@ -115,7 +114,6 @@ class TestCatalogAndProducer:
         prepared = prepare_for_publish(
             CATALOG,
             message_type="vk.execution.requested",
-            schema_version=1,
             producer="tasks-service",
             message_id=uuid4(),
             occurred_at=datetime.now(UTC),
@@ -131,7 +129,6 @@ class TestCatalogAndProducer:
             prepare_for_publish(
                 CATALOG,
                 message_type="vk.execution.requested",
-                schema_version=1,
                 producer="tasks-service",
                 message_id=uuid4(),
                 occurred_at=datetime.now(UTC),
@@ -145,7 +142,6 @@ class TestCatalogAndProducer:
         envelope = MessageEnvelope[VkExecutionRequested](
             message_id=uuid4(),
             message_type="vk.execution.requested",
-            schema_version=1,
             occurred_at=datetime.now(UTC),
             producer="tasks-service",
             correlation_id=value.execution_id,
