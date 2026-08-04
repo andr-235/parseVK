@@ -8,10 +8,10 @@ from pathlib import Path
 FIXTURES_DIR = Path(__file__).resolve().parent.parent / "examples"
 
 
-def load_fixture(message_type: str, schema_version: int, case: str) -> dict[str, object]:
-    """Load a JSON fixture by message_type, version, and case name."""
-    path = FIXTURES_DIR / message_type / f"v{schema_version}" / f"{case}.json"
+def load_fixture(message_type: str, case: str) -> dict[str, object]:
+    """Load one unversioned JSON fixture by semantic message type."""
+    path = FIXTURES_DIR / message_type / f"{case}.json"
     if not path.exists():
         raise FileNotFoundError(f"Fixture not found: {path}")
-    with open(path) as f:
-        return json.load(f)
+    with open(path) as file:
+        return json.load(file)
