@@ -3,7 +3,7 @@ import logging
 
 from common.events import TaskEvent
 from common.kafka.consumer import BaseEventConsumer
-from prometheus_client import Gauge, REGISTRY
+from prometheus_client import REGISTRY, Gauge
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.bootstrap import get_task_events_handler
