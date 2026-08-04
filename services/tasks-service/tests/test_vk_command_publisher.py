@@ -127,7 +127,7 @@ async def test_publisher_emits_canonical_envelope_and_partition_key():
         topic=call.args[0],
         value=call.kwargs["value"],
     )
-    assert parsed.envelope.schema_version == 1
+    assert "schemaVersion" not in parsed.envelope.to_wire()
     assert parsed.envelope.message_id == message.id
     assert parsed.envelope.correlation_id == execution_id
     assert parsed.envelope.payload.execution_id == execution_id
