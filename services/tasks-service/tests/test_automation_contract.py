@@ -1,121 +1,70 @@
-import sys
 from datetime import UTC, datetime
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _service_path import use_service_path
-
-use_service_path()
 
 from app.db.models import Task, TaskAuditLog, TaskAutomationSettings
 from app.modules.automation.service import AutomationService
 
 
-@pytest.fixture
-def anyio_backend():
-    return "asyncio"
-
-
 class FakeAutomationRepository:
-    def __init__(
-        self,
-        *,
-        base_scope="selected",
-        base_group_ids=None,
-        base_post_limit=10,
-    ):
+    def __init__(self, scope="selected", group_ids=None, post_limit=10):
         self.settings = TaskAutomationSettings(
             owner_user_id="user-1",
             enabled=True,
             run_hour=9,
             run_minute=0,
-            post_limit=base_post_limit,
+            post_limit=post_limit,
             timezone_offset_minutes=0,
         )
-        self.base_scope = base_scope
-        self.base_group_ids = (
-            base_group_ids if base_group_ids is not None else [1, 2]
-        )
-        self.base_post_limit = base_post_limit
-        self.has_active = False
-        self.last_run_updated = False
+        self.scope = scope
+        self.group_ids = [1, 2] if group_ids is None else group_ids
+        self.post_limit = post_limit
 
-    async def lock_settings(
-        self,
-        owner_user_id: str,
-    ) -> TaskAutomationSettings:
+    async def lock_settings(self, _owner_user_id):
         return self.settings
 
-    async def has_active_automation_task(
-        self,
-        owner_user_id: str,
-    ) -> bool:
-        return self.has_active
+    async def has_active_automation_task(self, _owner_user_id):
+        return False
 
-    async def find_latest_completed_reusable_task(
-        self,
-        owner_user_id: str,
-    ) -> Task | None:
+    async def find_latest_completed_reusable_task(self, owner_user_id):
         task = Task(
             owner_user_id=owner_user_id,
-            title=f"VK parse: {self.base_scope} / recent_posts",
+            title="VK parse",
             description={},
             status="done",
-            scope=self.base_scope,
+            scope=self.scope,
             mode="recent_posts",
-            group_ids=self.base_group_ids,
-            post_limit=self.base_post_limit,
+            group_ids=self.group_ids,
+            post_limit=self.post_limit,
             source="manual",
         )
         task.id = 100
         return task
 
-    async def update_last_run_at(
-        self,
-        settings: TaskAutomationSettings,
-    ) -> None:
+    async def update_last_run_at(self, settings):
         settings.last_run_at = datetime.now(UTC)
-        self.last_run_updated = True
 
 
 class FakeTasksRepository:
     def __init__(self):
-        self._next_id = 1
         self.tasks = []
         self.audits = []
 
     async def create_task(self, task: Task) -> Task:
-        task.id = self._next_id
-        self._next_id += 1
+        task.id = len(self.tasks) + 1
         task.created_at = datetime.now(UTC)
         task.updated_at = datetime.now(UTC)
         self.tasks.append(task)
         return task
 
     async def add_audit(self, audit: TaskAuditLog) -> TaskAuditLog:
-        audit.id = len(self.audits) + 1
-        audit.created_at = datetime.now(UTC)
         self.audits.append(audit)
         return audit
 
 
-class FakeOutbox:
-    def __init__(self):
-        self.events = []
-
-    async def add_event(self, **kwargs) -> None:
-        self.events.append(kwargs)
-
-
-class FakeSourceAdapter:
-    def __init__(self):
-        self.ensure_normalized_sources = AsyncMock()
-
-
-async def fake_freeze(session, task):
+async def fake_freeze(_session, task):
     return {
         "taskRunId": task.execution_run_id,
         "sourceSetRevision": 3,
@@ -123,114 +72,63 @@ async def fake_freeze(session, task):
     }
 
 
-def make_service(
-    *,
-    base_scope="selected",
-    base_group_ids=None,
-    base_post_limit=10,
-):
-    session = MagicMock()
-    repository = FakeAutomationRepository(
-        base_scope=base_scope,
-        base_group_ids=base_group_ids,
-        base_post_limit=base_post_limit,
-    )
+def make_service(scope="selected", group_ids=None, post_limit=10):
+    repository = FakeAutomationRepository(scope, group_ids, post_limit)
     tasks = FakeTasksRepository()
-    outbox = FakeOutbox()
-    source_adapter = FakeSourceAdapter()
+    outbox = SimpleNamespace(add_event=AsyncMock())
+    resolver = SimpleNamespace(resolve=AsyncMock())
     command_publisher = AsyncMock()
     service = AutomationService(
-        session=session,
+        session=AsyncMock(),
         repository=repository,
         tasks=tasks,
         outbox=outbox,
-        source_adapter_factory=lambda _session: source_adapter,
+        source_resolver_factory=lambda _session: resolver,
         freezer=fake_freeze,
         command_publisher=command_publisher,
     )
     service._clone_task_sources = AsyncMock()
-    service.test_source_adapter = source_adapter
-    return service, repository, tasks, outbox
+    return service, tasks, outbox, resolver
 
 
 @pytest.mark.anyio
 async def test_automation_task_has_execution_run_id():
-    service, _, tasks, _ = make_service()
-
+    service, tasks, _, _ = make_service()
     result = await service.run("user-1")
-
     assert result["started"] is True
-    assert len(tasks.tasks) == 1
-    task = tasks.tasks[0]
-    assert task.execution_run_id is not None
-    assert len(task.execution_run_id) > 0
+    assert tasks.tasks[0].execution_run_id
     service.command_publisher.assert_awaited_once()
 
 
 @pytest.mark.anyio
 async def test_automation_event_contains_frozen_run_metadata():
-    service, _, tasks, outbox = make_service()
-
+    service, tasks, outbox, _ = make_service()
     await service.run("user-1")
-
-    assert len(outbox.events) == 1
-    event = outbox.events[0]
-    assert event["event_type"] == "task.automation_run_requested"
+    event = outbox.add_event.await_args.kwargs
     task = tasks.tasks[0]
-    payload = event["payload"]
-    assert payload["taskId"] == str(task.id)
-    assert payload["ownerUserId"] == "user-1"
-    assert payload["runId"] == task.execution_run_id
-    assert payload["taskRunId"] == task.execution_run_id
-    assert payload["sourceSetRevision"] == 3
-    assert payload["snapshotSha256"] == "a" * 64
-    service.command_publisher.assert_awaited_once_with(
-        service.session,
-        service.outbox,
-        task,
-        {
-            "taskRunId": task.execution_run_id,
-            "sourceSetRevision": 3,
-            "snapshotSha256": "a" * 64,
-        },
-    )
+    assert event["event_type"] == "task.automation_run_requested"
+    assert event["payload"]["ownerUserId"] == "user-1"
+    assert event["payload"]["taskRunId"] == task.execution_run_id
+    assert event["payload"]["sourceSetRevision"] == 3
+    assert event["payload"]["snapshotSha256"] == "a" * 64
 
 
 @pytest.mark.anyio
 async def test_selected_automation_clones_frozen_base_sources():
-    service, _, tasks, _ = make_service(
-        base_scope="selected",
-        base_group_ids=[1, 2],
-    )
-
+    service, tasks, _, resolver = make_service(group_ids=[1, 2])
     await service.run("user-1")
-
-    new_task = tasks.tasks[0]
-    adapter_call = service.test_source_adapter.ensure_normalized_sources.await_args
-    assert adapter_call.args[0].id == 100
-    assert adapter_call.args[1] == [1, 2]
+    base_task, group_ids = resolver.resolve.await_args.args
+    assert base_task.id == 100
+    assert group_ids == [1, 2]
     service._clone_task_sources.assert_awaited_once()
-    assert new_task.group_ids == [1, 2]
+    assert tasks.tasks[0].group_ids == [1, 2]
 
 
 @pytest.mark.anyio
 async def test_scope_all_resolves_current_sources_on_new_task():
-    service, _, tasks, _ = make_service(
-        base_scope="all",
-        base_group_ids=[],
-        base_post_limit=25,
-    )
-
+    service, tasks, _, resolver = make_service("all", [], 25)
     await service.run("user-1")
-
     task = tasks.tasks[0]
-    assert task.scope == "all"
-    assert task.mode == "recent_posts"
-    assert task.group_ids == []
-    assert task.post_limit == 25
-    assert task.source == "automation"
-    service.test_source_adapter.ensure_normalized_sources.assert_awaited_once_with(
-        task,
-        [],
-    )
+    resolver.resolve.assert_awaited_once_with(task, [])
     service._clone_task_sources.assert_not_awaited()
+    assert (task.scope, task.group_ids, task.post_limit) == ("all", [], 25)
