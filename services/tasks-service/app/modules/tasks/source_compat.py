@@ -37,16 +37,19 @@ class SourceCompatAdapter:
         attempts never reread a mutable active-source set.
         """
         if task.scope == "all":
-            sources = await self.sources_repo.list_active_sources()
+            sources = await self.sources_repo.list_active_sources(
+                task.owner_user_id
+            )
             if not sources:
                 raise RuntimeError(
-                    "scope=all cannot be frozen because no active VK sources exist"
+                    "scope=all cannot be frozen because the owner has no active VK sources"
                 )
             for source in sources:
                 await self.sources_repo.link_task_source(task.id, source.id)
             logger.debug(
-                "Resolved scope=all task sources: task=%s count=%d",
+                "Resolved scope=all task sources: task=%s owner=%s count=%d",
                 task.id,
+                task.owner_user_id,
                 len(sources),
             )
             return
