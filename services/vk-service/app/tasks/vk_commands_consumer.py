@@ -1,4 +1,4 @@
-"""Kafka consumer for canonical VK execution commands."""
+"""Kafka consumer for the single canonical VK command stream."""
 
 import logging
 
@@ -82,12 +82,11 @@ class VkExecutionCommandsConsumer(BaseEventConsumer):
                             result.reason or "canonical command conflict",
                         )
                 elif isinstance(command, VkExecutionCancelRequested):
-                    cancelled = await repository.request_cancellation(
-                        task_id=command.task_id,
-                        run_id=str(command.task_run_id),
-                        reason=command.reason,
-                    )
-                    outcome = "cancelled" if cancelled is not None else "not_found"
+                    cancelled = await repository.request_cancellation(command)
+                    if cancelled is None:
+                        raise RuntimeError(
+                            "canonical cancellation has no matching TaskRun binding"
+                        )
                 else:
                     raise TypeError("Unexpected VK command payload")
                 await inbox.mark_processed(
