@@ -1,4 +1,4 @@
-"""Build and persist the canonical VK execution command for one TaskRun."""
+"""Build and persist canonical VK commands for immutable TaskRuns."""
 
 from __future__ import annotations
 
@@ -8,18 +8,20 @@ from parsevk_contracts.vk.commands import (
     CommentSelection,
     PostSelection,
     SourceReference,
+    VkExecutionCancelRequested,
     VkExecutionRequested,
     VkSourceDemandRequest,
 )
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.db.models import Task, TaskRun, TaskRunSourceDemand
 from app.modules.outbox.service import OutboxService
 
 VK_EXECUTION_REQUESTED = "vk.execution.requested"
 VK_EXECUTION_REQUESTED_VERSION = 2
+VK_EXECUTION_CANCEL_REQUESTED = "vk.execution.cancel_requested"
+VK_EXECUTION_CANCEL_REQUESTED_VERSION = 1
 
 
 def execution_id_for_run(task_run_id: UUID) -> UUID:
@@ -102,10 +104,8 @@ async def add_vk_execution_command(
     outbox: OutboxService,
     task: Task,
     run_meta: dict | None,
-) -> VkExecutionRequested | None:
-    """Append the canonical command in the active task transaction."""
-    if not settings.vk_commands_publish_enabled:
-        return None
+) -> VkExecutionRequested:
+    """Append the canonical execution command in the active task transaction."""
     if not run_meta or not run_meta.get("taskRunId"):
         raise RuntimeError(
             f"Task {task.id} cannot publish VK command without a TaskRun"
@@ -121,6 +121,38 @@ async def add_vk_execution_command(
         aggregate_id=execution_id,
         correlation_id=execution_id,
         dedupe_key=f"{VK_EXECUTION_REQUESTED}:{execution_id}",
+        payload=command.to_wire(),
+    )
+    return command
+
+
+async def add_vk_execution_cancel_command(
+    outbox: OutboxService,
+    task: Task,
+    *,
+    reason: str,
+) -> VkExecutionCancelRequested:
+    """Append the canonical cancellation command for the active TaskRun."""
+    if not task.execution_run_id:
+        raise RuntimeError(
+            f"Task {task.id} cannot publish VK cancellation without a TaskRun"
+        )
+    task_run_id = UUID(task.execution_run_id)
+    command = VkExecutionCancelRequested(
+        task_id=task.id,
+        task_run_id=task_run_id,
+        execution_id=execution_id_for_run(task_run_id),
+        owner_user_id=task.owner_user_id,
+        reason=reason,
+    )
+    execution_id = str(command.execution_id)
+    await outbox.add_event(
+        event_type=VK_EXECUTION_CANCEL_REQUESTED,
+        event_version=VK_EXECUTION_CANCEL_REQUESTED_VERSION,
+        aggregate_type="vk_execution",
+        aggregate_id=execution_id,
+        correlation_id=execution_id,
+        dedupe_key=f"{VK_EXECUTION_CANCEL_REQUESTED}:{execution_id}",
         payload=command.to_wire(),
     )
     return command
