@@ -1,8 +1,12 @@
-from .kafka_consumer import TaskEventsConsumer
+from .kafka_consumer import (
+    TaskCancellationEventsConsumer,
+    TaskEventsConsumer,
+)
 from .outbox_worker import OutboxPublisher, publish_outbox_forever
 
 __all__ = [
     "OutboxPublisher",
-    "publish_outbox_forever",
+    "TaskCancellationEventsConsumer",
     "TaskEventsConsumer",
+    "publish_outbox_forever",
 ]
