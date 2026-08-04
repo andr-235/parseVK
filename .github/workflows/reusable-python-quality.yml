@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      PYTHONPATH: ${{ github.workspace }}/libs/py/common
+      PYTHONPATH: ${{ github.workspace }}/libs/py/common:${{ github.workspace }}/libs/py/contracts
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v5

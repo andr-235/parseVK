@@ -3,6 +3,7 @@
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+from uuid import uuid4
 
 import pytest
 
@@ -35,8 +36,17 @@ class FakeCompatSession:
         return obj
 
 
-def make_task(*, owner_user_id: str = "user-1", task_id: int = 7):
-    return SimpleNamespace(id=task_id, owner_user_id=owner_user_id)
+def make_task(
+    *,
+    owner_user_id: str = "user-1",
+    task_id: int = 7,
+    scope: str = "selected",
+):
+    return SimpleNamespace(
+        id=task_id,
+        owner_user_id=owner_user_id,
+        scope=scope,
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -62,6 +72,46 @@ async def test_write_through_creates_sources_and_links():
     assert by_external["12345"].owner_user_id == "user-1"
     assert by_external["67890"].owner_id == -67890
     assert all(link.task_id == 7 for link in links)
+
+
+@pytest.mark.asyncio
+async def test_scope_all_resolves_only_sources_visible_to_owner():
+    source_1 = SimpleNamespace(id=uuid4())
+    source_2 = SimpleNamespace(id=uuid4())
+
+    class OwnerScopedRepository:
+        def __init__(self):
+            self.calls = []
+            self.links = []
+
+        async def list_active_sources(self, owner_user_id):
+            self.calls.append(owner_user_id)
+            return {
+                "user-1": [source_1],
+                "user-2": [source_2],
+            }[owner_user_id]
+
+        async def link_task_source(self, task_id, source_id):
+            self.links.append((task_id, source_id))
+
+    repository = OwnerScopedRepository()
+    adapter = SourceCompatAdapter(FakeCompatSession())
+    adapter.sources_repo = repository
+
+    await adapter.ensure_normalized_sources(
+        make_task(owner_user_id="user-1", task_id=7, scope="all"),
+        [],
+    )
+    await adapter.ensure_normalized_sources(
+        make_task(owner_user_id="user-2", task_id=8, scope="all"),
+        [],
+    )
+
+    assert repository.calls == ["user-1", "user-2"]
+    assert repository.links == [
+        (7, source_1.id),
+        (8, source_2.id),
+    ]
 
 
 @pytest.mark.asyncio

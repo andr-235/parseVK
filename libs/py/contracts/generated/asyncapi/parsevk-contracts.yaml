@@ -17,6 +17,8 @@ channels:
     messages:
       vk_execution_requested_v1:
         $ref: '#/components/messages/vk_execution_requested_v1'
+      vk_execution_requested_v2:
+        $ref: '#/components/messages/vk_execution_requested_v2'
 operations:
   tasks_service_send_sources_access_granted_v1:
     action: send
@@ -54,6 +56,18 @@ operations:
       $ref: '#/channels/parsevk_vk_commands'
     messages:
     - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_requested_v1'
+  tasks_service_send_vk_execution_requested_v2:
+    action: send
+    channel:
+      $ref: '#/channels/parsevk_vk_commands'
+    messages:
+    - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_requested_v2'
+  vk_service_receive_vk_execution_requested_v2:
+    action: receive
+    channel:
+      $ref: '#/channels/parsevk_vk_commands'
+    messages:
+    - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_requested_v2'
 components:
   messages:
     sources_access_granted_v1:
@@ -77,3 +91,10 @@ components:
       contentType: application/json
       payload:
         $ref: ../json-schema/vk.execution.requested/1.json
+    vk_execution_requested_v2:
+      name: vk.execution.requested
+      title: vk.execution.requested
+      summary: vk.execution.requested v2
+      contentType: application/json
+      payload:
+        $ref: ../json-schema/vk.execution.requested/2.json

@@ -5,10 +5,10 @@ Validates transitions and publishes outbox events for downstream consumers.
 """
 
 import logging
+from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.db.models import TaskAuditLog
 from app.modules.outbox.service import OutboxService
 from app.modules.tasks.event_payloads import (
@@ -20,7 +20,11 @@ from app.modules.tasks.event_payloads import (
 from app.modules.tasks.exceptions import TaskConflictError, TaskNotFoundError
 from app.modules.tasks.mapper import task_to_response
 from app.modules.tasks.repository import TasksRepository
-from app.modules.tasks.task_run import TaskRunFreezeError, freeze_task_run
+from app.modules.tasks.task_run import (
+    TaskRunFreezeError,
+    freeze_resumed_task_run,
+)
+from app.modules.tasks.vk_command import add_vk_execution_command
 
 logger = logging.getLogger(__name__)
 
@@ -33,42 +37,58 @@ class TaskStateService:
         session: AsyncSession,
         repository: TasksRepository,
         outbox: OutboxService,
-        freezer=freeze_task_run,
+        freezer=freeze_resumed_task_run,
+        command_publisher=add_vk_execution_command,
     ):
         self.session = session
         self.repository = repository
         self.outbox = outbox
         self.freezer = freezer
+        self.command_publisher = command_publisher
 
-    async def resume_task(self, owner_user_id: str, task_id: int) -> dict | None:
-        task = await self.repository.get_task_for_update(owner_user_id, task_id)
+    async def resume_task(
+        self,
+        owner_user_id: str,
+        task_id: int,
+    ) -> dict | None:
+        task = await self.repository.get_task_for_update(
+            owner_user_id,
+            task_id,
+        )
         if not task:
             return None
         if task.status not in {"failed", "cancelled"}:
             logger.warning(
-                "Invalid task transition for resume: task_id=%s status=%s", task_id, task.status
+                "Invalid task transition for resume: task_id=%s status=%s",
+                task_id,
+                task.status,
             )
             raise TaskConflictError(
-                "Invalid task transition", task_id=task_id, current_status=task.status
-            )
-        if not task.execution_run_id:
-            raise TaskConflictError(
-                "Cannot resume task without an execution run",
+                "Invalid task transition",
                 task_id=task_id,
                 current_status=task.status,
             )
+
+        previous_run_id = task.execution_run_id
+        task.execution_run_id = str(uuid4())
         task.status = "pending"
         task.error = None
         task.last_execution_sequence = 0
-        run_meta = None
-        if settings.source_compat_write_enabled:
-            try:
-                run_meta = await self.freezer(self.session, task)
-            except TaskRunFreezeError as exc:
-                logger.error(
-                    "TaskRun freeze failed on resume for task_id=%s: %s", task.id, exc, exc_info=True
-                )
-                raise
+        try:
+            run_meta = await self.freezer(
+                self.session,
+                task,
+                previous_run_id,
+            )
+        except TaskRunFreezeError as exc:
+            logger.error(
+                "TaskRun freeze failed on resume for task_id=%s: %s",
+                task.id,
+                exc,
+                exc_info=True,
+            )
+            raise
+
         await self.repository.add_audit(
             TaskAuditLog(
                 owner_user_id=owner_user_id,
@@ -76,7 +96,11 @@ class TaskStateService:
                 aggregate_id=str(task.id),
                 task_id=task.id,
                 event_type="task.resumed",
-                event_data={"taskId": str(task.id), "runId": task.execution_run_id},
+                event_data={
+                    "taskId": str(task.id),
+                    "runId": task.execution_run_id,
+                    "previousRunId": previous_run_id,
+                },
             )
         )
         await self.outbox.add_event(
@@ -86,25 +110,49 @@ class TaskStateService:
             dedupe_key=f"task.resumed:{task.id}:{task.execution_run_id}",
             payload=task_request_payload(task, owner_user_id, run_meta),
         )
+        await self.command_publisher(
+            self.session,
+            self.outbox,
+            task,
+            run_meta,
+        )
         task = await self.repository.touch_task(task)
         await self.outbox.add_event(
-            event_type="task.state_changed", aggregate_type="task", aggregate_id=str(task.id),
-            dedupe_key=f"task.state_changed:{task.id}:resumed:{task.revision}",
+            event_type="task.state_changed",
+            aggregate_type="task",
+            aggregate_id=str(task.id),
+            dedupe_key=(
+                f"task.state_changed:{task.id}:resumed:{task.revision}"
+            ),
             payload=task_state_changed_payload(task),
         )
-        logger.debug("Published task.state_changed (resumed) for task %s", task.id)
+        logger.debug(
+            "Published task.state_changed (resumed) for task %s",
+            task.id,
+        )
         return task_to_response(task)
 
-    async def cancel_task(self, owner_user_id: str, task_id: int) -> dict | None:
-        task = await self.repository.get_task_for_update(owner_user_id, task_id)
+    async def cancel_task(
+        self,
+        owner_user_id: str,
+        task_id: int,
+    ) -> dict | None:
+        task = await self.repository.get_task_for_update(
+            owner_user_id,
+            task_id,
+        )
         if not task:
             return None
         if task.status != "running":
             logger.warning(
-                "Can only cancel running tasks: task_id=%s status=%s", task_id, task.status
+                "Can only cancel running tasks: task_id=%s status=%s",
+                task_id,
+                task.status,
             )
             raise TaskConflictError(
-                "Can only cancel running tasks", task_id=task_id, current_status=task.status
+                "Can only cancel running tasks",
+                task_id=task_id,
+                current_status=task.status,
             )
         task.status = "cancelled"
         await self.repository.add_audit(
@@ -114,7 +162,10 @@ class TaskStateService:
                 aggregate_id=str(task.id),
                 task_id=task.id,
                 event_type="task.cancelled",
-                event_data={"taskId": str(task.id), "runId": task.execution_run_id},
+                event_data={
+                    "taskId": str(task.id),
+                    "runId": task.execution_run_id,
+                },
             )
         )
         await self.outbox.add_event(
@@ -126,14 +177,25 @@ class TaskStateService:
         )
         task = await self.repository.touch_task(task)
         await self.outbox.add_event(
-            event_type="task.state_changed", aggregate_type="task", aggregate_id=str(task.id),
-            dedupe_key=f"task.state_changed:{task.id}:cancelled:{task.revision}",
+            event_type="task.state_changed",
+            aggregate_type="task",
+            aggregate_id=str(task.id),
+            dedupe_key=(
+                f"task.state_changed:{task.id}:cancelled:{task.revision}"
+            ),
             payload=task_state_changed_payload(task),
         )
-        logger.debug("Published task.state_changed (cancelled) for task %s", task.id)
+        logger.debug(
+            "Published task.state_changed (cancelled) for task %s",
+            task.id,
+        )
         return task_to_response(task)
 
-    async def check_task(self, owner_user_id: str, task_id: int) -> dict | None:
+    async def check_task(
+        self,
+        owner_user_id: str,
+        task_id: int,
+    ) -> dict | None:
         task = await self.repository.get_task(owner_user_id, task_id)
         if not task:
             return None
@@ -149,7 +211,11 @@ class TaskStateService:
         )
         return task_to_response(task)
 
-    async def delete_task(self, owner_user_id: str, task_id: int) -> None:
+    async def delete_task(
+        self,
+        owner_user_id: str,
+        task_id: int,
+    ) -> None:
         task = await self.repository.get_task(owner_user_id, task_id)
         if not task:
             logger.warning("Task not found for delete: task_id=%s", task_id)
@@ -157,7 +223,9 @@ class TaskStateService:
         if task.status == "running":
             logger.warning("Cannot delete running task: task_id=%s", task_id)
             raise TaskConflictError(
-                "Cannot delete running task", task_id=task_id, current_status=task.status
+                "Cannot delete running task",
+                task_id=task_id,
+                current_status=task.status,
             )
         snapshot = task_snapshot(task)
         await self.repository.add_audit(

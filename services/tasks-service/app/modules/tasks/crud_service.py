@@ -10,7 +10,6 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.db.models import Task, TaskAuditLog
 from app.modules.outbox.service import OutboxService
 from app.modules.tasks.event_payloads import task_request_payload
@@ -19,7 +18,8 @@ from app.modules.tasks.mapper import audit_to_response, task_to_response
 from app.modules.tasks.repository import TasksRepository
 from app.modules.tasks.schemas import CreateParseTaskRequest
 from app.modules.tasks.source_compat import SourceCompatAdapter
-from app.modules.tasks.task_run import TaskRunFreezeError
+from app.modules.tasks.task_run import TaskRunFreezeError, freeze_task_run
+from app.modules.tasks.vk_command import add_vk_execution_command
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +27,22 @@ logger = logging.getLogger(__name__)
 class TasksCrudService:
     """CRUD operations for tasks: create, list, get, audit log."""
 
-    def __init__(self, session: AsyncSession, repository: TasksRepository, outbox: OutboxService):
+    def __init__(
+        self,
+        session: AsyncSession,
+        repository: TasksRepository,
+        outbox: OutboxService,
+        *,
+        source_adapter_factory=SourceCompatAdapter,
+        freezer=freeze_task_run,
+        command_publisher=add_vk_execution_command,
+    ):
         self.session = session
         self.repository = repository
         self.outbox = outbox
+        self.source_adapter_factory = source_adapter_factory
+        self.freezer = freezer
+        self.command_publisher = command_publisher
 
     async def create_parse_task(
         self,
@@ -71,18 +83,20 @@ class TasksCrudService:
                 event_data={"taskId": str(task.id), "source": "manual"},
             )
         )
-        run_meta = None
-        if settings.source_compat_write_enabled:
-            await SourceCompatAdapter(self.session).write_through(task, group_ids)
-            try:
-                from app.modules.tasks.task_run import freeze_task_run
 
-                run_meta = await freeze_task_run(self.session, task)
-            except TaskRunFreezeError as exc:
-                logger.error(
-                    "TaskRun freeze failed for task_id=%s: %s", task.id, exc, exc_info=True
-                )
-                raise
+        source_adapter = self.source_adapter_factory(self.session)
+        try:
+            await source_adapter.ensure_normalized_sources(task, group_ids)
+            run_meta = await self.freezer(self.session, task)
+        except (TaskRunFreezeError, RuntimeError) as exc:
+            logger.error(
+                "TaskRun freeze failed for task_id=%s: %s",
+                task.id,
+                exc,
+                exc_info=True,
+            )
+            raise
+
         await self.outbox.add_event(
             event_type="task.created",
             aggregate_type="task",
@@ -91,10 +105,25 @@ class TasksCrudService:
             dedupe_key=f"task.created:{task.id}",
             payload=task_request_payload(task, owner_user_id, run_meta),
         )
+        await self.command_publisher(
+            self.session,
+            self.outbox,
+            task,
+            run_meta,
+        )
         return task_to_response(task)
 
-    async def list_tasks(self, owner_user_id: str, page: int, limit: int) -> dict:
-        tasks, total = await self.repository.list_tasks(owner_user_id, page=page, limit=limit)
+    async def list_tasks(
+        self,
+        owner_user_id: str,
+        page: int,
+        limit: int,
+    ) -> dict:
+        tasks, total = await self.repository.list_tasks(
+            owner_user_id,
+            page=page,
+            limit=limit,
+        )
         total_pages = ceil(total / limit) if total else 0
         return {
             "tasks": [task_to_response(task) for task in tasks],
@@ -105,14 +134,26 @@ class TasksCrudService:
             "hasMore": page < total_pages,
         }
 
-    async def get_task(self, owner_user_id: str, task_id: int) -> dict | None:
+    async def get_task(
+        self,
+        owner_user_id: str,
+        task_id: int,
+    ) -> dict | None:
         task = await self.repository.get_task(owner_user_id, task_id)
         return task_to_response(task) if task else None
 
-    async def get_audit_log(self, owner_user_id: str, task_id: int) -> list[dict]:
+    async def get_audit_log(
+        self,
+        owner_user_id: str,
+        task_id: int,
+    ) -> list[dict]:
         task = await self.repository.get_task(owner_user_id, task_id)
         if not task:
-            logger.warning("Task not found for audit log: task_id=%s owner_user_id=%s", task_id, owner_user_id)
+            logger.warning(
+                "Task not found for audit log: task_id=%s owner_user_id=%s",
+                task_id,
+                owner_user_id,
+            )
             raise TaskNotFoundError(task_id=task_id)
         rows = await self.repository.list_audit(owner_user_id, task_id)
         return [audit_to_response(row) for row in rows]

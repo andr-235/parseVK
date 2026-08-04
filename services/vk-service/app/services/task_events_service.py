@@ -24,10 +24,22 @@ SYSTEM_PROVIDER_ACCOUNT_KEY = "system-vk"
 logger = logging.getLogger("vk-service")
 CANCELLATION_EVENTS = frozenset({"task.cancelled", "task.deleted"})
 IGNORED_TERMINAL_EVENTS = frozenset({"task.completed", "task.failed"})
+EXECUTION_REQUEST_EVENTS = frozenset(
+    {
+        "task.created",
+        "task.resumed",
+        "task.automation_run_requested",
+    }
+)
+SUPPORTED_LEGACY_EVENTS = (
+    CANCELLATION_EVENTS
+    | IGNORED_TERMINAL_EVENTS
+    | EXECUTION_REQUEST_EVENTS
+)
 
 
 class TaskEventsService:
-    """Translate task lifecycle events into coalesced VK collection demands."""
+    """Translate supported legacy task events into collection demands."""
 
     def __init__(
         self,
@@ -42,14 +54,33 @@ class TaskEventsService:
         self.tasks_client = tasks_client
         self.consumer_name = consumer_name
 
-    async def handle(self, event: TaskEvent) -> VkExecution | CollectionDemand | None:
-        task_id = get_task_id(event)
+    async def handle(
+        self,
+        event: TaskEvent,
+    ) -> VkExecution | CollectionDemand | None:
         run_id = str(event.payload.get("runId") or event.event_id)
 
         async with self.repository.session.begin():
-            if await self.repository.is_processed(self.consumer_name, event.event_id):
+            if await self.repository.is_processed(
+                self.consumer_name,
+                event.event_id,
+            ):
                 return None
 
+            if event.event_type not in SUPPORTED_LEGACY_EVENTS:
+                logger.info(
+                    "Ignoring non-execution legacy task event type=%s event_id=%s",
+                    event.event_type,
+                    event.event_id,
+                )
+                await self.repository.mark_processed(
+                    self.consumer_name,
+                    event.event_id,
+                    event.event_type,
+                )
+                return None
+
+            task_id = get_task_id(event)
             if event.event_type in CANCELLATION_EVENTS:
                 demand = await self.collection_repository.request_cancellation(
                     task_id=task_id,
@@ -57,19 +88,25 @@ class TaskEventsService:
                     reason=event.event_type,
                 )
                 await self.repository.mark_processed(
-                    self.consumer_name, event.event_id, event.event_type
+                    self.consumer_name,
+                    event.event_id,
+                    event.event_type,
                 )
                 return demand
 
             if event.event_type in IGNORED_TERMINAL_EVENTS:
                 await self.repository.mark_processed(
-                    self.consumer_name, event.event_id, event.event_type
+                    self.consumer_name,
+                    event.event_id,
+                    event.event_type,
                 )
                 return None
 
             attachment = await self._attach_demand(event, run_id)
             await self.repository.mark_processed(
-                self.consumer_name, event.event_id, event.event_type
+                self.consumer_name,
+                event.event_id,
+                event.event_type,
             )
 
         if attachment is None:
@@ -148,6 +185,9 @@ class TaskEventsService:
     @staticmethod
     def _extract_detail(exc: httpx.HTTPStatusError) -> str:
         try:
-            return str(exc.response.json().get("detail") or exc.response.status_code)
+            return str(
+                exc.response.json().get("detail")
+                or exc.response.status_code
+            )
         except Exception:
             return str(exc.response.status_code)

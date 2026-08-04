@@ -58,6 +58,8 @@ class OutboxPublisher:
         namespace: str = "default",
         publish_enabled: bool = True,
         key_fn: Callable[[OutboxMessage], str] | None = None,
+        topic_fn: Callable[[OutboxMessage], str] | None = None,
+        dlq_topic_fn: Callable[[OutboxMessage], str] | None = None,
     ):
         self.repository = repository
         self.producer = producer
@@ -66,6 +68,8 @@ class OutboxPublisher:
         self.publish_enabled = publish_enabled
         self.namespace = namespace
         self.key_fn = key_fn or self._default_key
+        self.topic_fn = topic_fn
+        self.dlq_topic_fn = dlq_topic_fn
         self.dlq_counter = _create_dlq_counter(namespace)
         logger.debug(
             "OutboxPublisher initialized: topic=%s dlq=%s namespace=%s",
@@ -77,6 +81,16 @@ class OutboxPublisher:
     @staticmethod
     def _default_key(msg: OutboxMessage) -> str:
         return msg.aggregate_id
+
+    def _topic_for(self, event: OutboxMessage) -> str:
+        return self.topic_fn(event) if self.topic_fn is not None else self.topic
+
+    def _dlq_topic_for(self, event: OutboxMessage) -> str:
+        return (
+            self.dlq_topic_fn(event)
+            if self.dlq_topic_fn is not None
+            else self.dlq_topic
+        )
 
     async def publish_batch(self, limit: int = 100) -> int:
         if not self.publish_enabled:
@@ -114,23 +128,35 @@ class OutboxPublisher:
             aggregate_id=event.aggregate_id,
             correlation_id=event.correlation_id,
             payload=event.payload,
-            created_at=event.created_at.isoformat() if event.created_at else datetime.now(UTC).isoformat(),
+            created_at=(
+                event.created_at.isoformat()
+                if event.created_at
+                else datetime.now(UTC).isoformat()
+            ),
         )
         key = self.key_fn(event)
+        topic = self._topic_for(event)
         logger.debug(
-            "Publishing event id=%s type=%s key=%s",
+            "Publishing event id=%s type=%s topic=%s key=%s",
             event.id,
             event.event_type,
+            topic,
             key,
         )
         await self.producer.send_and_wait(
-            self.topic,
+            topic,
             key=key.encode("utf-8"),
             value=wire.model_dump_json().encode("utf-8"),
         )
 
-    async def _publish_to_dlq(self, event: OutboxMessage, last_error: str = "") -> None:
-        dlq_reason = f"max_retries_exceeded: {last_error}" if last_error else "max_retries_exceeded"
+    async def _publish_to_dlq(
+        self, event: OutboxMessage, last_error: str = ""
+    ) -> None:
+        dlq_reason = (
+            f"max_retries_exceeded: {last_error}"
+            if last_error
+            else "max_retries_exceeded"
+        )
         envelope = {
             "event_id": str(event.id),
             "event_type": event.event_type,
@@ -143,17 +169,21 @@ class OutboxPublisher:
             "dlq_reason": dlq_reason,
             "dlq_timestamp": datetime.now(UTC).isoformat(),
         }
-        self.dlq_counter.labels(event_type=event.event_type, namespace=self.namespace).inc()
+        self.dlq_counter.labels(
+            event_type=event.event_type, namespace=self.namespace
+        ).inc()
         key = self.key_fn(event)
+        topic = self._dlq_topic_for(event)
         await self.producer.send_and_wait(
-            self.dlq_topic,
+            topic,
             key=key.encode("utf-8"),
             value=json.dumps(envelope).encode("utf-8"),
         )
         logger.warning(
-            "Moved outbox event id=%s type=%s to DLQ after %d attempts (reason: %s)",
+            "Moved outbox event id=%s type=%s to DLQ topic=%s after %d attempts (reason: %s)",
             event.id,
             event.event_type,
+            topic,
             event.attempts,
             dlq_reason,
         )

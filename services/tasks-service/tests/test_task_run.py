@@ -1,11 +1,11 @@
-"""Tests for TaskRun freeze lifecycle and retry semantics."""
+"""Tests for immutable TaskRun snapshots and resume semantics."""
 
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -14,14 +14,20 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.core.config import settings
 from app.db.models import TaskRun, TaskRunSourceDemand
-from app.modules.tasks.exceptions import TaskConflictError
 from app.modules.tasks.state_service import TaskStateService
-from app.modules.tasks.task_run import TaskRunFreezeError, freeze_task_run
+from app.modules.tasks.task_run import (
+    TaskRunFreezeError,
+    freeze_resumed_task_run,
+    freeze_task_run,
+)
 
 
-def make_task(run_id: str | None = None, revision: int = 5, status: str = "pending"):
+def make_task(
+    run_id: str | None = None,
+    revision: int = 5,
+    status: str = "pending",
+):
     return SimpleNamespace(
         id=42,
         owner_user_id="user-1",
@@ -48,7 +54,11 @@ def make_task(run_id: str | None = None, revision: int = 5, status: str = "pendi
     )
 
 
-def make_source(source_id, external_id: str, revision: int = 2):
+def make_source(
+    source_id: UUID,
+    external_id: str,
+    revision: int = 2,
+):
     return SimpleNamespace(
         id=source_id,
         provider="vk",
@@ -59,7 +69,7 @@ def make_source(source_id, external_id: str, revision: int = 2):
     )
 
 
-def make_link(source_id):
+def make_link(source_id: UUID):
     return SimpleNamespace(source_id=source_id, kind="target")
 
 
@@ -70,6 +80,21 @@ class FakeFreezeSession:
 
     async def get(self, model, key):
         return self.existing
+
+    def add(self, obj):
+        self.added.append(obj)
+
+    async def flush(self):
+        return None
+
+
+class MappingFreezeSession:
+    def __init__(self, existing_by_id=None):
+        self.added = []
+        self.existing_by_id = existing_by_id or {}
+
+    async def get(self, model, key):
+        return self.existing_by_id.get(key)
 
     def add(self, obj):
         self.added.append(obj)
@@ -98,26 +123,30 @@ def source_repo(*sources):
     )
 
 
-@pytest.fixture(autouse=True)
-def enable_compat_flag(monkeypatch):
-    monkeypatch.setattr(settings, "source_compat_write_enabled", True)
-
-
 @pytest.mark.asyncio
 async def test_freeze_creates_snapshot_with_contract_fields():
     source_id = uuid4()
-    source = make_source(source_id, "12345")
     task = make_task()
     session = FakeFreezeSession()
 
-    meta = await freeze_task_run(session, task, sources_repo=source_repo(source))
+    meta = await freeze_task_run(
+        session,
+        task,
+        sources_repo=source_repo(make_source(source_id, "12345")),
+    )
 
     run = next(obj for obj in session.added if isinstance(obj, TaskRun))
+    demand = next(
+        obj
+        for obj in session.added
+        if isinstance(obj, TaskRunSourceDemand)
+    )
     assert str(run.id) == task.execution_run_id
     assert run.config_snapshot == {
         "scope": "selected",
         "mode": "recent_posts",
         "postLimit": 10,
+        "taskRevision": 5,
     }
     assert "groupIds" not in run.config_snapshot
     assert run.source_set_snapshot[0] == {
@@ -130,19 +159,19 @@ async def test_freeze_creates_snapshot_with_contract_fields():
         "taskRevision": 5,
     }
     assert len(run.snapshot_sha256) == 64
-    demand = next(obj for obj in session.added if isinstance(obj, TaskRunSourceDemand))
     assert demand.source_id == source_id
     assert meta["snapshotSha256"] == run.snapshot_sha256
 
 
 @pytest.mark.asyncio
-async def test_freeze_reuses_existing_snapshot_without_reading_live_sources():
+async def test_freeze_reuses_existing_snapshot_without_live_reads():
     run_id = uuid4()
     existing = SimpleNamespace(
         id=run_id,
         task_id=42,
         source_set_revision=3,
         snapshot_sha256="a" * 64,
+        source_set_snapshot=[{"sourceId": str(uuid4())}],
     )
     repo = SimpleNamespace(
         list_task_sources=AsyncMock(),
@@ -165,6 +194,79 @@ async def test_freeze_reuses_existing_snapshot_without_reading_live_sources():
 
 
 @pytest.mark.asyncio
+async def test_resumed_run_clones_previous_physical_plan():
+    previous_id = uuid4()
+    new_id = uuid4()
+    source_id = uuid4()
+    previous = SimpleNamespace(
+        id=previous_id,
+        task_id=42,
+        run_revision=2,
+        source_set_revision=9,
+        snapshot_sha256="c" * 64,
+        config_snapshot={
+            "scope": "all",
+            "mode": "recent_posts",
+            "postLimit": 25,
+            "taskRevision": 4,
+        },
+        source_set_snapshot=[
+            {
+                "sourceId": str(source_id),
+                "provider": "vk",
+                "sourceType": "community",
+                "externalId": "777",
+                "ownerId": -777,
+                "sourceRevision": 8,
+                "taskRevision": 4,
+            }
+        ],
+    )
+    session = MappingFreezeSession({previous_id: previous})
+    task = make_task(run_id=str(new_id), revision=100)
+    task.scope = "selected"
+    task.post_limit = 1
+
+    meta = await freeze_resumed_task_run(
+        session,
+        task,
+        str(previous_id),
+    )
+
+    run = next(obj for obj in session.added if isinstance(obj, TaskRun))
+    demand = next(
+        obj
+        for obj in session.added
+        if isinstance(obj, TaskRunSourceDemand)
+    )
+    assert run.id == new_id
+    assert run.run_revision == 3
+    assert run.config_snapshot == previous.config_snapshot
+    assert run.source_set_snapshot == previous.source_set_snapshot
+    assert run.source_set_revision == 9
+    assert run.snapshot_sha256 == "c" * 64
+    assert demand.source_id == source_id
+    assert meta["snapshotSha256"] == "c" * 64
+
+
+@pytest.mark.asyncio
+async def test_freeze_rejects_incomplete_existing_snapshot():
+    run_id = uuid4()
+    existing = SimpleNamespace(
+        id=run_id,
+        task_id=42,
+        source_set_revision=1,
+        snapshot_sha256="a" * 64,
+        source_set_snapshot=[],
+    )
+    with pytest.raises(TaskRunFreezeError):
+        await freeze_task_run(
+            FakeFreezeSession(existing=existing),
+            make_task(run_id=str(run_id)),
+        )
+
+
+@pytest.mark.asyncio
 async def test_freeze_rejects_run_owned_by_another_task():
     run_id = uuid4()
     existing = SimpleNamespace(
@@ -172,6 +274,7 @@ async def test_freeze_rejects_run_owned_by_another_task():
         task_id=999,
         source_set_revision=1,
         snapshot_sha256="a" * 64,
+        source_set_snapshot=[{"sourceId": str(uuid4())}],
     )
     with pytest.raises(TaskRunFreezeError):
         await freeze_task_run(
@@ -184,21 +287,33 @@ async def test_freeze_rejects_run_owned_by_another_task():
 async def test_snapshot_hash_is_independent_of_repository_order():
     first = make_source(uuid4(), "10")
     second = make_source(uuid4(), "20")
-    task_a = make_task(run_id=str(uuid4()))
-    task_b = make_task(run_id=str(uuid4()))
 
     meta_a = await freeze_task_run(
-        FakeFreezeSession(), task_a, sources_repo=source_repo(second, first)
+        FakeFreezeSession(),
+        make_task(run_id=str(uuid4())),
+        sources_repo=source_repo(second, first),
     )
     meta_b = await freeze_task_run(
-        FakeFreezeSession(), task_b, sources_repo=source_repo(first, second)
+        FakeFreezeSession(),
+        make_task(run_id=str(uuid4())),
+        sources_repo=source_repo(first, second),
     )
 
     assert meta_a["snapshotSha256"] == meta_b["snapshotSha256"]
 
 
 @pytest.mark.asyncio
-async def test_freeze_invalid_run_id_raises():
+async def test_freeze_rejects_empty_source_set():
+    with pytest.raises(TaskRunFreezeError):
+        await freeze_task_run(
+            FakeFreezeSession(),
+            make_task(),
+            sources_repo=source_repo(),
+        )
+
+
+@pytest.mark.asyncio
+async def test_freeze_rejects_invalid_run_id():
     task = make_task()
     task.execution_run_id = "not-a-uuid"
     with pytest.raises(TaskRunFreezeError):
@@ -206,42 +321,83 @@ async def test_freeze_invalid_run_id_raises():
 
 
 @pytest.mark.asyncio
-async def test_resume_keeps_same_run_id_and_reuses_snapshot():
-    run_id = str(uuid4())
-    task = make_task(run_id=run_id, status="failed")
+async def test_resume_creates_child_run_and_publishes_command():
+    previous_run_id = str(uuid4())
+    task = make_task(run_id=previous_run_id, status="failed")
     repository = SimpleNamespace(
         get_task_for_update=AsyncMock(return_value=task),
         add_audit=AsyncMock(),
         touch_task=AsyncMock(return_value=task),
     )
     outbox = SimpleNamespace(add_event=AsyncMock())
-    freezer = AsyncMock(
-        return_value={
-            "taskRunId": run_id,
+    command_publisher = AsyncMock()
+
+    async def freeze_child(session, current_task, previous_id):
+        assert previous_id == previous_run_id
+        return {
+            "taskRunId": current_task.execution_run_id,
             "sourceSetRevision": 6,
             "snapshotSha256": "a" * 64,
         }
+
+    freezer = AsyncMock(side_effect=freeze_child)
+    service = TaskStateService(
+        AsyncMock(),
+        repository,
+        outbox,
+        freezer=freezer,
+        command_publisher=command_publisher,
     )
-    service = TaskStateService(AsyncMock(), repository, outbox, freezer=freezer)
 
     await service.resume_task("user-1", 42)
 
-    assert task.execution_run_id == run_id
-    freezer.assert_awaited_once_with(service.session, task)
+    assert task.execution_run_id != previous_run_id
+    freezer.assert_awaited_once_with(
+        service.session,
+        task,
+        previous_run_id,
+    )
+    command_publisher.assert_awaited_once()
     resumed = next(
         call
         for call in outbox.add_event.await_args_list
         if call.kwargs["event_type"] == "task.resumed"
     )
+    assert resumed.kwargs["payload"]["runId"] == task.execution_run_id
     assert resumed.kwargs["payload"]["snapshotSha256"] == "a" * 64
+    audit = repository.add_audit.await_args.args[0]
+    assert audit.event_data["previousRunId"] == previous_run_id
 
 
 @pytest.mark.asyncio
-async def test_resume_without_run_is_rejected():
+async def test_resume_creates_run_for_legacy_task_without_run_id():
     task = make_task(status="failed")
     task.execution_run_id = None
-    repository = SimpleNamespace(get_task_for_update=AsyncMock(return_value=task))
-    service = TaskStateService(AsyncMock(), repository, SimpleNamespace())
+    repository = SimpleNamespace(
+        get_task_for_update=AsyncMock(return_value=task),
+        add_audit=AsyncMock(),
+        touch_task=AsyncMock(return_value=task),
+    )
+    outbox = SimpleNamespace(add_event=AsyncMock())
+    command_publisher = AsyncMock()
 
-    with pytest.raises(TaskConflictError):
-        await service.resume_task("user-1", 42)
+    async def freeze_legacy(session, current_task, previous_id):
+        return {
+            "taskRunId": current_task.execution_run_id,
+            "sourceSetRevision": 1,
+            "snapshotSha256": "b" * 64,
+        }
+
+    freezer = AsyncMock(side_effect=freeze_legacy)
+    service = TaskStateService(
+        AsyncMock(),
+        repository,
+        outbox,
+        freezer=freezer,
+        command_publisher=command_publisher,
+    )
+
+    await service.resume_task("user-1", 42)
+
+    assert task.execution_run_id is not None
+    command_publisher.assert_awaited_once()

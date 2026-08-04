@@ -18,20 +18,23 @@ SERVICE_DIR = str(Path(__file__).resolve().parents[1])
 
 def test_token_file_satisfies_validation():
     """VK_SERVICE_TOKEN_FILE alone satisfies the secret requirement."""
-    s = Settings(vk_token="", token_file="/run/secrets/vk_token")
-    assert s.token_file == "/run/secrets/vk_token"
+    settings = Settings(vk_token="", token_file="/run/secrets/vk_token")
+    assert settings.token_file == "/run/secrets/vk_token"
 
 
 def test_legacy_env_token_still_accepted():
     """Legacy VK_SERVICE_VK_TOKEN remains a valid secret source."""
-    s = Settings(vk_token="legacy-token", token_file="")
-    assert s.vk_token == "legacy-token"
+    settings = Settings(vk_token="legacy-token", token_file="")
+    assert settings.vk_token == "legacy-token"
 
 
 def test_both_sources_accepted():
     """File takes precedence but both being set is not a validation error."""
-    s = Settings(vk_token="legacy-token", token_file="/run/secrets/vk_token")
-    assert s.token_file == "/run/secrets/vk_token"
+    settings = Settings(
+        vk_token="legacy-token",
+        token_file="/run/secrets/vk_token",
+    )
+    assert settings.token_file == "/run/secrets/vk_token"
 
 
 def test_missing_secret_source_raises_outside_pytest():
@@ -50,15 +53,32 @@ def test_missing_secret_source_raises_outside_pytest():
     assert "VK_SERVICE_VK_TOKEN or VK_SERVICE_TOKEN_FILE" in result.stderr
 
 
+def test_canonical_cutover_is_disabled_by_default():
+    """PR06A must preserve the lossless legacy path until PR06B exists."""
+    settings = Settings(vk_token="x", token_file="")
+    assert settings.vk_commands_consumer_enabled is False
+    assert settings.legacy_task_events_enabled is True
+
+
+def test_full_legacy_and_canonical_consumers_are_mutually_exclusive():
+    with pytest.raises(Exception, match="cannot be active together"):
+        Settings(
+            vk_token="x",
+            token_file="",
+            vk_commands_consumer_enabled=True,
+            legacy_task_events_enabled=True,
+        )
+
+
 def test_scheduler_knob_defaults():
     """Scheduler/retry settings carry sane defaults with bounds."""
-    s = Settings(vk_token="x", token_file="")
-    assert s.target_requests_per_second == 3.0
-    assert s.rate_limit_max_retries == 5
-    assert s.retry_max_elapsed_seconds == 300.0
-    assert s.short_backoff_base_seconds == 1.0
-    assert s.account_cooldown_seconds == 300
-    assert s.hard_limit_cooldown_seconds == 3600
+    settings = Settings(vk_token="x", token_file="")
+    assert settings.target_requests_per_second == 3.0
+    assert settings.rate_limit_max_retries == 5
+    assert settings.retry_max_elapsed_seconds == 300.0
+    assert settings.short_backoff_base_seconds == 1.0
+    assert settings.account_cooldown_seconds == 300
+    assert settings.hard_limit_cooldown_seconds == 3600
 
 
 def test_scheduler_knob_bounds_rejected():

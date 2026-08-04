@@ -60,6 +60,27 @@
       ],
       "schemaVersion": 1,
       "topic": "parsevk.vk.commands"
+    },
+    {
+      "causationPolicy": "forbidden",
+      "compatibility": "backward",
+      "consumers": [
+        "vk-service"
+      ],
+      "correlationPath": "payload.executionId",
+      "correlationRequired": true,
+      "messageType": "vk.execution.requested",
+      "partitionKey": {
+        "paths": [
+          "payload.executionId"
+        ],
+        "separator": ":"
+      },
+      "producers": [
+        "tasks-service"
+      ],
+      "schemaVersion": 2,
+      "topic": "parsevk.vk.commands"
     }
   ],
   "manifestVersion": 1,

@@ -2,7 +2,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_prefix="TASKS_", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_prefix="TASKS_",
+        extra="ignore",
+    )
 
     app_name: str = "parseVK Tasks Service"
     database_url: str = "postgresql+asyncpg://tasks:tasks@tasks-db:5432/tasks"
@@ -10,7 +14,10 @@ class Settings(BaseSettings):
     kafka_bootstrap_servers: str = "kafka:9092"
     kafka_topic_tasks: str = "parsevk.tasks.events"
     kafka_topic_tasks_dlq: str = "parsevk.tasks.dlq"
+    kafka_topic_vk_commands: str = "parsevk.vk.commands"
+    kafka_topic_vk_commands_dlq: str = "parsevk.vk.commands.dlq"
     outbox_publish_enabled: bool = False
+    vk_commands_publish_enabled: bool = False
     automation_scheduler_enabled: bool = False
     kafka_consumer_enabled: bool = False
     sources_api_enabled: bool = False

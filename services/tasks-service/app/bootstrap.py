@@ -48,30 +48,33 @@ class ApplicationFactory:
         return OutboxService(self.session)
 
     def create_outbox_publisher(self) -> "OutboxPublisher":
-        """Create an OutboxPublisher wired with repository, producer, and topic names.
-
-        Uses self.producer (may be None if no producer is available — the caller
-        is responsible for checking). Topic and DLQ topic names are read from
-        settings at construction time.
-        """
+        """Create the routed tasks/VK command outbox publisher."""
         from app.core.config import settings
         from app.modules.outbox.publisher import (
             OutboxPublisher,
             TasksOutboxRepositoryAdapter,
+            dlq_topic_for_event,
             kafka_key_for_event,
+            topic_for_event,
         )
         from app.modules.outbox.repository import OutboxRepository
 
         logger.debug("OutboxPublisher created via factory")
         return OutboxPublisher(
-            repository=TasksOutboxRepositoryAdapter(OutboxRepository(self.session)),
+            repository=TasksOutboxRepositoryAdapter(
+                OutboxRepository(self.session)
+            ),
             producer=self.producer,
             topic=settings.kafka_topic_tasks,
             dlq_topic=settings.kafka_topic_tasks_dlq,
             namespace="tasks",
             key_fn=lambda msg: kafka_key_for_event(
-                msg.event_type, msg.payload, msg.aggregate_id
+                msg.event_type,
+                msg.payload,
+                msg.aggregate_id,
             ),
+            topic_fn=lambda msg: topic_for_event(msg, settings),
+            dlq_topic_fn=lambda msg: dlq_topic_for_event(msg, settings),
         )
 
     def create_tasks_service(self) -> TasksService:
