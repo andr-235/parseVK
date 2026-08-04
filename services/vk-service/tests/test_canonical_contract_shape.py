@@ -4,7 +4,7 @@ from parsevk_contracts.vk.commands import CATALOG, VkExecutionRequested
 def test_only_one_execution_requested_contract_is_registered():
     contracts = [
         contract
-        for contract in CATALOG
+        for contract in CATALOG.contracts
         if contract.message_type == "vk.execution.requested"
     ]
 
