@@ -9,7 +9,7 @@ from parsevk_contracts.vk.commands import (
     PostSelection,
     SourceReference,
     VkExecutionCancelRequested,
-    VkExecutionRequested,
+    VkExecutionRequestedV2,
     VkSourceDemandRequest,
 )
 from sqlalchemy import select
@@ -19,7 +19,7 @@ from app.db.models import Task, TaskRun, TaskRunSourceDemand
 from app.modules.outbox.service import OutboxService
 
 VK_EXECUTION_REQUESTED = "vk.execution.requested"
-VK_EXECUTION_REQUESTED_VERSION = 1
+VK_EXECUTION_REQUESTED_VERSION = 2
 VK_EXECUTION_CANCEL_REQUESTED = "vk.execution.cancel_requested"
 VK_EXECUTION_CANCEL_REQUESTED_VERSION = 1
 
@@ -33,7 +33,7 @@ async def build_vk_execution_requested(
     session: AsyncSession,
     task: Task,
     task_run_id: UUID,
-) -> VkExecutionRequested:
+) -> VkExecutionRequestedV2:
     run = await session.get(TaskRun, task_run_id)
     if run is None or run.task_id != task.id:
         raise RuntimeError(
@@ -79,7 +79,7 @@ async def build_vk_execution_requested(
         raise RuntimeError(f"TaskRun {task_run_id} has invalid task revision")
 
     execution_id = execution_id_for_run(task_run_id)
-    return VkExecutionRequested(
+    return VkExecutionRequestedV2(
         task_id=task.id,
         task_run_id=task_run_id,
         execution_id=execution_id,
@@ -104,7 +104,7 @@ async def add_vk_execution_command(
     outbox: OutboxService,
     task: Task,
     run_meta: dict | None,
-) -> VkExecutionRequested:
+) -> VkExecutionRequestedV2:
     """Append the canonical execution command in the active task transaction."""
     if not run_meta or not run_meta.get("taskRunId"):
         raise RuntimeError(
