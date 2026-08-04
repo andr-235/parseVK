@@ -18,6 +18,8 @@ use_service_path()
 from parsevk_contracts.validation import prepare_for_publish
 from parsevk_contracts.vk.commands import (
     CATALOG as VK_COMMAND_CATALOG,
+)
+from parsevk_contracts.vk.commands import (
     CommentSelection,
     PostSelection,
     SourceReference,
