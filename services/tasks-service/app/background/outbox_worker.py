@@ -1,4 +1,9 @@
-"""Outbox publisher background worker for tasks-service."""
+"""Outbox publisher background worker for tasks-service.
+
+Creates a single long-lived Kafka producer at startup and uses it for all
+outbox publish cycles. Canonical VK command topics are provisioned
+idempotently before publication begins.
+"""
 
 import asyncio
 import logging
@@ -19,7 +24,10 @@ TopicProvisioner = Callable[[], Awaitable[None]]
 
 
 async def ensure_vk_command_topics() -> None:
-    """Create the canonical command and DLQ topics idempotently."""
+    """Create command and DLQ topics when canonical publishing is enabled."""
+    if not settings.vk_commands_publish_enabled:
+        return
+
     admin = AIOKafkaAdminClient(
         bootstrap_servers=settings.kafka_bootstrap_servers
     )
@@ -45,6 +53,7 @@ async def ensure_vk_command_topics() -> None:
                 ]
             )
         except TopicAlreadyExistsError:
+            # Another replica or kafka-init may win the same idempotent race.
             pass
         logger.info(
             "Ensured canonical VK command topics: %s",
