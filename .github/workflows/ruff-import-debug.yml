@@ -1,0 +1,22 @@
+name: Ruff import debug
+
+on:
+  push:
+    branches:
+      - agent/p2-hardening-canonical-vk-commands
+
+permissions:
+  contents: read
+
+jobs:
+  imports:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v5
+      - name: Show exact import fixes
+        run: |
+          uvx ruff check --select I --fix --diff \
+            services/tasks-service/app/modules/outbox/publisher.py \
+            services/vk-service/app/tasks/vk_commands_consumer.py \
+            services/vk-service/tests/test_vk_commands_consumer.py
