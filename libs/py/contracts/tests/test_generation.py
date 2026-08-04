@@ -28,17 +28,17 @@ class TestJsonSchemaGeneration:
         schema = generate_json_schema(VK_EXECUTION_REQUESTED)
         assert schema["title"] == "vk.execution.requested"
 
-    def test_schema_includes_envelope_fields(self) -> None:
+    def test_schema_includes_unversioned_envelope_fields(self) -> None:
         schema = generate_json_schema(VK_EXECUTION_REQUESTED)
         properties = schema.get("properties", {})
         assert {
             "messageId",
             "messageType",
-            "schemaVersion",
             "occurredAt",
             "producer",
             "payload",
         }.issubset(properties)
+        assert "schemaVersion" not in properties
 
     def test_execution_request_requires_owner_user_id(self) -> None:
         schema = generate_json_schema(VK_EXECUTION_REQUESTED)
@@ -58,7 +58,6 @@ class TestJsonSchemaGeneration:
             Path(__file__).resolve().parent.parent
             / "examples"
             / "vk.execution.requested"
-            / "v1"
             / "valid-single-demand.json"
         )
         with open(fixture_path) as fixture:
@@ -88,14 +87,12 @@ class TestManifestGeneration:
         manifest = generate_manifest(VK_CATALOG)
         contracts = manifest["contracts"]
         assert len(contracts) == 2
-        assert {
-            (entry["messageType"], entry["schemaVersion"])
-            for entry in contracts
-        } == {
-            ("vk.execution.requested", 1),
-            ("vk.execution.cancel_requested", 1),
+        assert {entry["messageType"] for entry in contracts} == {
+            "vk.execution.requested",
+            "vk.execution.cancel_requested",
         }
-        assert all(entry["compatibility"] == "none" for entry in contracts)
+        assert all("schemaVersion" not in entry for entry in contracts)
+        assert all("compatibility" not in entry for entry in contracts)
 
     def test_manifest_producers_consumers(self) -> None:
         manifest = generate_manifest(VK_CATALOG)
@@ -123,7 +120,6 @@ class TestManifestGeneration:
 
         extra = MessageContract(
             message_type="extra.event",
-            schema_version=1,
             payload_model=ExtraPayload,
             topic="extra.topic",
             producers=frozenset({"svc"}),
