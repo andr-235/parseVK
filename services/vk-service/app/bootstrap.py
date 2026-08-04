@@ -17,7 +17,6 @@ from app.infrastructure.db.repositories.provider_accounts import (
 from app.infrastructure.db.repositories.source_collections import (
     SqlAlchemySourceCollectionRepository,
 )
-from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsRepository
 from app.infrastructure.db.repositories.vk_friends import SqlAlchemyVkFriendsRepository
 from app.infrastructure.metrics.vk_metrics import (
     observe_rate_limit_retry,
@@ -36,7 +35,6 @@ from app.services.ingestion.collector import DataCollector
 from app.services.ingestion.pipeline import IngestionPipeline
 from app.services.ingestion_service import IngestionService
 from app.services.ok_friends.exporter import OkFriendsExportService
-from app.services.task_events_service import TaskEventsService
 from app.services.vk_friends.exporter import VkFriendsExportService
 from app.services.vk_groups_service import VkGroupsService
 from app.services.vk_retry_policy import VkRetryPolicy
@@ -153,16 +151,6 @@ def get_ingestion_service(
         collector=collector,
         pipeline=pipeline,
         outbox_service=outbox_service,
-    )
-
-
-def get_task_events_handler(session: AsyncSession) -> TaskEventsService:
-    repository = SqlAlchemyTaskEventsRepository(session)
-    collection_repository = SqlAlchemySourceCollectionRepository(session)
-    return TaskEventsService(
-        repository=repository,
-        collection_repository=collection_repository,
-        tasks_client=_tasks_client,
     )
 
 
