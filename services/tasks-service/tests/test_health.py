@@ -9,14 +9,24 @@ from _service_path import use_service_path
 
 use_service_path()
 
+import app.main as main_module
 from common.runtime import WorkerHealth
-from app.main import create_app
+
+
+def reset_worker_health() -> None:
+    main_module._outbox_publisher_health.mark_stopped()
+    main_module._automation_scheduler_health.mark_stopped()
+    main_module._progress_consumer_health.mark_stopped()
 
 
 @pytest.mark.asyncio
 async def test_health_returns_up():
-    app = create_app()
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    reset_worker_health()
+    app = main_module.create_app()
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
         response = await client.get("/health")
 
     assert response.status_code == 200
@@ -31,12 +41,16 @@ async def test_health_returns_up():
 @pytest.mark.asyncio
 async def test_ready_returns_ready():
     from unittest.mock import AsyncMock, patch
-    app = create_app()
+
+    app = main_module.create_app()
     with patch("app.db.session.engine") as mock_engine:
         mock_conn = AsyncMock()
         mock_engine.connect.return_value.__aenter__.return_value = mock_conn
-        
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+        ) as client:
             response = await client.get("/ready")
 
     assert response.status_code == 200
@@ -46,10 +60,14 @@ async def test_ready_returns_ready():
 @pytest.mark.asyncio
 async def test_ready_returns_service_unavailable():
     from unittest.mock import patch
-    app = create_app()
+
+    app = main_module.create_app()
     with patch("app.db.session.engine") as mock_engine:
         mock_engine.connect.side_effect = Exception("Database connection error")
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+        ) as client:
             response = await client.get("/ready")
 
     assert response.status_code == 503
@@ -58,56 +76,56 @@ async def test_ready_returns_service_unavailable():
 
 def test_initial_state_dead():
     """New WorkerHealth is not healthy."""
-    h = WorkerHealth()
-    assert h.running is False
-    assert h.last_cycle_success_at is None
-    assert h.last_cycle_error is None
-    assert h.last_crash is None
-    assert h.is_healthy is False
+    health = WorkerHealth()
+    assert health.running is False
+    assert health.last_cycle_success_at is None
+    assert health.last_cycle_error is None
+    assert health.last_crash is None
+    assert health.is_healthy is False
 
 
 def test_mark_started():
     """mark_started() sets running=True but is_healthy is still False."""
-    h = WorkerHealth()
-    h.mark_started()
-    assert h.running is True
-    assert h.is_healthy is False  # no success yet
+    health = WorkerHealth()
+    health.mark_started()
+    assert health.running is True
+    assert health.is_healthy is False
 
 
 def test_mark_cycle_success():
-    """mark_cycle_success() sets running=True, updates last_cycle_success_at, clears cycle error."""
-    h = WorkerHealth()
-    h.mark_cycle_success()
-    assert h.running is True
-    assert h.last_cycle_success_at is not None
-    assert h.last_cycle_error is None
-    assert h.is_healthy is True
+    """mark_cycle_success() sets running=True and clears cycle error."""
+    health = WorkerHealth()
+    health.mark_cycle_success()
+    assert health.running is True
+    assert health.last_cycle_success_at is not None
+    assert health.last_cycle_error is None
+    assert health.is_healthy is True
 
 
 def test_mark_crashed():
     """mark_crashed() sets running=False and records the crash."""
-    h = WorkerHealth()
-    h.mark_cycle_success()  # was healthy
-    h.mark_crashed("something went wrong")
-    assert h.running is False
-    assert h.last_crash == "something went wrong"
-    assert h.is_healthy is False
+    health = WorkerHealth()
+    health.mark_cycle_success()
+    health.mark_crashed("something went wrong")
+    assert health.running is False
+    assert health.last_crash == "something went wrong"
+    assert health.is_healthy is False
 
 
 def test_mark_cycle_error_preserves_running():
-    """mark_cycle_error keeps running=True, sets last_cycle_error."""
-    h = WorkerHealth()
-    h.mark_cycle_success()
-    h.mark_cycle_error("cycle failed")
-    assert h.running is True
-    assert h.last_cycle_error == "cycle failed"
-    assert h.is_healthy is False
+    """mark_cycle_error keeps running=True and sets last_cycle_error."""
+    health = WorkerHealth()
+    health.mark_cycle_success()
+    health.mark_cycle_error("cycle failed")
+    assert health.running is True
+    assert health.last_cycle_error == "cycle failed"
+    assert health.is_healthy is False
 
 
 def test_mark_stopped():
     """mark_stopped() sets running=False."""
-    h = WorkerHealth()
-    h.mark_started()
-    h.mark_stopped()
-    assert h.running is False
-    assert h.is_healthy is False
+    health = WorkerHealth()
+    health.mark_started()
+    health.mark_stopped()
+    assert health.running is False
+    assert health.is_healthy is False
