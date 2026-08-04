@@ -62,7 +62,7 @@ class VkExecutionCommandsConsumer(BaseEventConsumer):
             topic=settings.kafka_topic_vk_commands,
             value=raw_value,
         )
-        if parsed.contract.schema_version != VK_EXECUTION_REQUESTED_VERSION:
+        if parsed.envelope.schema_version != VK_EXECUTION_REQUESTED_VERSION:
             raise ValueError(
                 "active VK runtime requires vk.execution.requested schema v2"
             )
@@ -74,7 +74,8 @@ class VkExecutionCommandsConsumer(BaseEventConsumer):
 
         # PR06A feeds the fully validated canonical command into the existing
         # aggregate attachment service. PR06B removes this bridge and attaches
-        # one physical source collection per command demand.
+        # one physical source collection per command demand. The feature flags
+        # remain disabled by default until that lossless attachment exists.
         group_ids = [
             int(demand.source.external_id)
             for demand in command.demands
