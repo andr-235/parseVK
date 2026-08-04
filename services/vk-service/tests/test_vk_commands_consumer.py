@@ -15,8 +15,6 @@ from _service_path import use_service_path
 
 use_service_path()
 
-import app.tasks.vk_commands_consumer as consumer_module
-from app.tasks.vk_commands_consumer import VkExecutionCommandsConsumer
 from parsevk_contracts.validation import prepare_for_publish
 from parsevk_contracts.vk.commands import (
     CATALOG as VK_COMMAND_CATALOG,
@@ -26,6 +24,9 @@ from parsevk_contracts.vk.commands import (
     VkExecutionRequestedV2,
     VkSourceDemandRequest,
 )
+
+import app.tasks.vk_commands_consumer as consumer_module
+from app.tasks.vk_commands_consumer import VkExecutionCommandsConsumer
 
 
 class SessionContext:
