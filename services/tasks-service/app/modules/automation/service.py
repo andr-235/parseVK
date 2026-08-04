@@ -6,7 +6,7 @@ from app.db.models import Task, TaskAuditLog, TaskAutomationSettings
 from app.modules.automation.schemas import AutomationSettingsUpdate
 from app.modules.tasks.event_payloads import task_request_payload
 from app.modules.tasks.mapper import task_to_response
-from app.modules.tasks.source_resolution import TaskSourceResolver
+from app.modules.tasks.source_compat import SourceCompatAdapter
 from app.modules.tasks.task_run import TaskRunFreezeError, freeze_task_run
 from app.modules.tasks.vk_command import add_vk_execution_command
 
@@ -21,7 +21,7 @@ class AutomationService:
         repository,
         tasks,
         outbox,
-        source_resolver_factory=TaskSourceResolver,
+        source_adapter_factory=SourceCompatAdapter,
         freezer=freeze_task_run,
         command_publisher=add_vk_execution_command,
     ):
@@ -29,7 +29,7 @@ class AutomationService:
         self.repository = repository
         self.tasks = tasks
         self.outbox = outbox
-        self.source_resolver_factory = source_resolver_factory
+        self.source_adapter_factory = source_adapter_factory
         self.freezer = freezer
         self.command_publisher = command_publisher
 
@@ -157,11 +157,13 @@ class AutomationService:
         )
 
         try:
-            source_resolver = self.source_resolver_factory(self.session)
+            source_adapter = self.source_adapter_factory(self.session)
             if task.scope == "all":
-                await source_resolver.resolve(task, [])
+                # Resolve the currently active source set for this concrete run.
+                # Do not clone historical links from a completed scope=all task.
+                await source_adapter.ensure_normalized_sources(task, [])
             else:
-                await source_resolver.resolve(
+                await source_adapter.ensure_normalized_sources(
                     base_task,
                     list(base_task.group_ids or []),
                 )
