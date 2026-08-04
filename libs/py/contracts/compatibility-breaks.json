@@ -1,0 +1,10 @@
+{
+  "removedContracts": [
+    {
+      "messageType": "vk.execution.requested",
+      "schemaVersion": 1,
+      "issue": "#411",
+      "reason": "Hard cutover removes the aggregate task-event runtime; all producers and consumers use the immutable owner-attributed source-demand command."
+    }
+  ]
+}
