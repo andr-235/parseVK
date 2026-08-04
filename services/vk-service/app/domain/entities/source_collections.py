@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 ACTIVE_COLLECTION_STATUSES = frozenset({"pending", "running"})
@@ -11,8 +12,14 @@ TERMINAL_DEMAND_STATUSES = frozenset({"done", "failed", "cancelled"})
 class SourceCollection:
     id: UUID
     execution_id: UUID
+    identity_version: int
     provider_account_key: str
     source_key: str
+    source_id: UUID | None
+    source_provider: str | None
+    source_type: str | None
+    source_external_id: str | None
+    source_owner_id: int | None
     fingerprint: str
     status: str
     plan_snapshot: dict
@@ -30,10 +37,15 @@ class SourceCollection:
 @dataclass(frozen=True)
 class CollectionDemand:
     id: UUID
+    demand_id: UUID
     collection_id: UUID
+    source_id: UUID | None
     task_id: int
     run_id: str
     owner_user_id: str
+    task_revision: int | None
+    source_set_revision: int | None
+    snapshot_sha256: str | None
     status: str
     execution_sequence: int
     cancellation_requested_at: datetime | None
@@ -54,3 +66,23 @@ class DemandAttachment:
     demand: CollectionDemand
     execution: object
     collection_created: bool
+
+
+SourceDemandAttachOutcome = Literal[
+    "created",
+    "coalesced",
+    "duplicate",
+    "conflict",
+]
+
+
+@dataclass(frozen=True)
+class SourceDemandAttachment:
+    outcome: SourceDemandAttachOutcome
+    collection: SourceCollection
+    demand: CollectionDemand
+    execution: object
+
+    @property
+    def collection_created(self) -> bool:
+        return self.outcome == "created"
