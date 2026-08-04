@@ -1,9 +1,9 @@
 name: Ruff import debug
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/p2-hardening-canonical-vk-commands
+      - main
 
 permissions:
   contents: read
