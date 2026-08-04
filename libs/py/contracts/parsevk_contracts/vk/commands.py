@@ -97,28 +97,32 @@ class VkExecutionRequestedV2(VkExecutionRequested):
     owner_user_id: Annotated[str, StringConstraints(min_length=1)]
 
 
-_COMMON_CONTRACT = {
-    "message_type": "vk.execution.requested",
-    "topic": "parsevk.vk.commands",
-    "producers": frozenset({"tasks-service"}),
-    "consumers": frozenset({"vk-service"}),
-    "partition_key": PartitionKeySpec(paths=("payload.executionId",)),
-    "correlation_required": True,
-    "correlation_path": "payload.executionId",
-    "causation_policy": "forbidden",
-    "compatibility": "backward",
-}
-
 VK_EXECUTION_REQUESTED = MessageContract(
+    message_type="vk.execution.requested",
     schema_version=1,
     payload_model=VkExecutionRequested,
-    **_COMMON_CONTRACT,
+    topic="parsevk.vk.commands",
+    producers=frozenset({"tasks-service"}),
+    consumers=frozenset({"vk-service"}),
+    partition_key=PartitionKeySpec(paths=("payload.executionId",)),
+    correlation_required=True,
+    correlation_path="payload.executionId",
+    causation_policy="forbidden",
+    compatibility="backward",
 )
 
 VK_EXECUTION_REQUESTED_V2 = MessageContract(
+    message_type="vk.execution.requested",
     schema_version=2,
     payload_model=VkExecutionRequestedV2,
-    **_COMMON_CONTRACT,
+    topic="parsevk.vk.commands",
+    producers=frozenset({"tasks-service"}),
+    consumers=frozenset({"vk-service"}),
+    partition_key=PartitionKeySpec(paths=("payload.executionId",)),
+    correlation_required=True,
+    correlation_path="payload.executionId",
+    causation_policy="forbidden",
+    compatibility="backward",
 )
 
 CATALOG = ContractCatalog.from_contracts(
