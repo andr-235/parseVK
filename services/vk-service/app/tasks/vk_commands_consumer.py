@@ -9,7 +9,7 @@ from parsevk_contracts.vk.commands import (
     CATALOG as VK_COMMAND_CATALOG,
     VkExecutionRequestedV2,
 )
-from prometheus_client import Gauge, REGISTRY
+from prometheus_client import REGISTRY, Gauge
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.bootstrap import get_task_events_handler
