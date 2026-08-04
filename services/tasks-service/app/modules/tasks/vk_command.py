@@ -19,7 +19,7 @@ from app.db.models import Task, TaskRun, TaskRunSourceDemand
 from app.modules.outbox.service import OutboxService
 
 VK_EXECUTION_REQUESTED = "vk.execution.requested"
-VK_EXECUTION_REQUESTED_VERSION = 2
+VK_EXECUTION_REQUESTED_VERSION = 1
 VK_EXECUTION_CANCEL_REQUESTED = "vk.execution.cancel_requested"
 VK_EXECUTION_CANCEL_REQUESTED_VERSION = 1
 
