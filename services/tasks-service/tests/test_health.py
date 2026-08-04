@@ -9,8 +9,9 @@ from _service_path import use_service_path
 
 use_service_path()
 
-import app.main as main_module
 from common.runtime import WorkerHealth
+
+import app.main as main_module
 
 
 def reset_worker_health() -> None:
