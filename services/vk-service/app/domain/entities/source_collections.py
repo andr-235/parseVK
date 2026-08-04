@@ -12,14 +12,13 @@ TERMINAL_DEMAND_STATUSES = frozenset({"done", "failed", "cancelled"})
 class SourceCollection:
     id: UUID
     execution_id: UUID
-    identity_version: int
     provider_account_key: str
     source_key: str
-    source_id: UUID | None
-    source_provider: str | None
-    source_type: str | None
-    source_external_id: str | None
-    source_owner_id: int | None
+    source_id: UUID
+    source_provider: str
+    source_type: str
+    source_external_id: str
+    source_owner_id: int
     fingerprint: str
     status: str
     plan_snapshot: dict
@@ -39,13 +38,13 @@ class CollectionDemand:
     id: UUID
     demand_id: UUID
     collection_id: UUID
-    source_id: UUID | None
+    source_id: UUID
     task_id: int
     run_id: str
     owner_user_id: str
-    task_revision: int | None
-    source_set_revision: int | None
-    snapshot_sha256: str | None
+    task_revision: int
+    source_set_revision: int
+    snapshot_sha256: str
     status: str
     execution_sequence: int
     cancellation_requested_at: datetime | None
