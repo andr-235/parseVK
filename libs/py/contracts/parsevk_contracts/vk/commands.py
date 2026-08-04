@@ -13,11 +13,11 @@ from parsevk_contracts.catalog import ContractCatalog, MessageContract, Partitio
 Sha256Hex = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{64}$")]
 NegativeOwnerId = Annotated[int, Field(lt=0)]
 PositiveExternalId = Annotated[str, StringConstraints(pattern=r"^[1-9][0-9]*$")]
-UserId = Annotated[str, StringConstraints(min_length=1, max_length=128)]
+UserId = Annotated[str, StringConstraints(min_length=1)]
 
 
 class SourceReference(ContractModel):
-    """Reference to one VK community source."""
+    """Reference to a VK community source."""
 
     source_id: UUID
     provider: Literal["vk"]
@@ -27,6 +27,7 @@ class SourceReference(ContractModel):
 
     @model_validator(mode="after")
     def validate_vk_identity(self) -> Self:
+        """VK community ownerId must equal negative externalId."""
         if self.owner_id != -int(self.external_id):
             raise ValueError(
                 "VK community ownerId must equal negative externalId: "
@@ -36,18 +37,22 @@ class SourceReference(ContractModel):
 
 
 class VkSourceDemandRequest(ContractModel):
-    """One immutable source demand within a TaskRun."""
+    """A single source collection demand within an execution request."""
 
     demand_id: UUID
     source: SourceReference
 
 
 class PostSelection(ContractModel):
+    """Post collection strategy."""
+
     strategy: Literal["latestByPublishedAt"]
     limit_per_source: Annotated[int, Field(ge=1, le=100)]
 
 
 class CommentSelection(ContractModel):
+    """Comment collection strategy."""
+
     mode: Literal["all"]
     include_thread_replies: Literal[True]
 
@@ -59,19 +64,19 @@ class CommentSelection(ContractModel):
         return value
 
 
-class VkExecutionRequested(ContractModel):
-    """Request source-level execution for one immutable TaskRun."""
+class VkExecutionRequestedV2(ContractModel):
+    """Owner-attributed command payload used by the canonical rollout."""
 
     task_id: Annotated[int, Field(gt=0)]
     task_run_id: UUID
     execution_id: UUID
-    owner_user_id: UserId
     demands: Annotated[tuple[VkSourceDemandRequest, ...], Field(min_length=1)]
     post_selection: PostSelection
     comment_selection: CommentSelection
     task_revision: Annotated[int, Field(ge=0)]
     source_set_revision: Annotated[int, Field(ge=0)]
     snapshot_sha256: Sha256Hex
+    owner_user_id: UserId
 
     @model_validator(mode="after")
     def validate_unique_demands_and_sources(self) -> Self:
@@ -82,6 +87,11 @@ class VkExecutionRequested(ContractModel):
         if len(source_ids) != len(set(source_ids)):
             raise ValueError("Duplicate source_id found in demands")
         return self
+
+
+# Public runtime name. The internal class name is retained solely so the
+# already-published v2 JSON Schema remains byte-semantically unchanged.
+VkExecutionRequested = VkExecutionRequestedV2
 
 
 class VkExecutionCancelRequested(ContractModel):
