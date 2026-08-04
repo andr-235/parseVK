@@ -35,7 +35,7 @@ class SourceReference(ContractModel):
 
 
 class VkSourceDemandRequest(ContractModel):
-    """A single immutable source demand within an execution request."""
+    """A single immutable source demand within a TaskRun."""
 
     demand_id: UUID
     source: SourceReference
@@ -59,7 +59,7 @@ class CommentSelection(ContractModel):
 
 
 class VkExecutionRequested(ContractModel):
-    """Canonical command for one immutable TaskRun and its source demands."""
+    """Canonical execution command for one immutable TaskRun."""
 
     task_id: Annotated[int, Field(gt=0)]
     task_run_id: UUID
@@ -95,7 +95,7 @@ class VkExecutionCancelRequested(ContractModel):
 
 VK_EXECUTION_REQUESTED = MessageContract(
     message_type="vk.execution.requested",
-    schema_version=2,
+    schema_version=1,
     payload_model=VkExecutionRequested,
     topic="parsevk.vk.commands",
     producers=frozenset({"tasks-service"}),
