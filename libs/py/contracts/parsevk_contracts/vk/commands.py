@@ -83,6 +83,16 @@ class VkExecutionRequested(ContractModel):
         return self
 
 
+class VkExecutionCancelRequested(ContractModel):
+    """Canonical cancellation command for one immutable TaskRun."""
+
+    task_id: Annotated[int, Field(gt=0)]
+    task_run_id: UUID
+    execution_id: UUID
+    owner_user_id: Annotated[str, StringConstraints(min_length=1)]
+    reason: Annotated[str, StringConstraints(min_length=1, max_length=2000)]
+
+
 VK_EXECUTION_REQUESTED = MessageContract(
     message_type="vk.execution.requested",
     schema_version=2,
@@ -97,4 +107,23 @@ VK_EXECUTION_REQUESTED = MessageContract(
     compatibility="none",
 )
 
-CATALOG = ContractCatalog.from_contracts((VK_EXECUTION_REQUESTED,))
+VK_EXECUTION_CANCEL_REQUESTED = MessageContract(
+    message_type="vk.execution.cancel_requested",
+    schema_version=1,
+    payload_model=VkExecutionCancelRequested,
+    topic="parsevk.vk.commands",
+    producers=frozenset({"tasks-service"}),
+    consumers=frozenset({"vk-service"}),
+    partition_key=PartitionKeySpec(paths=("payload.executionId",)),
+    correlation_required=True,
+    correlation_path="payload.executionId",
+    causation_policy="forbidden",
+    compatibility="none",
+)
+
+CATALOG = ContractCatalog.from_contracts(
+    (
+        VK_EXECUTION_REQUESTED,
+        VK_EXECUTION_CANCEL_REQUESTED,
+    )
+)
