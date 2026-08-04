@@ -76,12 +76,12 @@ def command_payload(execution_id, task_run_id):
 
 
 @pytest.mark.asyncio
-async def test_publisher_emits_contract_v2_envelope_and_partition_key():
+async def test_publisher_emits_canonical_envelope_and_partition_key():
     execution_id = uuid4()
     message = OutboxMessage(
         id=uuid4(),
         event_type="vk.execution.requested",
-        event_version=2,
+        event_version=1,
         aggregate_type="vk_execution",
         aggregate_id=str(execution_id),
         correlation_id=str(execution_id),
@@ -127,7 +127,7 @@ async def test_publisher_emits_contract_v2_envelope_and_partition_key():
         topic=call.args[0],
         value=call.kwargs["value"],
     )
-    assert parsed.envelope.schema_version == 2
+    assert parsed.envelope.schema_version == 1
     assert parsed.envelope.message_id == message.id
     assert parsed.envelope.correlation_id == execution_id
     assert parsed.envelope.payload.execution_id == execution_id
