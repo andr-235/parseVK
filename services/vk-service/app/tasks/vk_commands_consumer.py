@@ -62,7 +62,8 @@ class VkExecutionCommandsConsumer(BaseEventConsumer):
         )
         command = parsed.envelope.payload
         attachments = ()
-        outcome = "cancelled"
+        outcome = "unknown"
+
         async with self.session_factory() as session:
             inbox = SqlAlchemyTaskEventsRepository(session)
             repository = CanonicalVkCommandRepository(session)
@@ -72,6 +73,7 @@ class VkExecutionCommandsConsumer(BaseEventConsumer):
                     parsed.envelope.message_id,
                 ):
                     return
+
                 if isinstance(command, VkExecutionRequested):
                     result = await repository.attach_command(command)
                     outcome = result.outcome
@@ -85,16 +87,20 @@ class VkExecutionCommandsConsumer(BaseEventConsumer):
                     cancelled = await repository.request_cancellation(
                         task_id=command.task_id,
                         run_id=str(command.task_run_id),
+                        execution_id=command.execution_id,
+                        owner_user_id=command.owner_user_id,
                         reason=command.reason,
                     )
                     outcome = "cancelled" if cancelled is not None else "not_found"
                 else:
                     raise TypeError("Unexpected VK command payload")
+
                 await inbox.mark_processed(
                     self.consumer_name,
                     parsed.envelope.message_id,
                     parsed.envelope.message_type,
                 )
+
         for attachment in attachments:
             observe_collection_demand_attached(
                 coalesced=not attachment.collection_created
