@@ -23,10 +23,8 @@ async def test_repository_lock_pending_sets_locked_at():
     event = MagicMock()
     event.id = UUID("00000000-0000-0000-0000-000000000007")
     event.locked_at = None
-    scalars_result = MagicMock()
-    scalars_result.all.return_value = [event]
     session = AsyncMock()
-    session.scalars.return_value = scalars_result
+    session.scalars.return_value = [event]
     repository = OutboxRepository(session)
 
     before = datetime.now(UTC)
