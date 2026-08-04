@@ -7,6 +7,8 @@ from common.kafka.consumer import BaseEventConsumer
 from parsevk_contracts.validation import parse_for_consume
 from parsevk_contracts.vk.commands import (
     CATALOG as VK_COMMAND_CATALOG,
+)
+from parsevk_contracts.vk.commands import (
     VkExecutionRequestedV2,
 )
 from prometheus_client import REGISTRY, Gauge
