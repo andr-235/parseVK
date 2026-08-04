@@ -1,0 +1,50 @@
+name: P2 Hardening Branch CI
+
+on:
+  push:
+    branches:
+      - agent/p2-hardening-source-level-collections
+
+permissions:
+  contents: read
+
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v5
+      - run: uvx ruff check --output-format=github libs/py services/tasks-service services/vk-service
+
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - working-directory: libs/py/contracts
+        run: |
+          uv sync --group dev --frozen
+          uv run pytest -v
+          uv run mypy parsevk_contracts
+          uv run python -m parsevk_contracts.generation.cli validate-registry
+          uv run python -m parsevk_contracts.generation.cli check
+          npx --yes @asyncapi/cli@6.0.2 validate generated/asyncapi/parsevk-contracts.yaml
+
+  tasks-service:
+    uses: ./.github/workflows/reusable-python-quality.yml
+    with:
+      service: tasks-service
+
+  vk-service:
+    uses: ./.github/workflows/reusable-python-quality.yml
+    with:
+      service: vk-service
+
+  vk-migrations:
+    uses: ./.github/workflows/reusable-alembic-migration.yml
+    with:
+      service: vk-service
+      database_url_env: VK_DATABASE_URL
