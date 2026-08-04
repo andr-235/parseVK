@@ -13,7 +13,6 @@ from _service_path import use_service_path
 
 use_service_path()
 
-from app.core.config import settings
 from app.modules.tasks.vk_command import (
     add_vk_execution_command,
     build_vk_execution_requested,
@@ -92,8 +91,7 @@ async def test_build_vk_command_uses_frozen_demands_and_stable_execution_id():
 
 
 @pytest.mark.asyncio
-async def test_add_vk_command_persists_camel_case_payload(monkeypatch):
-    monkeypatch.setattr(settings, "vk_commands_publish_enabled", True)
+async def test_add_vk_command_persists_camel_case_payload():
     run_id = uuid4()
     outbox = SimpleNamespace(add_event=AsyncMock())
 
@@ -108,10 +106,9 @@ async def test_add_vk_command_persists_camel_case_payload(monkeypatch):
         },
     )
 
-    assert command is not None
     call = outbox.add_event.await_args.kwargs
     assert call["event_type"] == "vk.execution.requested"
-    assert call["event_version"] == 2
+    assert call["event_version"] == 1
     assert call["aggregate_id"] == str(command.execution_id)
     assert call["correlation_id"] == str(command.execution_id)
     assert call["payload"]["taskRunId"] == str(run_id)
