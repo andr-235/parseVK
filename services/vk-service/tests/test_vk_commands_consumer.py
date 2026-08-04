@@ -23,7 +23,7 @@ from parsevk_contracts.vk.commands import (
     CommentSelection,
     PostSelection,
     SourceReference,
-    VkExecutionRequested,
+    VkExecutionRequestedV2,
     VkSourceDemandRequest,
 )
 
@@ -40,15 +40,15 @@ def session_factory():
     return SessionContext()
 
 
-def command_value(*, owner_user_id: str | None = "user-1"):
+def command_value():
     source_id = uuid4()
     task_run_id = uuid4()
     execution_id = uuid4()
-    command = VkExecutionRequested(
+    command = VkExecutionRequestedV2(
         task_id=10,
         task_run_id=task_run_id,
         execution_id=execution_id,
-        owner_user_id=owner_user_id,
+        owner_user_id="user-1",
         demands=(
             VkSourceDemandRequest(
                 demand_id=uuid4(),
@@ -76,7 +76,7 @@ def command_value(*, owner_user_id: str | None = "user-1"):
     prepared = prepare_for_publish(
         VK_COMMAND_CATALOG,
         message_type="vk.execution.requested",
-        schema_version=1,
+        schema_version=2,
         producer="tasks-service",
         message_id=uuid4(),
         occurred_at=datetime.now(UTC),
@@ -112,13 +112,15 @@ async def test_valid_command_is_translated_after_contract_validation(monkeypatch
 
 @pytest.mark.asyncio
 async def test_command_without_owner_is_rejected():
-    _, value = command_value(owner_user_id=None)
+    _, value = command_value()
+    payload = json.loads(value)
+    del payload["payload"]["ownerUserId"]
     consumer = VkExecutionCommandsConsumer(
         session_factory=session_factory
     )
 
-    with pytest.raises(ValueError, match="ownerUserId"):
-        await consumer.handle_message(value)
+    with pytest.raises(Exception, match="ownerUserId"):
+        await consumer.handle_message(json.dumps(payload).encode("utf-8"))
 
 
 @pytest.mark.asyncio
