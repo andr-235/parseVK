@@ -1,3 +1,10 @@
+# [0.91.0](https://github.com/andr-235/parseVK/compare/v0.90.0...v0.91.0) (2026-08-04)
+
+
+### Features
+
+* **p2:** route immutable TaskRuns through canonical VK commands ([#412](https://github.com/andr-235/parseVK/issues/412)) ([514b7d3](https://github.com/andr-235/parseVK/commit/514b7d3cabfef011b9d3c8c2dc5c0fd04b87dbeb))
+
 # [0.90.0](https://github.com/andr-235/parseVK/compare/v0.89.0...v0.90.0) (2026-08-03)
 
 
