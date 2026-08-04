@@ -17,7 +17,7 @@ from app.modules.tasks.exceptions import TaskNotFoundError
 from app.modules.tasks.mapper import audit_to_response, task_to_response
 from app.modules.tasks.repository import TasksRepository
 from app.modules.tasks.schemas import CreateParseTaskRequest
-from app.modules.tasks.source_compat import SourceCompatAdapter
+from app.modules.tasks.source_resolution import TaskSourceResolver
 from app.modules.tasks.task_run import TaskRunFreezeError, freeze_task_run
 from app.modules.tasks.vk_command import add_vk_execution_command
 
@@ -33,14 +33,14 @@ class TasksCrudService:
         repository: TasksRepository,
         outbox: OutboxService,
         *,
-        source_adapter_factory=SourceCompatAdapter,
+        source_resolver_factory=TaskSourceResolver,
         freezer=freeze_task_run,
         command_publisher=add_vk_execution_command,
     ):
         self.session = session
         self.repository = repository
         self.outbox = outbox
-        self.source_adapter_factory = source_adapter_factory
+        self.source_resolver_factory = source_resolver_factory
         self.freezer = freezer
         self.command_publisher = command_publisher
 
@@ -84,9 +84,9 @@ class TasksCrudService:
             )
         )
 
-        source_adapter = self.source_adapter_factory(self.session)
+        source_resolver = self.source_resolver_factory(self.session)
         try:
-            await source_adapter.ensure_normalized_sources(task, group_ids)
+            await source_resolver.resolve(task, group_ids)
             run_meta = await self.freezer(self.session, task)
         except (TaskRunFreezeError, RuntimeError) as exc:
             logger.error(
@@ -97,14 +97,6 @@ class TasksCrudService:
             )
             raise
 
-        await self.outbox.add_event(
-            event_type="task.created",
-            aggregate_type="task",
-            aggregate_id=str(task.id),
-            correlation_id=correlation_id,
-            dedupe_key=f"task.created:{task.id}",
-            payload=task_request_payload(task, owner_user_id, run_meta),
-        )
         await self.command_publisher(
             self.session,
             self.outbox,
