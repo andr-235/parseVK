@@ -9,7 +9,10 @@ from common.outbox import OutboxMessage
 from common.outbox import OutboxPublisher as CommonOutboxPublisher
 from parsevk_contracts.validation import prepare_for_publish
 from parsevk_contracts.vk.commands import CATALOG as VK_COMMAND_CATALOG
-from parsevk_contracts.vk.commands import VkExecutionRequested
+from parsevk_contracts.vk.commands import (
+    VkExecutionCancelRequested,
+    VkExecutionRequested,
+)
 
 from app.db.models import OutboxEvent
 from app.modules.outbox.repository import OutboxRepository as TasksOutboxRepository
@@ -24,7 +27,11 @@ __all__ = [
 ]
 
 MAX_OUTBOX_ATTEMPTS = 5
-VK_EXECUTION_REQUESTED = "vk.execution.requested"
+VK_COMMAND_MODELS = {
+    "vk.execution.requested": VkExecutionRequested,
+    "vk.execution.cancel_requested": VkExecutionCancelRequested,
+}
+VK_COMMAND_TYPES = frozenset(VK_COMMAND_MODELS)
 
 
 def kafka_key_for_event(
@@ -34,19 +41,19 @@ def kafka_key_for_event(
 ) -> str:
     if event_type == "task.automation_settings_updated":
         return str(payload["ownerUserId"])
-    if event_type == VK_EXECUTION_REQUESTED:
+    if event_type in VK_COMMAND_TYPES:
         return str(payload["executionId"])
     return str(payload.get("taskId") or aggregate_id)
 
 
 def topic_for_event(message: OutboxMessage, settings) -> str:
-    if message.event_type == VK_EXECUTION_REQUESTED:
+    if message.event_type in VK_COMMAND_TYPES:
         return settings.kafka_topic_vk_commands
     return settings.kafka_topic_tasks
 
 
 def dlq_topic_for_event(message: OutboxMessage, settings) -> str:
-    if message.event_type == VK_EXECUTION_REQUESTED:
+    if message.event_type in VK_COMMAND_TYPES:
         return settings.kafka_topic_vk_commands_dlq
     return settings.kafka_topic_tasks_dlq
 
@@ -60,26 +67,30 @@ def _as_utc(value: datetime | None) -> datetime:
 
 
 class OutboxPublisher(CommonOutboxPublisher):
-    """Publish task events and strict canonical VK commands."""
+    """Publish public task events and canonical VK commands."""
 
     async def _publish_event(self, event: OutboxMessage) -> None:
-        if event.event_type != VK_EXECUTION_REQUESTED:
+        model = VK_COMMAND_MODELS.get(event.event_type)
+        if model is None:
             await super()._publish_event(event)
             return
-        command = VkExecutionRequested.model_validate(event.payload)
+
+        command = model.model_validate(event.payload)
+        execution_id = command.execution_id
         if not event.correlation_id:
             raise ValueError(
-                "vk.execution.requested outbox row requires correlation_id"
+                f"{event.event_type} outbox row requires correlation_id"
             )
         correlation_id = UUID(str(event.correlation_id))
-        if correlation_id != command.execution_id:
+        if correlation_id != execution_id:
             raise ValueError(
-                "vk.execution.requested correlation_id must equal executionId"
+                f"{event.event_type} correlation_id must equal executionId"
             )
-        if str(event.aggregate_id) != str(command.execution_id):
+        if str(event.aggregate_id) != str(execution_id):
             raise ValueError(
-                "vk.execution.requested aggregate_id must equal executionId"
+                f"{event.event_type} aggregate_id must equal executionId"
             )
+
         prepared = prepare_for_publish(
             VK_COMMAND_CATALOG,
             message_type=event.event_type,
@@ -94,7 +105,7 @@ class OutboxPublisher(CommonOutboxPublisher):
             raise ValueError(
                 "configured VK command topic does not match contract catalog"
             )
-        key = prepared.partition_key or str(command.execution_id)
+        key = prepared.partition_key or str(execution_id)
         await self.producer.send_and_wait(
             prepared.topic,
             key=key.encode("utf-8"),
