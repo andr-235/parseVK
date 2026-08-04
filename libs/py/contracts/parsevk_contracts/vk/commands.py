@@ -64,7 +64,7 @@ class CommentSelection(ContractModel):
 
 
 class VkExecutionRequested(ContractModel):
-    """Version 1 command payload retained unchanged for compatibility."""
+    """Command payload: request VK execution for one or more sources."""
 
     task_id: Annotated[int, Field(gt=0)]
     task_run_id: UUID
@@ -92,7 +92,7 @@ class VkExecutionRequested(ContractModel):
 
 
 class VkExecutionRequestedV2(VkExecutionRequested):
-    """Owner-attributed command payload used by the active runtime."""
+    """Owner-attributed command payload used by the canonical rollout."""
 
     owner_user_id: Annotated[str, StringConstraints(min_length=1)]
 
