@@ -10,7 +10,6 @@
           "type": "string"
         },
         "ownerUserId": {
-          "maxLength": 128,
           "minLength": 1,
           "title": "Owneruserid",
           "type": "string"
