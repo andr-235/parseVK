@@ -5,7 +5,10 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-from common.outbox import OutboxMessage, OutboxPublisher as CommonOutboxPublisher
+from common.outbox import (
+    OutboxMessage,
+    OutboxPublisher as CommonOutboxPublisher,
+)
 from parsevk_contracts.validation import prepare_for_publish
 from parsevk_contracts.vk.commands import (
     CATALOG as VK_COMMAND_CATALOG,
@@ -16,12 +19,12 @@ from app.db.models import OutboxEvent
 from app.modules.outbox.repository import OutboxRepository as TasksOutboxRepository
 
 __all__ = [
+    "MAX_OUTBOX_ATTEMPTS",
     "OutboxPublisher",
     "TasksOutboxRepositoryAdapter",
+    "dlq_topic_for_event",
     "kafka_key_for_event",
     "topic_for_event",
-    "dlq_topic_for_event",
-    "MAX_OUTBOX_ATTEMPTS",
 ]
 
 MAX_OUTBOX_ATTEMPTS = 5
