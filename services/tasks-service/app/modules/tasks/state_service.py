@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import TaskAuditLog
 from app.modules.outbox.service import OutboxService
 from app.modules.tasks.event_payloads import (
-    task_identity_payload,
     task_request_payload,
     task_snapshot,
     task_state_changed_payload,
@@ -24,7 +23,10 @@ from app.modules.tasks.task_run import (
     TaskRunFreezeError,
     freeze_resumed_task_run,
 )
-from app.modules.tasks.vk_command import add_vk_execution_command
+from app.modules.tasks.vk_command import (
+    add_vk_execution_cancel_command,
+    add_vk_execution_command,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,12 +41,14 @@ class TaskStateService:
         outbox: OutboxService,
         freezer=freeze_resumed_task_run,
         command_publisher=add_vk_execution_command,
+        cancellation_publisher=add_vk_execution_cancel_command,
     ):
         self.session = session
         self.repository = repository
         self.outbox = outbox
         self.freezer = freezer
         self.command_publisher = command_publisher
+        self.cancellation_publisher = cancellation_publisher
 
     async def resume_task(
         self,
@@ -102,13 +106,6 @@ class TaskStateService:
                     "previousRunId": previous_run_id,
                 },
             )
-        )
-        await self.outbox.add_event(
-            event_type="task.resumed",
-            aggregate_type="task",
-            aggregate_id=str(task.id),
-            dedupe_key=f"task.resumed:{task.id}:{task.execution_run_id}",
-            payload=task_request_payload(task, owner_user_id, run_meta),
         )
         await self.command_publisher(
             self.session,
@@ -168,12 +165,10 @@ class TaskStateService:
                 },
             )
         )
-        await self.outbox.add_event(
-            event_type="task.cancelled",
-            aggregate_type="task",
-            aggregate_id=str(task.id),
-            dedupe_key=f"task.cancelled:{task.id}:{task.execution_run_id}",
-            payload=task_identity_payload(task, owner_user_id),
+        await self.cancellation_publisher(
+            self.outbox,
+            task,
+            reason="task.cancelled",
         )
         task = await self.repository.touch_task(task)
         await self.outbox.add_event(
@@ -237,16 +232,5 @@ class TaskStateService:
                 event_type="task.deleted",
                 event_data={"taskSnapshot": snapshot},
             )
-        )
-        await self.outbox.add_event(
-            event_type="task.deleted",
-            aggregate_type="task",
-            aggregate_id=str(task.id),
-            dedupe_key=f"task.deleted:{task.id}",
-            payload={
-                "taskId": str(task.id),
-                "ownerUserId": owner_user_id,
-                "taskSnapshot": snapshot,
-            },
         )
         await self.repository.delete_task(task)
