@@ -7,7 +7,7 @@ from parsevk_contracts.validation import parse_for_consume
 from parsevk_contracts.vk.commands import CATALOG as VK_COMMAND_CATALOG
 from parsevk_contracts.vk.commands import (
     VkExecutionCancelRequested,
-    VkExecutionRequestedV2,
+    VkExecutionRequested,
 )
 from prometheus_client import REGISTRY, Gauge
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -21,7 +21,6 @@ from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsReposit
 from app.infrastructure.metrics.vk_metrics import observe_collection_demand_attached
 
 logger = logging.getLogger(__name__)
-
 CONSUMER_NAME = "vk-service-vk-commands"
 
 
@@ -45,11 +44,7 @@ class VkExecutionCommandsConsumer(BaseEventConsumer):
     consumer_name = CONSUMER_NAME
     dlq_topic = settings.kafka_topic_vk_commands_dlq
 
-    def __init__(
-        self,
-        *,
-        session_factory: async_sessionmaker,
-    ):
+    def __init__(self, *, session_factory: async_sessionmaker):
         super().__init__(
             session_factory=session_factory,
             kafka_topic=settings.kafka_topic_vk_commands,
@@ -68,7 +63,6 @@ class VkExecutionCommandsConsumer(BaseEventConsumer):
         command = parsed.envelope.payload
         attachments = ()
         outcome = "cancelled"
-
         async with self.session_factory() as session:
             inbox = SqlAlchemyTaskEventsRepository(session)
             repository = CanonicalVkCommandRepository(session)
@@ -78,7 +72,7 @@ class VkExecutionCommandsConsumer(BaseEventConsumer):
                     parsed.envelope.message_id,
                 ):
                     return
-                if isinstance(command, VkExecutionRequestedV2):
+                if isinstance(command, VkExecutionRequested):
                     result = await repository.attach_command(command)
                     outcome = result.outcome
                     attachments = result.attachments
@@ -95,22 +89,18 @@ class VkExecutionCommandsConsumer(BaseEventConsumer):
                     )
                     outcome = "cancelled" if cancelled is not None else "not_found"
                 else:
-                    raise TypeError(
-                        "vk-service accepts vk.execution.requested only as schema v2"
-                    )
+                    raise TypeError("Unexpected VK command payload")
                 await inbox.mark_processed(
                     self.consumer_name,
                     parsed.envelope.message_id,
                     parsed.envelope.message_type,
                 )
-
         for attachment in attachments:
             observe_collection_demand_attached(
                 coalesced=not attachment.collection_created
             )
         logger.info(
-            "Handled canonical VK command type=%s task_id=%s run_id=%s "
-            "outcome=%s demands=%d",
+            "Handled VK command type=%s task_id=%s run_id=%s outcome=%s demands=%d",
             parsed.envelope.message_type,
             command.task_id,
             command.task_run_id,
