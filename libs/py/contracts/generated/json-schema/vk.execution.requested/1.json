@@ -2,7 +2,6 @@
   "$defs": {
     "CommentSelection": {
       "additionalProperties": false,
-      "description": "Comment collection strategy.",
       "properties": {
         "includeThreadReplies": {
           "const": true,
@@ -24,7 +23,6 @@
     },
     "PostSelection": {
       "additionalProperties": false,
-      "description": "Post collection strategy.",
       "properties": {
         "limitPerSource": {
           "maximum": 100,
@@ -47,7 +45,7 @@
     },
     "SourceReference": {
       "additionalProperties": false,
-      "description": "Reference to a VK community source.",
+      "description": "Reference to one VK community source.",
       "properties": {
         "externalId": {
           "pattern": "^[1-9][0-9]*$",
@@ -87,7 +85,7 @@
     },
     "VkExecutionRequested": {
       "additionalProperties": false,
-      "description": "Command payload: request VK execution for one or more sources.",
+      "description": "Canonical execution command for one immutable TaskRun.",
       "properties": {
         "commentSelection": {
           "$ref": "#/$defs/CommentSelection"
@@ -103,6 +101,11 @@
         "executionId": {
           "format": "uuid",
           "title": "Executionid",
+          "type": "string"
+        },
+        "ownerUserId": {
+          "minLength": 1,
+          "title": "Owneruserid",
           "type": "string"
         },
         "postSelection": {
@@ -138,6 +141,7 @@
         "taskId",
         "taskRunId",
         "executionId",
+        "ownerUserId",
         "demands",
         "postSelection",
         "commentSelection",
@@ -150,7 +154,7 @@
     },
     "VkSourceDemandRequest": {
       "additionalProperties": false,
-      "description": "A single source collection demand within an execution request.",
+      "description": "A single immutable source demand within a TaskRun.",
       "properties": {
         "demandId": {
           "format": "uuid",
