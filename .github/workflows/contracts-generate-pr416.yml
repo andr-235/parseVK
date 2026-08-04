@@ -1,0 +1,44 @@
+name: Generate PR416 contract artifacts
+
+on:
+  push:
+    branches:
+      - agent/p2-canonical-source-runtime
+
+permissions:
+  contents: write
+
+concurrency:
+  group: generate-pr416-contracts
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: agent/p2-canonical-source-runtime
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install contract dependencies
+        working-directory: libs/py/contracts
+        run: uv sync --group dev --frozen
+      - name: Generate artifacts
+        working-directory: libs/py/contracts
+        run: uv run python -m parsevk_contracts.generation.cli generate
+      - name: Commit generated artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- libs/py/contracts/generated; then
+            echo "Generated artifacts already current"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add libs/py/contracts/generated
+          git commit -m "chore(contracts): regenerate VK command artifacts"
+          git push origin HEAD:agent/p2-canonical-source-runtime
