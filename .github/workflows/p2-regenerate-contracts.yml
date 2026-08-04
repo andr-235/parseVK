@@ -17,11 +17,11 @@ jobs:
         with:
           persist-credentials: true
       - uses: astral-sh/setup-uv@v5
-      - name: Regenerate contract artifacts
+      - name: Regenerate all canonical contract artifacts
         working-directory: libs/py/contracts
         run: |
           uv sync --group dev --frozen
-          uv run python -c "from parsevk_contracts.generation import generate_all; from parsevk_contracts.vk.commands import CATALOG; generate_all(CATALOG)"
+          uv run python -m parsevk_contracts.generation.cli generate
       - name: Commit generated artifacts
         run: |
           if git diff --quiet -- libs/py/contracts/generated; then
