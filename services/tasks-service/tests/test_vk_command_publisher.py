@@ -127,7 +127,7 @@ async def test_publisher_emits_contract_v2_envelope_and_partition_key():
         topic=call.args[0],
         value=call.kwargs["value"],
     )
-    assert parsed.contract.schema_version == 2
+    assert parsed.envelope.schema_version == 2
     assert parsed.envelope.message_id == message.id
     assert parsed.envelope.correlation_id == execution_id
     assert parsed.envelope.payload.execution_id == execution_id
