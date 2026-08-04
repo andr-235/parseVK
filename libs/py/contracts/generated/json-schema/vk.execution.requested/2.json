@@ -85,9 +85,9 @@
       "title": "SourceReference",
       "type": "object"
     },
-    "VkExecutionRequested": {
+    "VkExecutionRequestedV2": {
       "additionalProperties": false,
-      "description": "Command payload: request VK execution for one or more sources.",
+      "description": "Owner-attributed command payload used by the canonical rollout.",
       "properties": {
         "commentSelection": {
           "$ref": "#/$defs/CommentSelection"
@@ -103,6 +103,11 @@
         "executionId": {
           "format": "uuid",
           "title": "Executionid",
+          "type": "string"
+        },
+        "ownerUserId": {
+          "minLength": 1,
+          "title": "Owneruserid",
           "type": "string"
         },
         "postSelection": {
@@ -143,9 +148,10 @@
         "commentSelection",
         "taskRevision",
         "sourceSetRevision",
-        "snapshotSha256"
+        "snapshotSha256",
+        "ownerUserId"
       ],
-      "title": "VkExecutionRequested",
+      "title": "VkExecutionRequestedV2",
       "type": "object"
     },
     "VkSourceDemandRequest": {
@@ -169,10 +175,10 @@
       "type": "object"
     }
   },
-  "$id": "urn:parsevk:contract:vk.execution.requested:1",
+  "$id": "urn:parsevk:contract:vk.execution.requested:2",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Schema for vk.execution.requested v1",
+  "description": "Schema for vk.execution.requested v2",
   "properties": {
     "causationId": {
       "type": "null"
@@ -195,7 +201,7 @@
       "type": "string"
     },
     "payload": {
-      "$ref": "#/$defs/VkExecutionRequested"
+      "$ref": "#/$defs/VkExecutionRequestedV2"
     },
     "producer": {
       "enum": [
@@ -203,7 +209,7 @@
       ]
     },
     "schemaVersion": {
-      "const": 1
+      "const": 2
     }
   },
   "required": [
