@@ -2,7 +2,6 @@
   "$defs": {
     "CommentSelection": {
       "additionalProperties": false,
-      "description": "Comment collection strategy.",
       "properties": {
         "includeThreadReplies": {
           "const": true,
@@ -24,7 +23,6 @@
     },
     "PostSelection": {
       "additionalProperties": false,
-      "description": "Post collection strategy.",
       "properties": {
         "limitPerSource": {
           "maximum": 100,
@@ -47,7 +45,7 @@
     },
     "SourceReference": {
       "additionalProperties": false,
-      "description": "Reference to a VK community source.",
+      "description": "Reference to one VK community source.",
       "properties": {
         "externalId": {
           "pattern": "^[1-9][0-9]*$",
@@ -85,9 +83,9 @@
       "title": "SourceReference",
       "type": "object"
     },
-    "VkExecutionRequestedV2": {
+    "VkExecutionRequested": {
       "additionalProperties": false,
-      "description": "Owner-attributed command payload used by the canonical rollout.",
+      "description": "Request source-level execution for one immutable TaskRun.",
       "properties": {
         "commentSelection": {
           "$ref": "#/$defs/CommentSelection"
@@ -106,6 +104,7 @@
           "type": "string"
         },
         "ownerUserId": {
+          "maxLength": 128,
           "minLength": 1,
           "title": "Owneruserid",
           "type": "string"
@@ -143,20 +142,20 @@
         "taskId",
         "taskRunId",
         "executionId",
+        "ownerUserId",
         "demands",
         "postSelection",
         "commentSelection",
         "taskRevision",
         "sourceSetRevision",
-        "snapshotSha256",
-        "ownerUserId"
+        "snapshotSha256"
       ],
-      "title": "VkExecutionRequestedV2",
+      "title": "VkExecutionRequested",
       "type": "object"
     },
     "VkSourceDemandRequest": {
       "additionalProperties": false,
-      "description": "A single source collection demand within an execution request.",
+      "description": "One immutable source demand within a TaskRun.",
       "properties": {
         "demandId": {
           "format": "uuid",
@@ -201,7 +200,7 @@
       "type": "string"
     },
     "payload": {
-      "$ref": "#/$defs/VkExecutionRequestedV2"
+      "$ref": "#/$defs/VkExecutionRequested"
     },
     "producer": {
       "enum": [

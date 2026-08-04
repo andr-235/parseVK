@@ -15,8 +15,8 @@ channels:
   parsevk_vk_commands:
     address: parsevk.vk.commands
     messages:
-      vk_execution_requested_v1:
-        $ref: '#/components/messages/vk_execution_requested_v1'
+      vk_execution_cancel_requested_v1:
+        $ref: '#/components/messages/vk_execution_cancel_requested_v1'
       vk_execution_requested_v2:
         $ref: '#/components/messages/vk_execution_requested_v2'
 operations:
@@ -44,18 +44,18 @@ operations:
       $ref: '#/channels/parsevk_sources_events'
     messages:
     - $ref: '#/channels/parsevk_sources_events/messages/sources_access_revoked_v1'
-  tasks_service_send_vk_execution_requested_v1:
+  tasks_service_send_vk_execution_cancel_requested_v1:
     action: send
     channel:
       $ref: '#/channels/parsevk_vk_commands'
     messages:
-    - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_requested_v1'
-  vk_service_receive_vk_execution_requested_v1:
+    - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_cancel_requested_v1'
+  vk_service_receive_vk_execution_cancel_requested_v1:
     action: receive
     channel:
       $ref: '#/channels/parsevk_vk_commands'
     messages:
-    - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_requested_v1'
+    - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_cancel_requested_v1'
   tasks_service_send_vk_execution_requested_v2:
     action: send
     channel:
@@ -84,13 +84,13 @@ components:
       contentType: application/json
       payload:
         $ref: ../json-schema/sources.access.revoked/1.json
-    vk_execution_requested_v1:
-      name: vk.execution.requested
-      title: vk.execution.requested
-      summary: vk.execution.requested v1
+    vk_execution_cancel_requested_v1:
+      name: vk.execution.cancel_requested
+      title: vk.execution.cancel_requested
+      summary: vk.execution.cancel_requested v1
       contentType: application/json
       payload:
-        $ref: ../json-schema/vk.execution.requested/1.json
+        $ref: ../json-schema/vk.execution.cancel_requested/1.json
     vk_execution_requested_v2:
       name: vk.execution.requested
       title: vk.execution.requested

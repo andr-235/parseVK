@@ -48,7 +48,7 @@
       ],
       "correlationPath": "payload.executionId",
       "correlationRequired": true,
-      "messageType": "vk.execution.requested",
+      "messageType": "vk.execution.cancel_requested",
       "partitionKey": {
         "paths": [
           "payload.executionId"
