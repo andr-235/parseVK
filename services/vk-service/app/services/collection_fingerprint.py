@@ -12,6 +12,61 @@ class CollectionIdentity:
     normalized_plan: dict[str, Any]
 
 
+def _fingerprint(normalized_plan: dict[str, Any]) -> str:
+    serialized = json.dumps(
+        normalized_plan,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(serialized).hexdigest()
+
+
+def build_source_collection_identity(
+    *,
+    provider_account_key: str,
+    source_provider: str,
+    source_type: str,
+    source_external_id: str,
+    source_owner_id: int,
+    post_strategy: str,
+    post_limit: int,
+    comment_mode: str,
+    include_thread_replies: bool,
+) -> CollectionIdentity:
+    """Build identity from the physical source and collection plan only.
+
+    TaskRun, demand, revision and snapshot metadata are deliberately excluded.
+    They describe who requested the work, not the physical VK work itself.
+    """
+
+    source_key = f"{source_provider}:{source_type}:{source_external_id}"
+    normalized_plan: dict[str, Any] = {
+        "identityVersion": 2,
+        "providerAccountKey": provider_account_key,
+        "source": {
+            "provider": source_provider,
+            "sourceType": source_type,
+            "externalId": str(source_external_id),
+            "ownerId": int(source_owner_id),
+        },
+        "postSelection": {
+            "strategy": post_strategy,
+            "limitPerSource": int(post_limit),
+        },
+        "commentSelection": {
+            "mode": comment_mode,
+            "includeThreadReplies": bool(include_thread_replies),
+        },
+    }
+    return CollectionIdentity(
+        provider_account_key=provider_account_key,
+        source_key=source_key,
+        fingerprint=_fingerprint(normalized_plan),
+        normalized_plan=normalized_plan,
+    )
+
+
 def build_collection_identity(
     *,
     provider_account_key: str,
@@ -21,6 +76,8 @@ def build_collection_identity(
     post_limit: int | None,
     payload: dict[str, Any] | None = None,
 ) -> CollectionIdentity:
+    """Build the legacy aggregate identity used by task-event compatibility."""
+
     normalized_groups = sorted({int(group_id) for group_id in group_ids})
     source_key = (
         "vk:groups:" + ",".join(str(group_id) for group_id in normalized_groups)
@@ -28,6 +85,7 @@ def build_collection_identity(
         else f"vk:scope:{scope}"
     )
     normalized_plan = {
+        "identityVersion": 1,
         "providerAccountKey": provider_account_key,
         "sourceKey": source_key,
         "scope": scope,
@@ -36,16 +94,10 @@ def build_collection_identity(
         "postLimit": post_limit,
         "filters": _normalize_filters(payload or {}),
     }
-    serialized = json.dumps(
-        normalized_plan,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
     return CollectionIdentity(
         provider_account_key=provider_account_key,
         source_key=source_key,
-        fingerprint=hashlib.sha256(serialized).hexdigest(),
+        fingerprint=_fingerprint(normalized_plan),
         normalized_plan=normalized_plan,
     )
 
@@ -54,10 +106,24 @@ def _normalize_filters(payload: dict[str, Any]) -> dict[str, Any]:
     ignored = {
         "taskId",
         "task_id",
+        "taskRunId",
+        "task_run_id",
         "runId",
         "run_id",
+        "executionId",
+        "execution_id",
+        "demandId",
+        "demand_id",
+        "sourceId",
+        "source_id",
         "ownerUserId",
         "owner_user_id",
+        "taskRevision",
+        "task_revision",
+        "sourceSetRevision",
+        "source_set_revision",
+        "snapshotSha256",
+        "snapshot_sha256",
         "createdAt",
         "created_at",
         "updatedAt",
