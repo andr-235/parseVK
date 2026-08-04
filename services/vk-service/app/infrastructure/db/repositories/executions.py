@@ -1,9 +1,11 @@
 import json
 from datetime import UTC, datetime
+from numbers import Number
 from uuid import UUID, uuid4
 
 from common.events.task_execution_completed import TaskExecutionCompletedPayload
 from common.events.task_execution_failed import TaskExecutionFailedPayload
+from common.events.task_execution_progressed import TaskExecutionProgressedPayload
 from common.events.task_execution_started import TaskExecutionStartedPayload
 from sqlalchemy import and_, exists, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,10 +23,12 @@ from app.infrastructure.db.models.provider_accounts import VkProviderAccount
 from app.infrastructure.db.models.source_collections import (
     VkCollectionDemand,
     VkSourceCollection,
+    VkTaskRunBinding,
 )
 
 EXECUTOR = "vk-service"
 ACTIVE_DEMAND_STATUSES = ("pending", "running")
+TERMINAL_BINDING_STATUSES = ("done", "failed", "cancelled")
 
 
 def utcnow() -> datetime:
@@ -99,7 +103,25 @@ def _attempt_entity(model: VkExecutionAttempt) -> execution_entities.VkExecution
     )
 
 
+def _merge_stats(values: list[dict]) -> dict:
+    merged: dict = {}
+    for stats in values:
+        for key, value in (stats or {}).items():
+            current = merged.get(key)
+            if (
+                isinstance(value, Number)
+                and not isinstance(value, bool)
+                and (current is None or isinstance(current, Number))
+            ):
+                merged[key] = (current or 0) + value
+            elif key not in merged:
+                merged[key] = value
+    return merged
+
+
 class SqlAlchemyExecutionRepository(ExecutionRepository):
+    """Own physical source attempts and aggregate lifecycle by TaskRun binding."""
+
     def __init__(self, session: AsyncSession):
         self.session = session
 
@@ -131,19 +153,22 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
             VkExecutionAttempt.status == "running",
             VkExecutionAttempt.lease_expires_at <= now,
         )
-        collection_exists = exists().where(
-            VkSourceCollection.execution_id == VkExecution.id
-        )
         compatible_collection = exists().where(
             VkSourceCollection.execution_id == VkExecution.id,
             VkSourceCollection.provider_account_key == account_key,
             VkSourceCollection.status.in_(("pending", "running")),
         )
+        active_demand = exists().where(
+            VkSourceCollection.execution_id == VkExecution.id,
+            VkCollectionDemand.collection_id == VkSourceCollection.id,
+            VkCollectionDemand.status.in_(ACTIVE_DEMAND_STATUSES),
+        )
         execution = await self.session.scalar(
             select(VkExecution)
             .where(
                 VkExecution.cancellation_requested_at.is_(None),
-                or_(~collection_exists, compatible_collection),
+                compatible_collection,
+                active_demand,
                 or_(
                     and_(
                         VkExecution.status == "pending",
@@ -195,62 +220,21 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
         execution.updated_at = now
 
         collection = await self._collection(execution.id, lock=True)
+        if collection is None:
+            raise RuntimeError(f"execution {execution.id} has no source collection")
         demands = await self._active_demands(execution.id, lock=True)
-        if collection is not None:
-            collection.status = "running"
-            collection.started_at = collection.started_at or now
-            collection.updated_at = now
+        if not demands:
+            raise RuntimeError(f"execution {execution.id} has no active source demands")
 
-        if demands:
-            for demand in demands:
-                demand.status = "running"
-                demand.execution_sequence += 1
-                demand.updated_at = now
-                payload = TaskExecutionStartedPayload(
-                    taskId=demand.task_id,
-                    runId=demand.run_id,
-                    ownerUserId=demand.owner_user_id,
-                    executor=EXECUTOR,
-                    workerId=worker_id,
-                    attempt=attempt.attempt_number,
-                    executionSequence=demand.execution_sequence,
-                    providerAccountKey=attempt.provider_account_key,
-                    credentialVersion=attempt.credential_version,
-                    startedAt=now.isoformat(),
-                )
-                self._add_outbox(
-                    event_type="task.execution_started",
-                    task_id=demand.task_id,
-                    dedupe_key=(
-                        f"task.execution_started:{demand.id}:"
-                        f"{attempt.attempt_number}"
-                    ),
-                    payload=payload.model_dump(mode="json", exclude_none=True),
-                    now=now,
-                )
-        else:
-            payload = TaskExecutionStartedPayload(
-                taskId=execution.task_id,
-                runId=execution.run_id,
-                ownerUserId=execution.owner_user_id,
-                executor=EXECUTOR,
-                workerId=worker_id,
-                attempt=attempt.attempt_number,
-                executionSequence=execution.execution_sequence,
-                providerAccountKey=attempt.provider_account_key,
-                credentialVersion=attempt.credential_version,
-                startedAt=now.isoformat(),
-            )
-            self._add_outbox(
-                event_type="task.execution_started",
-                task_id=execution.task_id,
-                dedupe_key=(
-                    f"task.execution_started:{execution.id}:"
-                    f"{attempt.attempt_number}"
-                ),
-                payload=payload.model_dump(mode="json", exclude_none=True),
-                now=now,
-            )
+        collection.status = "running"
+        collection.started_at = collection.started_at or now
+        collection.updated_at = now
+        for demand in demands:
+            demand.status = "running"
+            demand.execution_sequence += 1
+            demand.updated_at = now
+        await self._mark_bindings_started(demands, attempt, now)
+
         await self.session.flush()
         return VkExecutionClaim(
             execution=_execution_entity(execution),
@@ -321,6 +305,64 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
         await self.session.flush()
         return True
 
+    async def report_progress(
+        self,
+        *,
+        execution_id: UUID,
+        processed_items: int,
+        total_items: int,
+        stats: dict | None,
+        occurred_at: str,
+    ) -> int:
+        demands = await self._active_demands(execution_id, lock=True)
+        if not demands:
+            return 0
+        now = utcnow()
+        for demand in demands:
+            demand.processed_items = processed_items
+            demand.total_items = total_items
+            demand.stats = dict(stats or {})
+            demand.updated_at = now
+
+        emitted = 0
+        for binding_id in sorted({d.binding_id for d in demands}, key=str):
+            binding = await self._binding(binding_id, lock=True)
+            if binding is None or binding.status in TERMINAL_BINDING_STATUSES:
+                continue
+            all_demands = await self._binding_demands(binding_id)
+            self._apply_binding_totals(binding, all_demands, now)
+            binding.execution_sequence += 1
+            progress = (
+                binding.processed_items / binding.total_items
+                if binding.total_items > 0
+                else 0.0
+            )
+            payload = TaskExecutionProgressedPayload(
+                taskId=binding.task_id,
+                runId=binding.run_id,
+                ownerUserId=binding.owner_user_id,
+                executor=EXECUTOR,
+                executionSequence=binding.execution_sequence,
+                processedItems=binding.processed_items,
+                totalItems=binding.total_items,
+                progress=progress,
+                stats=binding.stats,
+                occurredAt=occurred_at,
+            )
+            self._add_outbox(
+                event_type="task.execution_progressed",
+                task_id=binding.task_id,
+                dedupe_key=(
+                    f"task.execution_progressed:{binding.id}:"
+                    f"{binding.execution_sequence}"
+                ),
+                payload=payload.model_dump(mode="json"),
+                now=now,
+            )
+            emitted += 1
+        await self.session.flush()
+        return emitted
+
     async def complete(
         self,
         *,
@@ -340,6 +382,10 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
             return False
         execution, attempt = owned
         now = utcnow()
+        demands = await self._active_demands(execution.id, lock=True)
+        if not demands:
+            return False
+
         attempt.status = "done"
         attempt.finished_at = now
         execution.status = "done"
@@ -351,59 +397,25 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
         execution.updated_at = now
 
         collection = await self._collection(execution.id, lock=True)
-        demands = await self._active_demands(execution.id, lock=True)
-        if collection is not None:
-            collection.status = "done"
-            collection.finished_at = now
-            collection.last_error = None
-            collection.updated_at = now
+        if collection is None:
+            raise RuntimeError(f"execution {execution.id} has no source collection")
+        collection.status = "done"
+        collection.finished_at = now
+        collection.last_error = None
+        collection.updated_at = now
 
-        if demands:
-            for demand in demands:
-                demand.status = "done"
-                demand.finished_at = now
-                demand.last_error = None
-                demand.execution_sequence += 1
-                demand.updated_at = now
-                payload = TaskExecutionCompletedPayload(
-                    taskId=demand.task_id,
-                    runId=demand.run_id,
-                    ownerUserId=demand.owner_user_id,
-                    executor=EXECUTOR,
-                    workerId=attempt.worker_id,
-                    executionSequence=demand.execution_sequence,
-                    processedItems=processed_items,
-                    totalItems=total_items,
-                    stats=stats or {},
-                    completedAt=now.isoformat(),
-                )
-                self._add_outbox(
-                    event_type="task.execution_completed",
-                    task_id=demand.task_id,
-                    dedupe_key=f"task.execution_completed:{demand.id}",
-                    payload=payload.model_dump(mode="json"),
-                    now=now,
-                )
-        else:
-            payload = TaskExecutionCompletedPayload(
-                taskId=execution.task_id,
-                runId=execution.run_id,
-                ownerUserId=execution.owner_user_id,
-                executor=EXECUTOR,
-                workerId=attempt.worker_id,
-                executionSequence=execution.execution_sequence,
-                processedItems=processed_items,
-                totalItems=total_items,
-                stats=stats or {},
-                completedAt=now.isoformat(),
-            )
-            self._add_outbox(
-                event_type="task.execution_completed",
-                task_id=execution.task_id,
-                dedupe_key=f"task.execution_completed:{execution.id}",
-                payload=payload.model_dump(mode="json"),
-                now=now,
-            )
+        binding_ids: set[UUID] = set()
+        for demand in demands:
+            demand.status = "done"
+            demand.finished_at = now
+            demand.last_error = None
+            demand.processed_items = processed_items
+            demand.total_items = total_items
+            demand.stats = dict(stats or {})
+            demand.execution_sequence += 1
+            demand.updated_at = now
+            binding_ids.add(demand.binding_id)
+        await self._finalize_bindings(binding_ids, attempt.worker_id, now)
         await self.session.flush()
         return True
 
@@ -427,7 +439,11 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
             return False
         execution, attempt = owned
         now = utcnow()
+        demands = await self._active_demands(execution.id, lock=True)
+        if not demands:
+            return False
         safe_error = error[:2000]
+
         attempt.status = "failed"
         attempt.finished_at = now
         attempt.last_error = safe_error
@@ -440,63 +456,25 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
         execution.updated_at = now
 
         collection = await self._collection(execution.id, lock=True)
-        demands = await self._active_demands(execution.id, lock=True)
-        if collection is not None:
-            collection.status = "failed"
-            collection.finished_at = now
-            collection.last_error = safe_error
-            collection.updated_at = now
+        if collection is None:
+            raise RuntimeError(f"execution {execution.id} has no source collection")
+        collection.status = "failed"
+        collection.finished_at = now
+        collection.last_error = safe_error
+        collection.updated_at = now
 
-        if demands:
-            for demand in demands:
-                demand.status = "failed"
-                demand.finished_at = now
-                demand.last_error = safe_error
-                demand.execution_sequence += 1
-                demand.updated_at = now
-                payload = TaskExecutionFailedPayload(
-                    taskId=demand.task_id,
-                    runId=demand.run_id,
-                    ownerUserId=demand.owner_user_id,
-                    executor=EXECUTOR,
-                    workerId=attempt.worker_id,
-                    executionSequence=demand.execution_sequence,
-                    processedItems=processed_items,
-                    totalItems=total_items,
-                    stats=stats or {},
-                    error=safe_error,
-                    failureKind="terminal",
-                    failedAt=now.isoformat(),
-                )
-                self._add_outbox(
-                    event_type="task.execution_failed",
-                    task_id=demand.task_id,
-                    dedupe_key=f"task.execution_failed:{demand.id}",
-                    payload=payload.model_dump(mode="json"),
-                    now=now,
-                )
-        else:
-            payload = TaskExecutionFailedPayload(
-                taskId=execution.task_id,
-                runId=execution.run_id,
-                ownerUserId=execution.owner_user_id,
-                executor=EXECUTOR,
-                workerId=attempt.worker_id,
-                executionSequence=execution.execution_sequence,
-                processedItems=processed_items,
-                totalItems=total_items,
-                stats=stats or {},
-                error=safe_error,
-                failureKind="terminal",
-                failedAt=now.isoformat(),
-            )
-            self._add_outbox(
-                event_type="task.execution_failed",
-                task_id=execution.task_id,
-                dedupe_key=f"task.execution_failed:{execution.id}",
-                payload=payload.model_dump(mode="json"),
-                now=now,
-            )
+        binding_ids: set[UUID] = set()
+        for demand in demands:
+            demand.status = "failed"
+            demand.finished_at = now
+            demand.last_error = safe_error
+            demand.processed_items = processed_items
+            demand.total_items = total_items
+            demand.stats = dict(stats or {})
+            demand.execution_sequence += 1
+            demand.updated_at = now
+            binding_ids.add(demand.binding_id)
+        await self._finalize_bindings(binding_ids, attempt.worker_id, now)
         await self.session.flush()
         return True
 
@@ -530,20 +508,6 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
             collection.finished_at = now
             collection.last_error = execution.cancellation_reason
             collection.updated_at = now
-        for demand in await self._active_demands(execution.id, lock=True):
-            demand.status = "cancelled"
-            demand.finished_at = now
-            demand.cancellation_requested_at = (
-                demand.cancellation_requested_at or now
-            )
-            demand.cancellation_reason = (
-                demand.cancellation_reason
-                or execution.cancellation_reason
-                or "collection cancelled"
-            )
-            demand.last_error = demand.cancellation_reason
-            demand.execution_sequence += 1
-            demand.updated_at = now
         await self.session.flush()
         return True
 
@@ -579,20 +543,6 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
                 collection.status = "cancelled"
                 collection.finished_at = now
                 collection.last_error = execution.cancellation_reason or error[:2000]
-            for demand in demands:
-                demand.status = "cancelled"
-                demand.finished_at = now
-                demand.cancellation_requested_at = (
-                    demand.cancellation_requested_at or now
-                )
-                demand.cancellation_reason = (
-                    demand.cancellation_reason
-                    or execution.cancellation_reason
-                    or error[:2000]
-                )
-                demand.last_error = demand.cancellation_reason
-                demand.execution_sequence += 1
-                demand.updated_at = now
         else:
             execution.status = "pending"
             execution.available_at = available_at
@@ -612,8 +562,135 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
         await self.session.flush()
         return True
 
+    async def _mark_bindings_started(
+        self,
+        demands: list[VkCollectionDemand],
+        attempt: VkExecutionAttempt,
+        now: datetime,
+    ) -> None:
+        for binding_id in sorted({d.binding_id for d in demands}, key=str):
+            binding = await self._binding(binding_id, lock=True)
+            if binding is None or binding.status != "pending":
+                continue
+            binding.status = "running"
+            binding.started_at = binding.started_at or now
+            binding.execution_sequence += 1
+            binding.updated_at = now
+            payload = TaskExecutionStartedPayload(
+                taskId=binding.task_id,
+                runId=binding.run_id,
+                ownerUserId=binding.owner_user_id,
+                executor=EXECUTOR,
+                workerId=attempt.worker_id,
+                attempt=attempt.attempt_number,
+                executionSequence=binding.execution_sequence,
+                providerAccountKey=attempt.provider_account_key,
+                credentialVersion=attempt.credential_version,
+                startedAt=now.isoformat(),
+            )
+            self._add_outbox(
+                event_type="task.execution_started",
+                task_id=binding.task_id,
+                dedupe_key=f"task.execution_started:{binding.id}",
+                payload=payload.model_dump(mode="json", exclude_none=True),
+                now=now,
+            )
+
+    async def _finalize_bindings(
+        self,
+        binding_ids: set[UUID],
+        worker_id: str,
+        now: datetime,
+    ) -> None:
+        for binding_id in sorted(binding_ids, key=str):
+            binding = await self._binding(binding_id, lock=True)
+            if binding is None:
+                continue
+            demands = await self._binding_demands(binding_id, lock=True)
+            self._apply_binding_totals(binding, demands, now)
+            if any(d.status in ACTIVE_DEMAND_STATUSES for d in demands):
+                continue
+            if binding.status in TERMINAL_BINDING_STATUSES:
+                continue
+
+            binding.execution_sequence += 1
+            binding.finished_at = now
+            if binding.failed_demands:
+                binding.status = "failed"
+                binding.last_error = next(
+                    (
+                        demand.last_error
+                        for demand in demands
+                        if demand.status == "failed" and demand.last_error
+                    ),
+                    "one or more VK source collections failed",
+                )
+                payload = TaskExecutionFailedPayload(
+                    taskId=binding.task_id,
+                    runId=binding.run_id,
+                    ownerUserId=binding.owner_user_id,
+                    executor=EXECUTOR,
+                    workerId=worker_id,
+                    executionSequence=binding.execution_sequence,
+                    processedItems=binding.processed_items,
+                    totalItems=binding.total_items,
+                    stats=binding.stats,
+                    error=binding.last_error,
+                    failureKind="terminal",
+                    failedAt=now.isoformat(),
+                )
+                self._add_outbox(
+                    event_type="task.execution_failed",
+                    task_id=binding.task_id,
+                    dedupe_key=f"task.execution_failed:{binding.id}",
+                    payload=payload.model_dump(mode="json"),
+                    now=now,
+                )
+            elif binding.cancelled_demands:
+                binding.status = "cancelled"
+                binding.last_error = binding.cancellation_reason
+            else:
+                binding.status = "done"
+                binding.last_error = None
+                payload = TaskExecutionCompletedPayload(
+                    taskId=binding.task_id,
+                    runId=binding.run_id,
+                    ownerUserId=binding.owner_user_id,
+                    executor=EXECUTOR,
+                    workerId=worker_id,
+                    executionSequence=binding.execution_sequence,
+                    processedItems=binding.processed_items,
+                    totalItems=binding.total_items,
+                    stats=binding.stats,
+                    completedAt=now.isoformat(),
+                )
+                self._add_outbox(
+                    event_type="task.execution_completed",
+                    task_id=binding.task_id,
+                    dedupe_key=f"task.execution_completed:{binding.id}",
+                    payload=payload.model_dump(mode="json"),
+                    now=now,
+                )
+
+    def _apply_binding_totals(
+        self,
+        binding: VkTaskRunBinding,
+        demands: list[VkCollectionDemand],
+        now: datetime,
+    ) -> None:
+        binding.completed_demands = sum(d.status == "done" for d in demands)
+        binding.failed_demands = sum(d.status == "failed" for d in demands)
+        binding.cancelled_demands = sum(d.status == "cancelled" for d in demands)
+        binding.processed_items = sum(d.processed_items for d in demands)
+        binding.total_items = sum(d.total_items for d in demands)
+        binding.stats = _merge_stats([dict(d.stats or {}) for d in demands])
+        binding.updated_at = now
+
     async def _collection(
-        self, execution_id: UUID, *, lock: bool = False
+        self,
+        execution_id: UUID,
+        *,
+        lock: bool = False,
     ) -> VkSourceCollection | None:
         stmt = select(VkSourceCollection).where(
             VkSourceCollection.execution_id == execution_id
@@ -623,7 +700,10 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
         return await self.session.scalar(stmt)
 
     async def _active_demands(
-        self, execution_id: UUID, *, lock: bool = False
+        self,
+        execution_id: UUID,
+        *,
+        lock: bool = False,
     ) -> list[VkCollectionDemand]:
         stmt = (
             select(VkCollectionDemand)
@@ -635,6 +715,32 @@ class SqlAlchemyExecutionRepository(ExecutionRepository):
                 VkSourceCollection.execution_id == execution_id,
                 VkCollectionDemand.status.in_(ACTIVE_DEMAND_STATUSES),
             )
+            .order_by(VkCollectionDemand.created_at, VkCollectionDemand.id)
+        )
+        if lock:
+            stmt = stmt.with_for_update()
+        return list((await self.session.scalars(stmt)).all())
+
+    async def _binding(
+        self,
+        binding_id: UUID,
+        *,
+        lock: bool = False,
+    ) -> VkTaskRunBinding | None:
+        stmt = select(VkTaskRunBinding).where(VkTaskRunBinding.id == binding_id)
+        if lock:
+            stmt = stmt.with_for_update()
+        return await self.session.scalar(stmt)
+
+    async def _binding_demands(
+        self,
+        binding_id: UUID,
+        *,
+        lock: bool = False,
+    ) -> list[VkCollectionDemand]:
+        stmt = (
+            select(VkCollectionDemand)
+            .where(VkCollectionDemand.binding_id == binding_id)
             .order_by(VkCollectionDemand.created_at, VkCollectionDemand.id)
         )
         if lock:
