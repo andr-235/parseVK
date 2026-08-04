@@ -15,26 +15,34 @@ class CollectionIdentity:
 def build_collection_identity(
     *,
     provider_account_key: str,
-    scope: str,
-    mode: str,
-    group_ids: list[int],
-    post_limit: int | None,
-    payload: dict[str, Any] | None = None,
+    source_provider: str,
+    source_type: str,
+    source_external_id: str,
+    source_owner_id: int,
+    post_strategy: str,
+    post_limit: int,
+    comment_mode: str,
+    include_thread_replies: bool,
 ) -> CollectionIdentity:
-    normalized_groups = sorted({int(group_id) for group_id in group_ids})
-    source_key = (
-        "vk:groups:" + ",".join(str(group_id) for group_id in normalized_groups)
-        if normalized_groups
-        else f"vk:scope:{scope}"
-    )
-    normalized_plan = {
+    """Build identity strictly from one physical source and its collection plan."""
+
+    source_key = f"{source_provider}:{source_type}:{source_external_id}"
+    normalized_plan: dict[str, Any] = {
         "providerAccountKey": provider_account_key,
-        "sourceKey": source_key,
-        "scope": scope,
-        "mode": mode,
-        "groupIds": normalized_groups,
-        "postLimit": post_limit,
-        "filters": _normalize_filters(payload or {}),
+        "source": {
+            "provider": source_provider,
+            "sourceType": source_type,
+            "externalId": str(source_external_id),
+            "ownerId": int(source_owner_id),
+        },
+        "postSelection": {
+            "strategy": post_strategy,
+            "limitPerSource": int(post_limit),
+        },
+        "commentSelection": {
+            "mode": comment_mode,
+            "includeThreadReplies": bool(include_thread_replies),
+        },
     }
     serialized = json.dumps(
         normalized_plan,
@@ -48,48 +56,3 @@ def build_collection_identity(
         fingerprint=hashlib.sha256(serialized).hexdigest(),
         normalized_plan=normalized_plan,
     )
-
-
-def _normalize_filters(payload: dict[str, Any]) -> dict[str, Any]:
-    ignored = {
-        "taskId",
-        "task_id",
-        "runId",
-        "run_id",
-        "ownerUserId",
-        "owner_user_id",
-        "createdAt",
-        "created_at",
-        "updatedAt",
-        "updated_at",
-        "correlationId",
-        "correlation_id",
-        "requestId",
-        "request_id",
-        "source",
-    }
-    plan_fields = {
-        "scope",
-        "mode",
-        "groupIds",
-        "group_ids",
-        "postLimit",
-        "post_limit",
-    }
-    return {
-        key: _normalize_value(value)
-        for key, value in sorted(payload.items())
-        if key not in ignored and key not in plan_fields
-    }
-
-
-def _normalize_value(value: Any) -> Any:
-    if isinstance(value, dict):
-        return {key: _normalize_value(value[key]) for key in sorted(value)}
-    if isinstance(value, (list, tuple, set)):
-        normalized = [_normalize_value(item) for item in value]
-        try:
-            return sorted(normalized, key=lambda item: json.dumps(item, sort_keys=True))
-        except TypeError:
-            return normalized
-    return value
