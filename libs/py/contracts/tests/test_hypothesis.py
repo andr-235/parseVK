@@ -56,7 +56,11 @@ def requested_payloads(draw: st.DrawFn) -> VkExecutionRequested:
     return VkExecutionRequested(
         task_id=draw(st.integers(min_value=1, max_value=1_000_000)),
         owner_user_id=draw(
-            st.text(alphabet=st.characters(whitelist_categories=("L", "N")), min_size=1, max_size=64)
+            st.text(
+                alphabet=st.characters(whitelist_categories=("L", "N")),
+                min_size=1,
+                max_size=64,
+            )
         ),
         task_run_id=draw(st.uuids()),
         execution_id=draw(st.uuids()),
@@ -85,7 +89,6 @@ def requested_envelopes(
     return MessageEnvelope[VkExecutionRequested](
         message_id=draw(st.uuids()),
         message_type="vk.execution.requested",
-        schema_version=1,
         occurred_at=datetime.now(UTC),
         producer="tasks-service",
         correlation_id=payload.execution_id,
