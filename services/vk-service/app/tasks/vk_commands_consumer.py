@@ -2,26 +2,24 @@
 
 import logging
 
-from common.events import TaskEvent
 from common.kafka.consumer import BaseEventConsumer
 from parsevk_contracts.validation import parse_for_consume
-from parsevk_contracts.vk.commands import (
-    CATALOG as VK_COMMAND_CATALOG,
-)
-from parsevk_contracts.vk.commands import (
-    VkExecutionRequestedV2,
-)
+from parsevk_contracts.vk.commands import CATALOG as VK_COMMAND_CATALOG
+from parsevk_contracts.vk.commands import VkExecutionRequested
 from prometheus_client import REGISTRY, Gauge
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.bootstrap import get_task_events_handler
 from app.core.config import settings
 from app.infrastructure.db.models.tasks import ProcessedEvent
+from app.infrastructure.db.repositories.canonical_commands import (
+    CanonicalVkCommandRepository,
+)
+from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsRepository
+from app.infrastructure.metrics.vk_metrics import observe_collection_demand_attached
 
 logger = logging.getLogger(__name__)
 
 CONSUMER_NAME = "vk-service-vk-commands"
-VK_EXECUTION_REQUESTED_VERSION = 2
 
 
 def _create_lag_gauge() -> Gauge:
@@ -40,7 +38,7 @@ _consumer_lag = _create_lag_gauge()
 
 
 class VkExecutionCommandsConsumer(BaseEventConsumer):
-    consumer_group = "vk-service-vk-commands-v2"
+    consumer_group = "vk-service-vk-commands"
     consumer_name = CONSUMER_NAME
     dlq_topic = settings.kafka_topic_vk_commands_dlq
 
@@ -64,42 +62,41 @@ class VkExecutionCommandsConsumer(BaseEventConsumer):
             topic=settings.kafka_topic_vk_commands,
             value=raw_value,
         )
-        if parsed.envelope.schema_version != VK_EXECUTION_REQUESTED_VERSION:
-            raise ValueError(
-                "active VK runtime requires vk.execution.requested schema v2"
-            )
         command = parsed.envelope.payload
-        if not isinstance(command, VkExecutionRequestedV2):
+        if not isinstance(command, VkExecutionRequested):
             raise TypeError(
-                "vk.execution.requested v2 resolved to an unexpected model"
+                "vk.execution.requested resolved to an unexpected payload model"
             )
 
-        # PR06A feeds the fully validated canonical command into the existing
-        # aggregate attachment service. PR06B removes this bridge and attaches
-        # one physical source collection per command demand. The feature flags
-        # remain disabled by default until that lossless attachment exists.
-        group_ids = [
-            int(demand.source.external_id)
-            for demand in command.demands
-        ]
-        task_event = TaskEvent.model_validate(
-            {
-                "event_id": str(parsed.envelope.message_id),
-                "event_type": "task.created",
-                "event_version": 1,
-                "aggregate_id": str(command.task_id),
-                "correlation_id": str(parsed.envelope.correlation_id),
-                "payload": {
-                    "taskId": str(command.task_id),
-                    "ownerUserId": command.owner_user_id,
-                    "runId": str(command.task_run_id),
-                    "scope": "selected",
-                    "mode": "recent_posts",
-                    "groupIds": group_ids,
-                    "postLimit": command.post_selection.limit_per_source,
-                },
-            }
-        )
         async with self.session_factory() as session:
-            handler = get_task_events_handler(session)
-            await handler.handle(task_event)
+            inbox = SqlAlchemyTaskEventsRepository(session)
+            repository = CanonicalVkCommandRepository(session)
+            async with session.begin():
+                if await inbox.is_processed(
+                    self.consumer_name,
+                    parsed.envelope.message_id,
+                ):
+                    return
+                result = await repository.attach_command(command)
+                if result.outcome == "conflict":
+                    await repository.emit_rejection(
+                        command,
+                        result.reason or "canonical command conflict",
+                    )
+                await inbox.mark_processed(
+                    self.consumer_name,
+                    parsed.envelope.message_id,
+                    parsed.envelope.message_type,
+                )
+
+        for attachment in result.attachments:
+            observe_collection_demand_attached(
+                coalesced=not attachment.collection_created
+            )
+        logger.info(
+            "Handled canonical VK command task_id=%s run_id=%s outcome=%s demands=%d",
+            command.task_id,
+            command.task_run_id,
+            result.outcome,
+            len(result.attachments),
+        )
