@@ -97,6 +97,14 @@ class TasksCrudService:
             )
             raise
 
+        await self.outbox.add_event(
+            event_type="task.created",
+            aggregate_type="task",
+            aggregate_id=str(task.id),
+            correlation_id=correlation_id,
+            dedupe_key=f"task.created:{task.id}",
+            payload=task_request_payload(task, owner_user_id, run_meta),
+        )
         await self.command_publisher(
             self.session,
             self.outbox,
