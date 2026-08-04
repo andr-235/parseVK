@@ -105,18 +105,6 @@
           "title": "Executionid",
           "type": "string"
         },
-        "ownerUserId": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Owneruserid"
-        },
         "postSelection": {
           "$ref": "#/$defs/PostSelection"
         },
