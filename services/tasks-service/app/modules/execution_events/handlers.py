@@ -16,9 +16,12 @@ from app.modules.execution_events.outbox import (
     emit_task_failed,
     emit_task_state_changed,
 )
+from app.modules.execution_events.task_run_lifecycle import (
+    mark_task_run_started,
+    mark_task_run_terminal,
+)
 
 logger = logging.getLogger(__name__)
-
 TERMINAL_STATUSES = {"done", "failed", "cancelled"}
 
 _LOAD_TASK_SQL = text("""
@@ -29,7 +32,6 @@ _LOAD_TASK_SQL = text("""
 
 
 async def _load_task(session: AsyncSession, task_id: int):
-    """Load task row with FOR UPDATE lock. Returns row or None."""
     result = await session.execute(_LOAD_TASK_SQL, {"task_id": task_id})
     return result.one_or_none()
 
@@ -39,7 +41,7 @@ class _SkipEvent(Exception):
 
 
 class _SequenceGap(Exception):
-    """Raised when a sequence gap is detected; offset must NOT be committed."""
+    """Raised when a sequence gap is detected; offset must not be committed."""
 
 
 async def _validate_sequence(
@@ -52,15 +54,12 @@ async def _validate_sequence(
     *,
     require_running: bool = False,
 ) -> None:
-    """Common sequence/run/terminal validations.
-
-    Raises _SkipEvent if the event should be skipped and its offset committed.
-    Raises _SequenceGap if a sequence gap is detected and the offset must NOT be committed.
-    Returns normally if the event can be applied.
-    """
     if execution_sequence <= last_seq:
         logger.debug(
-            "Stale sequence for task %d: %d <= %d", task_id, execution_sequence, last_seq
+            "Stale sequence for task %d: %d <= %d",
+            task_id,
+            execution_sequence,
+            last_seq,
         )
         raise _SkipEvent
     if task_run_id != run_id:
@@ -70,11 +69,18 @@ async def _validate_sequence(
         logger.debug("Task %d is %s, skipping execution event", task_id, status)
         raise _SkipEvent
     if require_running and status != "running":
-        logger.debug("Task %d is not running (status=%s), skipping", task_id, status)
+        logger.debug(
+            "Task %d is not running (status=%s), skipping",
+            task_id,
+            status,
+        )
         raise _SkipEvent
     if execution_sequence > last_seq + 1:
         logger.warning(
-            "Sequence gap for task %d: %d > %d + 1", task_id, execution_sequence, last_seq
+            "Sequence gap for task %d: %d > %d + 1",
+            task_id,
+            execution_sequence,
+            last_seq,
         )
         raise _SequenceGap
 
@@ -86,7 +92,6 @@ async def apply_started(
     execution_sequence: int,
     owner_user_id: str,
 ) -> bool:
-    """Apply task.execution_started transition."""
     row = await _load_task(session, task_id)
     if not row:
         logger.warning("Task %d not found, skipping started", task_id)
@@ -99,7 +104,12 @@ async def apply_started(
 
     try:
         await _validate_sequence(
-            task_id, execution_sequence, task_run_id, run_id, last_seq, status
+            task_id,
+            execution_sequence,
+            task_run_id,
+            run_id,
+            last_seq,
+            status,
         )
     except _SkipEvent:
         return True
@@ -115,10 +125,18 @@ async def apply_started(
                 revision = :rev
             WHERE id = :task_id
         """),
-        {"seq": execution_sequence, "rev": new_revision, "task_id": task_id},
+        {
+            "seq": execution_sequence,
+            "rev": new_revision,
+            "task_id": task_id,
+        },
+    )
+    await mark_task_run_started(
+        session,
+        task_id=task_id,
+        run_id=run_id,
     )
 
-    # Only emit task.state_changed on first start (not recovery).
     if status == "pending":
         emit_task_state_changed(
             session,
@@ -129,7 +147,12 @@ async def apply_started(
             revision=new_revision,
         )
 
-    logger.info("Started applied for task %d: seq=%d, rev=%d", task_id, execution_sequence, new_revision)
+    logger.info(
+        "Started applied for task %d: seq=%d, rev=%d",
+        task_id,
+        execution_sequence,
+        new_revision,
+    )
     return True
 
 
@@ -144,7 +167,6 @@ async def apply_progressed(
     stats: Optional[dict],
     owner_user_id: str,
 ) -> bool:
-    """Apply task.execution_progressed transition."""
     row = await _load_task(session, task_id)
     if not row:
         return True
@@ -156,7 +178,13 @@ async def apply_progressed(
 
     try:
         await _validate_sequence(
-            task_id, execution_sequence, task_run_id, run_id, last_seq, status, require_running=True
+            task_id,
+            execution_sequence,
+            task_run_id,
+            run_id,
+            last_seq,
+            status,
+            require_running=True,
         )
     except _SkipEvent:
         return True
@@ -167,25 +195,24 @@ async def apply_progressed(
     await session.execute(
         text("""
             UPDATE tasks
-            SET processed_items = :pi,
-                total_items = :ti,
-                progress = :p,
+            SET processed_items = :processed_items,
+                total_items = :total_items,
+                progress = :progress,
                 stats = :stats::jsonb,
-                last_execution_sequence = :seq,
-                revision = :rev
+                last_execution_sequence = :sequence,
+                revision = :revision
             WHERE id = :task_id
         """),
         {
-            "pi": processed_items,
-            "ti": total_items,
-            "p": progress,
+            "processed_items": processed_items,
+            "total_items": total_items,
+            "progress": progress,
             "stats": json.dumps(stats or {}),
-            "seq": execution_sequence,
-            "rev": new_revision,
+            "sequence": execution_sequence,
+            "revision": new_revision,
             "task_id": task_id,
         },
     )
-
     emit_task_state_changed(
         session,
         task_id=task_id,
@@ -211,7 +238,6 @@ async def apply_completed(
     stats: Optional[dict],
     owner_user_id: str,
 ) -> bool:
-    """Apply task.execution_completed transition."""
     row = await _load_task(session, task_id)
     if not row:
         return True
@@ -223,7 +249,13 @@ async def apply_completed(
 
     try:
         await _validate_sequence(
-            task_id, execution_sequence, task_run_id, run_id, last_seq, status, require_running=True
+            task_id,
+            execution_sequence,
+            task_run_id,
+            run_id,
+            last_seq,
+            status,
+            require_running=True,
         )
     except _SkipEvent:
         return True
@@ -235,22 +267,28 @@ async def apply_completed(
         text("""
             UPDATE tasks
             SET status = 'done',
-                processed_items = :pi,
-                total_items = :ti,
+                processed_items = :processed_items,
+                total_items = :total_items,
                 progress = 1.0,
                 stats = :stats::jsonb,
-                last_execution_sequence = :seq,
-                revision = :rev
+                last_execution_sequence = :sequence,
+                revision = :revision
             WHERE id = :task_id
         """),
         {
-            "pi": processed_items,
-            "ti": total_items,
+            "processed_items": processed_items,
+            "total_items": total_items,
             "stats": json.dumps(stats or {}),
-            "seq": execution_sequence,
-            "rev": new_revision,
+            "sequence": execution_sequence,
+            "revision": new_revision,
             "task_id": task_id,
         },
+    )
+    await mark_task_run_terminal(
+        session,
+        task_id=task_id,
+        run_id=run_id,
+        status="done",
     )
 
     emit_task_completed(
@@ -274,7 +312,12 @@ async def apply_completed(
         progress=1.0,
         stats=stats,
     )
-    logger.info("Completed applied for task %d: seq=%d, rev=%d", task_id, execution_sequence, new_revision)
+    logger.info(
+        "Completed applied for task %d: seq=%d, rev=%d",
+        task_id,
+        execution_sequence,
+        new_revision,
+    )
     return True
 
 
@@ -290,7 +333,6 @@ async def apply_failed(
     failure_kind: str,
     owner_user_id: str,
 ) -> bool:
-    """Apply task.execution_failed transition."""
     row = await _load_task(session, task_id)
     if not row:
         return True
@@ -302,7 +344,13 @@ async def apply_failed(
 
     try:
         await _validate_sequence(
-            task_id, execution_sequence, task_run_id, run_id, last_seq, status, require_running=True
+            task_id,
+            execution_sequence,
+            task_run_id,
+            run_id,
+            last_seq,
+            status,
+            require_running=True,
         )
     except _SkipEvent:
         return True
@@ -310,30 +358,38 @@ async def apply_failed(
         return False
 
     new_revision = revision + 1
-    failure_progress = (processed_items / total_items) if total_items > 0 else 0.0
+    failure_progress = (
+        processed_items / total_items if total_items > 0 else 0.0
+    )
     await session.execute(
         text("""
             UPDATE tasks
             SET status = 'failed',
-                processed_items = :pi,
-                total_items = :ti,
-                progress = :p,
+                processed_items = :processed_items,
+                total_items = :total_items,
+                progress = :progress,
                 stats = :stats::jsonb,
                 error = :error,
-                last_execution_sequence = :seq,
-                revision = :rev
+                last_execution_sequence = :sequence,
+                revision = :revision
             WHERE id = :task_id
         """),
         {
-            "pi": processed_items,
-            "ti": total_items,
-            "p": failure_progress,
+            "processed_items": processed_items,
+            "total_items": total_items,
+            "progress": failure_progress,
             "stats": json.dumps(stats or {}),
             "error": error,
-            "seq": execution_sequence,
-            "rev": new_revision,
+            "sequence": execution_sequence,
+            "revision": new_revision,
             "task_id": task_id,
         },
+    )
+    await mark_task_run_terminal(
+        session,
+        task_id=task_id,
+        run_id=run_id,
+        status="failed",
     )
 
     emit_task_failed(
@@ -359,5 +415,10 @@ async def apply_failed(
         stats=stats,
         error=error,
     )
-    logger.info("Failed applied for task %d: seq=%d, rev=%d", task_id, execution_sequence, new_revision)
+    logger.info(
+        "Failed applied for task %d: seq=%d, rev=%d",
+        task_id,
+        execution_sequence,
+        new_revision,
+    )
     return True
