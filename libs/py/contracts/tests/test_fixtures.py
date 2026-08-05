@@ -134,7 +134,7 @@ class TestSourceAccessExamples:
     def test_invalid_revision_fails_schema(self, message_type: str) -> None:
         case, contract, _ = SOURCE_CASES[message_type]
         data = deepcopy(load_fixture(message_type, case))
-        data["payload"]["revision"] = 0
+        data["payload"]["revision"] = -1
 
         with pytest.raises(jsonschema.ValidationError):
             validator(contract).validate(data)
