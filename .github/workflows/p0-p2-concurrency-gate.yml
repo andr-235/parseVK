@@ -17,6 +17,9 @@ concurrency:
   group: p0-p2-concurrency-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  PYTHONPATH: ${{ github.workspace }}/libs/py/common:${{ github.workspace }}/libs/py/contracts
+
 jobs:
   prepare:
     name: Build Complete Matrices
@@ -52,7 +55,7 @@ jobs:
           enable-cache: true
       - name: Install vk-service dependencies
         working-directory: services/vk-service
-        run: uv sync --group dev --frozen
+        run: uv sync --extra test --frozen
       - name: Run canonical PostgreSQL races repeatedly
         working-directory: services/vk-service
         env:
@@ -75,7 +78,7 @@ jobs:
           enable-cache: true
       - name: Install tasks-service dependencies
         working-directory: services/tasks-service
-        run: uv sync --group dev --frozen
+        run: uv sync --extra test --frozen
       - name: Run request-cancellation ordering repeatedly
         working-directory: services/tasks-service
         env:
