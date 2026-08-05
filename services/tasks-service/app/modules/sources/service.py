@@ -6,6 +6,7 @@ inputs, not authoritative source data.
 """
 
 import logging
+from uuid import UUID
 
 from app.db.models import MonitoringSource
 from app.modules.sources.errors import TaskNotFoundError
@@ -72,11 +73,33 @@ class SourcesService:
         await self.sources_repo.link_task_source(task_id, source.id, request.kind)
         logger.info(
             "Task source attached: task=%s source=%s kind=%s",
-            task_id, source.id, request.kind,
+            task_id,
+            source.id,
+            request.kind,
         )
         return source
 
-    async def list_task_sources(self, owner_user_id: str, task_id: int) -> list[MonitoringSource]:
+    async def detach_source_from_task(
+        self,
+        owner_user_id: str,
+        task_id: int,
+        source_id: UUID,
+    ) -> bool:
+        task = await self.tasks_repo.get_task(owner_user_id, task_id)
+        if task is None:
+            raise TaskNotFoundError(f"Task {task_id} not found")
+        detached = await self.sources_repo.unlink_task_source(task_id, source_id)
+        logger.info(
+            "Task source detached: task=%s source=%s changed=%s",
+            task_id,
+            source_id,
+            detached,
+        )
+        return detached
+
+    async def list_task_sources(
+        self, owner_user_id: str, task_id: int
+    ) -> list[MonitoringSource]:
         task = await self.tasks_repo.get_task(owner_user_id, task_id)
         if task is None:
             raise TaskNotFoundError(f"Task {task_id} not found")
