@@ -1,7 +1,7 @@
 from parsevk_contracts.vk.commands import CATALOG, VkExecutionRequested
 
 
-def test_only_one_execution_requested_contract_is_registered():
+def test_execution_requested_has_one_unversioned_contract():
     contracts = [
         contract
         for contract in CATALOG.contracts
@@ -9,5 +9,6 @@ def test_only_one_execution_requested_contract_is_registered():
     ]
 
     assert len(contracts) == 1
-    assert contracts[0].schema_version == 1
     assert contracts[0].payload_model is VkExecutionRequested
+    assert not hasattr(contracts[0], "schema_version")
+    assert not hasattr(contracts[0], "compatibility")
