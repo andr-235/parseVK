@@ -1,0 +1,148 @@
+name: P0-P2 Concurrency Gate
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/p0-p2-concurrency-gate.yml'
+      - 'docs/adr/ADR-0009-p2-hard-cutover-and-concurrency-gate.md'
+      - 'libs/py/contracts/**'
+      - 'services/tasks-service/**'
+      - 'services/vk-service/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p0-p2-concurrency-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/libs/py/common:${{ github.workspace }}/libs/py/contracts
+
+jobs:
+  prepare:
+    name: Build Complete Matrices
+    runs-on: ubuntu-latest
+    outputs:
+      service_matrix: ${{ steps.services.outputs.value }}
+      migration_matrix: ${{ steps.migrations.outputs.value }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build complete Python service matrix
+        id: services
+        run: >-
+          python3 .github/scripts/service_catalog.py matrix
+          --purpose pytest
+          --all
+          --github-output "$GITHUB_OUTPUT"
+      - name: Build complete migration matrix
+        id: migrations
+        run: >-
+          python3 .github/scripts/service_catalog.py matrix
+          --purpose migration
+          --all
+          --github-output "$GITHUB_OUTPUT"
+
+  vk-postgres-concurrency:
+    name: Repeated VK PostgreSQL Races
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install vk-service dependencies
+        working-directory: services/vk-service
+        run: uv sync --extra test --frozen
+      - name: Run canonical PostgreSQL races repeatedly
+        working-directory: services/vk-service
+        env:
+          P0_P2_CONCURRENCY_REPEATS: '5'
+        run: |
+          uv run pytest -q --strict-markers \
+            -o addopts="--import-mode=importlib" \
+            -m integration \
+            tests/p0_p2/test_attachment_postgres.py \
+            tests/p0_p2/test_terminal_postgres.py \
+            tests/p0_p2/test_stale_fencing_postgres.py \
+            tests/p0_p2/test_crash_recovery_postgres.py
+
+  tasks-postgres-ordering:
+    name: Repeated Tasks Outbox Ordering
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: ${{ github.workspace }}/libs/py/common:${{ github.workspace }}/libs/py/contracts:${{ github.workspace }}/services/tasks-service/tests
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install tasks-service dependencies
+        working-directory: services/tasks-service
+        run: uv sync --extra test --frozen
+      - name: Verify root pytest collection
+        run: >-
+          uv run --project services/tasks-service
+          pytest --collect-only -q -m integration
+          services/tasks-service/tests/test_vk_outbox_ordering_postgres.py
+      - name: Run request-cancellation ordering repeatedly
+        working-directory: services/tasks-service
+        env:
+          P0_P2_CONCURRENCY_REPEATS: '5'
+        run: |
+          uv run pytest -q --strict-markers \
+            -o addopts="--import-mode=importlib" \
+            -m integration \
+            tests/test_vk_outbox_ordering_postgres.py
+          uv run pytest -q --strict-markers \
+            tests/test_outbox_publisher_delivery.py \
+            tests/test_vk_command_replay.py
+
+  services:
+    name: Full Python Service Matrix
+    needs: prepare
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        service: ${{ fromJSON(needs.prepare.outputs.service_matrix) }}
+    uses: ./.github/workflows/reusable-python-quality.yml
+    with:
+      service: ${{ matrix.service }}
+
+  migrations:
+    name: Full Migration Matrix
+    needs: prepare
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.prepare.outputs.migration_matrix) }}
+    uses: ./.github/workflows/reusable-alembic-migration.yml
+    with:
+      service: ${{ matrix.service }}
+      database_url_env: ${{ matrix.database_url_env }}
+
+  gate:
+    name: P0-P2 Concurrency Gate
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - vk-postgres-concurrency
+      - tasks-postgres-ordering
+      - services
+      - migrations
+    steps:
+      - name: Enforce all concurrency and regression checks
+        env:
+          VK_RESULT: ${{ needs.vk-postgres-concurrency.result }}
+          TASKS_RESULT: ${{ needs.tasks-postgres-ordering.result }}
+          SERVICES_RESULT: ${{ needs.services.result }}
+          MIGRATIONS_RESULT: ${{ needs.migrations.result }}
+        run: |
+          set -euo pipefail
+          for result in "$VK_RESULT" "$TASKS_RESULT" "$SERVICES_RESULT" "$MIGRATIONS_RESULT"; do
+            [[ "$result" == "success" ]] || exit 1
+          done
