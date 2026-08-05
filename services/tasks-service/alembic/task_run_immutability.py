@@ -15,6 +15,8 @@ if _SPEC is None or _SPEC.loader is None:
 _REPAIR = module_from_spec(_SPEC)
 _SPEC.loader.exec_module(_REPAIR)
 
+LEGACY_FUNCTION = "reject_task_run_snapshot_update"
+LEGACY_TRIGGER = "trg_task_runs_immutable_snapshot"
 IMMUTABILITY_FUNCTION = "enforce_task_run_immutable_fields"
 IMMUTABILITY_TRIGGER = "trg_task_runs_immutable_fields"
 
@@ -28,20 +30,18 @@ def upgrade() -> None:
         "task_runs",
         sa.Column("retry_reason", sa.String(length=1000), nullable=True),
     )
+
+    # P1 already made the snapshot columns non-null, added the SHA constraint,
+    # and installed a trigger that blocks snapshot repair. Replace only the
+    # parts that need stronger semantics instead of recreating existing DDL.
+    _drop_legacy_immutability_trigger()
     _REPAIR.repair_task_run_snapshots(op.get_bind())
 
-    op.alter_column("task_runs", "snapshot_sha256", nullable=False)
-    op.alter_column("task_runs", "source_set_snapshot", nullable=False)
     op.drop_constraint("ck_task_runs_run_revision", "task_runs", type_="check")
     op.create_check_constraint(
         "ck_task_runs_run_revision",
         "task_runs",
         "run_revision >= 1",
-    )
-    op.create_check_constraint(
-        "ck_task_runs_snapshot_sha256",
-        "task_runs",
-        "snapshot_sha256 ~ '^[0-9a-f]{64}$'",
     )
     op.create_check_constraint(
         "ck_task_runs_config_snapshot",
@@ -56,6 +56,11 @@ def upgrade() -> None:
         AND jsonb_typeof(config_snapshot->'taskRevision') = 'number'
         AND (config_snapshot->>'taskRevision')::integer >= 0
         """,
+    )
+    op.drop_constraint(
+        "ck_task_runs_source_set_array",
+        "task_runs",
+        type_="check",
     )
     op.create_check_constraint(
         "ck_task_runs_source_set_snapshot",
@@ -98,25 +103,62 @@ def downgrade() -> None:
     )
     op.execute(f"DROP FUNCTION IF EXISTS {IMMUTABILITY_FUNCTION}()")
     op.drop_index("ix_task_runs_resumed_from", table_name="task_runs")
-    op.drop_constraint("fk_task_runs_resumed_from", "task_runs", type_="foreignkey")
+    op.drop_constraint(
+        "fk_task_runs_resumed_from",
+        "task_runs",
+        type_="foreignkey",
+    )
     for name in (
         "ck_task_runs_retry_reason_length",
         "ck_task_runs_resume_not_self",
         "ck_task_runs_source_set_snapshot",
         "ck_task_runs_config_snapshot",
-        "ck_task_runs_snapshot_sha256",
     ):
         op.drop_constraint(name, "task_runs", type_="check")
+    op.create_check_constraint(
+        "ck_task_runs_source_set_array",
+        "task_runs",
+        "jsonb_typeof(source_set_snapshot) = 'array'",
+    )
     op.drop_constraint("ck_task_runs_run_revision", "task_runs", type_="check")
     op.create_check_constraint(
         "ck_task_runs_run_revision",
         "task_runs",
         "run_revision >= 0",
     )
-    op.alter_column("task_runs", "source_set_snapshot", nullable=True)
-    op.alter_column("task_runs", "snapshot_sha256", nullable=True)
     op.drop_column("task_runs", "retry_reason")
     op.drop_column("task_runs", "resumed_from_task_run_id")
+    _create_legacy_immutability_trigger()
+
+
+def _drop_legacy_immutability_trigger() -> None:
+    op.execute(f"DROP TRIGGER IF EXISTS {LEGACY_TRIGGER} ON task_runs")
+    op.execute(f"DROP FUNCTION IF EXISTS {LEGACY_FUNCTION}()")
+
+
+def _create_legacy_immutability_trigger() -> None:
+    op.execute(
+        f"""
+        CREATE FUNCTION {LEGACY_FUNCTION}() RETURNS trigger AS $$
+        BEGIN
+            IF NEW.task_id IS DISTINCT FROM OLD.task_id
+               OR NEW.run_revision IS DISTINCT FROM OLD.run_revision
+               OR NEW.source_set_revision IS DISTINCT FROM OLD.source_set_revision
+               OR NEW.snapshot_sha256 IS DISTINCT FROM OLD.snapshot_sha256
+               OR NEW.config_snapshot IS DISTINCT FROM OLD.config_snapshot
+               OR NEW.source_set_snapshot IS DISTINCT FROM OLD.source_set_snapshot
+               OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+                RAISE EXCEPTION 'task run snapshot fields are immutable';
+            END IF;
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+
+        CREATE TRIGGER {LEGACY_TRIGGER}
+        BEFORE UPDATE ON task_runs
+        FOR EACH ROW EXECUTE FUNCTION {LEGACY_FUNCTION}();
+        """
+    )
 
 
 def _create_immutability_trigger() -> None:
