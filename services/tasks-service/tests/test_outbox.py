@@ -74,6 +74,18 @@ def test_kafka_key_for_vk_command_uses_execution_id():
     )
 
 
+def test_kafka_key_for_vk_cancel_command_uses_execution_id():
+    execution_id = str(uuid4())
+    assert (
+        kafka_key_for_event(
+            "vk.execution.cancel_requested",
+            {"executionId": execution_id},
+            "ignored",
+        )
+        == execution_id
+    )
+
+
 def test_payload_has_no_sensitive_keys():
     assert_no_sensitive_payload(
         {
@@ -175,10 +187,8 @@ async def test_tasks_service_outbox_events_include_frozen_run_metadata():
     service.crud.repository.add_audit = AsyncMock()
     service.crud.outbox.add_event = AsyncMock()
 
-    source_adapter = SimpleNamespace(
-        ensure_normalized_sources=AsyncMock()
-    )
-    service.crud.source_adapter_factory = lambda _session: source_adapter
+    source_resolver = SimpleNamespace(resolve=AsyncMock())
+    service.crud.source_resolver_factory = lambda _session: source_resolver
 
     async def freeze_created(_session, task):
         return {
@@ -217,7 +227,7 @@ async def test_tasks_service_outbox_events_include_frozen_run_metadata():
         "snapshotSha256": "a" * 64,
     }
     service.crud.command_publisher.assert_awaited_once()
-    source_adapter.ensure_normalized_sources.assert_awaited_once_with(
+    source_resolver.resolve.assert_awaited_once_with(
         task_mock,
         [1, 2],
     )
