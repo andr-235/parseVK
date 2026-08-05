@@ -1,0 +1,77 @@
+name: Temporary Kafka Consumer Test Migration
+
+on:
+  push:
+    branches:
+      - fix/vk-command-consumer-offset-reset
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v5
+      - name: Migrate tests to retry controller
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          paths = [
+              Path("services/content-service/tests/test_im_event_consumer.py"),
+              Path("services/content-service/tests/test_projection_consumer.py"),
+              Path("services/moderation-service/tests/test_projection_consumer.py"),
+              Path("services/im-service/tests/test_tasks_consumer.py"),
+          ]
+          replacements = {
+              'patch("common.kafka.consumer.send_to_dlq", new_callable=AsyncMock)':
+                  'patch("common.kafka.consumer_retry.send_to_dlq", new_callable=AsyncMock)',
+              '        await consumer._handle_processing_failure(msg)': (
+                  '        await consumer._retry.handle_failure(\n'
+                  '            msg,\n'
+                  '            ValueError("invalid JSON"),\n'
+                  '            consumer._consumer,\n'
+                  '        )'
+              ),
+              '    consumer.session_factory = lambda: session': (
+                  '    consumer._retry.session_factory = lambda: session\n'
+                  '    consumer._retry.repository.get_event = AsyncMock(return_value=row)'
+              ),
+              '    result = await consumer._skip_due_to_retry_backoff(raw_value)': (
+                  '    result = await consumer._retry.skip_due_to_backoff(\n'
+                  '        raw_value,\n'
+                  '        consumer._consumer,\n'
+                  '    )'
+              ),
+          }
+
+          for path in paths:
+              text = path.read_text(encoding="utf-8")
+              original = text
+              for old, new in replacements.items():
+                  text = text.replace(old, new)
+              if text == original:
+                  raise SystemExit(f"No Kafka retry test replacements applied to {path}")
+              path.write_text(text, encoding="utf-8")
+          PY
+
+          uvx ruff check --fix \
+            services/content-service/tests/test_im_event_consumer.py \
+            services/content-service/tests/test_projection_consumer.py \
+            services/moderation-service/tests/test_projection_consumer.py \
+            services/im-service/tests/test_tasks_consumer.py \
+            services/vk-service/tests/test_kafka_consumer_retry.py
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            services/content-service/tests/test_im_event_consumer.py \
+            services/content-service/tests/test_projection_consumer.py \
+            services/moderation-service/tests/test_projection_consumer.py \
+            services/im-service/tests/test_tasks_consumer.py \
+            services/vk-service/tests/test_kafka_consumer_retry.py
+          git commit -m "test(kafka): migrate consumers to retry controller"
+          git push origin HEAD:fix/vk-command-consumer-offset-reset
