@@ -20,6 +20,15 @@ from app.db.models import (
     TaskSource,
     utcnow,
 )
+from app.modules.sources.task_source_mutations import (
+    link_task_source as mutate_task_source_link,
+)
+from app.modules.sources.task_source_mutations import (
+    sync_task_sources as synchronize_task_sources,
+)
+from app.modules.sources.task_source_mutations import (
+    unlink_task_source as mutate_task_source_unlink,
+)
 
 
 class SourcesRepository:
@@ -120,14 +129,30 @@ class SourcesRepository:
     async def link_task_source(
         self, task_id: int, source_id: UUID, kind: str = "target"
     ) -> TaskSource:
-        existing = await self.get_task_source(task_id, source_id)
-        if existing is not None:
-            return existing
-        link = TaskSource(task_id=task_id, source_id=source_id, kind=kind)
-        self.session.add(link)
-        await self.session.flush()
-        await self.session.refresh(link)
-        return link
+        return await mutate_task_source_link(
+            self.session,
+            task_id,
+            source_id,
+            kind,
+        )
+
+    async def unlink_task_source(self, task_id: int, source_id: UUID) -> bool:
+        return await mutate_task_source_unlink(
+            self.session,
+            task_id,
+            source_id,
+        )
+
+    async def sync_task_sources(
+        self,
+        task_id: int,
+        desired: Iterable[tuple[UUID, str]],
+    ) -> bool:
+        return await synchronize_task_sources(
+            self.session,
+            task_id,
+            desired,
+        )
 
     async def get_task_source(
         self, task_id: int, source_id: UUID
