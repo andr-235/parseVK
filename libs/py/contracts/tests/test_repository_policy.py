@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from parsevk_contracts.generation.policy_layout import validate_unversioned_layo
 
 CONTRACTS_ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY_ROOT = CONTRACTS_ROOT.parents[2]
+GIT = shutil.which("git")
 
 
 def test_repository_uses_unversioned_contract_layout():
@@ -22,6 +24,8 @@ def test_changed_contracts_are_backward_readable_from_ci_baseline(tmp_path: Path
     baseline_sha = _github_baseline_sha()
     if baseline_sha is None:
         pytest.skip("No GitHub comparison baseline is available")
+    if GIT is None:
+        pytest.skip("git executable is unavailable")
 
     baseline_generated = tmp_path / "generated"
     paths = _git_lines(
@@ -39,8 +43,8 @@ def test_changed_contracts_are_backward_readable_from_ci_baseline(tmp_path: Path
         target = baseline_generated / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(
-            subprocess.check_output(
-                ["git", "show", f"{baseline_sha}:{repository_path}"],
+            subprocess.check_output(  # noqa: S603 - fixed executable and git-owned path
+                [GIT, "show", f"{baseline_sha}:{repository_path}"],
                 cwd=REPOSITORY_ROOT,
             )
         )
@@ -68,8 +72,10 @@ def _github_baseline_sha() -> str | None:
 
 
 def _git_lines(*args: str) -> list[str]:
-    output = subprocess.check_output(
-        ["git", *args],
+    if GIT is None:
+        raise RuntimeError("git executable is unavailable")
+    output = subprocess.check_output(  # noqa: S603 - fixed executable and static args
+        [GIT, *args],
         cwd=REPOSITORY_ROOT,
         text=True,
     )
