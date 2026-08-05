@@ -158,6 +158,7 @@ async def test_freeze_creates_snapshot_with_contract_fields():
         "sourceType": "community",
         "externalId": "12345",
         "ownerId": -12345,
+        "kind": "target",
         "sourceRevision": 2,
         "taskRevision": 5,
     }
