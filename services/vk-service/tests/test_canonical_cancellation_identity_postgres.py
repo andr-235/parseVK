@@ -9,6 +9,9 @@ from parsevk_contracts.vk.commands import (
     VkSourceDemandRequest,
 )
 
+from app.infrastructure.db.repositories.canonical_cancellation import (
+    CanonicalCancellationRepository,
+)
 from app.infrastructure.db.repositories.canonical_commands import (
     CanonicalVkCommandRepository,
 )
@@ -50,8 +53,8 @@ def _command():
 @pytest.mark.anyio
 async def test_cancellation_requires_matching_execution_and_owner(db_session):
     command = _command()
-    repository = CanonicalVkCommandRepository(db_session)
-    await repository.attach_command(command)
+    await CanonicalVkCommandRepository(db_session).attach_command(command)
+    repository = CanonicalCancellationRepository(db_session)
 
     wrong_execution = await repository.request_cancellation(
         task_id=command.task_id,
