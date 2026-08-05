@@ -66,15 +66,7 @@ class TaskSourceResolver:
         group_id: int,
     ) -> MonitoringSource:
         external_id = canonical_external_id(str(group_id))
-        source = await self.sources_repo.get_source_by_identity(
-            "vk",
-            "community",
-            external_id,
-        )
-        if source is not None:
-            return source
-
-        source = MonitoringSource(
+        candidate = MonitoringSource(
             id=canonical_source_id("vk", "community", external_id),
             owner_user_id=task.owner_user_id,
             provider="vk",
@@ -82,9 +74,9 @@ class TaskSourceResolver:
             external_id=external_id,
             owner_id=-int(external_id),
         )
-        source = await self.sources_repo.create_source(source)
+        source = await self.sources_repo.get_or_create_source(candidate)
         logger.debug(
-            "Created normalized VK source: id=%s external=%s",
+            "Resolved normalized VK source: id=%s external=%s",
             source.id,
             external_id,
         )
