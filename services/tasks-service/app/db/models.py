@@ -11,6 +11,7 @@ from app.db.source_models import (
     AccessScope,
     MonitoringSource,
     ScopeSourceAccess,
+    SourceRegistration,
     TaskSource,
 )
 from app.db.task_models import Task, TaskAuditLog
@@ -21,6 +22,7 @@ __all__ = [
     "OutboxEvent",
     "ProcessedEvent",
     "ScopeSourceAccess",
+    "SourceRegistration",
     "Task",
     "TaskAuditLog",
     "TaskAutomationSettings",
