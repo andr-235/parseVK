@@ -8,6 +8,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.sql.elements import TextClause
 
 revision: str = "pr6b2_quarantine_legacy_outbox"
 down_revision: str | None = "pr6b_source_level_collection_identity"
@@ -25,23 +26,25 @@ _EVENT_TYPES = (
 )
 
 
-def upgrade() -> None:
-    op.execute(
-        sa.text(
-            """
-            UPDATE outbox_events
-            SET status = 'failed',
-                last_error = :error,
-                locked_at = NULL
-            WHERE status = 'pending'
-              AND event_type IN :event_types
-            """
-        ).bindparams(
-            sa.bindparam("event_types", expanding=True),
-            error=_QUARANTINE_ERROR,
-            event_types=_EVENT_TYPES,
-        )
+def quarantine_statement() -> TextClause:
+    return sa.text(
+        """
+        UPDATE outbox_events
+        SET status = 'failed',
+            last_error = :error,
+            locked_at = NULL
+        WHERE status = 'pending'
+          AND event_type IN :event_types
+        """
+    ).bindparams(
+        sa.bindparam("event_types", expanding=True),
+        error=_QUARANTINE_ERROR,
+        event_types=_EVENT_TYPES,
     )
+
+
+def upgrade() -> None:
+    op.execute(quarantine_statement())
 
 
 def downgrade() -> None:
