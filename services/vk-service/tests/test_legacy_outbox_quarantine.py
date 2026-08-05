@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
-from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
+from runpy import run_path
 from uuid import uuid4
 
 import pytest
@@ -14,12 +14,8 @@ MODULE_PATH = (
 )
 
 
-def load_migration():
-    spec = spec_from_file_location("pr6b2_quarantine_legacy_outbox", MODULE_PATH)
-    assert spec is not None and spec.loader is not None
-    module = module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def load_migration() -> dict:
+    return run_path(str(MODULE_PATH))
 
 
 def make_event(event_type: str, *, status: str = "pending") -> OutboxEvent:
@@ -56,14 +52,14 @@ async def test_quarantine_blocks_only_pending_legacy_lifecycle_events(db_session
     )
     await db_session.flush()
 
-    await db_session.execute(migration.quarantine_statement())
+    await db_session.execute(migration["quarantine_statement"]())
     for event in [*pending_legacy, published_legacy, pending_canonical_command]:
         await db_session.refresh(event)
 
     for event in pending_legacy:
         assert event.status == "failed"
         assert event.locked_at is None
-        assert event.last_error == migration._QUARANTINE_ERROR
+        assert event.last_error == migration["_QUARANTINE_ERROR"]
 
     assert published_legacy.status == "published"
     assert published_legacy.last_error is None
@@ -74,5 +70,5 @@ async def test_quarantine_blocks_only_pending_legacy_lifecycle_events(db_session
 def test_quarantine_follows_source_level_cutover_revision():
     migration = load_migration()
 
-    assert migration.revision == "pr6b2_quarantine_legacy_outbox"
-    assert migration.down_revision == "pr6b_source_collection_identity"
+    assert migration["revision"] == "pr6b2_quarantine_legacy_outbox"
+    assert migration["down_revision"] == "pr6b_source_collection_identity"
