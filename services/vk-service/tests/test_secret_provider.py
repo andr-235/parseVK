@@ -76,9 +76,12 @@ def test_file_provider_empty_file_raises(tmp_path: Path):
         provider.load()
 
 
-def test_provider_factory_requires_mounted_file():
+def test_provider_factory_defers_missing_mount_error_until_load():
+    provider = build_secret_provider(SimpleNamespace(token_file=""))
+
+    assert isinstance(provider, FileSecretProvider)
     with pytest.raises(SecretProviderError, match="TOKEN_FILE"):
-        build_secret_provider(SimpleNamespace(token_file=""))
+        provider.load()
 
 
 def test_provider_factory_builds_file_provider(tmp_path: Path):
