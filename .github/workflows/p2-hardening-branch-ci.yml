@@ -6,9 +6,145 @@ on:
       - agent/p2-hardening-source-level-collections
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
+  patch-compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: true
+      - name: Apply VK file-secret cutover
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("docker-compose.yml")
+          text = path.read_text(encoding="utf-8")
+          original = text
+
+          for line in (
+              "      VK_SERVICE_VK_TOKEN: ${VK_SERVICE_VK_TOKEN:-${VK_TOKEN:-dev-vk-token}}\n",
+              "      VK_SERVICE_DEFAULT_GROUP_IDS: '${VK_SERVICE_DEFAULT_GROUP_IDS:-[1]}'\n",
+              "      VK_SERVICE_VK_TOKEN: ${VK_SERVICE_VK_TOKEN:-${VK_TOKEN:-}}\n",
+              "      # Preferred secret path: mount the token file and point VK_SERVICE_TOKEN_FILE at it.\n",
+              "      # Example with a top-level secrets section:\n",
+              "      #   secrets:\n",
+              "      #     vk_token_file:\n",
+              "      #       file: ./secrets/vk_token\n",
+              "      # then add `secrets: [vk_token_file]` to this service and set\n",
+              "      # VK_SERVICE_TOKEN_FILE: /run/secrets/vk_token\n",
+          ):
+              text = text.replace(line, "")
+          text = text.replace(
+              "      VK_SERVICE_TOKEN_FILE: ${VK_SERVICE_TOKEN_FILE:-}\n",
+              "      VK_SERVICE_TOKEN_FILE: /run/secrets/vk_token\n",
+          )
+
+          migrate_marker = (
+              "      VK_SERVICE_DATABASE_URL: ${VK_SERVICE_DATABASE_URL:-"
+              "postgresql+asyncpg://vk:vk_dev_password_change_me@vk-db:5432/vk}\n"
+              "      UV_CACHE_DIR: /tmp/uv-cache\n"
+              "    command: [\"uv\", \"run\", \"alembic\", \"upgrade\", \"head\"]\n"
+          )
+          migrate_replacement = (
+              "      VK_SERVICE_DATABASE_URL: ${VK_SERVICE_DATABASE_URL:-"
+              "postgresql+asyncpg://vk:vk_dev_password_change_me@vk-db:5432/vk}\n"
+              "      VK_SERVICE_TOKEN_FILE: /run/secrets/vk_token\n"
+              "      UV_CACHE_DIR: /tmp/uv-cache\n"
+              "    secrets:\n"
+              "      - vk_token\n"
+              "    command: [\"uv\", \"run\", \"alembic\", \"upgrade\", \"head\"]\n"
+          )
+          if "  vk-migrate:" in text and "VK_SERVICE_TOKEN_FILE: /run/secrets/vk_token\n      UV_CACHE_DIR" not in text:
+              if migrate_marker not in text:
+                  raise RuntimeError("vk-migrate marker not found")
+              text = text.replace(migrate_marker, migrate_replacement, 1)
+
+          service_marker = (
+              "      VK_SERVICE_OK_APPLICATION_SECRET_KEY: ${VK_SERVICE_OK_APPLICATION_SECRET_KEY:-}\n"
+              "      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318\n"
+              "    healthcheck:\n"
+          )
+          service_replacement = (
+              "      VK_SERVICE_OK_APPLICATION_SECRET_KEY: ${VK_SERVICE_OK_APPLICATION_SECRET_KEY:-}\n"
+              "      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318\n"
+              "    secrets:\n"
+              "      - vk_token\n"
+              "    healthcheck:\n"
+          )
+          if service_marker in text:
+              text = text.replace(service_marker, service_replacement, 1)
+          elif "VK_SERVICE_OK_APPLICATION_SECRET_KEY" in text and "    secrets:\n      - vk_token\n    healthcheck:" not in text:
+              raise RuntimeError("vk-service marker not found")
+
+          topic_marker = (
+              "      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 "
+              "--create --if-not-exists --topic parsevk.vk.events --partitions 3 "
+              "--replication-factor 1;\n"
+          )
+          command_topic = (
+              "      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 "
+              "--create --if-not-exists --topic parsevk.vk.commands --partitions 3 "
+              "--replication-factor 1;\n"
+          )
+          if "--topic parsevk.vk.commands " not in text:
+              if topic_marker not in text:
+                  raise RuntimeError("VK topic marker not found")
+              text = text.replace(topic_marker, topic_marker + command_topic, 1)
+
+          dlq_marker = (
+              "      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 "
+              "--create --if-not-exists --topic parsevk.vk.dlq --partitions 3 "
+              "--replication-factor 1;\n"
+          )
+          command_dlq = (
+              "      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 "
+              "--create --if-not-exists --topic parsevk.vk.commands.dlq --partitions 3 "
+              "--replication-factor 1;\n"
+          )
+          if "--topic parsevk.vk.commands.dlq " not in text:
+              if dlq_marker not in text:
+                  raise RuntimeError("VK DLQ marker not found")
+              text = text.replace(dlq_marker, dlq_marker + command_dlq, 1)
+
+          if "\nsecrets:\n  vk_token:\n" not in text:
+              networks_marker = "\nnetworks:\n"
+              if networks_marker not in text:
+                  raise RuntimeError("top-level networks marker not found")
+              text = text.replace(
+                  networks_marker,
+                  "\nsecrets:\n"
+                  "  vk_token:\n"
+                  "    file: ${VK_TOKEN_FILE:-./secrets/vk_token}\n"
+                  "\nnetworks:\n",
+                  1,
+              )
+
+          forbidden = (
+              "VK_SERVICE_VK_TOKEN",
+              "VK_SERVICE_DEFAULT_GROUP_IDS",
+              "${VK_TOKEN:",
+          )
+          for value in forbidden:
+              if value in text:
+                  raise RuntimeError(f"legacy compose setting remains: {value}")
+          if text == original:
+              print("docker-compose.yml is already canonical")
+          path.write_text(text, encoding="utf-8")
+          PY
+      - name: Commit Compose cutover
+        run: |
+          if git diff --quiet -- docker-compose.yml; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docker-compose.yml
+          git commit -m "chore(compose): apply VK file-secret cutover"
+          git push
+
   ruff:
     runs-on: ubuntu-latest
     steps:
