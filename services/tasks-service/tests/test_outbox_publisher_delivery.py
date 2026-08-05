@@ -1,9 +1,9 @@
 from unittest.mock import AsyncMock
 
 import pytest
+from outbox_test_helpers import make_message
 
 from app.modules.outbox.publisher import MAX_OUTBOX_ATTEMPTS, OutboxPublisher
-from outbox_test_helpers import make_message
 
 
 def make_publisher(repo, producer):
