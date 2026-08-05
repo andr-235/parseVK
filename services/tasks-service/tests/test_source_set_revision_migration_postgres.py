@@ -97,10 +97,10 @@ async def _seed_pre_migration_data(host: str, port: int) -> None:
                         'sourceId', $4::text,
                         'provider', 'vk',
                         'sourceType', 'community',
-                        'externalId', $5,
-                        'ownerId', $6,
+                        'externalId', $5::text,
+                        'ownerId', $6::bigint,
                         'sourceRevision', 0,
-                        'taskRevision', $7
+                        'taskRevision', $7::integer
                     )
                 ),
                 $8
