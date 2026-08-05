@@ -70,9 +70,9 @@ jobs:
             tests/p0_p2/test_crash_recovery_postgres.py
 
   tasks-postgres-ordering:
-    name: Repeated Tasks Outbox Ordering
+    name: Repeated Tasks PostgreSQL Invariants
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       PYTHONPATH: ${{ github.workspace }}/libs/py/common:${{ github.workspace }}/libs/py/contracts:${{ github.workspace }}/services/tasks-service/tests
     steps:
@@ -88,7 +88,8 @@ jobs:
           uv run --project services/tasks-service
           pytest --collect-only -q -m integration
           services/tasks-service/tests/test_vk_outbox_ordering_postgres.py
-      - name: Run request-cancellation ordering repeatedly
+          services/tasks-service/tests/test_source_registration_postgres.py
+      - name: Run PostgreSQL invariants repeatedly
         working-directory: services/tasks-service
         env:
           P0_P2_CONCURRENCY_REPEATS: '5'
@@ -96,7 +97,8 @@ jobs:
           uv run pytest -q --strict-markers \
             -o addopts="--import-mode=importlib" \
             -m integration \
-            tests/test_vk_outbox_ordering_postgres.py
+            tests/test_vk_outbox_ordering_postgres.py \
+            tests/test_source_registration_postgres.py
           uv run pytest -q --strict-markers \
             tests/test_outbox_publisher_delivery.py \
             tests/test_vk_command_replay.py
