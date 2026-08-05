@@ -83,9 +83,22 @@ class VkExecutionRequestedV2(ContractModel):
         demand_ids = [demand.demand_id for demand in self.demands]
         if len(demand_ids) != len(set(demand_ids)):
             raise ValueError("Duplicate demand_id found in demands")
+
         source_ids = [demand.source.source_id for demand in self.demands]
         if len(source_ids) != len(set(source_ids)):
             raise ValueError("Duplicate source_id found in demands")
+
+        physical_sources = [
+            (
+                demand.source.provider,
+                demand.source.source_type,
+                demand.source.external_id,
+                demand.source.owner_id,
+            )
+            for demand in self.demands
+        ]
+        if len(physical_sources) != len(set(physical_sources)):
+            raise ValueError("Duplicate physical VK source found in demands")
         return self
 
 
