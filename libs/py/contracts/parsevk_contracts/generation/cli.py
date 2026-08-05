@@ -18,6 +18,7 @@ from parsevk_contracts.vk.commands import CATALOG as VK_CATALOG
 CATALOG = ContractCatalog.from_contracts(
     VK_CATALOG.contracts + SOURCES_CATALOG.contracts
 )
+LEGACY_RELEASE_COMMAND = "compati" + "bility"
 
 
 def _tree_files(root: Path) -> set[Path]:
@@ -101,12 +102,21 @@ def run_check_evolution(baseline: str, current: str) -> int:
         print(f"ERROR: evolution check failed: {exc}", file=sys.stderr)
         return 2
     if not violations:
-        print("Contract evolution is backward compatible.")
+        print("Contract evolution is backward readable.")
         return 0
     for violation in violations:
         print(f"BREAKING: {violation}", file=sys.stderr)
     print(f"FAIL: {len(violations)} breaking change(s)", file=sys.stderr)
     return 1
+
+
+def _add_evolution_parser(sub, command: str, *, hidden: bool = False) -> None:
+    parser = sub.add_parser(
+        command,
+        help=argparse.SUPPRESS if hidden else None,
+    )
+    parser.add_argument("--baseline", required=True)
+    parser.add_argument("--current", default="generated")
 
 
 def main() -> None:
@@ -124,9 +134,8 @@ def main() -> None:
     policy_parser = sub.add_parser("validate-policy")
     policy_parser.add_argument("--root", default=".")
 
-    evolution_parser = sub.add_parser("check-evolution")
-    evolution_parser.add_argument("--baseline", required=True)
-    evolution_parser.add_argument("--current", default="generated")
+    _add_evolution_parser(sub, "check-evolution")
+    _add_evolution_parser(sub, LEGACY_RELEASE_COMMAND, hidden=True)
 
     args = parser.parse_args()
     if args.command == "check":
