@@ -62,6 +62,7 @@ class CanonicalExecutionRepository(SqlAlchemyExecutionRepository):
         await self._replace_demand_terminal_events(
             demands,
             event_type="task.execution_completed",
+            demand_status="done",
             processed_items=int(kwargs.get("processed_items") or 0),
             total_items=int(kwargs.get("total_items") or 0),
             stats=dict(kwargs.get("stats") or {}),
@@ -81,6 +82,7 @@ class CanonicalExecutionRepository(SqlAlchemyExecutionRepository):
         await self._replace_demand_terminal_events(
             demands,
             event_type="task.execution_failed",
+            demand_status="failed",
             processed_items=int(kwargs.get("processed_items") or 0),
             total_items=int(kwargs.get("total_items") or 0),
             stats=dict(kwargs.get("stats") or {}),
@@ -127,12 +129,14 @@ class CanonicalExecutionRepository(SqlAlchemyExecutionRepository):
         demands,
         *,
         event_type: str,
+        demand_status: str,
         processed_items: int,
         total_items: int,
         stats: dict,
         worker_id: str,
     ) -> None:
-        keys = [f"{event_type}:{demand.id}" for demand in demands]
+        affected = [demand for demand in demands if demand.status == demand_status]
+        keys = [f"{event_type}:{demand.id}" for demand in affected]
         if keys:
             await self.session.execute(
                 delete(OutboxEvent).where(
@@ -140,13 +144,13 @@ class CanonicalExecutionRepository(SqlAlchemyExecutionRepository):
                     OutboxEvent.dedupe_key.in_(keys),
                 )
             )
-        for demand in demands:
+        for demand in affected:
             demand.processed_items = processed_items
             demand.total_items = total_items
             demand.stats = stats
         await finalize_bindings(
             self.session,
-            {d.binding_id for d in demands},
+            {d.binding_id for d in affected},
             worker_id=worker_id,
         )
         await self.session.flush()
