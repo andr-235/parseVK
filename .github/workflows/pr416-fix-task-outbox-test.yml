@@ -1,0 +1,75 @@
+name: Patch PR416 task outbox fixture
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/pr416-fix-task-outbox-test.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - name: Replace removed source adapter fixture
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("services/tasks-service/tests/test_outbox.py")
+          text = path.read_text()
+          text = text.replace(
+              '''    source_adapter = SimpleNamespace(
+                  ensure_normalized_sources=AsyncMock()
+              )
+              service.crud.source_adapter_factory = lambda _session: source_adapter
+          ''',
+              '''    source_resolver = SimpleNamespace(resolve=AsyncMock())
+              service.crud.source_resolver_factory = lambda _session: source_resolver
+          ''',
+          )
+          text = text.replace(
+              '''    source_adapter.ensure_normalized_sources.assert_awaited_once_with(
+                  task_mock,
+                  [1, 2],
+              )
+          ''',
+              '''    source_resolver.resolve.assert_awaited_once_with(
+                  task_mock,
+                  [1, 2],
+              )
+          ''',
+          )
+          marker = '''def test_payload_has_no_sensitive_keys():
+          '''
+          addition = '''def test_kafka_key_for_vk_cancel_command_uses_execution_id():
+              execution_id = str(uuid4())
+              assert (
+                  kafka_key_for_event(
+                      "vk.execution.cancel_requested",
+                      {"executionId": execution_id},
+                      "ignored",
+                  )
+                  == execution_id
+              )
+
+
+          '''
+          if addition not in text:
+              text = text.replace(marker, addition + marker)
+          path.write_text(text)
+          PY
+          rm .github/workflows/pr416-fix-task-outbox-test.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add services/tasks-service/tests/test_outbox.py .github/workflows/pr416-fix-task-outbox-test.yml
+          git commit -m "test(tasks): use source resolver in outbox suite"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
