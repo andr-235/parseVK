@@ -140,4 +140,5 @@ async def test_cancel_uses_current_execution_run_in_both_commands():
         f"task.state_changed:42:cancelled:{task.revision}"
     )
     cancellation_publisher.assert_awaited_once()
-    assert cancellation_publisher.await_args.args[2] is task
+    assert cancellation_publisher.await_args.args[1] is task
+    assert cancellation_publisher.await_args.kwargs["reason"] == "task.cancelled"
