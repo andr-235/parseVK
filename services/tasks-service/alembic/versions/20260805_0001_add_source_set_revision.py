@@ -3,10 +3,10 @@
 Revision ID: p2h1_source_set_revision
 Revises: p1_task_run_snapshot
 
-The backfill preserves monotonicity relative to both the previous task revision
-and already frozen TaskRun metadata. Historical source-set changes cannot be
-reconstructed, so this migration establishes a deterministic baseline for all
-future effective-set mutations.
+Historical source-set transitions cannot be reconstructed. The migration
+therefore assigns the current effective set a deterministic revision above all
+already frozen TaskRuns whenever the task currently has normalized sources.
+Future mutations advance this baseline monotonically.
 """
 
 from collections.abc import Sequence
@@ -33,8 +33,7 @@ def upgrade() -> None:
     op.execute(
         """
         UPDATE tasks AS task
-        SET source_set_revision = GREATEST(
-            COALESCE(task.revision, 0),
+        SET source_set_revision =
             COALESCE(
                 (
                     SELECT MAX(task_run.source_set_revision)
@@ -43,7 +42,14 @@ def upgrade() -> None:
                 ),
                 0
             )
-        )
+            + CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM task_sources AS task_source
+                    WHERE task_source.task_id = task.id
+                ) THEN 1
+                ELSE 0
+              END
         """
     )
     op.create_check_constraint(
