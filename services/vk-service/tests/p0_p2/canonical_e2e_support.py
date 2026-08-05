@@ -1,5 +1,6 @@
 import asyncio
 import os
+import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -117,6 +118,9 @@ def publish_from_tasks(
     infra: CanonicalE2EInfra,
     metadata_path: Path,
 ) -> None:
+    uv_binary = shutil.which("uv")
+    if uv_binary is None:
+        raise RuntimeError("uv executable is required for canonical E2E")
     env = os.environ.copy()
     env.update(
         {
@@ -129,9 +133,9 @@ def publish_from_tasks(
             ),
         }
     )
-    result = subprocess.run(
+    result = subprocess.run(  # noqa: S603 - fixed executable and arguments
         [
-            "uv", "run", "--project", "services/tasks-service", "python",
+            uv_binary, "run", "--project", "services/tasks-service", "python",
             "services/tasks-service/tests/_publish_canonical_commands.py",
             str(metadata_path),
         ],
