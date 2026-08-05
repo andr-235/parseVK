@@ -4,14 +4,16 @@ Revision ID: p2h7_source_registrations
 Revises: p2h3_task_run_immutable
 """
 
-from alembic import op
+from collections.abc import Sequence
+
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "p2h7_source_registrations"
-down_revision = "p2h3_task_run_immutable"
-branch_labels = None
-depends_on = None
+revision: str = "p2h7_source_registrations"
+down_revision: str | None = "p2h3_task_run_immutable"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
