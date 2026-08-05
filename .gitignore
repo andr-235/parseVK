@@ -47,6 +47,9 @@ lerna-debug.log*
 .env.local
 *.local
 
+# Mounted secrets
+/secrets/
+
 # temp directory
 .temp
 .tmp
