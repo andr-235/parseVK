@@ -26,8 +26,12 @@ async def test_handle_processing_failure_sends_to_dlq_on_malformed_msg():
     msg.value = b"not valid json{{{"
     msg.offset = 42
 
-    with patch("common.kafka.consumer.send_to_dlq", new_callable=AsyncMock) as mock_send:
-        await consumer._handle_processing_failure(msg)
+    with patch("common.kafka.consumer_retry.send_to_dlq", new_callable=AsyncMock) as mock_send:
+        await consumer._retry.handle_failure(
+            msg,
+            ValueError("invalid JSON"),
+            consumer._consumer,
+        )
         mock_send.assert_awaited_once()
 
     consumer._consumer.commit.assert_awaited_once()
@@ -61,9 +65,13 @@ async def test_skip_due_to_retry_backoff_preserves_offset_when_in_backoff():
     session.scalar = scalar_mock
     session.__aenter__ = AsyncMock(return_value=session)
 
-    consumer.session_factory = lambda: session
+    consumer._retry.session_factory = lambda: session
+    consumer._retry.repository.get_event = AsyncMock(return_value=row)
 
-    result = await consumer._skip_due_to_retry_backoff(raw_value)
+    result = await consumer._retry.skip_due_to_backoff(
+        raw_value,
+        consumer._consumer,
+    )
 
     assert result is True
     consumer._consumer.commit.assert_not_awaited()

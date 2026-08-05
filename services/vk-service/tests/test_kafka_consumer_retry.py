@@ -3,7 +3,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-
 from common.kafka import consumer_retry
 from common.kafka.consumer_retry import ConsumerRetryController
 

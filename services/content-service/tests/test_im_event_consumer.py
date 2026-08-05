@@ -29,8 +29,12 @@ async def test_handle_processing_failure_sends_to_dlq_on_malformed_msg():
     msg.value = b"not valid json{{{"
     msg.offset = 42
 
-    with patch("common.kafka.consumer.send_to_dlq", new_callable=AsyncMock) as mock_send:
-        await consumer._handle_processing_failure(msg)
+    with patch("common.kafka.consumer_retry.send_to_dlq", new_callable=AsyncMock) as mock_send:
+        await consumer._retry.handle_failure(
+            msg,
+            ValueError("invalid JSON"),
+            consumer._consumer,
+        )
         mock_send.assert_awaited_once()
 
     consumer._consumer.commit.assert_awaited_once()
@@ -68,9 +72,13 @@ async def test_skip_due_to_retry_backoff_commits_offset_when_in_backoff():
     session.scalar = scalar_mock
     session.__aenter__ = AsyncMock(return_value=session)
 
-    consumer.session_factory = lambda: session
+    consumer._retry.session_factory = lambda: session
+    consumer._retry.repository.get_event = AsyncMock(return_value=row)
 
-    result = await consumer._skip_due_to_retry_backoff(raw_value)
+    result = await consumer._retry.skip_due_to_backoff(
+        raw_value,
+        consumer._consumer,
+    )
 
     assert result is True
     # Durable backoff: skip without committing offset — partition stays paused
@@ -105,8 +113,9 @@ async def test_service_handle_v1_message_collected():
     from unittest.mock import AsyncMock
     from uuid import uuid4
 
-    from app.modules.im_events.service import ImEventService
     from common.events import ImEvent
+
+    from app.modules.im_events.service import ImEventService
 
     repo = AsyncMock()
     repo.is_processed.return_value = False
@@ -137,8 +146,9 @@ async def test_service_handle_v2_message_collected():
     from unittest.mock import AsyncMock
     from uuid import uuid4
 
-    from app.modules.im_events.service import ImEventService
     from common.events import ImEvent
+
+    from app.modules.im_events.service import ImEventService
 
     repo = AsyncMock()
     repo.is_processed.return_value = False
@@ -188,8 +198,9 @@ async def test_service_handle_already_processed():
     from unittest.mock import AsyncMock
     from uuid import uuid4
 
-    from app.modules.im_events.service import ImEventService
     from common.events import ImEvent
+
+    from app.modules.im_events.service import ImEventService
 
     repo = AsyncMock()
     repo.is_processed.return_value = True
@@ -219,8 +230,9 @@ async def test_v1_event_calls_upsert_with_version_1():
     from unittest.mock import AsyncMock
     from uuid import uuid4
 
-    from app.modules.im_events.service import ImEventService
     from common.events import ImEvent
+
+    from app.modules.im_events.service import ImEventService
 
     repo = AsyncMock()
     repo.is_processed.return_value = False
@@ -247,8 +259,9 @@ async def test_v2_after_v1_upgrades_projection():
     from unittest.mock import AsyncMock
     from uuid import uuid4
 
-    from app.modules.im_events.service import ImEventService
     from common.events import ImEvent
+
+    from app.modules.im_events.service import ImEventService
 
     repo = AsyncMock()
     repo.is_processed.return_value = False
@@ -288,8 +301,9 @@ async def test_same_event_id_delivered_twice():
     from unittest.mock import AsyncMock
     from uuid import uuid4
 
-    from app.modules.im_events.service import ImEventService
     from common.events import ImEvent
+
+    from app.modules.im_events.service import ImEventService
 
     repo = AsyncMock()
     repo.is_processed.side_effect = [True, True]  # always processed
@@ -317,8 +331,9 @@ async def test_two_events_same_natural_key_both_call_upsert_message():
     from unittest.mock import AsyncMock
     from uuid import uuid4
 
-    from app.modules.im_events.service import ImEventService
     from common.events import ImEvent
+
+    from app.modules.im_events.service import ImEventService
 
     repo = AsyncMock()
     repo.is_processed.return_value = False
