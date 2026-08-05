@@ -109,14 +109,16 @@ async def request_cancellation(
         execution.cancellation_requested_at = execution.cancellation_requested_at or now
         execution.cancellation_reason = execution.cancellation_reason or safe_reason
         execution.updated_at = now
+        collection.last_error = safe_reason
+        collection.updated_at = now
         if execution.status == "pending":
             execution.status = "cancelled"
             execution.finished_at = now
             execution.last_error = safe_reason
             collection.status = "cancelled"
             collection.finished_at = now
-            collection.last_error = safe_reason
-            collection.updated_at = now
+        else:
+            collection.status = "cancelling"
 
     binding.status = "cancelled"
     binding.cancellation_requested_at = binding.cancellation_requested_at or now
