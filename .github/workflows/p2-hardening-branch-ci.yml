@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   ruff:
@@ -18,9 +18,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v5
-      - name: Show exact Ruff import fixes
+      - name: Apply exact Ruff import fixes
         run: |
-          uvx ruff check --fix --diff \
+          set -euo pipefail
+          uvx ruff check --fix \
             services/tasks-service/tests/test_outbox_publisher_configuration.py \
             services/tasks-service/tests/test_outbox_publisher_delivery.py \
             services/tasks-service/tests/test_outbox_repository.py \
@@ -31,6 +32,25 @@ jobs:
             services/vk-service/tests/integration/repositories/test_execution_repository.py \
             services/vk-service/tests/test_execution_control.py \
             services/vk-service/tests/test_execution_runner_postgres.py
+          if git diff --quiet; then
+            echo "Ruff imports already canonical"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            services/tasks-service/tests/test_outbox_publisher_configuration.py \
+            services/tasks-service/tests/test_outbox_publisher_delivery.py \
+            services/tasks-service/tests/test_outbox_repository.py \
+            services/tasks-service/tests/test_vk_cancel_command_publisher.py \
+            services/vk-service/tests/integration/repositories/test_canonical_cancelled_audit.py \
+            services/vk-service/tests/integration/repositories/test_canonical_source_attachment.py \
+            services/vk-service/tests/integration/repositories/test_canonical_source_lifecycle.py \
+            services/vk-service/tests/integration/repositories/test_execution_repository.py \
+            services/vk-service/tests/test_execution_control.py \
+            services/vk-service/tests/test_execution_runner_postgres.py
+          git commit -m "style: apply Ruff import ordering"
+          git push origin HEAD:agent/p2-hardening-source-level-collections
 
   contracts:
     runs-on: ubuntu-latest
