@@ -1,7 +1,7 @@
 """Quarantine pending lifecycle events from the aggregate VK runtime.
 
 Revision ID: pr6b2_quarantine_legacy_outbox
-Revises: pr6b_source_level_collection_identity
+Revises: pr6b_source_collection_identity
 """
 
 from collections.abc import Sequence
@@ -11,7 +11,7 @@ from alembic import op
 from sqlalchemy.sql.elements import TextClause
 
 revision: str = "pr6b2_quarantine_legacy_outbox"
-down_revision: str | None = "pr6b_source_level_collection_identity"
+down_revision: str | None = "pr6b_source_collection_identity"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
