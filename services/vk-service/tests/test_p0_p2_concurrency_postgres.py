@@ -14,6 +14,7 @@ from _canonical_runtime_helpers import (
     make_command,
     seed_account,
 )
+
 from app.domain.repositories.checkpoint import CheckpointData
 from app.infrastructure.db.base import Base
 from app.infrastructure.db.models.executions import VkExecution  # noqa: F401
