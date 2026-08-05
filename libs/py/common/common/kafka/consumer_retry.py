@@ -59,7 +59,12 @@ class ConsumerRetryController:
     async def handle_failure(self, message, error: Exception, consumer) -> None:
         from aiokafka import TopicPartition
 
-        payload = decode_payload(message.value)
+        try:
+            payload = decode_payload(message.value)
+        except Exception:
+            await self._handle_poison_pill(message, error, consumer)
+            return
+
         event_id, event_type = message_identity(payload)
         if not event_id:
             await self._handle_poison_pill(message, error, consumer)
