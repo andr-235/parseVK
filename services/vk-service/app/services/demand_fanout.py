@@ -1,3 +1,5 @@
+"""Project physical source progress into canonical TaskRun lifecycle."""
+
 from app.infrastructure.db.repositories.canonical_executions import (
     report_binding_progress,
 )
@@ -5,15 +7,7 @@ from app.infrastructure.metrics.vk_metrics import observe_collection_fanout
 
 
 class DemandLifecycleFanout:
-    """Publish progress from physical source work at TaskRun scope."""
-
-    def __init__(
-        self,
-        *,
-        session,
-        collection_repository,
-        outbox,
-    ):
+    def __init__(self, *, session):
         self.session = session
 
     async def report_progress(
