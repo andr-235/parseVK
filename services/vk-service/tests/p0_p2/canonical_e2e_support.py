@@ -18,10 +18,7 @@ async def _wait_for_postgres(host: str, port: int) -> None:
     for _ in range(100):
         try:
             connection = await asyncpg.connect(
-                host=host,
-                port=port,
-                user="postgres",
-                password="postgres",
+                host=host, port=port, user="postgres", password="postgres",
                 database="postgres",
             )
             await connection.close()
@@ -34,10 +31,7 @@ async def _wait_for_postgres(host: str, port: int) -> None:
 
 async def _create_database(host: str, port: int, name: str) -> None:
     connection = await asyncpg.connect(
-        host=host,
-        port=port,
-        user="postgres",
-        password="postgres",
+        host=host, port=port, user="postgres", password="postgres",
         database="postgres",
     )
     try:
@@ -54,8 +48,8 @@ async def _prepare_kafka(bootstrap_servers: str) -> None:
             await admin.start()
             existing = await admin.list_topics()
             missing = [
-                NewTopic(name, num_partitions=partitions, replication_factor=1)
-                for name, partitions in ((TOPIC, 3), (DLQ_TOPIC, 1))
+                NewTopic(name, num_partitions=count, replication_factor=1)
+                for name, count in ((TOPIC, 3), (DLQ_TOPIC, 1))
                 if name not in existing
             ]
             if missing:
@@ -88,8 +82,10 @@ class CanonicalE2EInfra:
         )
         kafka = KafkaContainer(image="apache/kafka:4.1.0")
         postgres.start()
-        kafka.start()
+        kafka_started = False
         try:
+            kafka.start()
+            kafka_started = True
             host = postgres.get_container_host_ip()
             port = int(postgres.get_exposed_port(5432))
             await _wait_for_postgres(host, port)
@@ -106,7 +102,8 @@ class CanonicalE2EInfra:
                 bootstrap_servers=bootstrap_servers,
             )
         except Exception:
-            kafka.stop()
+            if kafka_started:
+                kafka.stop()
             postgres.stop()
             raise
 
@@ -128,20 +125,13 @@ def publish_from_tasks(
             "TASKS_KAFKA_TOPIC_VK_COMMANDS": TOPIC,
             "TASKS_KAFKA_TOPIC_VK_COMMANDS_DLQ": DLQ_TOPIC,
             "PYTHONPATH": os.pathsep.join(
-                [
-                    str(repo_root / "libs/py/common"),
-                    str(repo_root / "libs/py/contracts"),
-                ]
+                [str(repo_root / "libs/py/common"), str(repo_root / "libs/py/contracts")]
             ),
         }
     )
     result = subprocess.run(
         [
-            "uv",
-            "run",
-            "--project",
-            "services/tasks-service",
-            "python",
+            "uv", "run", "--project", "services/tasks-service", "python",
             "services/tasks-service/tests/_publish_canonical_commands.py",
             str(metadata_path),
         ],
