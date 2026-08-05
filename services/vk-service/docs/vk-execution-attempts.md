@@ -92,4 +92,6 @@ Before deployment, take a database backup. The migration downgrade can reconstru
 
 Terminal states are `done`, `failed` and `cancelled`.
 
-A terminal execution is immutable and cannot be reclaimed or resumed. A later TaskRun creates a new execution. When it follows a terminal execution for the same task, `parent_execution_id` records the relationship without mutating the previous execution.
+A terminal execution is immutable and cannot be reclaimed or resumed. A later TaskRun creates new physical work. Resume lineage belongs to `tasks-service.task_runs.resumed_from_task_run_id`; shared VK executions never encode TaskRun ancestry.
+
+Migration `p2h4_execution_plan_cleanup` removes `parent_execution_id`, `scope`, `mode` and `group_ids` from `vk_executions`. Source identity and collection options remain in `VkSourceCollection` and the normalized `plan_snapshot`. Downgrade can recreate the removed columns only as derived emergency placeholders; it cannot restore discarded task-level semantics. Production rollback therefore requires the previous application image together with a pre-migration database backup.

@@ -5,6 +5,10 @@ from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
 
 logger = logging.getLogger("vk-service.ingestion")
 
+_POST_STRATEGY_TO_MODE = {
+    "latestByPublishedAt": "recent_posts",
+}
+
 
 class PostCollector:
     def __init__(
@@ -27,7 +31,9 @@ class PostCollector:
         correlation_id: str | None = None,
     ) -> list[dict]:
         posts_response = await self.adapter.get_posts(
-            group_id, mode=task_run.mode, post_limit=task_run.post_limit
+            group_id,
+            mode=post_collection_mode(task_run),
+            post_limit=task_run.post_limit,
         )
         posts = posts_response["items"]
 
@@ -45,8 +51,7 @@ class PostCollector:
                 continue
             valid_posts.append(post)
 
-        posts = valid_posts
-        return posts
+        return valid_posts
 
     async def save_post(
         self,
@@ -57,14 +62,24 @@ class PostCollector:
         correlation_id: str | None = None,
     ) -> bool:
         author_added = await self._upsert_post_author(post, author_profiles)
-        await self.repository.upsert_post(post, task_id=task_run.task_id, group_id=post.get("owner_id"))
+        await self.repository.upsert_post(
+            post,
+            task_id=task_run.task_id,
+            group_id=post.get("owner_id"),
+        )
         if self.outbox:
             await self.outbox.emit_post_collected(
-                post, task_id=task_run.task_id, correlation_id=correlation_id
+                post,
+                task_id=task_run.task_id,
+                correlation_id=correlation_id,
             )
         return author_added
 
-    async def _upsert_post_author(self, post: dict, profiles: dict[int, dict]) -> bool:
+    async def _upsert_post_author(
+        self,
+        post: dict,
+        profiles: dict[int, dict],
+    ) -> bool:
         from_id = post.get("from_id")
         if from_id is None:
             return False
@@ -73,7 +88,26 @@ class PostCollector:
         return True
 
 
-def _author_payload(from_id: int, profiles: dict[int, dict] | None = None) -> dict:
+def post_collection_mode(task_run: Any) -> str:
+    plan = getattr(task_run, "plan_snapshot", None)
+    post_selection = plan.get("postSelection") if isinstance(plan, dict) else None
+    strategy = (
+        post_selection.get("strategy")
+        if isinstance(post_selection, dict)
+        else None
+    )
+    mode = _POST_STRATEGY_TO_MODE.get(strategy)
+    if mode is None:
+        raise RuntimeError(
+            "Execution plan has unsupported postSelection strategy"
+        )
+    return mode
+
+
+def _author_payload(
+    from_id: int,
+    profiles: dict[int, dict] | None = None,
+) -> dict:
     author_vk_id = int(from_id)
     profile = profiles.get(author_vk_id) if profiles else None
     if profile is None and author_vk_id < 0:

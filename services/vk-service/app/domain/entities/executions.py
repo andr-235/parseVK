@@ -12,9 +12,6 @@ class VkExecution:
     owner_user_id: str
     run_id: str
     status: str
-    scope: str
-    mode: str
-    group_ids: list[int]
     post_limit: int | None
     plan_snapshot: dict
     processed_items: int
@@ -25,7 +22,6 @@ class VkExecution:
     current_fencing_token: int
     cancellation_requested_at: datetime | None
     cancellation_reason: str | None
-    parent_execution_id: UUID | None
     execution_sequence: int
     started_at: datetime | None
     finished_at: datetime | None
@@ -86,18 +82,6 @@ class VkExecutionClaim:
     @property
     def run_id(self) -> str:
         return self.execution.run_id
-
-    @property
-    def scope(self) -> str:
-        return self.execution.scope
-
-    @property
-    def mode(self) -> str:
-        return self.execution.mode
-
-    @property
-    def group_ids(self) -> list[int]:
-        return self.execution.group_ids
 
     @property
     def post_limit(self) -> int | None:
