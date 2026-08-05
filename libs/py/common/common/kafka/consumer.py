@@ -17,6 +17,7 @@ class BaseEventConsumer(ABC):
     consumer_name: str
     dlq_topic: str
     max_consumer_retries: int = 3
+    auto_offset_reset: str = "latest"
 
     def __init__(
         self,
@@ -76,6 +77,7 @@ class BaseEventConsumer(ABC):
             bootstrap_servers=self.bootstrap_servers,
             group_id=self.consumer_group,
             enable_auto_commit=False,
+            auto_offset_reset=self.auto_offset_reset,
         )
         await self._consumer.start()
         logger.info("Kafka consumer started, waiting for messages")
