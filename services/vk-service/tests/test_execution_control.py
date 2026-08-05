@@ -1,16 +1,20 @@
 from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 import pytest
 
-from app.domain.entities.provider_account import SYSTEM_VK_CAPABILITY
-from app.infrastructure.db.repositories.executions import SqlAlchemyExecutionRepository
-from app.infrastructure.db.repositories.provider_accounts import (
-    SqlAlchemyProviderAccountRepository,
+from _canonical_runtime_helpers import (
+    attach,
+    cancel_command,
+    make_command,
+    seed_account,
 )
-from app.infrastructure.db.repositories.source_collections import (
-    SqlAlchemySourceCollectionRepository,
+from app.infrastructure.db.repositories.canonical_commands import (
+    CanonicalVkCommandRepository,
 )
-from app.services.collection_fingerprint import build_collection_identity
+from app.infrastructure.db.repositories.canonical_executions import (
+    CanonicalExecutionRepository,
+)
 from app.tasks.execution_control import (
     ExecutionAttemptControl,
     ExecutionCancellationRequested,
@@ -19,40 +23,16 @@ from app.tasks.execution_control import (
 )
 
 
-async def _claim(db_session, *, expired=False):
-    account_repo = SqlAlchemyProviderAccountRepository(db_session)
-    if await account_repo.get_by_key("system-vk") is None:
-        await account_repo.upsert_system(
-            account_key="system-vk",
-            provider="vk",
-            credential_version="version-1",
-            capabilities=[SYSTEM_VK_CAPABILITY],
-        )
-    demands = SqlAlchemySourceCollectionRepository(db_session)
-    if await demands.get_demand(task_id=10, run_id="run-10") is None:
-        identity = build_collection_identity(
-            provider_account_key="system-vk",
-            scope="selected",
-            mode="recent_posts",
-            group_ids=[1],
-            post_limit=10,
-            payload={},
-        )
-        attachment = await demands.attach_demand(
-            task_id=10,
-            owner_user_id="user-1",
-            run_id="run-10",
-            provider_account_key=identity.provider_account_key,
-            source_key=identity.source_key,
-            fingerprint=identity.fingerprint,
-            scope="selected",
-            mode="recent_posts",
-            group_ids=[1],
-            post_limit=10,
-            plan_snapshot=identity.normalized_plan,
-        )
-        assert attachment is not None
-    return await SqlAlchemyExecutionRepository(db_session).claim_next(
+async def _attach_execution(db_session):
+    await seed_account(db_session)
+    command = make_command(task_id=10, source_id=uuid4(), external_id=1)
+    attachment = await attach(db_session, command)
+    assert attachment.outcome == "created"
+    return command
+
+
+async def _claim(db_session, *, expired: bool = False):
+    return await CanonicalExecutionRepository(db_session).claim_next(
         worker_id="same-worker",
         lease_expires_at=(
             datetime.now(UTC) - timedelta(seconds=1)
@@ -64,6 +44,7 @@ async def _claim(db_session, *, expired=False):
 
 @pytest.mark.anyio
 async def test_commit_guard_rejects_stale_attempt_with_same_worker_id(db_session):
+    await _attach_execution(db_session)
     first = await _claim(db_session, expired=True)
     second = await _claim(db_session)
     assert first is not None and second is not None
@@ -75,12 +56,11 @@ async def test_commit_guard_rejects_stale_attempt_with_same_worker_id(db_session
 
 @pytest.mark.anyio
 async def test_commit_guard_reports_durable_cancellation(db_session):
+    command = await _attach_execution(db_session)
     claim = await _claim(db_session)
     assert claim is not None
-    await SqlAlchemySourceCollectionRepository(db_session).request_cancellation(
-        task_id=10,
-        run_id="run-10",
-        reason="task.cancelled",
+    await CanonicalVkCommandRepository(db_session).request_cancellation(
+        cancel_command(command)
     )
     control = ExecutionAttemptControl(claim=claim, session_factory=None)
 
