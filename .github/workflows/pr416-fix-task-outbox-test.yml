@@ -1,4 +1,4 @@
-name: Patch PR416 task outbox fixture
+name: Patch PR416 task fixtures
 
 on:
   pull_request:
@@ -18,14 +18,14 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
-      - name: Replace removed source adapter fixture
+      - name: Replace removed fixtures and SQL mock counts
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          path = Path("services/tasks-service/tests/test_outbox.py")
-          text = path.read_text()
+          outbox_path = Path("services/tasks-service/tests/test_outbox.py")
+          text = outbox_path.read_text()
           text = text.replace(
               '''    source_adapter = SimpleNamespace(
                   ensure_normalized_sources=AsyncMock()
@@ -65,11 +65,51 @@ jobs:
           '''
           if addition not in text:
               text = text.replace(marker, addition + marker)
-          path.write_text(text)
+          outbox_path.write_text(text)
+
+          consumer_path = Path(
+              "services/tasks-service/tests/test_execution_consumer.py"
+          )
+          text = consumer_path.read_text()
+          text = text.replace(
+              '''    results.extend([_mock_result_task_row(row), MagicMock()])
+          ''',
+              '''    results.extend(
+                  [_mock_result_task_row(row), *[MagicMock() for _ in range(4)]]
+              )
+          ''',
+          )
+          text = text.replace(
+              '''    assert session.execute.await_count == 3
+              assert session.commit.await_count == 1
+
+              added_models = [call.args[0] for call in session.add.call_args_list]
+              state_events = [m for m in added_models if getattr(m, "event_type", None) == "task.state_changed"]
+              assert len(state_events) == 1
+              assert state_events[0].payload["status"] == "running"
+          ''',
+              '''    assert session.execute.await_count == 4
+              assert session.commit.await_count == 1
+
+              added_models = [call.args[0] for call in session.add.call_args_list]
+              state_events = [
+                  model
+                  for model in added_models
+                  if getattr(model, "event_type", None) == "task.state_changed"
+              ]
+              assert len(state_events) == 1
+              assert state_events[0].payload["status"] == "running"
+          ''',
+              1,
+          )
+          consumer_path.write_text(text)
           PY
           rm .github/workflows/pr416-fix-task-outbox-test.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add services/tasks-service/tests/test_outbox.py .github/workflows/pr416-fix-task-outbox-test.yml
-          git commit -m "test(tasks): use source resolver in outbox suite"
+          git add \
+            services/tasks-service/tests/test_outbox.py \
+            services/tasks-service/tests/test_execution_consumer.py \
+            .github/workflows/pr416-fix-task-outbox-test.yml
+          git commit -m "test(tasks): align canonical runtime fixtures"
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
