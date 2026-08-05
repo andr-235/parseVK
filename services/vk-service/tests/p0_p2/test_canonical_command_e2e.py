@@ -96,10 +96,12 @@ async def test_tasks_outbox_to_canonical_vk_runtime_e2e(tmp_path: Path):
         auto_offset_reset="earliest",
         enable_auto_commit=False,
     )
+    consumer_started = False
     try:
         async with engine.begin() as connection:
             await connection.run_sync(Base.metadata.create_all)
         await consumer.start()
+        consumer_started = True
         repo_root = Path(__file__).resolve().parents[4]
         repeats = int(os.getenv("P0_P2_E2E_REPEATS", "1"))
 
@@ -111,7 +113,11 @@ async def test_tasks_outbox_to_canonical_vk_runtime_e2e(tmp_path: Path):
                 infra,
                 metadata_path,
             )
-            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            raw_metadata = await asyncio.to_thread(
+                metadata_path.read_text,
+                encoding="utf-8",
+            )
+            metadata = json.loads(raw_metadata)
             execution_id = UUID(metadata["executionId"])
 
             request = await consumer.getone(timeout_ms=30000)
@@ -135,6 +141,7 @@ async def test_tasks_outbox_to_canonical_vk_runtime_e2e(tmp_path: Path):
             await command_consumer.handle_message(duplicate.value)
             await _assert_runtime_state(sessions, metadata, iteration)
     finally:
-        await consumer.stop()
+        if consumer_started:
+            await consumer.stop()
         await engine.dispose()
         infra.stop()
