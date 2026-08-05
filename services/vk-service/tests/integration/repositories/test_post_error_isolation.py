@@ -3,7 +3,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-import sqlalchemy.exc
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from _service_path import use_service_path
@@ -120,13 +119,12 @@ class ControllableStubVkApiClient:
 
 
 def execution(group_ids=None):
+    group_id = (group_ids if group_ids is not None else [1])[0]
     return SimpleNamespace(
         task_id=10,
         run_id="run-10",
-        scope="selected",
-        mode="recent_posts",
-        group_ids=group_ids if group_ids is not None else [1],
         post_limit=3,
+        plan_snapshot={"source": {"externalId": str(group_id)}},
         processed_items=0,
         total_items=0,
         status="running",
@@ -166,30 +164,18 @@ async def test_three_posts_middle_fails(db_session):
 
 
 @pytest.mark.anyio
-async def test_task_level_failure_only_on_systemic():
+async def test_source_resolution_uses_frozen_plan_without_repository_read():
     class FailingRepository(FakeRepository):
         async def get_active_group_ids(self):
-            raise sqlalchemy.exc.DBAPIError("", None, None)
+            raise AssertionError("mutable group lookup must not be used")
 
     collector = DataCollector(
         adapter=ControllableStubVkApiClient(),
         repository=FailingRepository(),
         tasks_client=FakeTasksClient(),
     )
-    current = SimpleNamespace(
-        task_id=10,
-        run_id="run-10",
-        scope="all",
-        mode="recent_posts",
-        group_ids=[],
-        post_limit=1,
-        processed_items=0,
-        total_items=0,
-        status="running",
-    )
 
-    with pytest.raises(sqlalchemy.exc.DBAPIError):
-        await collector.get_group_ids(current)
+    assert await collector.get_group_ids(execution(group_ids=[12345])) == [12345]
 
 
 @pytest.mark.anyio
