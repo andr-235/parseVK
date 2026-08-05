@@ -16,9 +16,21 @@ def test_model_tables_exist():
     assert OutboxEvent.__tablename__ == "outbox_events"
 
 
-def test_task_has_owner_source_and_status_columns():
+def test_task_has_owner_source_status_and_revision_columns():
     columns = Task.__table__.columns
     assert "owner_user_id" in columns
     assert "source" in columns
     assert "status" in columns
+    assert "revision" in columns
+    assert "source_set_revision" in columns
+    assert columns["source_set_revision"].nullable is False
     assert "completed" not in columns
+
+
+def test_source_set_revision_has_database_constraint():
+    names = {
+        constraint.name
+        for constraint in Task.__table__.constraints
+        if constraint.name
+    }
+    assert "ck_tasks_source_set_revision" in names

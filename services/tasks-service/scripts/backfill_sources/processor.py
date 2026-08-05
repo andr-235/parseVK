@@ -76,6 +76,9 @@ async def process_task_sources(
         if not dry_run:
             session.add(TaskSource(task_id=task.id, source_id=source.id, kind="target"))
         linked += 1
+
+    if linked and not dry_run:
+        task.source_set_revision = int(task.source_set_revision or 0) + 1
     return linked, skipped
 
 
@@ -116,7 +119,7 @@ async def process_task_run_baseline(
             task_id=task.id,
             run_revision=1,
             status="requested",
-            source_set_revision=task.revision,
+            source_set_revision=task.source_set_revision,
             snapshot_sha256=sha,
             config_snapshot=config_snapshot,
             source_set_snapshot=source_set_snapshot,

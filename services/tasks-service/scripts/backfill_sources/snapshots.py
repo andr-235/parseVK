@@ -34,6 +34,7 @@ def build_source_set_snapshot(
             "sourceType": source.source_type,
             "externalId": source.external_id,
             "ownerId": source.owner_id,
+            "kind": "target",
             "sourceRevision": source.revision,
             "taskRevision": task.revision,
         }
@@ -51,6 +52,6 @@ def build_run_snapshot(task: Task, source_set_snapshot: list[dict]) -> tuple[dic
     payload = {
         "config": config_snapshot,
         "sourceSet": source_set_snapshot,
-        "sourceSetRevision": task.revision,
+        "sourceSetRevision": task.source_set_revision,
     }
     return config_snapshot, snapshot_sha256(payload)

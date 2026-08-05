@@ -4,6 +4,7 @@ import logging
 from copy import deepcopy
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Task, TaskRun, TaskRunSourceDemand
@@ -61,6 +62,21 @@ def _validate_existing_run(
         raise TaskRunFreezeError(
             f"TaskRun {run.id} exists without a complete frozen snapshot"
         )
+
+
+async def _lock_source_set(session: AsyncSession, task: Task) -> Task:
+    """Serialize a new snapshot with every effective source-set mutation."""
+    if not isinstance(task, Task):
+        return task
+    locked = await session.scalar(
+        select(Task)
+        .where(Task.id == task.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if locked is None:
+        raise TaskRunFreezeError(f"Task {task.id} disappeared before freeze")
+    return locked
 
 
 async def _persist_snapshot(
@@ -133,11 +149,13 @@ async def freeze_task_run(
         )
         return _run_meta(existing)
 
+    task = await _lock_source_set(session, task)
     if sources_repo is None:
         from app.modules.sources.repository import SourcesRepository
 
         sources_repo = SourcesRepository(session)
     links = await sources_repo.list_task_sources(task.id)
+    kind_by_source_id = {link.source_id: link.kind for link in links}
     sources = await sources_repo.list_sources_by_ids(
         link.source_id for link in links
     )
@@ -153,13 +171,14 @@ async def freeze_task_run(
             "sourceType": source.source_type,
             "externalId": source.external_id,
             "ownerId": source.owner_id,
+            "kind": kind_by_source_id[source.id],
             "sourceRevision": source.revision,
             "taskRevision": task.revision,
         }
         for source in sources
     ]
     config_snapshot = _config_snapshot(task)
-    source_set_revision = int(task.revision or 0)
+    source_set_revision = int(task.source_set_revision or 0)
     snapshot_hash = snapshot_sha256(
         {
             "config": config_snapshot,

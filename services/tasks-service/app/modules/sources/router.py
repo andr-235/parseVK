@@ -6,8 +6,9 @@ Router -> Service -> Repository; routers carry no business logic.
 
 import logging
 from typing import Annotated
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.api.dependencies import get_sources_service
 from app.core.security import require_internal_token, require_owner_user_id
@@ -112,3 +113,25 @@ async def attach_task_source(
         ) from exc
     logger.info("Attached task source: task=%s external=%s", task_id, payload.external_id)
     return source
+
+
+@router.delete(
+    "/tasks/{task_id}/sources/{source_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_sources_enabled)],
+)
+async def detach_task_source(
+    task_id: int,
+    source_id: UUID,
+    owner_user_id: Annotated[str, Depends(require_owner_user_id)],
+    service: SourcesService = Depends(get_sources_service),
+) -> Response:
+    try:
+        await service.detach_source_from_task(
+            owner_user_id,
+            task_id,
+            source_id,
+        )
+    except TaskNotFoundError as exc:
+        raise map_source_error(exc) from exc
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

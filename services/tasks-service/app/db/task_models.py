@@ -49,6 +49,10 @@ class Task(Base):
         CheckConstraint(
             "source IN ('manual', 'automation')", name="ck_tasks_source"
         ),
+        CheckConstraint(
+            "source_set_revision >= 0",
+            name="ck_tasks_source_set_revision",
+        ),
         Index("ix_tasks_owner_created", "owner_user_id", "created_at", "id"),
         Index("ix_tasks_owner_status", "owner_user_id", "status"),
         Index("ix_tasks_owner_source_status", "owner_user_id", "source", "status"),
@@ -70,6 +74,11 @@ class Task(Base):
     processed_items: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     progress: Mapped[float] = mapped_column(Float, nullable=False, default=0)
     revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    source_set_revision: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+    )
     last_execution_sequence: Mapped[int] = mapped_column(
         BigInteger, nullable=False, default=0
     )

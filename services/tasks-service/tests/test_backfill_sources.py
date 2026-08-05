@@ -17,7 +17,13 @@ from scripts.backfill_task_sources import run_backfill
 from app.db.models import MonitoringSource, Task, TaskRun, TaskSource
 
 
-def make_task(task_id: int, group_ids: list[int], *, run_id: str | None = None, scope: str = "selected"):
+def make_task(
+    task_id: int,
+    group_ids: list[int],
+    *,
+    run_id: str | None = None,
+    scope: str = "selected",
+):
     return SimpleNamespace(
         id=task_id,
         owner_user_id="user-1",
@@ -27,6 +33,7 @@ def make_task(task_id: int, group_ids: list[int], *, run_id: str | None = None, 
         mode="recent_posts",
         post_limit=10,
         revision=5,
+        source_set_revision=0,
     )
 
 
@@ -88,20 +95,23 @@ def session_state(session):
 
 @pytest.mark.asyncio
 async def test_dry_run_does_not_write():
-    session = FakeSession(tasks=[make_task(1, [12345, 67890])])
+    task = make_task(1, [12345, 67890])
+    session = FakeSession(tasks=[task])
 
     summary = await run_backfill(session, dry_run=True)
 
     assert summary["linked"] == 2
     assert summary["runs_created"] == 0
     assert summary["errors"] == []
+    assert task.source_set_revision == 0
     assert session.added == []
 
 
 @pytest.mark.asyncio
 async def test_commit_creates_task_sources_and_baseline_run():
     run_id = str(uuid4())
-    session = FakeSession(tasks=[make_task(1, [12345], run_id=run_id)])
+    task = make_task(1, [12345], run_id=run_id)
+    session = FakeSession(tasks=[task])
 
     summary = await run_backfill(session, dry_run=False)
 
@@ -109,8 +119,10 @@ async def test_commit_creates_task_sources_and_baseline_run():
     assert summary["runs_created"] == 1
     task_source = next(o for o in session.added if isinstance(o, TaskSource))
     run = next(o for o in session.added if isinstance(o, TaskRun))
+    assert task.source_set_revision == 1
     assert task_source.task_id == 1
     assert str(run.id) == run_id
+    assert run.source_set_revision == 1
     assert run.source_set_snapshot[0]["externalId"] == "12345"
 
 
@@ -127,6 +139,7 @@ async def test_rerun_is_idempotent_by_run_id():
     assert second["linked"] == 0
     assert second["skipped"] == 1
     assert second["runs_created"] == 0
+    assert session.tasks[0].source_set_revision == 1
 
 
 @pytest.mark.asyncio
@@ -143,6 +156,8 @@ async def test_same_external_id_is_shared_across_users():
     assert summary["linked"] == 2
     assert len(sources) == 1
     assert len({link.source_id for link in links}) == 1
+    assert first.source_set_revision == 1
+    assert second.source_set_revision == 1
 
 
 @pytest.mark.asyncio
@@ -156,6 +171,7 @@ async def test_scope_all_creates_empty_snapshot():
     run = next(o for o in session.added if isinstance(o, TaskRun))
     assert summary["linked"] == 0
     assert summary["runs_created"] == 1
+    assert run.source_set_revision == 0
     assert run.source_set_snapshot == []
 
 
