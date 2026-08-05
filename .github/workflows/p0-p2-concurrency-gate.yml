@@ -86,7 +86,7 @@ jobs:
       - name: Verify root pytest collection
         run: >-
           uv run --project services/tasks-service
-          pytest --collect-only -q
+          pytest --collect-only -q -m integration
           services/tasks-service/tests/test_vk_outbox_ordering_postgres.py
       - name: Run request-cancellation ordering repeatedly
         working-directory: services/tasks-service
