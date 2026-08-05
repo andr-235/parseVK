@@ -13,7 +13,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.db.base import Base
@@ -36,9 +36,6 @@ class VkExecution(Base):
     owner_user_id: Mapped[str] = mapped_column(String(128), nullable=False)
     run_id: Mapped[str] = mapped_column(String(128), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
-    scope: Mapped[str] = mapped_column(String(32), nullable=False)
-    mode: Mapped[str] = mapped_column(String(64), nullable=False)
-    group_ids: Mapped[list[int]] = mapped_column(ARRAY(BigInteger), nullable=False, default=list)
     post_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
     plan_snapshot: Mapped[dict] = mapped_column(JSONB, nullable=False)
     processed_items: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -49,9 +46,6 @@ class VkExecution(Base):
     current_fencing_token: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     cancellation_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     cancellation_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
-    parent_execution_id: Mapped[PyUUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("vk_executions.id", ondelete="SET NULL"), nullable=True
-    )
     execution_sequence: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

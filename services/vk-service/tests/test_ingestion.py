@@ -40,10 +40,8 @@ def execution():
         task_id=10,
         run_id="run-10",
         owner_user_id="user-1",
-        scope="selected",
-        mode="recent_posts",
-        group_ids=[1],
         post_limit=10,
+        plan_snapshot={"source": {"externalId": "1"}},
     )
 
 

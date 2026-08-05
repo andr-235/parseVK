@@ -39,7 +39,6 @@ class DataCollector:
         self.group_collector = GroupCollector(
             adapter=adapter,
             repository=repository,
-            tasks_client=tasks_client,
             outbox=outbox,
         )
         self.post_collector = PostCollector(

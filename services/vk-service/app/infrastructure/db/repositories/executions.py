@@ -1,4 +1,3 @@
-import json
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -37,20 +36,6 @@ def _as_utc(value: datetime | None) -> datetime | None:
     return value.replace(tzinfo=UTC)
 
 
-def _group_ids(value) -> list[int]:
-    if isinstance(value, str):
-        serialized = value
-    elif (
-        isinstance(value, list)
-        and value
-        and value[0] == "["
-        and value[-1] == "]"
-    ):
-        serialized = "".join(value)
-    else:
-        return [int(item) for item in (value or [])]
-    return [int(item) for item in json.loads(serialized)]
-
 
 def _execution_entity(model: VkExecution) -> execution_entities.VkExecution:
     return execution_entities.VkExecution(
@@ -59,9 +44,6 @@ def _execution_entity(model: VkExecution) -> execution_entities.VkExecution:
         owner_user_id=model.owner_user_id,
         run_id=model.run_id,
         status=model.status,
-        scope=model.scope,
-        mode=model.mode,
-        group_ids=_group_ids(model.group_ids),
         post_limit=model.post_limit,
         plan_snapshot=dict(model.plan_snapshot or {}),
         processed_items=model.processed_items,
@@ -72,7 +54,6 @@ def _execution_entity(model: VkExecution) -> execution_entities.VkExecution:
         current_fencing_token=model.current_fencing_token,
         cancellation_requested_at=_as_utc(model.cancellation_requested_at),
         cancellation_reason=model.cancellation_reason,
-        parent_execution_id=model.parent_execution_id,
         execution_sequence=model.execution_sequence,
         started_at=_as_utc(model.started_at),
         finished_at=_as_utc(model.finished_at),

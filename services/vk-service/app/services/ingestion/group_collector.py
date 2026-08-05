@@ -1,7 +1,6 @@
 from typing import Any
 
 from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
-from app.infrastructure.tasks_client.client import TasksClient
 
 _GROUP_FIELDS = [
     "members_count",
@@ -24,21 +23,23 @@ class GroupCollector:
         *,
         adapter: VkApiAdapter,
         repository,
-        tasks_client: TasksClient,
         outbox=None,
     ) -> None:
         self.adapter = adapter
         self.repository = repository
-        self.tasks_client = tasks_client
         self.outbox = outbox
 
     async def get_group_ids(self, task_run: Any) -> list[int]:
-        if task_run.scope == "selected":
-            return [int(item) for item in task_run.group_ids]
-        group_ids = await self.repository.get_active_group_ids()
-        if not group_ids:
-            raise RuntimeError("No active groups configured for scope=all")
-        return group_ids
+        plan = task_run.plan_snapshot
+        source = plan.get("source") if isinstance(plan, dict) else None
+        external_id = source.get("externalId") if isinstance(source, dict) else None
+        try:
+            group_id = int(external_id)
+        except (TypeError, ValueError) as exc:
+            raise RuntimeError("Execution plan has no valid source externalId") from exc
+        if group_id <= 0:
+            raise RuntimeError("Execution plan source externalId must be positive")
+        return [group_id]
 
     async def collect_group(self, group_id: int, *, correlation_id: str | None = None) -> None:
         group = await self.adapter.get_groups([group_id], fields=_GROUP_FIELDS)
