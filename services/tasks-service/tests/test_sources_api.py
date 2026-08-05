@@ -19,6 +19,7 @@ class FakeSourcesService:
     def __init__(self):
         self.created = []
         self.attached = []
+        self.detached = []
 
     @staticmethod
     def source_response(payload):
@@ -45,6 +46,10 @@ class FakeSourcesService:
     async def attach_source_to_task(self, owner_user_id, task_id, payload):
         self.attached.append((owner_user_id, task_id, payload))
         return self.source_response(payload)
+
+    async def detach_source_from_task(self, owner_user_id, task_id, source_id):
+        self.detached.append((owner_user_id, task_id, source_id))
+        return True
 
     async def list_task_sources(self, owner_user_id, task_id):
         return []
@@ -171,6 +176,20 @@ async def test_attach_task_source(app_with_sources, fake_service):
     assert response.status_code == 200
     assert response.json()["externalId"] == "12345"
     assert fake_service.attached[0][1] == 1
+
+
+@pytest.mark.asyncio
+async def test_detach_task_source_is_idempotent(app_with_sources, fake_service):
+    source_id = uuid4()
+    async with AsyncClient(
+        transport=ASGITransport(app=app_with_sources), base_url="http://test"
+    ) as client:
+        response = await client.delete(
+            f"/internal/tasks/1/sources/{source_id}",
+            headers=headers(),
+        )
+    assert response.status_code == 204
+    assert fake_service.detached == [("user-1", 1, source_id)]
 
 
 @pytest.mark.asyncio
