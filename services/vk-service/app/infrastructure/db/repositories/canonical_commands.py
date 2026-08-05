@@ -1,13 +1,15 @@
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from common.events.task_execution_failed import TaskExecutionFailedPayload
 from common.events.task_execution_started import TaskExecutionStartedPayload
-from sqlalchemy import func, or_, select, text
+from sqlalchemy import or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.entities.source_collections import (
+    CollectionDemand,
     CommandAttachmentResult,
+    SourceCollection,
     SourceDemandAttachment,
     TaskRunBinding,
 )
@@ -23,7 +25,6 @@ from app.services.collection_fingerprint import build_collection_identity
 
 ACTIVE_BINDING_STATUSES = ("pending", "running")
 ACTIVE_COLLECTION_STATUSES = ("pending", "running")
-ACTIVE_DEMAND_STATUSES = ("pending", "running")
 EXECUTOR = "vk-service"
 SYSTEM_PROVIDER_ACCOUNT_KEY = "system-vk"
 
@@ -67,9 +68,7 @@ def _binding_entity(model: VkTaskRunBinding) -> TaskRunBinding:
     )
 
 
-def _collection_entity(model: VkSourceCollection):
-    from app.domain.entities.source_collections import SourceCollection
-
+def _collection_entity(model: VkSourceCollection) -> SourceCollection:
     return SourceCollection(
         id=model.id,
         execution_id=model.execution_id,
@@ -91,9 +90,7 @@ def _collection_entity(model: VkSourceCollection):
     )
 
 
-def _demand_entity(model: VkCollectionDemand):
-    from app.domain.entities.source_collections import CollectionDemand
-
+def _demand_entity(model: VkCollectionDemand) -> CollectionDemand:
     return CollectionDemand(
         id=model.id,
         demand_id=model.demand_id,
@@ -121,6 +118,8 @@ def _demand_entity(model: VkCollectionDemand):
 
 
 class CanonicalVkCommandRepository:
+    """Attach immutable command demands to physical source collections."""
+
     def __init__(self, session: AsyncSession):
         self.session = session
 
@@ -187,19 +186,20 @@ class CanonicalVkCommandRepository:
         self.session.add(binding)
         await self.session.flush()
 
-        attachments: list[SourceDemandAttachment] = []
-        for requested in command.demands:
-            attachments.append(
+        attachments = tuple(
+            [
                 await self._attach_source(
                     binding=binding,
                     command=command,
                     requested=requested,
                 )
-            )
+                for requested in command.demands
+            ]
+        )
         return CommandAttachmentResult(
             outcome="created",
             binding=_binding_entity(binding),
-            attachments=tuple(attachments),
+            attachments=attachments,
         )
 
     async def emit_rejection(self, command, reason: str) -> None:
@@ -226,104 +226,6 @@ class CanonicalVkCommandRepository:
             now=now,
         )
 
-    async def request_cancellation(
-        self,
-        *,
-        task_id: int,
-        run_id: str,
-        execution_id: UUID,
-        owner_user_id: str,
-        reason: str,
-    ) -> TaskRunBinding | None:
-        await self._advisory_lock(f"task:{task_id}")
-        binding = await self.session.scalar(
-            select(VkTaskRunBinding)
-            .where(
-                VkTaskRunBinding.task_id == task_id,
-                VkTaskRunBinding.run_id == run_id,
-                VkTaskRunBinding.command_execution_id == execution_id,
-                VkTaskRunBinding.owner_user_id == owner_user_id,
-                VkTaskRunBinding.status.in_(ACTIVE_BINDING_STATUSES),
-            )
-            .with_for_update()
-        )
-        if binding is None:
-            return None
-
-        now = utcnow()
-        safe_reason = reason[:2000]
-        binding.status = "cancelled"
-        binding.cancellation_requested_at = binding.cancellation_requested_at or now
-        binding.cancellation_reason = binding.cancellation_reason or safe_reason
-        binding.last_error = binding.cancellation_reason
-        binding.execution_sequence += 1
-        binding.finished_at = now
-        binding.updated_at = now
-
-        demands = list(
-            (
-                await self.session.scalars(
-                    select(VkCollectionDemand)
-                    .where(
-                        VkCollectionDemand.binding_id == binding.id,
-                        VkCollectionDemand.status.in_(ACTIVE_DEMAND_STATUSES),
-                    )
-                    .with_for_update()
-                )
-            ).all()
-        )
-        collection_ids: set[UUID] = set()
-        for demand in demands:
-            demand.status = "cancelled"
-            demand.cancellation_requested_at = demand.cancellation_requested_at or now
-            demand.cancellation_reason = demand.cancellation_reason or safe_reason
-            demand.last_error = demand.cancellation_reason
-            demand.execution_sequence += 1
-            demand.finished_at = now
-            demand.updated_at = now
-            collection_ids.add(demand.collection_id)
-        binding.cancelled_demands = len(demands)
-
-        for collection_id in collection_ids:
-            remaining = int(
-                await self.session.scalar(
-                    select(func.count(VkCollectionDemand.id)).where(
-                        VkCollectionDemand.collection_id == collection_id,
-                        VkCollectionDemand.status.in_(ACTIVE_DEMAND_STATUSES),
-                    )
-                )
-                or 0
-            )
-            if remaining:
-                continue
-            collection = await self.session.scalar(
-                select(VkSourceCollection)
-                .where(VkSourceCollection.id == collection_id)
-                .with_for_update()
-            )
-            if collection is None:
-                continue
-            execution = await self.session.scalar(
-                select(VkExecution)
-                .where(VkExecution.id == collection.execution_id)
-                .with_for_update()
-            )
-            if execution is None or execution.status not in ACTIVE_COLLECTION_STATUSES:
-                continue
-            execution.cancellation_requested_at = execution.cancellation_requested_at or now
-            execution.cancellation_reason = execution.cancellation_reason or safe_reason
-            execution.updated_at = now
-            if execution.status == "pending":
-                execution.status = "cancelled"
-                execution.finished_at = now
-                execution.last_error = safe_reason
-                collection.status = "cancelled"
-                collection.finished_at = now
-                collection.last_error = safe_reason
-                collection.updated_at = now
-        await self.session.flush()
-        return _binding_entity(binding)
-
     async def _attach_source(self, *, binding, command, requested):
         source = requested.source
         identity = build_collection_identity(
@@ -345,7 +247,8 @@ class CanonicalVkCommandRepository:
         collection = await self.session.scalar(
             select(VkSourceCollection)
             .where(
-                VkSourceCollection.provider_account_key == identity.provider_account_key,
+                VkSourceCollection.provider_account_key
+                == identity.provider_account_key,
                 VkSourceCollection.source_key == identity.source_key,
                 VkSourceCollection.fingerprint == identity.fingerprint,
                 VkSourceCollection.status.in_(ACTIVE_COLLECTION_STATUSES),
@@ -407,7 +310,9 @@ class CanonicalVkCommandRepository:
             self.session.add(collection)
             await self.session.flush()
 
-        joining_running = execution.status == "running" and collection.status == "running"
+        joining_running = (
+            execution.status == "running" and collection.status == "running"
+        )
         demand = VkCollectionDemand(
             demand_id=requested.demand_id,
             binding_id=binding.id,
