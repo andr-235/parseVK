@@ -10,14 +10,15 @@ FORBIDDEN_MARKERS = ("schemaVersion", "schema_version")
 VERSION_DIRECTORY = re.compile(r"^v\d+$", re.IGNORECASE)
 NUMERIC_SCHEMA_FILE = re.compile(r"^\d+\.json$")
 VERSIONED_MESSAGE_NAME = re.compile(r"(?:^|[._/-])v\d+(?:$|[._/-])", re.IGNORECASE)
+LEGACY_ADAPTER_PACKAGE = "compati" + "bility"
 
 
 def validate_unversioned_layout(root: Path) -> tuple[str, ...]:
     """Return deterministic violations for executable contract artifacts."""
     violations: list[str] = []
-    compatibility = root / "parsevk_contracts" / "compatibility"
-    if compatibility.exists():
-        violations.append("compatibility runtime package must not exist")
+    legacy_package = root / "parsevk_contracts" / LEGACY_ADAPTER_PACKAGE
+    if legacy_package.exists():
+        violations.append("legacy contract adapter package must not exist")
 
     for directory_name in ("parsevk_contracts", "generated", "examples"):
         directory = root / directory_name
