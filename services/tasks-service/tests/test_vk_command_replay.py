@@ -139,4 +139,4 @@ async def test_invalid_frozen_run_is_failed_without_building_command(monkeypatch
     assert await vk_command_replay.replay_active_vk_commands(session) == 0
     build.assert_not_awaited()
     assert task.status == "failed"
-    assert task_run.status == "requested"
+    assert task_run.status == "failed"
