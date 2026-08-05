@@ -117,6 +117,7 @@ def publish_from_tasks(
     repo_root: Path,
     infra: CanonicalE2EInfra,
     metadata_path: Path,
+    scenario: str,
 ) -> None:
     uv_binary = shutil.which("uv")
     if uv_binary is None:
@@ -137,7 +138,7 @@ def publish_from_tasks(
         [
             uv_binary, "run", "--project", "services/tasks-service", "python",
             "services/tasks-service/tests/_publish_canonical_commands.py",
-            str(metadata_path),
+            str(metadata_path), scenario,
         ],
         cwd=repo_root,
         env=env,
