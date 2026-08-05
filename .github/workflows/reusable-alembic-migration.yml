@@ -22,7 +22,6 @@ jobs:
     timeout-minutes: 20
     env:
       PYTHONPATH: ${{ github.workspace }}/libs/py/common
-      VK_SERVICE_VK_TOKEN: ci-migration-placeholder
     services:
       postgres:
         image: postgres:16.14
