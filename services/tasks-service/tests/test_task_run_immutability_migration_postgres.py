@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 from datetime import UTC, datetime
 from pathlib import Path
@@ -73,7 +74,8 @@ async def _seed_repairable_history(host: str, port: int):
                 snapshot_sha256, config_snapshot, source_set_snapshot,
                 created_at
             ) VALUES (
-                $1, 1, 2, 'failed', 3, NULL, '{}'::jsonb, NULL, $2
+                $1, 1, 2, 'failed', 3, repeat('a', 64),
+                '{}'::jsonb, '[]'::jsonb, $2
             )
             """,
             parent_id,
@@ -90,15 +92,17 @@ async def _seed_repairable_history(host: str, port: int):
             uuid4(),
             parent_id,
             source_id,
-            {
-                "sourceId": str(source_id),
-                "provider": "vk",
-                "sourceType": "community",
-                "externalId": "777",
-                "ownerId": -777,
-                "sourceRevision": 8,
-                "taskRevision": 4,
-            },
+            json.dumps(
+                {
+                    "sourceId": str(source_id),
+                    "provider": "vk",
+                    "sourceType": "community",
+                    "externalId": "777",
+                    "ownerId": -777,
+                    "sourceRevision": 8,
+                    "taskRevision": 4,
+                }
+            ),
             now,
         )
     finally:
@@ -192,7 +196,8 @@ async def _seed_irreparable_run(host: str, port: int) -> None:
                 snapshot_sha256, config_snapshot, source_set_snapshot,
                 created_at
             ) VALUES (
-                $1, 1, 1, 'failed', 3, NULL, '{}'::jsonb, NULL, now()
+                $1, 1, 1, 'failed', 3, repeat('a', 64),
+                '{}'::jsonb, '[]'::jsonb, now()
             )
             """,
             uuid4(),
