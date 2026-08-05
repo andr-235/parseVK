@@ -2,6 +2,8 @@
 
 from datetime import UTC, datetime
 
+MAX_FAILURE_REASON_BYTES = 2000
+
 
 def build_dlq_headers(
     *,
@@ -24,5 +26,16 @@ def build_dlq_headers(
     if retry_count:
         headers.append(("retry_count", str(retry_count).encode()))
     if failure_reason:
-        headers.append(("failure_reason", failure_reason.encode()[:2000]))
+        headers.append(("failure_reason", _utf8_prefix(failure_reason)))
     return headers
+
+
+def _utf8_prefix(value: str) -> bytes:
+    encoded = value.encode("utf-8")
+    if len(encoded) <= MAX_FAILURE_REASON_BYTES:
+        return encoded
+    return (
+        encoded[:MAX_FAILURE_REASON_BYTES]
+        .decode("utf-8", errors="ignore")
+        .encode("utf-8")
+    )
