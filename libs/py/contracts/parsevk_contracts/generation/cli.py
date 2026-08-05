@@ -18,7 +18,6 @@ from parsevk_contracts.vk.commands import CATALOG as VK_CATALOG
 CATALOG = ContractCatalog.from_contracts(
     VK_CATALOG.contracts + SOURCES_CATALOG.contracts
 )
-LEGACY_RELEASE_COMMAND = "compati" + "bility"
 
 
 def _tree_files(root: Path) -> set[Path]:
@@ -128,13 +127,6 @@ def main() -> None:
     evolution_parser = sub.add_parser("check-evolution")
     evolution_parser.add_argument("--baseline", required=True)
     evolution_parser.add_argument("--current", default="generated")
-
-    legacy_release_parser = sub.add_parser(
-        LEGACY_RELEASE_COMMAND,
-        help=argparse.SUPPRESS,
-    )
-    legacy_release_parser.add_argument("--baseline", required=True)
-    legacy_release_parser.add_argument("--current", default="generated")
 
     args = parser.parse_args()
     if args.command == "check":
