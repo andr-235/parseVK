@@ -2,9 +2,9 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
+from _canonical_runtime_helpers import attach, cancel_command, make_command
 from sqlalchemy import select
 
-from _canonical_runtime_helpers import attach, cancel_command, make_command
 from app.domain.entities.provider_account import SYSTEM_VK_CAPABILITY
 from app.domain.repositories.checkpoint import CheckpointData
 from app.infrastructure.db.models.executions import VkExecutionAttempt

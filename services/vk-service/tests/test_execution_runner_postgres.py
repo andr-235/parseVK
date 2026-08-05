@@ -4,11 +4,11 @@ from uuid import uuid4
 
 import asyncpg
 import pytest
+from _canonical_runtime_helpers import make_command
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from testcontainers.core.container import DockerContainer
 
-from _canonical_runtime_helpers import make_command
 from app.domain.entities.provider_account import SYSTEM_VK_CAPABILITY
 from app.domain.repositories.checkpoint import CheckpointData
 from app.infrastructure.db.base import Base

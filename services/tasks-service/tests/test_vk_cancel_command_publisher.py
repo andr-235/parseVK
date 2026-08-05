@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-
 from common.outbox import OutboxMessage
 from parsevk_contracts.validation import parse_for_consume
 from parsevk_contracts.vk.commands import CATALOG as VK_COMMAND_CATALOG

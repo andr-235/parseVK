@@ -2,10 +2,10 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
+from outbox_test_helpers import make_event
 
 from app.modules.outbox.publisher import MAX_OUTBOX_ATTEMPTS
 from app.modules.outbox.repository import OutboxRepository
-from outbox_test_helpers import make_event
 
 
 @pytest.mark.anyio
