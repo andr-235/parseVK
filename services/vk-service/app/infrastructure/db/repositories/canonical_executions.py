@@ -4,11 +4,17 @@ from sqlalchemy import delete
 
 from app.infrastructure.db.models.executions import VkExecutionAttempt
 from app.infrastructure.db.models.outbox import OutboxEvent
-from app.infrastructure.db.repositories.canonical_binding_lifecycle import (
-    demands_for_execution,
-    finalize_bindings,
-    mark_bindings_started,
+from app.infrastructure.db.repositories.canonical_binding_progress import (
     report_binding_progress,
+)
+from app.infrastructure.db.repositories.canonical_binding_queries import (
+    demands_for_execution,
+)
+from app.infrastructure.db.repositories.canonical_binding_started import (
+    mark_bindings_started,
+)
+from app.infrastructure.db.repositories.canonical_binding_terminal import (
+    finalize_bindings,
 )
 from app.infrastructure.db.repositories.canonical_command_events import EXECUTOR
 from app.infrastructure.db.repositories.executions import SqlAlchemyExecutionRepository
