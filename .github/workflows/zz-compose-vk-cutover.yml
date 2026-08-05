@@ -1,0 +1,100 @@
+name: Apply VK Compose Cutover
+
+on:
+  push:
+    branches:
+      - agent/p2-hardening-source-level-collections
+
+permissions:
+  contents: write
+
+jobs:
+  patch-compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: true
+      - name: Remove legacy VK configuration and mount token file
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("docker-compose.yml")
+          text = path.read_text(encoding="utf-8")
+
+          replacements = {
+              "      VK_SERVICE_VK_TOKEN: ${VK_SERVICE_VK_TOKEN:-${VK_TOKEN:-dev-vk-token}}\n": "",
+              "      VK_SERVICE_DEFAULT_GROUP_IDS: '${VK_SERVICE_DEFAULT_GROUP_IDS:-[1]}'\n": "",
+              "      VK_SERVICE_VK_TOKEN: ${VK_SERVICE_VK_TOKEN:-${VK_TOKEN:-}}\n": "",
+              "      # Preferred secret path: mount the token file and point VK_SERVICE_TOKEN_FILE at it.\n": "",
+              "      # Example with a top-level secrets section:\n": "",
+              "      #   secrets:\n": "",
+              "      #     vk_token_file:\n": "",
+              "      #       file: ./secrets/vk_token\n": "",
+              "      # then add `secrets: [vk_token_file]` to this service and set\n": "",
+              "      # VK_SERVICE_TOKEN_FILE: /run/secrets/vk_token\n": "",
+              "      VK_SERVICE_TOKEN_FILE: ${VK_SERVICE_TOKEN_FILE:-}\n": "      VK_SERVICE_TOKEN_FILE: /run/secrets/vk_token\n",
+          }
+          for old, new in replacements.items():
+              text = text.replace(old, new)
+
+          vk_service_marker = "      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318\n    healthcheck:\n"
+          if "    secrets:\n      - vk_token\n" not in text:
+              text = text.replace(
+                  vk_service_marker,
+                  "      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318\n"
+                  "    secrets:\n"
+                  "      - vk_token\n"
+                  "    healthcheck:\n",
+                  1,
+              )
+
+          command_topic = (
+              "      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 "
+              "--create --if-not-exists --topic parsevk.vk.commands --partitions 3 "
+              "--replication-factor 1;\n"
+          )
+          if "--topic parsevk.vk.commands " not in text:
+              marker = (
+                  "      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 "
+                  "--create --if-not-exists --topic parsevk.vk.events --partitions 3 "
+                  "--replication-factor 1;\n"
+              )
+              text = text.replace(marker, marker + command_topic)
+
+          command_dlq = (
+              "      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 "
+              "--create --if-not-exists --topic parsevk.vk.commands.dlq --partitions 3 "
+              "--replication-factor 1;\n"
+          )
+          if "--topic parsevk.vk.commands.dlq " not in text:
+              marker = (
+                  "      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 "
+                  "--create --if-not-exists --topic parsevk.vk.dlq --partitions 3 "
+                  "--replication-factor 1;\n"
+              )
+              text = text.replace(marker, marker + command_dlq)
+
+          if "\nsecrets:\n  vk_token:\n" not in text:
+              text = text.replace(
+                  "\nnetworks:\n",
+                  "\nsecrets:\n"
+                  "  vk_token:\n"
+                  "    file: ${VK_TOKEN_FILE:-./secrets/vk_token}\n"
+                  "\nnetworks:\n",
+                  1,
+              )
+
+          path.write_text(text, encoding="utf-8")
+      - name: Commit compose cutover
+        run: |
+          if git diff --quiet -- docker-compose.yml; then
+            echo "Compose is already canonical"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docker-compose.yml
+          git commit -m "chore(compose): apply VK file-secret cutover"
+          git push
