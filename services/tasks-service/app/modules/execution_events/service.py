@@ -16,6 +16,7 @@ from app.modules.execution_events.handlers import (
     apply_progressed,
     apply_started,
 )
+from app.modules.execution_events.rejection import apply_rejected
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +100,19 @@ class ExecutionEventService:
         failure_kind: str,
         owner_user_id: str,
     ) -> bool:
-        """Apply task.execution_failed transition."""
+        """Apply terminal failure or a pre-start command rejection."""
+        if failure_kind == "rejected":
+            return await apply_rejected(
+                self.session,
+                task_id,
+                run_id,
+                execution_sequence,
+                processed_items,
+                total_items,
+                stats,
+                error,
+                owner_user_id,
+            )
         return await apply_failed(
             self.session,
             task_id,
