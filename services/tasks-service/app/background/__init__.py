@@ -19,6 +19,7 @@ from app.background.outbox_worker import (
     ensure_vk_command_topics,
     publish_outbox_forever,
 )
+from app.background.vk_command_replay import replay_active_vk_commands
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.modules.execution_events.consumer import consume_execution_events
@@ -41,6 +42,9 @@ def create_lifespan(
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         tasks: list[asyncio.Task] = []
         if settings.outbox_publish_enabled:
+            async with SessionLocal() as session:
+                async with session.begin():
+                    await replay_active_vk_commands(session)
             tasks.append(
                 asyncio.create_task(
                     supervise(
