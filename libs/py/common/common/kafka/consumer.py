@@ -79,6 +79,7 @@ class BaseEventConsumer(ABC):
                 update_lag_metric(
                     self._lag_gauge,
                     self.consumer_group,
+                    self._consumer,
                     message,
                 )
         except asyncio.CancelledError:
