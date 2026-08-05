@@ -107,8 +107,8 @@ async def _seed_pre_migration_data(host: str, port: int) -> None:
             )
             """,
             [
-                (uuid4(), 1, 4, source_ids[0], "101", -101, 99, now),
-                (uuid4(), 2, 7, uuid4(), "202", -202, 2, now),
+                (uuid4(), 1, 4, str(source_ids[0]), "101", -101, 99, now),
+                (uuid4(), 2, 7, str(uuid4()), "202", -202, 2, now),
             ],
         )
     finally:
