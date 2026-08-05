@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
 from sqlalchemy import func, select
 
@@ -26,6 +27,8 @@ async def run_crash_recovery(sessions, metadata) -> None:
     owner_id = int(metadata["sourceOwnerId"])
     group_id = abs(owner_id)
     task_id = int(metadata["taskId"])
+    command_execution_id = UUID(metadata["executionId"])
+    demand_id = UUID(metadata["demandId"])
     async with sessions() as session, session.begin():
         await SqlAlchemyProviderAccountRepository(session).upsert_system(
             account_key="system-vk",
@@ -88,14 +91,13 @@ async def run_crash_recovery(sessions, metadata) -> None:
     async with sessions() as session:
         binding = await session.scalar(
             select(VkTaskRunBinding).where(
-                VkTaskRunBinding.command_execution_id
-                == metadata["executionId"]
+                VkTaskRunBinding.command_execution_id == command_execution_id
             )
         )
         execution = await session.get(VkExecution, current.execution_id)
         demand = await session.scalar(
             select(VkCollectionDemand).where(
-                VkCollectionDemand.demand_id == metadata["demandId"]
+                VkCollectionDemand.demand_id == demand_id
             )
         )
         collection = await session.scalar(
