@@ -110,15 +110,6 @@ def run_check_evolution(baseline: str, current: str) -> int:
     return 1
 
 
-def _add_evolution_parser(sub, command: str, *, hidden: bool = False) -> None:
-    parser = sub.add_parser(
-        command,
-        help=argparse.SUPPRESS if hidden else None,
-    )
-    parser.add_argument("--baseline", required=True)
-    parser.add_argument("--current", default="generated")
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="parseVK contract generation CLI")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -134,8 +125,16 @@ def main() -> None:
     policy_parser = sub.add_parser("validate-policy")
     policy_parser.add_argument("--root", default=".")
 
-    _add_evolution_parser(sub, "check-evolution")
-    _add_evolution_parser(sub, LEGACY_RELEASE_COMMAND, hidden=True)
+    evolution_parser = sub.add_parser("check-evolution")
+    evolution_parser.add_argument("--baseline", required=True)
+    evolution_parser.add_argument("--current", default="generated")
+
+    legacy_release_parser = sub.add_parser(
+        LEGACY_RELEASE_COMMAND,
+        help=argparse.SUPPRESS,
+    )
+    legacy_release_parser.add_argument("--baseline", required=True)
+    legacy_release_parser.add_argument("--current", default="generated")
 
     args = parser.parse_args()
     if args.command == "check":
