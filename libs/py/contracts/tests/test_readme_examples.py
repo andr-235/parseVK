@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import runpy
 from pathlib import Path
 
 README = Path(__file__).resolve().parents[1] / "README.md"
@@ -13,9 +14,10 @@ def executable_example() -> str:
     return section.split("```python", 1)[1].split("```", 1)[0].strip()
 
 
-def test_readme_contract_example_executes():
-    namespace = {"__name__": "readme_contract_example"}
-    exec(compile(executable_example(), str(README), "exec"), namespace)
+def test_readme_contract_example_executes(tmp_path: Path):
+    script = tmp_path / "readme_contract_example.py"
+    script.write_text(executable_example(), encoding="utf-8")
+    runpy.run_path(str(script), run_name="readme_contract_example")
 
 
 def test_readme_does_not_document_removed_versioned_api():
