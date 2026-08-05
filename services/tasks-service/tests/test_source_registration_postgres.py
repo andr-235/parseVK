@@ -1,6 +1,5 @@
 import asyncio
 import os
-from uuid import uuid4
 
 import asyncpg
 import pytest
@@ -38,6 +37,30 @@ async def _wait_for_postgres(host: str, port: int) -> None:
     raise RuntimeError("PostgreSQL test container did not become ready") from last_error
 
 
+async def _register(
+    sessions,
+    owner_user_id: str,
+    source_id,
+    external_id: str,
+):
+    async with sessions() as session, session.begin():
+        repository = SourcesRepository(session)
+        source = await repository.get_or_create_source(
+            MonitoringSource(
+                id=source_id,
+                owner_user_id=owner_user_id,
+                provider="vk",
+                source_type="community",
+                external_id=external_id,
+                owner_id=-int(external_id),
+                display_name=f"registered by {owner_user_id}",
+            )
+        )
+        await repository.ensure_source_registration(owner_user_id, source.id)
+        await repository.ensure_source_registration(owner_user_id, source.id)
+        return source.id
+
+
 @pytest.mark.asyncio
 async def test_concurrent_registration_returns_one_global_source_per_identity():
     container = (
@@ -70,33 +93,16 @@ async def test_concurrent_registration_returns_one_global_source_per_identity():
                 external_id,
             )
             owners = [f"user-{iteration}-{index}" for index in range(6)]
-
-            async def register(owner_user_id: str):
-                async with sessions() as session, session.begin():
-                    repository = SourcesRepository(session)
-                    source = await repository.get_or_create_source(
-                        MonitoringSource(
-                            id=expected_source_id,
-                            owner_user_id=owner_user_id,
-                            provider="vk",
-                            source_type="community",
-                            external_id=external_id,
-                            owner_id=-int(external_id),
-                            display_name=f"registered by {owner_user_id}",
-                        )
-                    )
-                    await repository.ensure_source_registration(
-                        owner_user_id,
-                        source.id,
-                    )
-                    await repository.ensure_source_registration(
-                        owner_user_id,
-                        source.id,
-                    )
-                    return source.id
-
             source_ids = await asyncio.gather(
-                *(register(owner) for owner in owners)
+                *(
+                    _register(
+                        sessions,
+                        owner,
+                        expected_source_id,
+                        external_id,
+                    )
+                    for owner in owners
+                )
             )
             assert source_ids == [expected_source_id] * len(owners)
 
