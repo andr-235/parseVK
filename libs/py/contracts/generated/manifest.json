@@ -2,7 +2,6 @@
   "contracts": [
     {
       "causationPolicy": "optional",
-      "compatibility": "backward",
       "consumers": [
         "vk-service"
       ],
@@ -17,12 +16,10 @@
       "producers": [
         "tasks-service"
       ],
-      "schemaVersion": 1,
       "topic": "parsevk.sources.events"
     },
     {
       "causationPolicy": "optional",
-      "compatibility": "backward",
       "consumers": [
         "vk-service"
       ],
@@ -37,12 +34,10 @@
       "producers": [
         "tasks-service"
       ],
-      "schemaVersion": 1,
       "topic": "parsevk.sources.events"
     },
     {
       "causationPolicy": "forbidden",
-      "compatibility": "none",
       "consumers": [
         "vk-service"
       ],
@@ -58,12 +53,10 @@
       "producers": [
         "tasks-service"
       ],
-      "schemaVersion": 1,
       "topic": "parsevk.vk.commands"
     },
     {
       "causationPolicy": "forbidden",
-      "compatibility": "none",
       "consumers": [
         "vk-service"
       ],
@@ -79,11 +72,9 @@
       "producers": [
         "tasks-service"
       ],
-      "schemaVersion": 1,
       "topic": "parsevk.vk.commands"
     }
   ],
-  "manifestVersion": 1,
   "package": {
     "name": "parsevk-contracts",
     "repository": "github.com/andr-235/parseVK",

@@ -2,7 +2,6 @@
   "$defs": {
     "CommentSelection": {
       "additionalProperties": false,
-      "description": "Comment collection strategy.",
       "properties": {
         "includeThreadReplies": {
           "const": true,
@@ -24,7 +23,6 @@
     },
     "PostSelection": {
       "additionalProperties": false,
-      "description": "Post collection strategy.",
       "properties": {
         "limitPerSource": {
           "maximum": 100,
@@ -47,7 +45,6 @@
     },
     "SourceReference": {
       "additionalProperties": false,
-      "description": "Reference to a VK community source.",
       "properties": {
         "externalId": {
           "pattern": "^[1-9][0-9]*$",
@@ -87,7 +84,7 @@
     },
     "VkExecutionRequested": {
       "additionalProperties": false,
-      "description": "Command payload: request VK execution for one or more sources.",
+      "description": "Request source-level execution for one immutable TaskRun.",
       "properties": {
         "commentSelection": {
           "$ref": "#/$defs/CommentSelection"
@@ -103,6 +100,12 @@
         "executionId": {
           "format": "uuid",
           "title": "Executionid",
+          "type": "string"
+        },
+        "ownerUserId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Owneruserid",
           "type": "string"
         },
         "postSelection": {
@@ -138,6 +141,7 @@
         "taskId",
         "taskRunId",
         "executionId",
+        "ownerUserId",
         "demands",
         "postSelection",
         "commentSelection",
@@ -150,7 +154,6 @@
     },
     "VkSourceDemandRequest": {
       "additionalProperties": false,
-      "description": "A single source collection demand within an execution request.",
       "properties": {
         "demandId": {
           "format": "uuid",
@@ -169,10 +172,10 @@
       "type": "object"
     }
   },
-  "$id": "urn:parsevk:contract:vk.execution.requested:1",
+  "$id": "urn:parsevk:contract:vk.execution.requested",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Schema for vk.execution.requested v1",
+  "description": "Schema for vk.execution.requested",
   "properties": {
     "causationId": {
       "type": "null"
@@ -201,15 +204,11 @@
       "enum": [
         "tasks-service"
       ]
-    },
-    "schemaVersion": {
-      "const": 1
     }
   },
   "required": [
     "messageId",
     "messageType",
-    "schemaVersion",
     "occurredAt",
     "producer",
     "payload",

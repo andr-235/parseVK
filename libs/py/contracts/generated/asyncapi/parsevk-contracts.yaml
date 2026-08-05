@@ -2,99 +2,99 @@ asyncapi: 3.1.0
 info:
   title: ParseVK Contracts
   version: 0.1.0
-  description: AsyncAPI specification for ParseVK Kafka message contracts
+  description: ParseVK Kafka message contracts
 defaultContentType: application/json
 channels:
   parsevk_sources_events:
     address: parsevk.sources.events
     messages:
-      sources_access_granted_v1:
-        $ref: '#/components/messages/sources_access_granted_v1'
-      sources_access_revoked_v1:
-        $ref: '#/components/messages/sources_access_revoked_v1'
+      sources_access_granted:
+        $ref: '#/components/messages/sources_access_granted'
+      sources_access_revoked:
+        $ref: '#/components/messages/sources_access_revoked'
   parsevk_vk_commands:
     address: parsevk.vk.commands
     messages:
-      vk_execution_cancel_requested_v1:
-        $ref: '#/components/messages/vk_execution_cancel_requested_v1'
-      vk_execution_requested_v1:
-        $ref: '#/components/messages/vk_execution_requested_v1'
+      vk_execution_cancel_requested:
+        $ref: '#/components/messages/vk_execution_cancel_requested'
+      vk_execution_requested:
+        $ref: '#/components/messages/vk_execution_requested'
 operations:
-  tasks_service_send_sources_access_granted_v1:
+  tasks_service_send_sources_access_granted:
     action: send
     channel:
       $ref: '#/channels/parsevk_sources_events'
     messages:
-    - $ref: '#/channels/parsevk_sources_events/messages/sources_access_granted_v1'
-  vk_service_receive_sources_access_granted_v1:
+    - $ref: '#/channels/parsevk_sources_events/messages/sources_access_granted'
+  vk_service_receive_sources_access_granted:
     action: receive
     channel:
       $ref: '#/channels/parsevk_sources_events'
     messages:
-    - $ref: '#/channels/parsevk_sources_events/messages/sources_access_granted_v1'
-  tasks_service_send_sources_access_revoked_v1:
+    - $ref: '#/channels/parsevk_sources_events/messages/sources_access_granted'
+  tasks_service_send_sources_access_revoked:
     action: send
     channel:
       $ref: '#/channels/parsevk_sources_events'
     messages:
-    - $ref: '#/channels/parsevk_sources_events/messages/sources_access_revoked_v1'
-  vk_service_receive_sources_access_revoked_v1:
+    - $ref: '#/channels/parsevk_sources_events/messages/sources_access_revoked'
+  vk_service_receive_sources_access_revoked:
     action: receive
     channel:
       $ref: '#/channels/parsevk_sources_events'
     messages:
-    - $ref: '#/channels/parsevk_sources_events/messages/sources_access_revoked_v1'
-  tasks_service_send_vk_execution_cancel_requested_v1:
+    - $ref: '#/channels/parsevk_sources_events/messages/sources_access_revoked'
+  tasks_service_send_vk_execution_cancel_requested:
     action: send
     channel:
       $ref: '#/channels/parsevk_vk_commands'
     messages:
-    - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_cancel_requested_v1'
-  vk_service_receive_vk_execution_cancel_requested_v1:
+    - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_cancel_requested'
+  vk_service_receive_vk_execution_cancel_requested:
     action: receive
     channel:
       $ref: '#/channels/parsevk_vk_commands'
     messages:
-    - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_cancel_requested_v1'
-  tasks_service_send_vk_execution_requested_v1:
+    - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_cancel_requested'
+  tasks_service_send_vk_execution_requested:
     action: send
     channel:
       $ref: '#/channels/parsevk_vk_commands'
     messages:
-    - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_requested_v1'
-  vk_service_receive_vk_execution_requested_v1:
+    - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_requested'
+  vk_service_receive_vk_execution_requested:
     action: receive
     channel:
       $ref: '#/channels/parsevk_vk_commands'
     messages:
-    - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_requested_v1'
+    - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_requested'
 components:
   messages:
-    sources_access_granted_v1:
+    sources_access_granted:
       name: sources.access.granted
       title: sources.access.granted
-      summary: sources.access.granted v1
+      summary: sources.access.granted
       contentType: application/json
       payload:
-        $ref: ../json-schema/sources.access.granted/1.json
-    sources_access_revoked_v1:
+        $ref: ../json-schema/sources.access.granted.json
+    sources_access_revoked:
       name: sources.access.revoked
       title: sources.access.revoked
-      summary: sources.access.revoked v1
+      summary: sources.access.revoked
       contentType: application/json
       payload:
-        $ref: ../json-schema/sources.access.revoked/1.json
-    vk_execution_cancel_requested_v1:
+        $ref: ../json-schema/sources.access.revoked.json
+    vk_execution_cancel_requested:
       name: vk.execution.cancel_requested
       title: vk.execution.cancel_requested
-      summary: vk.execution.cancel_requested v1
+      summary: vk.execution.cancel_requested
       contentType: application/json
       payload:
-        $ref: ../json-schema/vk.execution.cancel_requested/1.json
-    vk_execution_requested_v1:
+        $ref: ../json-schema/vk.execution.cancel_requested.json
+    vk_execution_requested:
       name: vk.execution.requested
       title: vk.execution.requested
-      summary: vk.execution.requested v1
+      summary: vk.execution.requested
       contentType: application/json
       payload:
-        $ref: ../json-schema/vk.execution.requested/1.json
+        $ref: ../json-schema/vk.execution.requested.json

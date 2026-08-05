@@ -2,7 +2,7 @@
   "$defs": {
     "VkExecutionCancelRequested": {
       "additionalProperties": false,
-      "description": "Canonical cancellation command for one immutable TaskRun.",
+      "description": "Cancel one immutable TaskRun execution.",
       "properties": {
         "executionId": {
           "format": "uuid",
@@ -10,6 +10,7 @@
           "type": "string"
         },
         "ownerUserId": {
+          "maxLength": 128,
           "minLength": 1,
           "title": "Owneruserid",
           "type": "string"
@@ -42,10 +43,10 @@
       "type": "object"
     }
   },
-  "$id": "urn:parsevk:contract:vk.execution.cancel_requested:1",
+  "$id": "urn:parsevk:contract:vk.execution.cancel_requested",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Schema for vk.execution.cancel_requested v1",
+  "description": "Schema for vk.execution.cancel_requested",
   "properties": {
     "causationId": {
       "type": "null"
@@ -74,15 +75,11 @@
       "enum": [
         "tasks-service"
       ]
-    },
-    "schemaVersion": {
-      "const": 1
     }
   },
   "required": [
     "messageId",
     "messageType",
-    "schemaVersion",
     "occurredAt",
     "producer",
     "payload",

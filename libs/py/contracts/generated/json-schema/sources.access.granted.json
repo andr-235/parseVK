@@ -2,7 +2,6 @@
   "$defs": {
     "SourceAccessGranted": {
       "additionalProperties": false,
-      "description": "Payload: a source was granted to an access scope.",
       "properties": {
         "accessScopeId": {
           "format": "uuid",
@@ -59,10 +58,10 @@
       "type": "object"
     }
   },
-  "$id": "urn:parsevk:contract:sources.access.granted:1",
+  "$id": "urn:parsevk:contract:sources.access.granted",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Schema for sources.access.granted v1",
+  "description": "Schema for sources.access.granted",
   "properties": {
     "causationId": {
       "anyOf": [
@@ -110,15 +109,11 @@
       "enum": [
         "tasks-service"
       ]
-    },
-    "schemaVersion": {
-      "const": 1
     }
   },
   "required": [
     "messageId",
     "messageType",
-    "schemaVersion",
     "occurredAt",
     "producer",
     "payload"
