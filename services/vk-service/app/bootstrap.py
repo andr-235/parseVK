@@ -14,9 +14,6 @@ from app.infrastructure.db.repositories.outbox import SqlAlchemyOutboxRepository
 from app.infrastructure.db.repositories.provider_accounts import (
     SqlAlchemyProviderAccountRepository,
 )
-from app.infrastructure.db.repositories.source_collections import (
-    SqlAlchemySourceCollectionRepository,
-)
 from app.infrastructure.db.repositories.vk_friends import SqlAlchemyVkFriendsRepository
 from app.infrastructure.metrics.vk_metrics import (
     observe_rate_limit_retry,
@@ -115,12 +112,7 @@ def get_ingestion_service(
     outbox_repo = SqlAlchemyOutboxRepository(session)
     outbox_service = OutboxService(outbox_repo, session=session)
     checkpoint_store = SqlAlchemyIngestionCheckpointStore(session)
-    collection_repository = SqlAlchemySourceCollectionRepository(session)
-    demand_fanout = DemandLifecycleFanout(
-        session=session,
-        collection_repository=collection_repository,
-        outbox=outbox_service,
-    )
+    demand_fanout = DemandLifecycleFanout(session=session)
 
     async def commit_page() -> None:
         if attempt_control is not None:
