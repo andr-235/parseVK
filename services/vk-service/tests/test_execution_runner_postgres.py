@@ -1,8 +1,16 @@
 import asyncio
 from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 import asyncpg
 import pytest
+from parsevk_contracts.vk.commands import (
+    CommentSelection,
+    PostSelection,
+    SourceReference,
+    VkExecutionRequested,
+    VkSourceDemandRequest,
+)
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from testcontainers.core.container import DockerContainer
@@ -12,16 +20,15 @@ from app.domain.repositories.checkpoint import CheckpointData
 from app.infrastructure.db.base import Base
 from app.infrastructure.db.models.executions import VkExecutionAttempt
 from app.infrastructure.db.models.outbox import OutboxEvent
+from app.infrastructure.db.repositories.canonical_commands import (
+    CanonicalVkCommandRepository,
+)
 from app.infrastructure.db.repositories.checkpoint import (
     SqlAlchemyIngestionCheckpointStore,
 )
 from app.infrastructure.db.repositories.provider_accounts import (
     SqlAlchemyProviderAccountRepository,
 )
-from app.infrastructure.db.repositories.source_collections import (
-    SqlAlchemySourceCollectionRepository,
-)
-from app.services.collection_fingerprint import build_collection_identity
 from app.services.ingestion.result import IngestionResult
 from app.tasks.execution_control import ExecutionAttemptControl
 from app.tasks.execution_runner import ExecutionAttemptRunner
@@ -59,6 +66,38 @@ async def _wait_for_postgres(*, host: str, port: int) -> None:
             last_error = exc
             await asyncio.sleep(0.1)
     raise RuntimeError("PostgreSQL test container did not become ready") from last_error
+
+
+def _command() -> VkExecutionRequested:
+    return VkExecutionRequested(
+        task_id=2860,
+        task_run_id=uuid4(),
+        execution_id=uuid4(),
+        owner_user_id="user-1",
+        demands=(
+            VkSourceDemandRequest(
+                demand_id=uuid4(),
+                source=SourceReference(
+                    source_id=uuid4(),
+                    provider="vk",
+                    source_type="community",
+                    external_id="1",
+                    owner_id=-1,
+                ),
+            ),
+        ),
+        post_selection=PostSelection(
+            strategy="latestByPublishedAt",
+            limit_per_source=10,
+        ),
+        comment_selection=CommentSelection(
+            mode="all",
+            include_thread_replies=True,
+        ),
+        task_revision=1,
+        source_set_revision=1,
+        snapshot_sha256="8" * 64,
+    )
 
 
 @pytest.mark.anyio
@@ -101,30 +140,10 @@ async def test_postgres_runner_heartbeats_and_recovers_after_committed_page(
                     credential_version="version-1",
                     capabilities=[SYSTEM_VK_CAPABILITY],
                 )
-                identity = build_collection_identity(
-                    provider_account_key="system-vk",
-                    scope="selected",
-                    mode="recent_posts",
-                    group_ids=[1],
-                    post_limit=10,
-                    payload={},
-                )
-                attachment = await SqlAlchemySourceCollectionRepository(
+                result = await CanonicalVkCommandRepository(
                     session
-                ).attach_demand(
-                    task_id=2860,
-                    owner_user_id="user-1",
-                    run_id="run-2860",
-                    provider_account_key=identity.provider_account_key,
-                    source_key=identity.source_key,
-                    fingerprint=identity.fingerprint,
-                    scope="selected",
-                    mode="recent_posts",
-                    group_ids=[1],
-                    post_limit=10,
-                    plan_snapshot=identity.normalized_plan,
-                )
-                assert attachment is not None
+                ).attach_command(_command())
+                assert result.outcome == "created"
 
         execution_store = ExecutionStore(session_factory)
         first = await execution_store.claim(
@@ -142,7 +161,9 @@ async def test_postgres_runner_heartbeats_and_recovers_after_committed_page(
 
             async def execute(self, claim, *, correlation_id=None):
                 await self.adapter.get_groups([1])
-                checkpoint_store = SqlAlchemyIngestionCheckpointStore(self.session)
+                checkpoint_store = SqlAlchemyIngestionCheckpointStore(
+                    self.session
+                )
                 await checkpoint_store.save(
                     CheckpointData(
                         run_id=claim.run_id,
@@ -154,7 +175,9 @@ async def test_postgres_runner_heartbeats_and_recovers_after_committed_page(
                         processed_comments=200,
                     )
                 )
-                await self.attempt_control.ensure_active_in_session(self.session)
+                await self.attempt_control.ensure_active_in_session(
+                    self.session
+                )
                 await self.session.commit()
 
                 await asyncio.sleep(0.15)
@@ -164,7 +187,11 @@ async def test_postgres_runner_heartbeats_and_recovers_after_committed_page(
             execution_store=execution_store,
             session_factory=session_factory,
             ingestion_factory=lambda session, adapter, attempt_control: (
-                CrashAfterPageCommitService(session, adapter, attempt_control)
+                CrashAfterPageCommitService(
+                    session,
+                    adapter,
+                    attempt_control,
+                )
             ),
             lease_seconds=2,
             heartbeat_seconds=0.03,
@@ -259,14 +286,14 @@ async def test_postgres_runner_heartbeats_and_recovers_after_committed_page(
         )
 
         async with session_factory() as session:
-            terminal_events = (
+            terminal_events = list(
                 await session.scalars(
                     select(OutboxEvent).where(
                         OutboxEvent.event_type == "task.execution_completed",
                         OutboxEvent.aggregate_id == "2860",
                     )
                 )
-            ).all()
+            )
             assert len(terminal_events) == 1
     finally:
         if engine is not None:
