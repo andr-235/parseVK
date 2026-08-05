@@ -14,5 +14,6 @@ def test_legacy_task_execution_runtime_is_removed():
     assert "from app.tasks.kafka_consumer" not in consumer
     assert '"task.created"' not in consumer
     assert "'task.created'" not in consumer
-    assert "vk.execution.requested" in consumer
-    assert "vk.execution.cancel_requested" in consumer
+    assert "VkExecutionRequested" in consumer
+    assert "VkExecutionCancelRequested" in consumer
+    assert "parsevk_contracts.vk.commands" in consumer
