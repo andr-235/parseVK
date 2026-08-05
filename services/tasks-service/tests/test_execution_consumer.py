@@ -159,7 +159,9 @@ def _mock_session_with_task_row(row, *, include_duplicate_check: bool = True):
     results = []
     if include_duplicate_check:
         results.append(_mock_result_none())
-    results.extend([_mock_result_task_row(row), MagicMock()])
+    results.extend(
+        [_mock_result_task_row(row), *[MagicMock() for _ in range(4)]]
+    )
     session.execute.side_effect = results
     return session
 
@@ -229,11 +231,15 @@ async def test_handle_execution_event_started_applies_and_emits_state_changed():
     ok = await handle_execution_event(session, msg, "consumer-1")
 
     assert ok is True
-    assert session.execute.await_count == 3
+    assert session.execute.await_count == 4
     assert session.commit.await_count == 1
 
     added_models = [call.args[0] for call in session.add.call_args_list]
-    state_events = [m for m in added_models if getattr(m, "event_type", None) == "task.state_changed"]
+    state_events = [
+        model
+        for model in added_models
+        if getattr(model, "event_type", None) == "task.state_changed"
+    ]
     assert len(state_events) == 1
     assert state_events[0].payload["status"] == "running"
 
