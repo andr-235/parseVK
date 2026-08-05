@@ -20,16 +20,31 @@ from app.modules.tasks.task_run import TaskRunFreezeError, freeze_resumed_task_r
 
 
 def make_task(run_id: str | None, status: str = "failed"):
+    now = datetime.now(UTC)
     return SimpleNamespace(
         id=42,
         owner_user_id="user-1",
+        title="VK parse",
+        description={},
         status=status,
         execution_run_id=run_id,
         last_execution_sequence=0,
+        scope="selected",
+        mode="recent_posts",
+        group_ids=[12345],
+        post_limit=10,
+        source="manual",
         revision=5,
         source_set_revision=7,
+        completed=False,
+        total_items=0,
+        processed_items=0,
+        progress=0.0,
+        stats=None,
         error=None,
-        updated_at=datetime.now(UTC),
+        skipped_groups_message=None,
+        created_at=now,
+        updated_at=now,
     )
 
 

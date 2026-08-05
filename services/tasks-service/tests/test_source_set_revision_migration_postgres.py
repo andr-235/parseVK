@@ -45,11 +45,11 @@ async def _seed_pre_migration_data(host: str, port: int) -> None:
             """
             INSERT INTO tasks (
                 id, owner_user_id, title, status, scope, mode, group_ids,
-                source, total_items, processed_items, progress, revision,
-                last_execution_sequence, created_at, updated_at
+                post_limit, source, total_items, processed_items, progress,
+                revision, last_execution_sequence, created_at, updated_at
             ) VALUES (
                 $1, 'user-1', $2, 'pending', 'selected', 'recent_posts',
-                ARRAY[]::bigint[], 'manual', 0, 0, 0, $3, 0, $4, $4
+                ARRAY[]::bigint[], 10, 'manual', 0, 0, 0, $3, 0, $4, $4
             )
             """,
             [
@@ -91,12 +91,24 @@ async def _seed_pre_migration_data(host: str, port: int) -> None:
                 created_at
             ) VALUES (
                 $1, $2, 1, 'requested', $3, repeat('a', 64),
-                '{}'::jsonb, '[{}]'::jsonb, $4
+                '{}'::jsonb,
+                jsonb_build_array(
+                    jsonb_build_object(
+                        'sourceId', $4::text,
+                        'provider', 'vk',
+                        'sourceType', 'community',
+                        'externalId', $5::text,
+                        'ownerId', $6::bigint,
+                        'sourceRevision', 0,
+                        'taskRevision', $7::integer
+                    )
+                ),
+                $8
             )
             """,
             [
-                (uuid4(), 1, 4, now),
-                (uuid4(), 2, 7, now),
+                (uuid4(), 1, 4, str(source_ids[0]), "101", -101, 99, now),
+                (uuid4(), 2, 7, str(uuid4()), "202", -202, 2, now),
             ],
         )
     finally:
