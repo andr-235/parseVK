@@ -3,9 +3,8 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import func, select
-
 from _canonical_runtime_helpers import make_command, seed_account
+from sqlalchemy import func, select
 
 from app.domain.repositories.checkpoint import CheckpointData
 from app.infrastructure.db.models.outbox import OutboxEvent

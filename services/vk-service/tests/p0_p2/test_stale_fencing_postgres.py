@@ -3,7 +3,6 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
-
 from _canonical_runtime_helpers import make_command, seed_account
 
 from app.domain.repositories.checkpoint import CheckpointData
