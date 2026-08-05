@@ -14,6 +14,7 @@ from app.modules.outbox.repository import OutboxRepository
 REPEATS = int(os.getenv("P0_P2_CONCURRENCY_REPEATS", "1"))
 REQUEST_ID = UUID("00000000-0000-0000-0000-000000000001")
 CANCEL_ID = UUID("00000000-0000-0000-0000-000000000002")
+pytestmark = pytest.mark.integration
 
 
 @pytest.fixture(scope="module")
@@ -29,8 +30,10 @@ def postgres_url():
     host = container.get_container_host_ip()
     port = int(container.get_exposed_port(5432))
     asyncio.run(_wait_for_postgres(host, port))
-    yield f"postgresql+asyncpg://postgres:postgres@{host}:{port}/postgres"
-    container.stop()
+    try:
+        yield f"postgresql+asyncpg://postgres:postgres@{host}:{port}/postgres"
+    finally:
+        container.stop()
 
 
 @pytest.fixture
@@ -39,10 +42,12 @@ async def pg_factory(postgres_url):
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
     factory = async_sessionmaker(engine, expire_on_commit=False)
-    yield factory
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.drop_all)
-    await engine.dispose()
+    try:
+        yield factory
+    finally:
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.drop_all)
+        await engine.dispose()
 
 
 async def _wait_for_postgres(host: str, port: int) -> None:
