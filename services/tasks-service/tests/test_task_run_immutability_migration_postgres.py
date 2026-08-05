@@ -121,10 +121,12 @@ async def _verify_repair_and_constraints(host: str, port: int, parent_id) -> Non
             parent_id,
         )
         assert parent is not None
+        config_snapshot = json.loads(parent["config_snapshot"])
+        source_set_snapshot = json.loads(parent["source_set_snapshot"])
         assert len(parent["snapshot_sha256"]) == 64
-        assert parent["config_snapshot"]["taskRevision"] == 4
-        assert parent["config_snapshot"]["postLimit"] == 25
-        assert len(parent["source_set_snapshot"]) == 1
+        assert config_snapshot["taskRevision"] == 4
+        assert config_snapshot["postLimit"] == 25
+        assert len(source_set_snapshot) == 1
 
         await connection.execute(
             "UPDATE task_runs SET status = 'cancelled' WHERE id = $1",
