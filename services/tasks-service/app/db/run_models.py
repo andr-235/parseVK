@@ -27,12 +27,25 @@ class TaskRun(Base):
             "status IN ('requested', 'running', 'completed', 'failed', 'cancelled')",
             name="ck_task_runs_status",
         ),
-        CheckConstraint("run_revision >= 0", name="ck_task_runs_run_revision"),
+        CheckConstraint("run_revision >= 1", name="ck_task_runs_run_revision"),
         CheckConstraint(
             "source_set_revision >= 0",
             name="ck_task_runs_source_set_revision",
         ),
+        CheckConstraint(
+            "length(snapshot_sha256) = 64",
+            name="ck_task_runs_snapshot_sha256_length",
+        ),
+        CheckConstraint(
+            "resumed_from_task_run_id IS NULL OR resumed_from_task_run_id <> id",
+            name="ck_task_runs_resume_not_self",
+        ),
+        CheckConstraint(
+            "retry_reason IS NULL OR length(trim(retry_reason)) BETWEEN 1 AND 1000",
+            name="ck_task_runs_retry_reason_length",
+        ),
         Index("ix_task_runs_task_created", "task_id", "created_at"),
+        Index("ix_task_runs_resumed_from", "resumed_from_task_run_id"),
     )
 
     id: Mapped[PyUUID] = mapped_column(
@@ -48,11 +61,19 @@ class TaskRun(Base):
     source_set_revision: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0
     )
-    snapshot_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    snapshot_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     config_snapshot: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    source_set_snapshot: Mapped[list[dict] | None] = mapped_column(
-        JSONB, nullable=True
+    source_set_snapshot: Mapped[list[dict]] = mapped_column(JSONB, nullable=False)
+    resumed_from_task_run_id: Mapped[PyUUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "task_runs.id",
+            deferrable=True,
+            initially="DEFERRED",
+        ),
+        nullable=True,
     )
+    retry_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utcnow
     )
