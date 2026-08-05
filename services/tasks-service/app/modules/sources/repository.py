@@ -1,21 +1,22 @@
 """Sources module repository: async CRUD over source/task-source tables.
 
 MonitoringSource is a globally deduplicated identity. User visibility is
-therefore derived from registration, owned task links, or effective access
-scope grants rather than treating the first registering user as the sole owner
-forever.
+derived from durable registration, owned task links, or effective access
+scope grants rather than treating the first registering user as the sole owner.
 """
 
 from collections.abc import Iterable
 from uuid import UUID
 
 from sqlalchemy import exists, or_, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import (
     AccessScope,
     MonitoringSource,
     ScopeSourceAccess,
+    SourceRegistration,
     Task,
     TaskSource,
     utcnow,
@@ -36,10 +37,83 @@ class SourcesRepository:
         self.session = session
 
     async def create_source(self, source: MonitoringSource) -> MonitoringSource:
-        self.session.add(source)
-        await self.session.flush()
-        await self.session.refresh(source)
-        return source
+        """Compatibility wrapper for atomic canonical source creation."""
+        return await self.get_or_create_source(source)
+
+    async def get_or_create_source(
+        self,
+        source: MonitoringSource,
+    ) -> MonitoringSource:
+        """Return one canonical source under concurrent registration."""
+        now = utcnow()
+        statement = (
+            insert(MonitoringSource)
+            .values(
+                id=source.id,
+                owner_user_id=source.owner_user_id,
+                provider=source.provider,
+                source_type=source.source_type,
+                external_id=source.external_id,
+                owner_id=source.owner_id,
+                display_name=source.display_name,
+                status=source.status or "active",
+                revision=int(source.revision or 0),
+                created_at=source.created_at or now,
+                updated_at=source.updated_at or now,
+            )
+            .on_conflict_do_nothing(
+                constraint="uq_monitoring_sources_identity",
+            )
+            .returning(MonitoringSource)
+        )
+        persisted = await self.session.scalar(statement)
+        if persisted is not None:
+            return persisted
+
+        persisted = await self.get_source_by_identity(
+            source.provider,
+            source.source_type,
+            source.external_id,
+        )
+        if persisted is None:
+            raise RuntimeError(
+                "canonical source insert conflicted without an identity row"
+            )
+        return persisted
+
+    async def ensure_source_registration(
+        self,
+        owner_user_id: str,
+        source_id: UUID,
+    ) -> SourceRegistration:
+        """Idempotently make a global source visible to one user."""
+        statement = (
+            insert(SourceRegistration)
+            .values(
+                owner_user_id=owner_user_id,
+                source_id=source_id,
+            )
+            .on_conflict_do_nothing(
+                index_elements=[
+                    SourceRegistration.owner_user_id,
+                    SourceRegistration.source_id,
+                ]
+            )
+            .returning(SourceRegistration)
+        )
+        registration = await self.session.scalar(statement)
+        if registration is not None:
+            return registration
+
+        registration = await self.session.scalar(
+            select(SourceRegistration).where(
+                SourceRegistration.owner_user_id == owner_user_id,
+                SourceRegistration.source_id == source_id,
+            )
+        )
+        if registration is None:
+            raise RuntimeError("source registration conflict returned no row")
+        return registration
 
     async def get_source_by_id(self, source_id: UUID) -> MonitoringSource | None:
         return await self.session.get(MonitoringSource, source_id)
@@ -63,6 +137,14 @@ class SourcesRepository:
 
     @staticmethod
     def _owner_visibility_clause(owner_user_id: str):
+        registered_to_owner = exists(
+            select(1)
+            .select_from(SourceRegistration)
+            .where(
+                SourceRegistration.source_id == MonitoringSource.id,
+                SourceRegistration.owner_user_id == owner_user_id,
+            )
+        )
         linked_to_owner = exists(
             select(1)
             .select_from(TaskSource)
@@ -87,6 +169,7 @@ class SourcesRepository:
             )
         )
         return or_(
+            registered_to_owner,
             MonitoringSource.owner_user_id == owner_user_id,
             linked_to_owner,
             granted_to_owner_scope,
