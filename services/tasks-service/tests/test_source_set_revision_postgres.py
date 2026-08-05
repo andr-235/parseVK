@@ -3,11 +3,10 @@ from uuid import UUID, uuid4
 
 import asyncpg
 import pytest
+from _service_path import use_service_path
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from testcontainers.core.container import DockerContainer
-
-from _service_path import use_service_path
 
 use_service_path()
 
