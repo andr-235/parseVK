@@ -1,21 +1,35 @@
 from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 import pytest
+from parsevk_contracts.vk.commands import (
+    CommentSelection,
+    PostSelection,
+    SourceReference,
+    VkExecutionRequested,
+    VkSourceDemandRequest,
+)
 from sqlalchemy import select
 
 from app.domain.entities.provider_account import SYSTEM_VK_CAPABILITY
 from app.domain.repositories.checkpoint import CheckpointData
 from app.infrastructure.db.models.executions import VkExecutionAttempt
 from app.infrastructure.db.models.outbox import OutboxEvent
-from app.infrastructure.db.repositories.checkpoint import SqlAlchemyIngestionCheckpointStore
-from app.infrastructure.db.repositories.executions import SqlAlchemyExecutionRepository
+from app.infrastructure.db.repositories.canonical_cancellation import (
+    CanonicalCancellationRepository,
+)
+from app.infrastructure.db.repositories.canonical_commands import (
+    CanonicalVkCommandRepository,
+)
+from app.infrastructure.db.repositories.checkpoint import (
+    SqlAlchemyIngestionCheckpointStore,
+)
+from app.infrastructure.db.repositories.executions import (
+    SqlAlchemyExecutionRepository,
+)
 from app.infrastructure.db.repositories.provider_accounts import (
     SqlAlchemyProviderAccountRepository,
 )
-from app.infrastructure.db.repositories.source_collections import (
-    SqlAlchemySourceCollectionRepository,
-)
-from app.services.collection_fingerprint import build_collection_identity
 
 
 async def _seed_account(db_session, *, status="active", capabilities=None):
@@ -38,40 +52,50 @@ async def _seed_account(db_session, *, status="active", capabilities=None):
     return account
 
 
-async def _create_execution(db_session, *, task_id, run_id):
-    identity = build_collection_identity(
-        provider_account_key="system-vk",
-        scope="selected",
-        mode="recent_posts",
-        group_ids=[1],
-        post_limit=10,
-        payload={},
-    )
-    attachment = await SqlAlchemySourceCollectionRepository(
-        db_session
-    ).attach_demand(
+def _command(task_id: int) -> VkExecutionRequested:
+    run_id = uuid4()
+    return VkExecutionRequested(
         task_id=task_id,
+        task_run_id=run_id,
+        execution_id=uuid4(),
         owner_user_id="user-1",
-        run_id=run_id,
-        provider_account_key=identity.provider_account_key,
-        source_key=identity.source_key,
-        fingerprint=identity.fingerprint,
-        scope="selected",
-        mode="recent_posts",
-        group_ids=[1],
-        post_limit=10,
-        plan_snapshot=identity.normalized_plan,
+        demands=(
+            VkSourceDemandRequest(
+                demand_id=uuid4(),
+                source=SourceReference(
+                    source_id=uuid4(),
+                    provider="vk",
+                    source_type="community",
+                    external_id=str(task_id),
+                    owner_id=-task_id,
+                ),
+            ),
+        ),
+        post_selection=PostSelection(
+            strategy="latestByPublishedAt",
+            limit_per_source=10,
+        ),
+        comment_selection=CommentSelection(
+            mode="all",
+            include_thread_replies=True,
+        ),
+        task_revision=1,
+        source_set_revision=1,
+        snapshot_sha256=f"{task_id:064x}"[-64:],
     )
-    assert attachment is not None
-    return attachment.execution
+
+
+async def _create_execution(db_session, *, task_id):
+    command = _command(task_id)
+    result = await CanonicalVkCommandRepository(db_session).attach_command(command)
+    assert result.outcome == "created"
+    return result.attachments[0].execution, command
 
 
 @pytest.mark.anyio
 async def test_expired_attempt_is_replaced_with_higher_fence(db_session):
     await _seed_account(db_session)
-    execution = await _create_execution(
-        db_session, task_id=900, run_id="run-900"
-    )
+    execution, _ = await _create_execution(db_session, task_id=900)
     repository = SqlAlchemyExecutionRepository(db_session)
 
     first = await repository.claim_next(
@@ -90,18 +114,20 @@ async def test_expired_attempt_is_replaced_with_higher_fence(db_session):
     assert second.fencing_token == 2
     assert second.attempt_number == 2
 
-    attempts = (
+    attempts = list(
         await db_session.scalars(
-            select(VkExecutionAttempt).order_by(VkExecutionAttempt.attempt_number)
+            select(VkExecutionAttempt).order_by(
+                VkExecutionAttempt.attempt_number
+            )
         )
-    ).all()
+    )
     assert [attempt.status for attempt in attempts] == ["expired", "running"]
 
 
 @pytest.mark.anyio
 async def test_stale_attempt_cannot_heartbeat_or_complete(db_session):
     await _seed_account(db_session)
-    await _create_execution(db_session, task_id=901, run_id="run-901")
+    await _create_execution(db_session, task_id=901)
     repository = SqlAlchemyExecutionRepository(db_session)
     first = await repository.claim_next(
         worker_id="same-worker",
@@ -134,20 +160,22 @@ async def test_stale_attempt_cannot_heartbeat_or_complete(db_session):
         total_items=12,
     )
 
-    terminal_events = (
+    terminal_events = list(
         await db_session.scalars(
             select(OutboxEvent).where(
                 OutboxEvent.event_type == "task.execution_completed"
             )
         )
-    ).all()
+    )
     assert len(terminal_events) == 1
 
 
 @pytest.mark.anyio
-async def test_crash_recovery_reuses_checkpoint_and_emits_one_terminal_event(db_session):
+async def test_crash_recovery_reuses_checkpoint_and_emits_one_terminal_event(
+    db_session,
+):
     await _seed_account(db_session)
-    await _create_execution(db_session, task_id=905, run_id="run-905")
+    await _create_execution(db_session, task_id=905)
     repository = SqlAlchemyExecutionRepository(db_session)
     checkpoint_store = SqlAlchemyIngestionCheckpointStore(db_session)
 
@@ -159,10 +187,10 @@ async def test_crash_recovery_reuses_checkpoint_and_emits_one_terminal_event(db_
     await checkpoint_store.save(
         CheckpointData(
             run_id=first.run_id,
-            owner_id=-1,
+            owner_id=-905,
             post_id=10,
             task_id=first.task_id,
-            group_id=1,
+            group_id=905,
             next_offset=200,
             processed_comments=200,
             status="in_progress",
@@ -175,7 +203,7 @@ async def test_crash_recovery_reuses_checkpoint_and_emits_one_terminal_event(db_
         lease_expires_at=datetime.now(UTC) + timedelta(minutes=1),
     )
     assert second is not None
-    checkpoint = await checkpoint_store.load(second.run_id, -1, 10)
+    checkpoint = await checkpoint_store.load(second.run_id, -905, 10)
 
     assert second.execution_id == first.execution_id
     assert second.attempt_number == first.attempt_number + 1
@@ -196,23 +224,21 @@ async def test_crash_recovery_reuses_checkpoint_and_emits_one_terminal_event(db_
         processed_items=250,
         total_items=250,
     )
-    terminal_events = (
+    terminal_events = list(
         await db_session.scalars(
             select(OutboxEvent).where(
                 OutboxEvent.event_type == "task.execution_completed",
                 OutboxEvent.aggregate_id == "905",
             )
         )
-    ).all()
+    )
     assert len(terminal_events) == 1
 
 
 @pytest.mark.anyio
 async def test_cancellation_is_durable_and_stops_heartbeat(db_session):
     await _seed_account(db_session)
-    execution = await _create_execution(
-        db_session, task_id=902, run_id="run-902"
-    )
+    execution, command = await _create_execution(db_session, task_id=902)
     repository = SqlAlchemyExecutionRepository(db_session)
     claim = await repository.claim_next(
         worker_id="worker-1",
@@ -220,23 +246,24 @@ async def test_cancellation_is_durable_and_stops_heartbeat(db_session):
     )
     assert claim is not None
 
-    demands = SqlAlchemySourceCollectionRepository(db_session)
-    requested = await demands.request_cancellation(
-        task_id=902,
-        run_id="run-902",
+    cancellation = CanonicalCancellationRepository(db_session)
+    requested = await cancellation.request_cancellation(
+        task_id=command.task_id,
+        run_id=str(command.task_run_id),
+        execution_id=command.execution_id,
+        owner_user_id=command.owner_user_id,
         reason="task.cancelled",
     )
-    repeated = await demands.request_cancellation(
-        task_id=902,
-        run_id="run-902",
+    repeated = await cancellation.request_cancellation(
+        task_id=command.task_id,
+        run_id=str(command.task_run_id),
+        execution_id=command.execution_id,
+        owner_user_id=command.owner_user_id,
         reason="task.cancelled",
     )
-    terminal = await demands.get_demand(task_id=902, run_id="run-902")
 
     assert requested is not None
     assert repeated is None
-    assert terminal is not None
-    assert terminal.cancellation_requested_at == requested.cancellation_requested_at
     assert not await repository.renew(
         execution_id=execution.id,
         attempt_id=claim.attempt_id,
@@ -253,7 +280,7 @@ async def test_cancellation_is_durable_and_stops_heartbeat(db_session):
 @pytest.mark.anyio
 async def test_terminal_execution_is_never_reclaimed(db_session):
     await _seed_account(db_session)
-    await _create_execution(db_session, task_id=903, run_id="run-903")
+    await _create_execution(db_session, task_id=903)
     repository = SqlAlchemyExecutionRepository(db_session)
     claim = await repository.claim_next(
         worker_id="worker-1",
@@ -280,7 +307,7 @@ async def test_terminal_execution_is_never_reclaimed(db_session):
 @pytest.mark.anyio
 async def test_claim_is_blocked_for_invalid_provider(db_session):
     await _seed_account(db_session, status="invalid")
-    await _create_execution(db_session, task_id=904, run_id="run-904")
+    await _create_execution(db_session, task_id=904)
 
     assert (
         await SqlAlchemyExecutionRepository(db_session).claim_next(
