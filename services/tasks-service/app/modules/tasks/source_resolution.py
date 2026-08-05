@@ -29,8 +29,10 @@ class TaskSourceResolver:
                 raise RuntimeError(
                     "scope=all cannot be frozen because the owner has no active VK sources"
                 )
-            for source in sources:
-                await self.sources_repo.link_task_source(task.id, source.id)
+            await self.sources_repo.sync_task_sources(
+                task.id,
+                ((source.id, "target") for source in sources),
+            )
             logger.debug(
                 "Resolved scope=all task sources: task=%s owner=%s count=%d",
                 task.id,
@@ -44,9 +46,14 @@ class TaskSourceResolver:
             raise RuntimeError(
                 "selected scope cannot be frozen without group identifiers"
             )
-        for group_id in normalized_ids:
-            source = await self._ensure_group_source(task, group_id)
-            await self.sources_repo.link_task_source(task.id, source.id)
+        sources = [
+            await self._ensure_group_source(task, group_id)
+            for group_id in normalized_ids
+        ]
+        await self.sources_repo.sync_task_sources(
+            task.id,
+            ((source.id, "target") for source in sources),
+        )
         logger.debug(
             "Resolved selected task sources: task=%s count=%d",
             task.id,
