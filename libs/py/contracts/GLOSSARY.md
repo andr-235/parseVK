@@ -4,48 +4,59 @@ Canonical definitions for domain concepts used in ParseVK event contracts.
 
 ## Workflow concepts
 
-- **Task** — A user-defined job specification (e.g. "parse VK group durov"). Created via API. Contains target, type, schedule, and configuration. Immutable after creation.
-- **TaskRun** — One concrete trigger of a Task with an immutable source/configuration snapshot. Owned by tasks-service and not reused for later retries or changed configuration.
-- **TaskRunSourceDemand** — A per-source work item within a TaskRun. One TaskRun may contain multiple demands (e.g. parse 3 communities). Owned by tasks-service.
+- **Task** — A user-defined monitoring specification owned by tasks-service.
+- **TaskRun** — One concrete trigger of a Task with an immutable source and configuration snapshot. A terminal TaskRun is never reopened.
+- **TaskRunSourceDemand** — One source-specific work item within a TaskRun.
 
-## VK-specific concepts
+## VK execution concepts
 
-- **VkSourceCollection** — One physical VK collection aggregate identified by provider account, normalized source key and exact collection-plan fingerprint. Multiple compatible TaskRuns may share it while it is pending or running. It owns exactly one VkExecution and one canonical ingestion/checkpoint stream.
-- **VkCollectionDemand** — One TaskRun's independent demand attached to a VkSourceCollection. It keeps the TaskRun identity, lifecycle sequence, cancellation and terminal attribution. Cancelling one demand does not cancel the shared collection while another active demand remains.
-- **Collection fingerprint** — A deterministic SHA-256 digest of the provider account, normalized source identity and immutable collection plan. Coalescing requires exact equality; broader or partial matching is forbidden.
-- **VkExecution** — The logical worker execution for one VkSourceCollection. It survives worker crashes and may have multiple physical attempts, but reaches a terminal outcome only once.
-- **VkExecutionAttempt** — One physical worker attempt within a VkExecution. It owns a lease, heartbeat, attempt number and fencing token. New attempts continue from execution checkpoints; they do not create independent checkpoint histories.
-- **Fencing token** — A monotonically increasing number assigned when a new VkExecutionAttempt is claimed. Any attempt with an older token is stale and cannot heartbeat, commit checkpoints, emit terminal effects or change execution state.
+- **VkTaskRunBinding** — The vk-service projection of one immutable TaskRun command. It aggregates independent source demands and owns TaskRun-level lifecycle attribution.
+- **VkSourceCollection** — One physical VK collection aggregate identified by provider account, normalized source key and exact collection-plan fingerprint. Multiple compatible TaskRuns may share it while pending or running.
+- **VkCollectionDemand** — One TaskRun's independent demand attached to a VkSourceCollection. Cancelling it does not stop shared work while another active demand remains.
+- **Collection fingerprint** — A deterministic SHA-256 digest of provider account, normalized source identity and immutable collection plan. Coalescing requires exact equality.
+- **VkExecution** — The logical worker execution for one VkSourceCollection. It survives worker crashes and reaches one terminal outcome.
+- **VkExecutionAttempt** — One physical worker attempt with a lease, heartbeat, attempt number and fencing token.
+- **Fencing token** — A monotonically increasing ownership token. A stale attempt cannot heartbeat, commit checkpoints, emit terminal effects or change execution state.
 
 ## Content concepts
 
-- **SourceCollection** — A stored collection of content from a single source (VK community, Telegram channel). Created by content-service after ingestion. This is distinct from vk-service's VkSourceCollection orchestration aggregate.
-- **SourceCollectionId** — Unique identifier for a SourceCollection. Used to correlate ingestion receipts with collection requests.
+- **SourceCollection** — A canonical content collection owned by content-service. It is distinct from vk-service's orchestration aggregate `VkSourceCollection`.
+- **SourceCollectionId** — The content-service identifier used to correlate ingestion delivery and receipts.
 
 ## Source access concepts
 
-- **MonitoringSource** — A normalized global source identity, unique by provider/type/external ID. Owned by tasks-service.
-- **AccessScope** — A user-owned scope grouping sources that share the same access level. Has an id and a separate `createdByUserId` — the scope id must never be conflated with the user who created it.
-- **SourceAccessGranted** — Event published when a source is granted to an access scope (`sources.access.granted`). Carries source identity, `accessScopeId`, `createdByUserId`, and the source `revision`.
-- **SourceAccessRevoked** — Event published when a source is revoked from an access scope (`sources.access.revoked`). Acts as a tombstone: access is not hard-deleted.
-- **Access revision** — Monotonic revision of a source's access state. Used by consumers to detect stale access events.
-- **VkSourceResolver** — Internal data contract for validating frontend-supplied normalized identities against canonical sources (request: provider/type/externalId; response: canonical `SourceReference` + access scope + revisions).
+- **MonitoringSource** — A normalized global source identity, unique by provider, source type and external ID. Owned by tasks-service.
+- **AccessScope** — A user-owned group of source grants. Its identifier is distinct from `createdByUserId`.
+- **SourceAccessGranted** — `sources.access.granted`, published when a source is granted to an access scope.
+- **SourceAccessRevoked** — `sources.access.revoked`, a tombstone published when access is revoked.
+- **Access revision** — A monotonic revision used to reject stale access events.
+- **VkSourceResolver** — Internal contract for resolving provider, source type and external ID to canonical source identity and access metadata.
 
 ## Message metadata
 
-- **messageId** — Globally unique identifier for each message. Generated by the producer. Used for deduplication and idempotent consumption.
-- **batchId** — Logical batch identifier. Multiple messages may share the same batchId when produced as part of a single batch operation.
-- **sourceId** — Identifier of the logical source that originated the workflow (e.g. a TaskRunId, an API request ID). Not to be confused with SourceCollectionId.
+- **messageId** — Globally unique message identifier used for inbox deduplication.
+- **messageType** — Stable semantic routing identity, such as `vk.execution.requested`. It is not paired with a numeric schema version.
+- **producer** — Named service that emitted the envelope and is authorized by the contract catalog.
+- **occurredAt** — UTC timestamp at which the message was produced.
+- **batchId** — Optional domain-level batch identity carried by payloads that define batching.
+- **sourceId** — Domain identifier of a normalized monitoring source. Do not confuse it with a content SourceCollectionId.
 
 ## Correlation identifiers
 
-- **correlationId** — Identifies the root workflow that this message belongs to. All messages in the same workflow chain share the same correlationId. For root commands, correlationId equals the workflow's executionId.
-- **causationId** — Identifies the immediate parent message that caused this message. Used to reconstruct the message chain: `A → B (causationId=A) → C (causationId=B)`. Optional — only present when a message is a direct response to another message.
+- **correlationId** — Root workflow identity shared by messages in one workflow chain. For VK root commands it equals `executionId`.
+- **causationId** — Immediate parent message identifier. Its required, optional or forbidden policy is declared per contract.
 
 ## Contract infrastructure
 
-- **PartitionKey** — A deterministic string computed from payload fields. Used for Kafka partition assignment. Composite keys use `:` separator. Defined per contract in the catalog.
-- **schemaVersion** — Positive integer identifying the version of the message schema. Starts at 1 for each messageType. Consumers reject unknown schemaVersion — no fallback to older versions.
-- **Producer** — A named service that publishes messages of a given messageType. Listed in the contract catalog. Validated at publish time.
-- **Consumer** — A named service that consumes messages of a given messageType. Listed in the contract catalog. Validated at consume time.
-- **Contract compatibility** — Defines the evolution policy for a message schema. Currently only `backward` is supported: a consumer running the new schema can read data written with the old schema.
+- **MessageContract** — Immutable catalog entry declaring semantic message type, payload model, topic, producers, consumers, partition key and correlation/causation rules.
+- **ContractCatalog** — Immutable registry keyed by one semantic `message_type`.
+- **PartitionKey** — Deterministic string computed from envelope or payload fields for Kafka partition assignment.
+- **Generated contract schema** — Flat JSON Schema artifact at `generated/json-schema/<message_type>.json`.
+- **Additive evolution** — Change under the same message type that keeps old messages readable, such as an optional field or relaxed constraint.
+- **Breaking evolution** — Change that invalidates old messages or changes routing/ownership metadata. It requires a new semantic message type and explicit cutover plan.
+- **Semantic replacement** — New message type describing a new business meaning, for example replacing `vk.execution.requested` with `vk.collection.requested`. Numeric suffixes are not a versioning mechanism.
+- **Contract policy gate** — CI checks that enforce the unversioned layout and compare generated schemas/manifests with a baseline.
+- **Producer** — Service authorized to publish a message type.
+- **Consumer** — Service authorized to consume a message type.
+
+The binding policy is defined by `docs/adr/ADR-0008-unversioned-semantic-message-contracts.md`.
