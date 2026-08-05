@@ -1,5 +1,6 @@
 """Integration tests for canonical source-level attachment and cancellation."""
 
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -14,7 +15,15 @@ from app.infrastructure.db.models.source_collections import (
 from app.infrastructure.db.repositories.canonical_commands import (
     CanonicalVkCommandRepository,
 )
-from canonical_runtime_helpers import attach, cancel_command, make_command
+from app.infrastructure.db.repositories.canonical_executions import (
+    CanonicalExecutionRepository,
+)
+from canonical_runtime_helpers import (
+    attach,
+    cancel_command,
+    make_command,
+    seed_account,
+)
 
 
 @pytest.mark.anyio
@@ -96,3 +105,33 @@ async def test_last_cancellation_stops_pending_shared_work(db_session):
     )
     assert execution.status == "cancelled"
     assert collection.status == "cancelled"
+
+
+@pytest.mark.anyio
+async def test_running_cancellation_allows_successor_collection(db_session):
+    await seed_account(db_session)
+    source_id = uuid4()
+    command = make_command(task_id=2009, source_id=source_id)
+    first = await attach(db_session, command)
+    executions = CanonicalExecutionRepository(db_session)
+    claim = await executions.claim_next(
+        worker_id="cancelling-worker",
+        lease_expires_at=datetime.now(UTC) + timedelta(minutes=1),
+    )
+    assert claim is not None
+
+    await CanonicalVkCommandRepository(db_session).request_cancellation(
+        cancel_command(command)
+    )
+    successor = await attach(
+        db_session,
+        make_command(task_id=2010, source_id=source_id),
+    )
+
+    old_collection = await db_session.get(
+        VkSourceCollection,
+        first.attachments[0].collection.id,
+    )
+    assert old_collection.status == "cancelling"
+    assert successor.attachments[0].collection.id != old_collection.id
+    assert successor.attachments[0].execution.id != claim.execution_id
