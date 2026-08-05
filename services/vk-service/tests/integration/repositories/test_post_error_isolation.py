@@ -124,7 +124,13 @@ def execution(group_ids=None):
         task_id=10,
         run_id="run-10",
         post_limit=3,
-        plan_snapshot={"source": {"externalId": str(group_id)}},
+        plan_snapshot={
+            "source": {"externalId": str(group_id)},
+            "postSelection": {
+                "strategy": "latestByPublishedAt",
+                "limitPerSource": 3,
+            },
+        },
         processed_items=0,
         total_items=0,
         status="running",
