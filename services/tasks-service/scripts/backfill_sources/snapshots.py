@@ -51,6 +51,6 @@ def build_run_snapshot(task: Task, source_set_snapshot: list[dict]) -> tuple[dic
     payload = {
         "config": config_snapshot,
         "sourceSet": source_set_snapshot,
-        "sourceSetRevision": task.revision,
+        "sourceSetRevision": task.source_set_revision,
     }
     return config_snapshot, snapshot_sha256(payload)
