@@ -1,6 +1,8 @@
-"""Tests for path validation in registry_validation."""
+"""Tests for registry path validation."""
 
 from __future__ import annotations
+
+from uuid import UUID
 
 from parsevk_contracts._base import ContractModel
 from parsevk_contracts.catalog import ContractCatalog, MessageContract, PartitionKeySpec
@@ -17,49 +19,39 @@ class NestedPayload(ContractModel):
     inner: SamplePayload
 
 
+def violations_for(
+    payload_model: type[ContractModel],
+    partition_path: str,
+    *,
+    correlation_path: str | None = None,
+):
+    contract = MessageContract(
+        message_type="test.event",
+        payload_model=payload_model,
+        topic="test.topic",
+        producers=frozenset({"producer"}),
+        consumers=frozenset({"consumer"}),
+        partition_key=PartitionKeySpec(paths=(partition_path,)),
+        correlation_path=correlation_path,
+    )
+    return validate_registry(ContractCatalog.from_contracts((contract,)))
+
+
 class TestPathValidation:
     def test_nested_valid_path_passes(self) -> None:
-        contract = MessageContract(
-            message_type="test.nested",
-            schema_version=1,
-            payload_model=NestedPayload,
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("inner.entityId",)),
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert len(violations) == 0
+        assert violations_for(NestedPayload, "inner.entityId") == ()
 
     def test_partition_path_missing_fails(self) -> None:
-        contract = MessageContract(
-            message_type="test.event",
-            schema_version=1,
-            payload_model=SamplePayload,
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("nonexistent",)),
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("invalid_partition_key_path" in v.code for v in violations)
+        violations = violations_for(SamplePayload, "nonexistent")
+        assert any(item.code == "invalid_partition_key_path" for item in violations)
 
     def test_correlation_path_missing_from_payload_fails(self) -> None:
-        contract = MessageContract(
-            message_type="test.event",
-            schema_version=1,
-            payload_model=SamplePayload,
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("entityId",)),
+        violations = violations_for(
+            SamplePayload,
+            "entityId",
             correlation_path="nonexistentField",
         )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("invalid_correlation_path" in v.code for v in violations)
+        assert any(item.code == "invalid_correlation_path" for item in violations)
 
     def test_path_into_tuple_item_fails(self) -> None:
         class ItemPayload(ContractModel):
@@ -68,102 +60,38 @@ class TestPathValidation:
         class CollectionPayload(ContractModel):
             items: tuple[ItemPayload, ...]
 
-        contract = MessageContract(
-            message_type="test.collection",
-            schema_version=1,
-            payload_model=CollectionPayload,
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("items.itemId",)),
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("invalid_partition_key_path" in v.code for v in violations)
+        violations = violations_for(CollectionPayload, "items.itemId")
+        assert any(item.code == "invalid_partition_key_path" for item in violations)
 
     def test_intermediate_list_fails(self) -> None:
-        class InnerPayload(ContractModel):
+        class ItemPayload(ContractModel):
             item_id: str
 
         class ListPayload(ContractModel):
-            items: list[InnerPayload]
+            items: list[ItemPayload]
 
-        contract = MessageContract(
-            message_type="test.listpath",
-            schema_version=1,
-            payload_model=ListPayload,
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("items.itemId",)),
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("invalid_partition_key_path" in v.code for v in violations)
+        violations = violations_for(ListPayload, "items.itemId")
+        assert any(item.code == "invalid_partition_key_path" for item in violations)
 
     def test_terminal_tuple_fails(self) -> None:
         class TagsPayload(ContractModel):
             tags: tuple[str, ...]
 
-        contract = MessageContract(
-            message_type="test.tags",
-            schema_version=1,
-            payload_model=TagsPayload,
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("tags",)),
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("invalid_partition_key_path" in v.code for v in violations)
+        violations = violations_for(TagsPayload, "tags")
+        assert any(item.code == "invalid_partition_key_path" for item in violations)
 
     def test_terminal_contract_model_fails(self) -> None:
         class OuterPayload(ContractModel):
             inner: SamplePayload
 
-        contract = MessageContract(
-            message_type="test.outer",
-            schema_version=1,
-            payload_model=OuterPayload,
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("inner",)),
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("invalid_partition_key_path" in v.code for v in violations)
+        violations = violations_for(OuterPayload, "inner")
+        assert any(item.code == "invalid_partition_key_path" for item in violations)
 
     def test_terminal_uuid_passes(self) -> None:
-        from uuid import UUID
-
         class UuidPayload(ContractModel):
             entity_id: UUID
 
-        contract = MessageContract(
-            message_type="test.uuid",
-            schema_version=1,
-            payload_model=UuidPayload,
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("entityId",)),
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert len(violations) == 0
+        assert violations_for(UuidPayload, "entityId") == ()
 
     def test_nested_contract_model_passes(self) -> None:
-        contract = MessageContract(
-            message_type="test.nested",
-            schema_version=1,
-            payload_model=NestedPayload,
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("inner.entityId",)),
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert len(violations) == 0
+        assert violations_for(NestedPayload, "inner.entityId") == ()
