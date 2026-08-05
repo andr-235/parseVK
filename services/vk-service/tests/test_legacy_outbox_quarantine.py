@@ -7,7 +7,6 @@ import pytest
 
 from app.infrastructure.db.models.outbox import OutboxEvent
 
-
 MODULE_PATH = (
     Path(__file__).resolve().parents[1]
     / "alembic/versions/pr6b2_quarantine_legacy_outbox.py"
