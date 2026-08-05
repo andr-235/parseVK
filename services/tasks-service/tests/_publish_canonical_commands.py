@@ -113,7 +113,8 @@ async def publish(metadata_path: Path) -> None:
                     "canonical outbox events were not marked published"
                 )
 
-        metadata_path.write_text(
+        await asyncio.to_thread(
+            metadata_path.write_text,
             json.dumps(fixture.metadata()),
             encoding="utf-8",
         )
