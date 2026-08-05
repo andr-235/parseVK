@@ -1,8 +1,16 @@
 import asyncio
 from datetime import UTC, datetime, timedelta
+from uuid import UUID, uuid4
 
 import asyncpg
 import pytest
+from parsevk_contracts.vk.commands import (
+    CommentSelection,
+    PostSelection,
+    SourceReference,
+    VkExecutionRequested,
+    VkSourceDemandRequest,
+)
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from testcontainers.core.container import DockerContainer
@@ -15,19 +23,16 @@ from app.infrastructure.db.models.outbox import OutboxEvent
 from app.infrastructure.db.models.source_collections import (
     VkCollectionDemand,
     VkSourceCollection,
+    VkTaskRunBinding,
+)
+from app.infrastructure.db.repositories.canonical_commands import (
+    CanonicalVkCommandRepository,
 )
 from app.infrastructure.db.repositories.checkpoint import (
     SqlAlchemyIngestionCheckpointStore,
 )
 from app.infrastructure.db.repositories.provider_accounts import (
     SqlAlchemyProviderAccountRepository,
-)
-from app.infrastructure.db.repositories.source_collections import (
-    SqlAlchemySourceCollectionRepository,
-)
-from app.services.collection_fingerprint import (
-    CollectionIdentity,
-    build_collection_identity,
 )
 from app.tasks.execution_store import ExecutionStore
 
@@ -51,8 +56,45 @@ async def _wait_for_postgres(*, host: str, port: int) -> None:
     raise RuntimeError("PostgreSQL test container did not become ready") from last_error
 
 
+def _command(
+    *,
+    task_id: int,
+    external_id: str,
+    source_id: UUID,
+) -> VkExecutionRequested:
+    return VkExecutionRequested(
+        task_id=task_id,
+        task_run_id=uuid4(),
+        execution_id=uuid4(),
+        owner_user_id=f"user-{task_id}",
+        demands=(
+            VkSourceDemandRequest(
+                demand_id=uuid4(),
+                source=SourceReference(
+                    source_id=source_id,
+                    provider="vk",
+                    source_type="community",
+                    external_id=external_id,
+                    owner_id=-int(external_id),
+                ),
+            ),
+        ),
+        post_selection=PostSelection(
+            strategy="latestByPublishedAt",
+            limit_per_source=10,
+        ),
+        comment_selection=CommentSelection(
+            mode="all",
+            include_thread_replies=True,
+        ),
+        task_revision=1,
+        source_set_revision=1,
+        snapshot_sha256=f"{task_id:064x}"[-64:],
+    )
+
+
 @pytest.mark.anyio
-async def test_concurrent_demands_share_collection_and_recover_one_execution():
+async def test_concurrent_commands_share_source_and_recover_one_execution():
     container = (
         DockerContainer("postgres:16-alpine")
         .with_env("POSTGRES_USER", "postgres")
@@ -83,50 +125,44 @@ async def test_concurrent_demands_share_collection_and_recover_one_execution():
                     capabilities=[SYSTEM_VK_CAPABILITY],
                 )
 
-        identity = build_collection_identity(
-            provider_account_key="system-vk",
-            scope="selected",
-            mode="recent_posts",
-            group_ids=[777],
-            post_limit=10,
-            payload={},
+        source_id = uuid4()
+        first_command = _command(
+            task_id=2870,
+            external_id="777",
+            source_id=source_id,
+        )
+        second_command = _command(
+            task_id=2871,
+            external_id="777",
+            source_id=source_id,
         )
 
-        async def attach(
-            task_id: int,
-            run_id: str,
-            collection_identity: CollectionIdentity,
-        ):
+        async def attach(command: VkExecutionRequested):
             async with session_factory() as session:
                 async with session.begin():
-                    return await SqlAlchemySourceCollectionRepository(
+                    return await CanonicalVkCommandRepository(
                         session
-                    ).attach_demand(
-                        task_id=task_id,
-                        owner_user_id=f"user-{task_id}",
-                        run_id=run_id,
-                        provider_account_key=(
-                            collection_identity.provider_account_key
-                        ),
-                        source_key=collection_identity.source_key,
-                        fingerprint=collection_identity.fingerprint,
-                        scope="selected",
-                        mode="recent_posts",
-                        group_ids=collection_identity.normalized_plan["groupIds"],
-                        post_limit=collection_identity.normalized_plan["postLimit"],
-                        plan_snapshot=collection_identity.normalized_plan,
-                    )
+                    ).attach_command(command)
 
-        first_attachment, second_attachment = await asyncio.gather(
-            attach(2870, "run-2870", identity),
-            attach(2871, "run-2871", identity),
+        first_result, second_result = await asyncio.gather(
+            attach(first_command),
+            attach(second_command),
         )
-        assert first_attachment is not None
-        assert second_attachment is not None
-        assert first_attachment.collection.id == second_attachment.collection.id
-        assert first_attachment.execution.id == second_attachment.execution.id
+        assert first_result.outcome == "created"
+        assert second_result.outcome == "created"
+        attachments = (
+            first_result.attachments[0],
+            second_result.attachments[0],
+        )
+        assert {attachment.outcome for attachment in attachments} == {
+            "created",
+            "coalesced",
+        }
+        assert attachments[0].collection.id == attachments[1].collection.id
+        assert attachments[0].execution.id == attachments[1].execution.id
 
         async with session_factory() as session:
+            assert await session.scalar(select(func.count(VkTaskRunBinding.id))) == 2
             assert await session.scalar(select(func.count(VkSourceCollection.id))) == 1
             assert await session.scalar(select(func.count(VkExecution.id))) == 1
             assert await session.scalar(select(func.count(VkCollectionDemand.id))) == 2
@@ -187,43 +223,50 @@ async def test_concurrent_demands_share_collection_and_recover_one_execution():
         )
 
         async with session_factory() as session:
-            demands = (
+            demands = list(
                 await session.scalars(
-                    select(VkCollectionDemand).order_by(VkCollectionDemand.task_id)
+                    select(VkCollectionDemand).order_by(
+                        VkCollectionDemand.task_id
+                    )
                 )
-            ).all()
+            )
             assert [demand.status for demand in demands] == ["done", "done"]
-            terminal_events = (
+            terminal_events = list(
                 await session.scalars(
                     select(OutboxEvent).where(
                         OutboxEvent.event_type == "task.execution_completed"
                     )
                 )
-            ).all()
+            )
             assert {event.aggregate_id for event in terminal_events} == {
                 "2870",
                 "2871",
             }
 
-        different_identity = build_collection_identity(
-            provider_account_key="system-vk",
-            scope="selected",
-            mode="recent_posts",
-            group_ids=[778],
-            post_limit=10,
-            payload={},
+        same_task_first = _command(
+            task_id=2872,
+            external_id="778",
+            source_id=uuid4(),
+        )
+        same_task_second = _command(
+            task_id=2872,
+            external_id="779",
+            source_id=uuid4(),
         )
         same_task_results = await asyncio.gather(
-            attach(2872, "run-2872-a", identity),
-            attach(2872, "run-2872-b", different_identity),
+            attach(same_task_first),
+            attach(same_task_second),
         )
-        assert sum(result is not None for result in same_task_results) == 1
+        assert {result.outcome for result in same_task_results} == {
+            "created",
+            "conflict",
+        }
 
         async with session_factory() as session:
             active_for_task = await session.scalar(
-                select(func.count(VkCollectionDemand.id)).where(
-                    VkCollectionDemand.task_id == 2872,
-                    VkCollectionDemand.status.in_(("pending", "running")),
+                select(func.count(VkTaskRunBinding.id)).where(
+                    VkTaskRunBinding.task_id == 2872,
+                    VkTaskRunBinding.status.in_(("pending", "running")),
                 )
             )
             assert active_for_task == 1
