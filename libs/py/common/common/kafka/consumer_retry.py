@@ -1,10 +1,10 @@
 """Durable retry and dead-letter handling for Kafka consumers."""
 
-import asyncio
 import logging
 from datetime import UTC, datetime, timedelta
 
 from common.events import decode_payload
+from common.kafka.consumer_backoff import PartitionResumeScheduler
 from common.kafka.consumer_dlq import build_dlq_headers
 from common.kafka.message_identity import message_identity
 from common.kafka.producer import send_to_dlq
@@ -31,7 +31,7 @@ class ConsumerRetryController:
         self.dlq_topic = dlq_topic
         self.bootstrap_servers = bootstrap_servers
         self.max_retries = max_retries
-        self.pending_resume_tasks: set[asyncio.Task] = set()
+        self.resume_scheduler = PartitionResumeScheduler()
 
     async def skip_due_to_backoff(self, raw_value: bytes, consumer) -> bool:
         payload = decode_payload(raw_value)
@@ -52,20 +52,7 @@ class ConsumerRetryController:
                 return True
             if row.retry_count < self.max_retries:
                 return False
-            logger.warning(
-                "Event %s (type=%s) exceeded max retries (%d)",
-                event_id,
-                event_type,
-                self.max_retries,
-            )
-            await self._send_to_dlq(
-                raw_value,
-                event_id=str(row.event_id),
-                event_type=row.event_type,
-                retry_count=row.retry_count,
-                failure_reason=str(row.last_error or ""),
-            )
-            await consumer.commit()
+            await self._send_exhausted(raw_value, row, consumer)
             return True
 
     async def handle_failure(self, message, error: Exception, consumer) -> None:
@@ -78,6 +65,49 @@ class ConsumerRetryController:
             return
 
         failure_reason = self._failure_reason(error)
+        retry_count, next_retry = await self._record_failure(
+            event_id,
+            event_type,
+            failure_reason,
+        )
+        if retry_count >= self.max_retries:
+            logger.error(
+                "Failed event %s after %d retries; sending to DLQ",
+                event_id,
+                retry_count,
+                exc_info=(type(error), error, error.__traceback__),
+            )
+            await self._send_to_dlq(
+                message.value,
+                event_id=event_id,
+                event_type=event_type,
+                retry_count=retry_count,
+                failure_reason=failure_reason,
+            )
+            await consumer.commit()
+            return
+
+        logger.error(
+            "Failed event %s (retry %d/%d, next at %s)",
+            event_id,
+            retry_count,
+            self.max_retries,
+            next_retry,
+            exc_info=(type(error), error, error.__traceback__),
+        )
+        partition = TopicPartition(message.topic, message.partition)
+        delay = max((next_retry - datetime.now(UTC)).total_seconds(), 0)
+        self.resume_scheduler.pause_until(consumer, partition, delay)
+
+    async def cancel_pending_resumes(self) -> None:
+        await self.resume_scheduler.cancel()
+
+    async def _record_failure(
+        self,
+        event_id: str,
+        event_type: str,
+        failure_reason: str,
+    ) -> tuple[int, datetime]:
         async with self.session_factory() as session:
             async with session.begin():
                 current = await self.repository.get_retry_count(session, event_id)
@@ -94,46 +124,24 @@ class ConsumerRetryController:
                     next_retry,
                     now,
                 )
-            updated = await self.repository.get_retry_count(session, event_id)
+            stored_count = await self.repository.get_retry_count(session, event_id)
+        return stored_count or retry_count, next_retry
 
-        if updated and updated >= self.max_retries:
-            logger.error(
-                "Failed event %s after %d retries; sending to DLQ",
-                event_id,
-                updated,
-                exc_info=(type(error), error, error.__traceback__),
-            )
-            await self._send_to_dlq(
-                message.value,
-                event_id=event_id,
-                event_type=event_type,
-                retry_count=updated,
-                failure_reason=failure_reason,
-            )
-            await consumer.commit()
-            return
-
-        logger.error(
-            "Failed event %s (retry %d/%d, next at %s)",
-            event_id,
-            updated or 1,
+    async def _send_exhausted(self, raw_value, row, consumer) -> None:
+        logger.warning(
+            "Event %s (type=%s) exceeded max retries (%d)",
+            row.event_id,
+            row.event_type,
             self.max_retries,
-            next_retry,
-            exc_info=(type(error), error, error.__traceback__),
         )
-        partition = TopicPartition(message.topic, message.partition)
-        consumer.pause(partition)
-        delay = max((next_retry - datetime.now(UTC)).total_seconds(), 0)
-        task = asyncio.create_task(self._delayed_resume(consumer, partition, delay))
-        self.pending_resume_tasks.add(task)
-        task.add_done_callback(self.pending_resume_tasks.discard)
-
-    async def cancel_pending_resumes(self) -> None:
-        for task in self.pending_resume_tasks:
-            task.cancel()
-        if self.pending_resume_tasks:
-            await asyncio.gather(*self.pending_resume_tasks, return_exceptions=True)
-        self.pending_resume_tasks.clear()
+        await self._send_to_dlq(
+            raw_value,
+            event_id=str(row.event_id),
+            event_type=row.event_type,
+            retry_count=row.retry_count,
+            failure_reason=str(row.last_error or ""),
+        )
+        await consumer.commit()
 
     async def _handle_poison_pill(self, message, error, consumer) -> None:
         reason = f"Poison pill at offset {message.offset}: {self._failure_reason(error)}"
@@ -153,14 +161,6 @@ class ConsumerRetryController:
             self.bootstrap_servers,
             headers=headers,
         )
-
-    async def _delayed_resume(self, consumer, partition, delay: float) -> None:
-        await asyncio.sleep(delay)
-        try:
-            consumer.resume(partition)
-            logger.info("Resumed partition %s after retry backoff", partition)
-        except Exception:
-            logger.exception("Failed to resume partition %s", partition)
 
     @staticmethod
     def _failure_reason(error: Exception) -> str:
