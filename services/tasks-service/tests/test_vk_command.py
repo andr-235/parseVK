@@ -9,11 +9,11 @@ from uuid import UUID, uuid4
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _service_path import use_service_path
+from _service_path import use_service_path  # noqa: E402
 
 use_service_path()
 
-from app.modules.tasks.vk_command import (
+from app.modules.tasks.vk_command import (  # noqa: E402
     add_vk_execution_command,
     build_vk_execution_requested,
     execution_id_for_run,
@@ -108,7 +108,7 @@ async def test_add_vk_command_persists_camel_case_payload():
 
     call = outbox.add_event.await_args.kwargs
     assert call["event_type"] == "vk.execution.requested"
-    assert call["event_version"] == 1
+    assert "event_version" not in call
     assert call["aggregate_id"] == str(command.execution_id)
     assert call["correlation_id"] == str(command.execution_id)
     assert call["payload"]["taskRunId"] == str(run_id)
