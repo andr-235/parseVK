@@ -4,6 +4,7 @@ import logging
 from copy import deepcopy
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Task, TaskRun, TaskRunSourceDemand
@@ -61,6 +62,21 @@ def _validate_existing_run(
         raise TaskRunFreezeError(
             f"TaskRun {run.id} exists without a complete frozen snapshot"
         )
+
+
+async def _lock_source_set(session: AsyncSession, task: Task) -> Task:
+    """Serialize a new snapshot with every effective source-set mutation."""
+    if not isinstance(task, Task):
+        return task
+    locked = await session.scalar(
+        select(Task)
+        .where(Task.id == task.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if locked is None:
+        raise TaskRunFreezeError(f"Task {task.id} disappeared before freeze")
+    return locked
 
 
 async def _persist_snapshot(
@@ -133,6 +149,7 @@ async def freeze_task_run(
         )
         return _run_meta(existing)
 
+    task = await _lock_source_set(session, task)
     if sources_repo is None:
         from app.modules.sources.repository import SourcesRepository
 
