@@ -44,14 +44,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_runtime(self) -> "Settings":
-        import sys
-
         if self.task_heartbeat_seconds * 3 > self.task_lease_seconds:
             raise ValueError(
                 "task lease must be at least three heartbeat intervals"
             )
-        if "pytest" not in sys.modules and not self.token_file:
-            raise ValueError("VK_SERVICE_TOKEN_FILE is required")
         return self
 
 
