@@ -1,5 +1,6 @@
 import asyncio
 import os
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
@@ -37,7 +38,7 @@ async def _seed_pre_migration_data(host: str, port: int) -> None:
         database="postgres",
     )
     try:
-        now = "2026-08-05T00:00:00+00:00"
+        now = datetime(2026, 8, 5, tzinfo=UTC)
         await connection.executemany(
             """
             INSERT INTO tasks (
