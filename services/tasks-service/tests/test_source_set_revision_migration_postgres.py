@@ -9,6 +9,8 @@ from alembic import command
 from alembic.config import Config
 from testcontainers.core.container import DockerContainer
 
+from app.core.config import settings
+
 
 async def _wait_for_postgres(host: str, port: int) -> None:
     last_error = None
@@ -124,14 +126,17 @@ def test_migration_backfills_collision_free_revision_baselines():
         .with_exposed_ports(5432)
     )
     container.start()
-    previous_url = os.environ.get("TASKS_DATABASE_URL")
+    previous_env_url = os.environ.get("TASKS_DATABASE_URL")
+    previous_settings_url = settings.database_url
     try:
         host = container.get_container_host_ip()
         port = int(container.get_exposed_port(5432))
         asyncio.run(_wait_for_postgres(host, port))
-        os.environ["TASKS_DATABASE_URL"] = (
+        database_url = (
             f"postgresql+asyncpg://postgres:postgres@{host}:{port}/postgres"
         )
+        os.environ["TASKS_DATABASE_URL"] = database_url
+        settings.database_url = database_url
         config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
         command.upgrade(config, "p1_task_run_snapshot")
         asyncio.run(_seed_pre_migration_data(host, port))
@@ -145,8 +150,9 @@ def test_migration_backfills_collision_free_revision_baselines():
         }
         command.upgrade(config, "head")
     finally:
-        if previous_url is None:
+        settings.database_url = previous_settings_url
+        if previous_env_url is None:
             os.environ.pop("TASKS_DATABASE_URL", None)
         else:
-            os.environ["TASKS_DATABASE_URL"] = previous_url
+            os.environ["TASKS_DATABASE_URL"] = previous_env_url
         container.stop()
