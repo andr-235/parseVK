@@ -87,9 +87,9 @@ async def _seed_pre_migration_data(host: str, port: int) -> None:
             """
             INSERT INTO task_runs (
                 id, task_id, run_revision, status, source_set_revision,
-                config_snapshot, source_set_snapshot, created_at, updated_at
+                config_snapshot, source_set_snapshot, created_at
             ) VALUES ($1, $2, 1, 'requested', $3, '{}'::jsonb,
-                      '[]'::jsonb, $4, $4)
+                      '[]'::jsonb, $4)
             """,
             [
                 (uuid4(), 1, 4, now),
