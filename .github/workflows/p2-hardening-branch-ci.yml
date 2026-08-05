@@ -5,6 +5,10 @@ on:
     branches:
       - agent/p2-hardening-source-level-collections
 
+concurrency:
+  group: p2-hardening-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
