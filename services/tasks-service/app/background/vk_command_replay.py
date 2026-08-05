@@ -38,9 +38,13 @@ async def replay_active_vk_commands(session: AsyncSession) -> int:
     failed = 0
 
     for task in tasks:
-        task_run = await _active_frozen_run(session, task)
+        task_run = await _active_run(session, task)
         if task_run is None:
             await _fail_unreplayable(outbox, task, None, REPLAY_FAILURE)
+            failed += 1
+            continue
+        if not task_run.snapshot_sha256 or not task_run.source_set_snapshot:
+            await _fail_unreplayable(outbox, task, task_run, REPLAY_FAILURE)
             failed += 1
             continue
 
@@ -78,10 +82,7 @@ async def replay_active_vk_commands(session: AsyncSession) -> int:
     return replayed
 
 
-async def _active_frozen_run(
-    session: AsyncSession,
-    task: Task,
-) -> TaskRun | None:
+async def _active_run(session: AsyncSession, task: Task) -> TaskRun | None:
     if not task.execution_run_id:
         return None
     try:
@@ -94,8 +95,6 @@ async def _active_frozen_run(
         task_run is None
         or task_run.task_id != task.id
         or task_run.status not in ACTIVE_RUN_STATUSES
-        or not task_run.snapshot_sha256
-        or not task_run.source_set_snapshot
     ):
         return None
     return task_run
