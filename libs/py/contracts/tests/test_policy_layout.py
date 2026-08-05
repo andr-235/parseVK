@@ -28,7 +28,7 @@ def test_rejects_legacy_markers_and_compatibility_package(tmp_path: Path):
 
     violations = validate_unversioned_layout(root)
 
-    assert any("compatibility runtime package" in item for item in violations)
+    assert any("legacy contract adapter package" in item for item in violations)
     assert any("schema_version" in item for item in violations)
 
 
