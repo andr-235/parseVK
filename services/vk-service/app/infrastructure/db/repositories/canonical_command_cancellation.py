@@ -61,6 +61,7 @@ async def request_cancellation(
         VkCollectionDemand,
         sorted({d.id for d in demand_refs}, key=str),
     )
+    await advisory_lock(session, f"binding:{binding_ref.id}")
     binding = await session.scalar(
         select(VkTaskRunBinding)
         .where(VkTaskRunBinding.id == binding_ref.id)
