@@ -110,9 +110,9 @@ class FakeOutbox:
         self.events.append(kwargs)
 
 
-class FakeSourceAdapter:
+class FakeSourceResolver:
     def __init__(self):
-        self.ensure_normalized_sources = AsyncMock()
+        self.resolve = AsyncMock()
 
 
 async def fake_freeze(session, task):
@@ -137,19 +137,19 @@ def make_service(
     )
     tasks = FakeTasksRepository()
     outbox = FakeOutbox()
-    source_adapter = FakeSourceAdapter()
+    source_resolver = FakeSourceResolver()
     command_publisher = AsyncMock()
     service = AutomationService(
         session=session,
         repository=repository,
         tasks=tasks,
         outbox=outbox,
-        source_adapter_factory=lambda _session: source_adapter,
+        source_resolver_factory=lambda _session: source_resolver,
         freezer=fake_freeze,
         command_publisher=command_publisher,
     )
     service._clone_task_sources = AsyncMock()
-    service.test_source_adapter = source_adapter
+    service.test_source_resolver = source_resolver
     return service, repository, tasks, outbox
 
 
@@ -206,9 +206,9 @@ async def test_selected_automation_clones_frozen_base_sources():
     await service.run("user-1")
 
     new_task = tasks.tasks[0]
-    adapter_call = service.test_source_adapter.ensure_normalized_sources.await_args
-    assert adapter_call.args[0].id == 100
-    assert adapter_call.args[1] == [1, 2]
+    resolver_call = service.test_source_resolver.resolve.await_args
+    assert resolver_call.args[0].id == 100
+    assert resolver_call.args[1] == [1, 2]
     service._clone_task_sources.assert_awaited_once()
     assert new_task.group_ids == [1, 2]
 
@@ -229,8 +229,5 @@ async def test_scope_all_resolves_current_sources_on_new_task():
     assert task.group_ids == []
     assert task.post_limit == 25
     assert task.source == "automation"
-    service.test_source_adapter.ensure_normalized_sources.assert_awaited_once_with(
-        task,
-        [],
-    )
+    service.test_source_resolver.resolve.assert_awaited_once_with(task, [])
     service._clone_task_sources.assert_not_awaited()
