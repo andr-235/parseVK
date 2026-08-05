@@ -5,6 +5,12 @@ from uuid import uuid4
 
 import pytest
 
+from _canonical_runtime_helpers import (
+    attach,
+    cancel_command,
+    make_command,
+    seed_account,
+)
 from app.infrastructure.db.models.source_collections import (
     VkCollectionDemand,
     VkTaskRunBinding,
@@ -14,12 +20,6 @@ from app.infrastructure.db.repositories.canonical_commands import (
 )
 from app.infrastructure.db.repositories.canonical_executions import (
     CanonicalExecutionRepository,
-)
-from canonical_runtime_helpers import (
-    attach,
-    cancel_command,
-    make_command,
-    seed_account,
 )
 
 
