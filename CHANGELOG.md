@@ -1,3 +1,10 @@
+## [0.91.2](https://github.com/andr-235/parseVK/compare/v0.91.1...v0.91.2) (2026-08-05)
+
+
+### Bug Fixes
+
+* **kafka:** preserve canonical backlog and isolate retry handling ([#419](https://github.com/andr-235/parseVK/issues/419)) ([38f0177](https://github.com/andr-235/parseVK/commit/38f0177d323b79942b9ad762090295f59a448c07))
+
 ## [0.91.1](https://github.com/andr-235/parseVK/compare/v0.91.0...v0.91.1) (2026-08-05)
 
 
