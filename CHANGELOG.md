@@ -1,3 +1,10 @@
+## [0.91.4](https://github.com/andr-235/parseVK/compare/v0.91.3...v0.91.4) (2026-08-05)
+
+
+### Bug Fixes
+
+* **tasks:** repair H03 post-merge migration failures ([f85839f](https://github.com/andr-235/parseVK/commit/f85839f27778c1b5df0a7dffdf0b1c223e3376a2)), closes [#421](https://github.com/andr-235/parseVK/issues/421)
+
 ## [0.91.3](https://github.com/andr-235/parseVK/compare/v0.91.2...v0.91.3) (2026-08-05)
 
 
