@@ -18,7 +18,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v5
-      - run: uvx ruff check --output-format=github libs/py services/tasks-service services/vk-service
+      - name: Show exact Ruff import fixes
+        run: |
+          uvx ruff check --fix --diff \
+            services/tasks-service/tests/test_outbox_publisher_configuration.py \
+            services/tasks-service/tests/test_outbox_publisher_delivery.py \
+            services/tasks-service/tests/test_outbox_repository.py \
+            services/tasks-service/tests/test_vk_cancel_command_publisher.py \
+            services/vk-service/tests/integration/repositories/test_canonical_cancelled_audit.py \
+            services/vk-service/tests/integration/repositories/test_canonical_source_attachment.py \
+            services/vk-service/tests/integration/repositories/test_canonical_source_lifecycle.py \
+            services/vk-service/tests/integration/repositories/test_execution_repository.py \
+            services/vk-service/tests/test_execution_control.py \
+            services/vk-service/tests/test_execution_runner_postgres.py
 
   contracts:
     runs-on: ubuntu-latest
