@@ -26,6 +26,7 @@ from app.modules.tasks.task_run import (
 def make_task(
     run_id: str | None = None,
     revision: int = 5,
+    source_set_revision: int = 7,
     status: str = "pending",
 ):
     return SimpleNamespace(
@@ -42,6 +43,7 @@ def make_task(
         post_limit=10,
         source="manual",
         revision=revision,
+        source_set_revision=source_set_revision,
         completed=False,
         total_items=0,
         processed_items=0,
@@ -149,6 +151,7 @@ async def test_freeze_creates_snapshot_with_contract_fields():
         "taskRevision": 5,
     }
     assert "groupIds" not in run.config_snapshot
+    assert run.source_set_revision == 7
     assert run.source_set_snapshot[0] == {
         "sourceId": str(source_id),
         "provider": "vk",
@@ -160,6 +163,7 @@ async def test_freeze_creates_snapshot_with_contract_fields():
     }
     assert len(run.snapshot_sha256) == 64
     assert demand.source_id == source_id
+    assert meta["sourceSetRevision"] == 7
     assert meta["snapshotSha256"] == run.snapshot_sha256
 
 
@@ -300,6 +304,23 @@ async def test_snapshot_hash_is_independent_of_repository_order():
     )
 
     assert meta_a["snapshotSha256"] == meta_b["snapshotSha256"]
+
+
+@pytest.mark.asyncio
+async def test_snapshot_hash_changes_with_source_set_revision():
+    source = make_source(uuid4(), "10")
+    first = await freeze_task_run(
+        FakeFreezeSession(),
+        make_task(run_id=str(uuid4()), revision=5, source_set_revision=7),
+        sources_repo=source_repo(source),
+    )
+    second = await freeze_task_run(
+        FakeFreezeSession(),
+        make_task(run_id=str(uuid4()), revision=5, source_set_revision=8),
+        sources_repo=source_repo(source),
+    )
+
+    assert first["snapshotSha256"] != second["snapshotSha256"]
 
 
 @pytest.mark.asyncio
