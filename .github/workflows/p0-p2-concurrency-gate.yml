@@ -44,6 +44,31 @@ jobs:
           --all
           --github-output "$GITHUB_OUTPUT"
 
+  canonical-command-e2e:
+    name: Canonical Kafka PostgreSQL E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install tasks-service dependencies
+        working-directory: services/tasks-service
+        run: uv sync --extra test --frozen
+      - name: Install vk-service dependencies
+        working-directory: services/vk-service
+        run: uv sync --extra test --frozen
+      - name: Run the real command path repeatedly
+        working-directory: services/vk-service
+        env:
+          P0_P2_E2E_REPEATS: '3'
+        run: |
+          uv run pytest -q --strict-markers \
+            -o addopts="--import-mode=importlib" \
+            -m integration \
+            tests/p0_p2/test_canonical_command_e2e.py
+
   vk-postgres-concurrency:
     name: Repeated VK PostgreSQL Races
     runs-on: ubuntu-latest
@@ -132,6 +157,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs:
+      - canonical-command-e2e
       - vk-postgres-concurrency
       - tasks-postgres-ordering
       - services
@@ -139,12 +165,13 @@ jobs:
     steps:
       - name: Enforce all concurrency and regression checks
         env:
+          E2E_RESULT: ${{ needs.canonical-command-e2e.result }}
           VK_RESULT: ${{ needs.vk-postgres-concurrency.result }}
           TASKS_RESULT: ${{ needs.tasks-postgres-ordering.result }}
           SERVICES_RESULT: ${{ needs.services.result }}
           MIGRATIONS_RESULT: ${{ needs.migrations.result }}
         run: |
           set -euo pipefail
-          for result in "$VK_RESULT" "$TASKS_RESULT" "$SERVICES_RESULT" "$MIGRATIONS_RESULT"; do
+          for result in "$E2E_RESULT" "$VK_RESULT" "$TASKS_RESULT" "$SERVICES_RESULT" "$MIGRATIONS_RESULT"; do
             [[ "$result" == "success" ]] || exit 1
           done
