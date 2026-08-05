@@ -10,10 +10,12 @@ from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import TaskAuditLog
+from app.modules.execution_events.task_run_lifecycle import (
+    mark_task_run_terminal,
+)
 from app.modules.outbox.service import OutboxService
 from app.modules.tasks.event_payloads import (
     task_identity_payload,
-    task_request_payload,
     task_snapshot,
     task_state_changed_payload,
 )
@@ -33,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 
 class TaskStateService:
-    """Handles task state transitions: resume, cancel, check, delete."""
+    """Handles task state transitions: resume, cancel, check, and delete."""
 
     def __init__(
         self,
@@ -113,7 +115,7 @@ class TaskStateService:
             aggregate_type="task",
             aggregate_id=str(task.id),
             dedupe_key=f"task.resumed:{task.id}:{task.execution_run_id}",
-            payload=task_request_payload(task, owner_user_id, run_meta),
+            payload=task_identity_payload(task, owner_user_id),
         )
         await self.command_publisher(
             self.session,
@@ -159,7 +161,14 @@ class TaskStateService:
                 task_id=task_id,
                 current_status=task.status,
             )
+
         task.status = "cancelled"
+        await mark_task_run_terminal(
+            self.session,
+            task_id=task.id,
+            run_id=task.execution_run_id,
+            status="cancelled",
+        )
         await self.repository.add_audit(
             TaskAuditLog(
                 owner_user_id=owner_user_id,
