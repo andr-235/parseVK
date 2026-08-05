@@ -132,8 +132,6 @@ jobs:
       SKIPPED: ${{ needs.resolve.outputs.skipped }}
       DEPLOY_RESULT: ${{ inputs.deploy_result }}
       DEPLOYMENT_METADATA_FILE: /opt/parseVK/.deployment-metadata.json
-      SMOKE_REPORT: ${{ runner.temp }}/post-deploy-verification.json
-      DEPLOYMENT_EVIDENCE: ${{ runner.temp }}/deployment-evidence.json
     steps:
       - name: Checkout trusted deployment observer
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -175,6 +173,8 @@ jobs:
       - name: Verify production HTTP entrypoints
         id: smoke
         continue-on-error: true
+        env:
+          SMOKE_REPORT: ${{ runner.temp }}/post-deploy-verification.json
         run: python3 .github/scripts/production/post_deploy_smoke.py --report "$SMOKE_REPORT"
 
       - name: Build deployment evidence
@@ -185,6 +185,8 @@ jobs:
           PREVIOUS_SHA: ${{ steps.state.outputs.previous_sha }}
           STATE_VALID: ${{ steps.state.outputs.state_valid }}
           SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
+          SMOKE_REPORT: ${{ runner.temp }}/post-deploy-verification.json
+          DEPLOYMENT_EVIDENCE: ${{ runner.temp }}/deployment-evidence.json
         run: |
           set -euo pipefail
           STATUS=failure
