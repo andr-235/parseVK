@@ -34,6 +34,7 @@ def build_source_set_snapshot(
             "sourceType": source.source_type,
             "externalId": source.external_id,
             "ownerId": source.owner_id,
+            "kind": "target",
             "sourceRevision": source.revision,
             "taskRevision": task.revision,
         }
