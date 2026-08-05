@@ -1,4 +1,4 @@
-"""Tests for Settings configuration: secret source validation and scheduler knobs."""
+"""Tests for Settings configuration: secret sources and scheduler knobs."""
 
 import subprocess
 import sys
@@ -17,19 +17,16 @@ SERVICE_DIR = str(Path(__file__).resolve().parents[1])
 
 
 def test_token_file_satisfies_validation():
-    """VK_SERVICE_TOKEN_FILE alone satisfies the secret requirement."""
     settings = Settings(vk_token="", token_file="/run/secrets/vk_token")
     assert settings.token_file == "/run/secrets/vk_token"
 
 
 def test_legacy_env_token_still_accepted():
-    """Legacy VK_SERVICE_VK_TOKEN remains a valid secret source."""
     settings = Settings(vk_token="legacy-token", token_file="")
     assert settings.vk_token == "legacy-token"
 
 
 def test_both_sources_accepted():
-    """File takes precedence but both being set is not a validation error."""
     settings = Settings(
         vk_token="legacy-token",
         token_file="/run/secrets/vk_token",
@@ -38,7 +35,6 @@ def test_both_sources_accepted():
 
 
 def test_missing_secret_source_raises_outside_pytest():
-    """Neither file nor env token is a configuration error (outside pytest)."""
     code = (
         "from app.core.config import Settings\n"
         "Settings(vk_token='', token_file='')\n"
@@ -53,25 +49,15 @@ def test_missing_secret_source_raises_outside_pytest():
     assert "VK_SERVICE_VK_TOKEN or VK_SERVICE_TOKEN_FILE" in result.stderr
 
 
-def test_canonical_cutover_is_disabled_by_default():
-    """PR06A must preserve the lossless legacy path until PR06B exists."""
+def test_runtime_has_no_legacy_consumer_flags():
     settings = Settings(vk_token="x", token_file="")
-    assert settings.vk_commands_consumer_enabled is False
-    assert settings.legacy_task_events_enabled is True
 
-
-def test_full_legacy_and_canonical_consumers_are_mutually_exclusive():
-    with pytest.raises(Exception, match="cannot be active together"):
-        Settings(
-            vk_token="x",
-            token_file="",
-            vk_commands_consumer_enabled=True,
-            legacy_task_events_enabled=True,
-        )
+    assert not hasattr(settings, "vk_commands_consumer_enabled")
+    assert not hasattr(settings, "legacy_task_events_enabled")
+    assert settings.kafka_consumer_enabled is True
 
 
 def test_scheduler_knob_defaults():
-    """Scheduler/retry settings carry sane defaults with bounds."""
     settings = Settings(vk_token="x", token_file="")
     assert settings.target_requests_per_second == 3.0
     assert settings.rate_limit_max_retries == 5
@@ -82,7 +68,6 @@ def test_scheduler_knob_defaults():
 
 
 def test_scheduler_knob_bounds_rejected():
-    """Non-positive scheduler knobs are rejected by pydantic fields."""
     with pytest.raises(Exception):
         Settings(vk_token="x", target_requests_per_second=0)
     with pytest.raises(Exception):
