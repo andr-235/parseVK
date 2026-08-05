@@ -1,21 +1,65 @@
 from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
 import pytest
+from parsevk_contracts.vk.commands import (
+    CommentSelection,
+    PostSelection,
+    SourceReference,
+    VkExecutionRequested,
+    VkSourceDemandRequest,
+)
+from sqlalchemy import select
 
 from app.domain.entities.provider_account import SYSTEM_VK_CAPABILITY
-from app.infrastructure.db.repositories.executions import SqlAlchemyExecutionRepository
+from app.infrastructure.db.models.source_collections import VkTaskRunBinding
+from app.infrastructure.db.repositories.canonical_cancellation import (
+    CanonicalCancellationRepository,
+)
+from app.infrastructure.db.repositories.canonical_commands import (
+    CanonicalVkCommandRepository,
+)
+from app.infrastructure.db.repositories.executions import (
+    SqlAlchemyExecutionRepository,
+)
 from app.infrastructure.db.repositories.provider_accounts import (
     SqlAlchemyProviderAccountRepository,
 )
-from app.infrastructure.db.repositories.source_collections import (
-    SqlAlchemySourceCollectionRepository,
-)
-from app.services.collection_fingerprint import build_collection_identity
 from app.tasks.execution_control import (
     ExecutionAttemptControl,
     ExecutionCancellationRequested,
     FencedVkApiClient,
     FenceLostError,
+)
+
+COMMAND = VkExecutionRequested(
+    task_id=10,
+    task_run_id=UUID("00000000-0000-0000-0000-000000000010"),
+    execution_id=UUID("10000000-0000-0000-0000-000000000010"),
+    owner_user_id="user-1",
+    demands=(
+        VkSourceDemandRequest(
+            demand_id=UUID("20000000-0000-0000-0000-000000000010"),
+            source=SourceReference(
+                source_id=UUID("30000000-0000-0000-0000-000000000010"),
+                provider="vk",
+                source_type="community",
+                external_id="1",
+                owner_id=-1,
+            ),
+        ),
+    ),
+    post_selection=PostSelection(
+        strategy="latestByPublishedAt",
+        limit_per_source=10,
+    ),
+    comment_selection=CommentSelection(
+        mode="all",
+        include_thread_replies=True,
+    ),
+    task_revision=1,
+    source_set_revision=1,
+    snapshot_sha256="1" * 64,
 )
 
 
@@ -28,30 +72,16 @@ async def _claim(db_session, *, expired=False):
             credential_version="version-1",
             capabilities=[SYSTEM_VK_CAPABILITY],
         )
-    demands = SqlAlchemySourceCollectionRepository(db_session)
-    if await demands.get_demand(task_id=10, run_id="run-10") is None:
-        identity = build_collection_identity(
-            provider_account_key="system-vk",
-            scope="selected",
-            mode="recent_posts",
-            group_ids=[1],
-            post_limit=10,
-            payload={},
+    binding = await db_session.scalar(
+        select(VkTaskRunBinding.id).where(
+            VkTaskRunBinding.command_execution_id == COMMAND.execution_id
         )
-        attachment = await demands.attach_demand(
-            task_id=10,
-            owner_user_id="user-1",
-            run_id="run-10",
-            provider_account_key=identity.provider_account_key,
-            source_key=identity.source_key,
-            fingerprint=identity.fingerprint,
-            scope="selected",
-            mode="recent_posts",
-            group_ids=[1],
-            post_limit=10,
-            plan_snapshot=identity.normalized_plan,
-        )
-        assert attachment is not None
+    )
+    if binding is None:
+        result = await CanonicalVkCommandRepository(
+            db_session
+        ).attach_command(COMMAND)
+        assert result.outcome == "created"
     return await SqlAlchemyExecutionRepository(db_session).claim_next(
         worker_id="same-worker",
         lease_expires_at=(
@@ -77,9 +107,11 @@ async def test_commit_guard_rejects_stale_attempt_with_same_worker_id(db_session
 async def test_commit_guard_reports_durable_cancellation(db_session):
     claim = await _claim(db_session)
     assert claim is not None
-    await SqlAlchemySourceCollectionRepository(db_session).request_cancellation(
-        task_id=10,
-        run_id="run-10",
+    await CanonicalCancellationRepository(db_session).request_cancellation(
+        task_id=COMMAND.task_id,
+        run_id=str(COMMAND.task_run_id),
+        execution_id=COMMAND.execution_id,
+        owner_user_id=COMMAND.owner_user_id,
         reason="task.cancelled",
     )
     control = ExecutionAttemptControl(claim=claim, session_factory=None)
