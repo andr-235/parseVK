@@ -4,10 +4,10 @@ from app.domain.entities.credentials import CredentialMaterial
 
 
 class SecretProviderError(RuntimeError):
-    """Raised when a configured secret source is missing or unreadable."""
+    """Raised when the mounted credential file is missing or unreadable."""
 
 
 class SecretProvider(Protocol):
-    """Port for loading provider credentials (mounted file or env)."""
+    """Port for loading provider credentials from the mounted file."""
 
     def load(self) -> CredentialMaterial: ...

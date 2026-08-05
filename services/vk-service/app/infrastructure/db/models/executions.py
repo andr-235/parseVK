@@ -26,7 +26,7 @@ def utcnow() -> datetime:
 class VkExecution(Base):
     __tablename__ = "vk_executions"
     __table_args__ = (
-        UniqueConstraint("task_id", "run_id", name="uq_vk_executions_task_run"),
+        Index("ix_vk_executions_task_run", "task_id", "run_id"),
         Index("ix_vk_executions_claimable", "status", "available_at"),
         Index("ix_vk_executions_task_id", "task_id"),
     )

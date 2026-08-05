@@ -1,157 +1,133 @@
 #!/usr/bin/env python3
-"""Validate JSON examples against the generated vk.execution.requested schema."""
+"""Validate flat, unversioned contract examples against generated schemas."""
+
 from __future__ import annotations
 
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 import jsonschema
+from parsevk_contracts.catalog import ContractCatalog
 from parsevk_contracts.errors import ContractError
-from parsevk_contracts.generation.json_schema import generate_json_schema
+from parsevk_contracts.sources import SOURCES_CATALOG
 from parsevk_contracts.validation import parse_for_consume
 from parsevk_contracts.vk import VK_CATALOG
-from parsevk_contracts.vk.commands import VK_EXECUTION_REQUESTED
+
+
+@dataclass(frozen=True, slots=True)
+class Boundary:
+    catalog: ContractCatalog
+    consumer: str
+
+
+BOUNDARIES = {
+    "sources.": Boundary(SOURCES_CATALOG, "vk-service"),
+    "vk.": Boundary(VK_CATALOG, "vk-service"),
+}
+
+
+def boundary_for(message_type: str) -> Boundary:
+    for prefix, boundary in BOUNDARIES.items():
+        if message_type.startswith(prefix):
+            return boundary
+    raise ValueError(f"No consume boundary configured for {message_type}")
 
 
 def main() -> int:
-    schema = generate_json_schema(VK_EXECUTION_REQUESTED)
     repo_root = Path(__file__).resolve().parents[2]
-    examples_dir = repo_root / "libs/py/contracts/examples" / "vk.execution.requested" / "v1"
+    contracts_root = repo_root / "libs/py/contracts"
+    examples_root = contracts_root / "examples"
+    schemas_root = contracts_root / "generated/json-schema"
 
-    validator = jsonschema.Draft202012Validator(
-        schema,
-        format_checker=jsonschema.FormatChecker(),
-    )
+    example_dirs = sorted(path for path in examples_root.iterdir() if path.is_dir())
+    if not example_dirs:
+        print("No contract example directories found", file=sys.stderr)
+        return 1
 
     failures = 0
+    validated = 0
 
-    def classify_fixture(path: Path) -> str | None:
-        for prefix in (
-            "valid-",
-            "consume-",
-            "invalid-schema-",
-            "invalid-contract-",
-        ):
-            if path.stem.startswith(prefix):
-                return prefix.removesuffix("-")
-        return None
+    for example_dir in example_dirs:
+        message_type = example_dir.name
+        schema_path = schemas_root / f"{message_type}.json"
+        examples = sorted(example_dir.glob("*.json"))
 
-    all_json: list[Path] = sorted(examples_dir.glob("*.json"))
-    known_prefixes = frozenset({"valid", "consume", "invalid-schema", "invalid-contract"})
-
-    for path in all_json:
-        prefix = classify_fixture(path)
-        if prefix is None:
-            print(f"  FAIL {path.name}: unknown prefix (expected one of: {', '.join(sorted(known_prefixes))})", file=sys.stderr)
-            failures += 1
-
-    valid_examples = sorted(examples_dir.glob("valid-*.json"))
-    consume_examples = sorted(examples_dir.glob("consume-*.json"))
-    invalid_schema_examples = sorted(examples_dir.glob("invalid-schema-*.json"))
-    invalid_contract_examples = sorted(examples_dir.glob("invalid-contract-*.json"))
-
-    if not valid_examples:
-        print("No valid examples found", file=sys.stderr)
-        return 1
-
-    if not consume_examples:
-        print("No consume examples found", file=sys.stderr)
-        return 1
-
-    if not invalid_schema_examples:
-        print("No invalid schema examples found", file=sys.stderr)
-        return 1
-
-    if not invalid_contract_examples:
-        print("No invalid contract examples found", file=sys.stderr)
-        return 1
-
-    # valid-* : schema accept + boundary accept
-    for example in valid_examples:
-        with open(example, encoding="utf-8") as fh:
-            instance = json.load(fh)
-        try:
-            validator.validate(instance)
-        except jsonschema.ValidationError as exc:
-            print(f"  FAIL {example.name}: {exc.message}", file=sys.stderr)
-            failures += 1
-            continue
-        try:
-            parse_for_consume(
-                VK_CATALOG,
-                consumer="vk-service",
-                topic="parsevk.vk.commands",
-                value=json.dumps(instance).encode("utf-8"),
+        if not schema_path.is_file():
+            print(
+                f"  FAIL {message_type}: missing schema {schema_path.name}",
+                file=sys.stderr,
             )
-        except ContractError as exc:
-            print(f"  FAIL {example.name}: valid example rejected by contract: {exc}", file=sys.stderr)
             failures += 1
             continue
-        print(f"  PASS {example.name}")
+        if not examples:
+            print(f"  FAIL {message_type}: no examples found", file=sys.stderr)
+            failures += 1
+            continue
 
-    # consume-* : schema reject + boundary accept
-    for example in consume_examples:
-        with open(example, encoding="utf-8") as fh:
-            instance = json.load(fh)
         try:
-            validator.validate(instance)
-            print(f"  FAIL {example.name}: expected schema rejection but got none", file=sys.stderr)
+            boundary = boundary_for(message_type)
+            contract = boundary.catalog.get(message_type)
+        except (ValueError, ContractError) as exc:
+            print(f"  FAIL {message_type}: {exc}", file=sys.stderr)
             failures += 1
             continue
-        except jsonschema.ValidationError:
-            pass
-        try:
-            parse_for_consume(
-                VK_CATALOG,
-                consumer="vk-service",
-                topic="parsevk.vk.commands",
-                value=json.dumps(instance).encode("utf-8"),
-            )
-        except ContractError as exc:
-            print(f"  FAIL {example.name}: consume example rejected by contract: {exc}", file=sys.stderr)
-            failures += 1
-            continue
-        print(f"  PASS {example.name}")
 
-    # invalid-schema-* : schema reject
-    for example in invalid_schema_examples:
-        with open(example, encoding="utf-8") as fh:
-            instance = json.load(fh)
-        try:
-            validator.validate(instance)
-            print(f"  FAIL {example.name}: expected schema error but got none", file=sys.stderr)
-            failures += 1
-        except jsonschema.ValidationError:
-            print(f"  PASS {example.name} (expectedly rejected by schema)")
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        validator = jsonschema.Draft202012Validator(
+            schema,
+            format_checker=jsonschema.FormatChecker(),
+        )
 
-    # invalid-contract-* : schema accept + boundary reject
-    for example in invalid_contract_examples:
-        with open(example, encoding="utf-8") as fh:
-            instance = json.load(fh)
-        try:
-            validator.validate(instance)
-        except jsonschema.ValidationError as exc:
-            print(f"  FAIL {example.name}: expected schema acceptance but got: {exc.message}", file=sys.stderr)
-            failures += 1
-            continue
-        try:
-            parse_for_consume(
-                VK_CATALOG,
-                consumer="vk-service",
-                topic="parsevk.vk.commands",
-                value=json.dumps(instance).encode("utf-8"),
-            )
-            print(f"  FAIL {example.name}: expected contract error but got none", file=sys.stderr)
-            failures += 1
-        except ContractError:
-            print(f"  PASS {example.name} (expectedly rejected by contract)")
+        for example_path in examples:
+            try:
+                instance = json.loads(example_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                print(f"  FAIL {example_path}: invalid JSON: {exc}", file=sys.stderr)
+                failures += 1
+                continue
+
+            if instance.get("messageType") != message_type:
+                print(
+                    f"  FAIL {example_path}: messageType must equal {message_type}",
+                    file=sys.stderr,
+                )
+                failures += 1
+                continue
+            if "schemaVersion" in instance:
+                print(
+                    f"  FAIL {example_path}: schemaVersion is forbidden",
+                    file=sys.stderr,
+                )
+                failures += 1
+                continue
+
+            try:
+                validator.validate(instance)
+                parse_for_consume(
+                    boundary.catalog,
+                    consumer=boundary.consumer,
+                    topic=contract.topic,
+                    value=json.dumps(instance).encode("utf-8"),
+                )
+            except (jsonschema.ValidationError, ContractError) as exc:
+                detail = exc.message if isinstance(exc, jsonschema.ValidationError) else str(exc)
+                print(f"  FAIL {example_path}: {detail}", file=sys.stderr)
+                failures += 1
+                continue
+
+            print(f"  PASS {example_path.relative_to(examples_root)}")
+            validated += 1
 
     if failures:
         print(f"\n{failures} validation failure(s)", file=sys.stderr)
         return 1
+    if not validated:
+        print("No examples were validated", file=sys.stderr)
+        return 1
 
-    print("All example fixtures validated successfully")
+    print(f"Validated {validated} unversioned contract example(s)")
     return 0
 
 

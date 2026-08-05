@@ -3,7 +3,9 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import exists, select
 
 from app.infrastructure.db.models.executions import VkExecutionAttempt
-from app.infrastructure.db.repositories.executions import SqlAlchemyExecutionRepository
+from app.infrastructure.db.repositories.canonical_executions import (
+    CanonicalExecutionRepository,
+)
 from app.infrastructure.metrics.execution_metrics import (
     observe_attempt_released,
     observe_attempt_started,
@@ -19,7 +21,7 @@ class ExecutionStore:
     async def claim(self, *, worker_id: str, lease_expires_at: datetime):
         async with self.session_factory() as session:
             async with session.begin():
-                repository = SqlAlchemyExecutionRepository(session)
+                repository = CanonicalExecutionRepository(session)
                 claim = await repository.claim_next(
                     worker_id=worker_id,
                     lease_expires_at=lease_expires_at,
@@ -85,7 +87,7 @@ class ExecutionStore:
     async def _call(self, method_name: str, **kwargs):
         async with self.session_factory() as session:
             async with session.begin():
-                repository = SqlAlchemyExecutionRepository(session)
+                repository = CanonicalExecutionRepository(session)
                 return await getattr(repository, method_name)(**kwargs)
 
 

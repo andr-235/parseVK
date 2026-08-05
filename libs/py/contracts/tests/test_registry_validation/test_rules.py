@@ -1,4 +1,4 @@
-"""Tests for registry metadata rules (contract-level validation)."""
+"""Tests for canonical registry metadata rules."""
 
 from __future__ import annotations
 
@@ -12,208 +12,63 @@ class SamplePayload(ContractModel):
     value: int
 
 
+def validate_contract(**overrides):
+    values = {
+        "message_type": "test.event",
+        "payload_model": SamplePayload,
+        "topic": "test.topic",
+        "producers": frozenset({"producer"}),
+        "consumers": frozenset({"consumer"}),
+        "partition_key": PartitionKeySpec(paths=("entityId",)),
+    }
+    values.update(overrides)
+    contract = MessageContract(**values)
+    return validate_registry(ContractCatalog.from_contracts((contract,)))
+
+
 class TestRules:
     def test_empty_message_type_fails(self) -> None:
-        contract = MessageContract(
-            message_type="",
-            schema_version=1,
-            payload_model=SamplePayload,
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("entityId",)),
+        assert any(
+            item.code == "empty_message_type"
+            for item in validate_contract(message_type="")
         )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("empty_message_type" in v.code for v in violations)
-
-    def test_schema_version_zero_fails(self) -> None:
-        contract = MessageContract(
-            message_type="test.event",
-            schema_version=0,
-            payload_model=SamplePayload,
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("entityId",)),
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("invalid_schema_version" in v.code for v in violations)
-
-    def test_schema_version_negative_fails(self) -> None:
-        contract = MessageContract(
-            message_type="test.event",
-            schema_version=-1,
-            payload_model=SamplePayload,
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("entityId",)),
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("invalid_schema_version" in v.code for v in violations)
-
-    def test_schema_version_bool_fails(self) -> None:
-        contract = MessageContract(
-            message_type="test.event",
-            schema_version=True,  # type: ignore[arg-type]
-            payload_model=SamplePayload,
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("entityId",)),
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("invalid_schema_version" in v.code for v in violations)
 
     def test_empty_topic_fails(self) -> None:
-        contract = MessageContract(
-            message_type="test.event",
-            schema_version=1,
-            payload_model=SamplePayload,
-            topic="",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("entityId",)),
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("empty_topic" in v.code for v in violations)
+        assert any(item.code == "empty_topic" for item in validate_contract(topic=""))
 
     def test_empty_producers_fails(self) -> None:
-        contract = MessageContract(
-            message_type="test.event",
-            schema_version=1,
-            payload_model=SamplePayload,
-            topic="test.topic",
-            producers=frozenset(),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("entityId",)),
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("empty_producers" in v.code for v in violations)
+        violations = validate_contract(producers=frozenset())
+        assert any(item.code == "empty_producers" for item in violations)
 
     def test_empty_consumers_fails(self) -> None:
-        contract = MessageContract(
-            message_type="test.event",
-            schema_version=1,
-            payload_model=SamplePayload,
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset(),
-            partition_key=PartitionKeySpec(paths=("entityId",)),
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("empty_consumers" in v.code for v in violations)
+        violations = validate_contract(consumers=frozenset())
+        assert any(item.code == "empty_consumers" for item in violations)
 
     def test_empty_producer_name_fails(self) -> None:
-        contract = MessageContract(
-            message_type="test.event",
-            schema_version=1,
-            payload_model=SamplePayload,
-            topic="test.topic",
-            producers=frozenset({""}),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("entityId",)),
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("empty_producer_name" in v.code for v in violations)
+        violations = validate_contract(producers=frozenset({""}))
+        assert any(item.code == "empty_producer_name" for item in violations)
 
-    def test_payload_model_not_contract_model_fails(self) -> None:
+    def test_invalid_payload_model_fails(self) -> None:
         class FakeModel:
             pass
 
-        contract = MessageContract(
-            message_type="test.event",
-            schema_version=1,
-            payload_model=FakeModel,  # type: ignore[arg-type]
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("entityId",)),
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("invalid_payload_model" in v.code for v in violations)
-
-    def test_unsupported_compatibility_fails(self) -> None:
-        contract = MessageContract(
-            message_type="test.event",
-            schema_version=1,
-            payload_model=SamplePayload,
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("entityId",)),
-            compatibility="forward",  # type: ignore[arg-type]
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("unsupported_compatibility" in v.code for v in violations)
+        violations = validate_contract(payload_model=FakeModel)
+        assert any(item.code == "invalid_payload_model" for item in violations)
 
     def test_unsupported_causation_policy_fails(self) -> None:
-        contract = MessageContract(
-            message_type="test.event",
-            schema_version=1,
-            payload_model=SamplePayload,
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("entityId",)),
-            causation_policy="invalid",  # type: ignore[arg-type]
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("unsupported_causation_policy" in v.code for v in violations)
+        violations = validate_contract(causation_policy="invalid")
+        assert any(item.code == "unsupported_causation_policy" for item in violations)
 
     def test_missing_partition_key_fails(self) -> None:
-        contract = MessageContract(
-            message_type="test.event",
-            schema_version=1,
-            payload_model=SamplePayload,
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=None,
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("missing_partition_key" in v.code for v in violations)
-
-    def test_empty_partition_key_paths_fails(self) -> None:
-        spec = PartitionKeySpec(paths=("entityId",))
-        object.__setattr__(spec, "paths", ())
-        contract = MessageContract(
-            message_type="test.event",
-            schema_version=1,
-            payload_model=SamplePayload,
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=spec,
-        )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("empty_partition_key_paths" in v.code for v in violations)
+        violations = validate_contract(partition_key=None)
+        assert any(item.code == "missing_partition_key" for item in violations)
 
     def test_correlation_required_without_path_fails(self) -> None:
-        contract = MessageContract(
-            message_type="test.event",
-            schema_version=1,
-            payload_model=SamplePayload,
-            topic="test.topic",
-            producers=frozenset({"producer"}),
-            consumers=frozenset({"consumer"}),
-            partition_key=PartitionKeySpec(paths=("entityId",)),
+        violations = validate_contract(
             correlation_required=True,
             correlation_path=None,
         )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert any("missing_correlation_path" in v.code for v in violations)
+        assert any(item.code == "missing_correlation_path" for item in violations)
+
+    def test_valid_contract_has_no_violations(self) -> None:
+        assert validate_contract(correlation_path="entityId") == ()

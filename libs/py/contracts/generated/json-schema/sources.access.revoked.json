@@ -1,0 +1,123 @@
+{
+  "$defs": {
+    "SourceAccessRevoked": {
+      "additionalProperties": false,
+      "properties": {
+        "accessScopeId": {
+          "format": "uuid",
+          "title": "Accessscopeid",
+          "type": "string"
+        },
+        "createdByUserId": {
+          "format": "uuid",
+          "title": "Createdbyuserid",
+          "type": "string"
+        },
+        "externalId": {
+          "pattern": "^[1-9][0-9]*$",
+          "title": "Externalid",
+          "type": "string"
+        },
+        "ownerId": {
+          "exclusiveMaximum": 0,
+          "title": "Ownerid",
+          "type": "integer"
+        },
+        "provider": {
+          "const": "vk",
+          "title": "Provider",
+          "type": "string"
+        },
+        "revision": {
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "sourceId": {
+          "format": "uuid",
+          "title": "Sourceid",
+          "type": "string"
+        },
+        "sourceType": {
+          "const": "community",
+          "title": "Sourcetype",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sourceId",
+        "provider",
+        "sourceType",
+        "externalId",
+        "ownerId",
+        "accessScopeId",
+        "createdByUserId",
+        "revision"
+      ],
+      "title": "SourceAccessRevoked",
+      "type": "object"
+    }
+  },
+  "$id": "urn:parsevk:contract:sources.access.revoked",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Schema for sources.access.revoked",
+  "properties": {
+    "causationId": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Causationid"
+    },
+    "correlationId": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Correlationid"
+    },
+    "messageId": {
+      "format": "uuid",
+      "title": "Messageid",
+      "type": "string"
+    },
+    "messageType": {
+      "const": "sources.access.revoked"
+    },
+    "occurredAt": {
+      "format": "date-time",
+      "title": "Occurredat",
+      "type": "string"
+    },
+    "payload": {
+      "$ref": "#/$defs/SourceAccessRevoked"
+    },
+    "producer": {
+      "enum": [
+        "tasks-service"
+      ]
+    }
+  },
+  "required": [
+    "messageId",
+    "messageType",
+    "occurredAt",
+    "producer",
+    "payload"
+  ],
+  "title": "sources.access.revoked",
+  "type": "object"
+}

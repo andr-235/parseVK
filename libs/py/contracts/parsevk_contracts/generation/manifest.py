@@ -1,4 +1,4 @@
-"""Manifest generation for contract packages."""
+"""Manifest generation for semantic message contracts."""
 
 from __future__ import annotations
 
@@ -21,37 +21,31 @@ def generate_manifest(
     catalog: ContractCatalog,
     metadata: ManifestMetadata | None = None,
 ) -> dict[str, object]:
-    """Generate a contract manifest listing all registered contracts."""
     metadata = metadata or ManifestMetadata()
-    contracts = [
-        _contract_entry(c)
-        for c in sorted(
-            catalog.contracts,
-            key=lambda c: (c.message_type, c.schema_version),
-        )
-    ]
     return {
-        "manifestVersion": 1,
         "package": {
             "name": metadata.package,
             "version": metadata.package_version,
             "repository": metadata.repository,
         },
-        "contracts": contracts,
+        "contracts": [
+            _contract_entry(contract)
+            for contract in sorted(
+                catalog.contracts,
+                key=lambda item: item.message_type,
+            )
+        ],
     }
 
 
 def _contract_entry(contract: MessageContract) -> dict[str, object]:
-    """Build a manifest entry for a single contract."""
     entry: dict[str, object] = {
         "messageType": contract.message_type,
-        "schemaVersion": contract.schema_version,
         "topic": contract.topic,
         "producers": sorted(contract.producers),
         "consumers": sorted(contract.consumers),
         "correlationRequired": contract.correlation_required,
         "causationPolicy": contract.causation_policy,
-        "compatibility": contract.compatibility,
     }
     if contract.correlation_path is not None:
         entry["correlationPath"] = contract.correlation_path
@@ -68,9 +62,12 @@ def write_manifest(
     output_dir: Path,
     metadata: ManifestMetadata | None = None,
 ) -> Path:
-    """Generate and write the contract manifest."""
-    manifest = generate_manifest(catalog, metadata)
     path = output_dir / "manifest.json"
-    text = json.dumps(manifest, indent=2, ensure_ascii=False, sort_keys=True) + "\n"
-    path.write_bytes(text.encode("utf-8"))
+    text = json.dumps(
+        generate_manifest(catalog, metadata),
+        indent=2,
+        ensure_ascii=False,
+        sort_keys=True,
+    ) + "\n"
+    path.write_text(text, encoding="utf-8")
     return path

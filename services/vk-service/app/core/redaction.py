@@ -7,49 +7,46 @@ _REGISTERED_SECRETS: set[str] = set()
 
 
 def register_secret(secret: str) -> None:
-    """Register a runtime-loaded secret (e.g. from a mounted file) for redaction."""
+    """Register a runtime-loaded secret for redaction."""
     if secret and len(secret) > 4:
         _REGISTERED_SECRETS.add(secret)
 
 
 def redact_secrets(text: Any) -> str:
-    """
-    Universally redacts sensitive keys and values from logs, errors, and JSON responses.
-    """
+    """Redact sensitive values from logs, errors, and JSON responses."""
     if text is None:
         return ""
-    
     text_str = str(text)
     if not text_str:
         return text_str
 
-    secrets_to_redact = []
-    
-    # Collect all configured sensitive variables
-    if hasattr(settings, "vk_token") and settings.vk_token:
-        secrets_to_redact.append(settings.vk_token)
-    if hasattr(settings, "ok_access_token") and settings.ok_access_token:
-        secrets_to_redact.append(settings.ok_access_token)
-    if hasattr(settings, "ok_application_secret_key") and settings.ok_application_secret_key:
-        secrets_to_redact.append(settings.ok_application_secret_key)
-    if hasattr(settings, "internal_service_token") and settings.internal_service_token:
-        secrets_to_redact.append(settings.internal_service_token)
-
-    # Redact runtime-registered secrets (mounted file credentials, etc.)
+    secrets_to_redact = [
+        value
+        for value in (
+            settings.ok_access_token,
+            settings.ok_application_secret_key,
+            settings.internal_service_token,
+        )
+        if value
+    ]
     secrets_to_redact.extend(_REGISTERED_SECRETS)
 
-    # Redact dynamic sig or access token formats that might match typical base64/hex tokens
     for secret in secrets_to_redact:
-        if secret and len(secret) > 4:
+        if len(secret) > 4:
             text_str = text_str.replace(secret, "<redacted>")
 
-    # Redact Authorization header values
-    text_str = re.sub(r"(?i)(authorization:\s*)[^\r\n]+", r"\1<redacted>", text_str)
-    
-    # Redact Cookies
-    text_str = re.sub(r"(?i)(cookie:\s*)[^\r\n]+", r"\1<redacted>", text_str)
-
-    # Redact URL parameters commonly housing keys
-    text_str = re.sub(r"(?i)(access_token|session_key|sig|token)=[^&\s]+", r"\1=<redacted>", text_str)
-
-    return text_str
+    text_str = re.sub(
+        r"(?i)(authorization:\s*)[^\r\n]+",
+        r"\1<redacted>",
+        text_str,
+    )
+    text_str = re.sub(
+        r"(?i)(cookie:\s*)[^\r\n]+",
+        r"\1<redacted>",
+        text_str,
+    )
+    return re.sub(
+        r"(?i)(access_token|session_key|sig|token)=[^&\s]+",
+        r"\1=<redacted>",
+        text_str,
+    )

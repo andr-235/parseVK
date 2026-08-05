@@ -1,4 +1,4 @@
-"""AsyncAPI 3.1 generation for the contract catalog."""
+"""AsyncAPI 3.1 generation for semantic message contracts."""
 
 from __future__ import annotations
 
@@ -10,105 +10,76 @@ from parsevk_contracts.catalog import ContractCatalog, MessageContract
 
 
 def _message_name(contract: MessageContract) -> str:
-    """Generate a versioned message component name."""
-    return f"{contract.message_type.replace('.', '_')}_v{contract.schema_version}"
+    return contract.message_type.replace(".", "_")
 
 
 def generate_asyncapi(catalog: ContractCatalog) -> dict[str, object]:
-    """Generate an AsyncAPI 3.1 document from the contract catalog."""
     channels: dict[str, dict[str, Any]] = {}
     messages: dict[str, dict[str, Any]] = {}
     operations: dict[str, dict[str, Any]] = {}
-
-    for contract in sorted(
-        catalog.contracts,
-        key=lambda c: (c.message_type, c.schema_version),
-    ):
-        msg_name = _message_name(contract)
-
-        messages[msg_name] = {
+    for contract in sorted(catalog.contracts, key=lambda item: item.message_type):
+        message_name = _message_name(contract)
+        messages[message_name] = {
             "name": contract.message_type,
             "title": contract.message_type,
-            "summary": f"{contract.message_type} v{contract.schema_version}",
+            "summary": contract.message_type,
             "contentType": "application/json",
             "payload": {
-                "$ref": f"../json-schema/{contract.message_type}/{contract.schema_version}.json",
+                "$ref": f"../json-schema/{contract.message_type}.json",
             },
         }
-
         channel_name = contract.topic.replace(".", "_")
-        if channel_name not in channels:
-            channels[channel_name] = {
-                "address": contract.topic,
-                "messages": {},
-            }
-        channels[channel_name]["messages"][msg_name] = {
-            "$ref": f"#/components/messages/{msg_name}",
+        channel = channels.setdefault(
+            channel_name,
+            {"address": contract.topic, "messages": {}},
+        )
+        channel["messages"][message_name] = {
+            "$ref": f"#/components/messages/{message_name}",
         }
-
-        # Operations per producer
+        message_ref = f"#/channels/{channel_name}/messages/{message_name}"
         for producer in sorted(contract.producers):
-            op_name_send = f"{producer.replace('-', '_')}_send_{msg_name}"
-            operations[op_name_send] = {
+            operation = f"{producer.replace('-', '_')}_send_{message_name}"
+            operations[operation] = {
                 "action": "send",
-                "channel": {
-                    "$ref": f"#/channels/{channel_name}",
-                },
-                "messages": [
-                    {"$ref": f"#/channels/{channel_name}/messages/{msg_name}"},
-                ],
+                "channel": {"$ref": f"#/channels/{channel_name}"},
+                "messages": [{"$ref": message_ref}],
             }
-
-        # Operations per consumer
         for consumer in sorted(contract.consumers):
-            op_name_recv = f"{consumer.replace('-', '_')}_receive_{msg_name}"
-            operations[op_name_recv] = {
+            operation = f"{consumer.replace('-', '_')}_receive_{message_name}"
+            operations[operation] = {
                 "action": "receive",
-                "channel": {
-                    "$ref": f"#/channels/{channel_name}",
-                },
-                "messages": [
-                    {"$ref": f"#/channels/{channel_name}/messages/{msg_name}"},
-                ],
+                "channel": {"$ref": f"#/channels/{channel_name}"},
+                "messages": [{"$ref": message_ref}],
             }
-
-    result: dict[str, object] = {
+    return {
         "asyncapi": "3.1.0",
         "info": {
             "title": "ParseVK Contracts",
             "version": PACKAGE_VERSION,
-            "description": "AsyncAPI specification for ParseVK Kafka message contracts",
+            "description": "ParseVK Kafka message contracts",
         },
         "defaultContentType": "application/json",
         "channels": channels,
         "operations": operations,
-        "components": {
-            "messages": messages,
-        },
+        "components": {"messages": messages},
     }
-    return result
 
 
-def write_asyncapi(
-    catalog: ContractCatalog,
-    output_dir: Path,
-) -> Path:
-    """Generate and write the AsyncAPI YAML file.
-
-    Returns the path to the written file.
-    """
+def write_asyncapi(catalog: ContractCatalog, output_dir: Path) -> Path:
     asyncapi_dir = output_dir / "asyncapi"
     asyncapi_dir.mkdir(parents=True, exist_ok=True)
     path = asyncapi_dir / "parsevk-contracts.yaml"
-
     try:
         import yaml
     except ImportError as exc:
         raise RuntimeError(
             "AsyncAPI generation requires parsevk-contracts[generation]"
         ) from exc
-
-    document = generate_asyncapi(catalog)
-    text = yaml.safe_dump(document, default_flow_style=False, sort_keys=False, allow_unicode=True)
-    path.write_bytes(text.encode("utf-8"))
+    text = yaml.safe_dump(
+        generate_asyncapi(catalog),
+        default_flow_style=False,
+        sort_keys=False,
+        allow_unicode=True,
+    )
+    path.write_text(text, encoding="utf-8")
     return path

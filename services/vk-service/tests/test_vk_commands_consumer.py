@@ -2,6 +2,7 @@
 
 import json
 import sys
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -16,14 +17,13 @@ from _service_path import use_service_path
 use_service_path()
 
 from parsevk_contracts.validation import prepare_for_publish
-from parsevk_contracts.vk.commands import (
-    CATALOG as VK_COMMAND_CATALOG,
-)
+from parsevk_contracts.vk.commands import CATALOG as VK_COMMAND_CATALOG
 from parsevk_contracts.vk.commands import (
     CommentSelection,
     PostSelection,
     SourceReference,
-    VkExecutionRequestedV2,
+    VkExecutionCancelRequested,
+    VkExecutionRequested,
     VkSourceDemandRequest,
 )
 
@@ -31,9 +31,15 @@ import app.tasks.vk_commands_consumer as consumer_module
 from app.tasks.vk_commands_consumer import VkExecutionCommandsConsumer
 
 
+class FakeSession:
+    @asynccontextmanager
+    async def begin(self):
+        yield self
+
+
 class SessionContext:
     async def __aenter__(self):
-        return SimpleNamespace()
+        return FakeSession()
 
     async def __aexit__(self, exc_type, exc, tb):
         return False
@@ -43,11 +49,11 @@ def session_factory():
     return SessionContext()
 
 
-def command_value():
+def execution_value():
     source_id = uuid4()
     task_run_id = uuid4()
     execution_id = uuid4()
-    command = VkExecutionRequestedV2(
+    command = VkExecutionRequested(
         task_id=10,
         task_run_id=task_run_id,
         execution_id=execution_id,
@@ -79,7 +85,6 @@ def command_value():
     prepared = prepare_for_publish(
         VK_COMMAND_CATALOG,
         message_type="vk.execution.requested",
-        schema_version=2,
         producer="tasks-service",
         message_id=uuid4(),
         occurred_at=datetime.now(UTC),
@@ -90,50 +95,175 @@ def command_value():
     return command, prepared.value
 
 
+def cancellation_value(command: VkExecutionRequested):
+    cancellation = VkExecutionCancelRequested(
+        task_id=command.task_id,
+        task_run_id=command.task_run_id,
+        execution_id=command.execution_id,
+        owner_user_id=command.owner_user_id,
+        reason="user_cancelled",
+    )
+    prepared = prepare_for_publish(
+        VK_COMMAND_CATALOG,
+        message_type="vk.execution.cancel_requested",
+        producer="tasks-service",
+        message_id=uuid4(),
+        occurred_at=datetime.now(UTC),
+        correlation_id=command.execution_id,
+        causation_id=None,
+        payload=cancellation.model_dump(mode="python"),
+    )
+    return cancellation, prepared.value
+
+
 @pytest.mark.asyncio
-async def test_valid_command_is_translated_after_contract_validation(monkeypatch):
-    handler = SimpleNamespace(handle=AsyncMock())
+async def test_valid_command_attaches_source_demands_directly(monkeypatch):
+    inbox = SimpleNamespace(
+        is_processed=AsyncMock(return_value=False),
+        mark_processed=AsyncMock(),
+    )
+    attachment = SimpleNamespace(collection_created=True)
+    repository = SimpleNamespace(
+        attach_command=AsyncMock(
+            return_value=SimpleNamespace(
+                outcome="created",
+                attachments=(attachment,),
+                reason=None,
+            )
+        ),
+        emit_rejection=AsyncMock(),
+        request_cancellation=AsyncMock(),
+    )
     monkeypatch.setattr(
         consumer_module,
-        "get_task_events_handler",
-        lambda session: handler,
+        "SqlAlchemyTaskEventsRepository",
+        lambda session: inbox,
     )
-    command, value = command_value()
-    consumer = VkExecutionCommandsConsumer(
-        session_factory=session_factory
+    monkeypatch.setattr(
+        consumer_module,
+        "CanonicalVkCommandRepository",
+        lambda session: repository,
     )
+    command, value = execution_value()
 
-    await consumer.handle_message(value)
+    await VkExecutionCommandsConsumer(session_factory=session_factory).handle_message(value)
 
-    event = handler.handle.await_args.args[0]
-    assert event.event_type == "task.created"
-    assert event.payload["taskId"] == "10"
-    assert event.payload["runId"] == str(command.task_run_id)
-    assert event.payload["groupIds"] == [777]
-    assert event.payload["postLimit"] == 15
+    repository.attach_command.assert_awaited_once_with(command)
+    repository.emit_rejection.assert_not_awaited()
+    inbox.mark_processed.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_cancellation_command_uses_canonical_repository(monkeypatch):
+    inbox = SimpleNamespace(
+        is_processed=AsyncMock(return_value=False),
+        mark_processed=AsyncMock(),
+    )
+    repository = SimpleNamespace(
+        attach_command=AsyncMock(),
+        emit_rejection=AsyncMock(),
+        request_cancellation=AsyncMock(return_value=SimpleNamespace()),
+    )
+    monkeypatch.setattr(
+        consumer_module,
+        "SqlAlchemyTaskEventsRepository",
+        lambda session: inbox,
+    )
+    monkeypatch.setattr(
+        consumer_module,
+        "CanonicalVkCommandRepository",
+        lambda session: repository,
+    )
+    command, _ = execution_value()
+    cancellation, value = cancellation_value(command)
+
+    await VkExecutionCommandsConsumer(session_factory=session_factory).handle_message(value)
+
+    repository.request_cancellation.assert_awaited_once_with(cancellation)
+    repository.attach_command.assert_not_awaited()
+    inbox.mark_processed.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_orphan_cancellation_is_retried_not_marked_processed(monkeypatch):
+    inbox = SimpleNamespace(
+        is_processed=AsyncMock(return_value=False),
+        mark_processed=AsyncMock(),
+    )
+    repository = SimpleNamespace(
+        attach_command=AsyncMock(),
+        emit_rejection=AsyncMock(),
+        request_cancellation=AsyncMock(return_value=None),
+    )
+    monkeypatch.setattr(
+        consumer_module,
+        "SqlAlchemyTaskEventsRepository",
+        lambda session: inbox,
+    )
+    monkeypatch.setattr(
+        consumer_module,
+        "CanonicalVkCommandRepository",
+        lambda session: repository,
+    )
+    command, _ = execution_value()
+    _, value = cancellation_value(command)
+
+    with pytest.raises(RuntimeError, match="no matching TaskRun binding"):
+        await VkExecutionCommandsConsumer(session_factory=session_factory).handle_message(
+            value
+        )
+
+    inbox.mark_processed.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_duplicate_inbox_message_is_not_processed_again(monkeypatch):
+    inbox = SimpleNamespace(
+        is_processed=AsyncMock(return_value=True),
+        mark_processed=AsyncMock(),
+    )
+    repository = SimpleNamespace(
+        attach_command=AsyncMock(),
+        emit_rejection=AsyncMock(),
+        request_cancellation=AsyncMock(),
+    )
+    monkeypatch.setattr(
+        consumer_module,
+        "SqlAlchemyTaskEventsRepository",
+        lambda session: inbox,
+    )
+    monkeypatch.setattr(
+        consumer_module,
+        "CanonicalVkCommandRepository",
+        lambda session: repository,
+    )
+    _, value = execution_value()
+
+    await VkExecutionCommandsConsumer(session_factory=session_factory).handle_message(value)
+
+    repository.attach_command.assert_not_awaited()
+    inbox.mark_processed.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_command_without_owner_is_rejected():
-    _, value = command_value()
+    _, value = execution_value()
     payload = json.loads(value)
     del payload["payload"]["ownerUserId"]
-    consumer = VkExecutionCommandsConsumer(
-        session_factory=session_factory
-    )
 
     with pytest.raises(Exception, match="ownerUserId"):
-        await consumer.handle_message(json.dumps(payload).encode("utf-8"))
+        await VkExecutionCommandsConsumer(session_factory=session_factory).handle_message(
+            json.dumps(payload).encode("utf-8")
+        )
 
 
 @pytest.mark.asyncio
 async def test_command_with_wrong_correlation_is_rejected():
-    _, value = command_value()
+    _, value = execution_value()
     payload = json.loads(value)
     payload["correlationId"] = str(uuid4())
-    consumer = VkExecutionCommandsConsumer(
-        session_factory=session_factory
-    )
 
     with pytest.raises(Exception, match="correlationId"):
-        await consumer.handle_message(json.dumps(payload).encode("utf-8"))
+        await VkExecutionCommandsConsumer(session_factory=session_factory).handle_message(
+            json.dumps(payload).encode("utf-8")
+        )

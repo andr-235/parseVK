@@ -1,8 +1,10 @@
 import asyncio
 from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 import asyncpg
 import pytest
+from _canonical_runtime_helpers import make_command
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from testcontainers.core.container import DockerContainer
@@ -12,16 +14,15 @@ from app.domain.repositories.checkpoint import CheckpointData
 from app.infrastructure.db.base import Base
 from app.infrastructure.db.models.executions import VkExecutionAttempt
 from app.infrastructure.db.models.outbox import OutboxEvent
+from app.infrastructure.db.repositories.canonical_commands import (
+    CanonicalVkCommandRepository,
+)
 from app.infrastructure.db.repositories.checkpoint import (
     SqlAlchemyIngestionCheckpointStore,
 )
 from app.infrastructure.db.repositories.provider_accounts import (
     SqlAlchemyProviderAccountRepository,
 )
-from app.infrastructure.db.repositories.source_collections import (
-    SqlAlchemySourceCollectionRepository,
-)
-from app.services.collection_fingerprint import build_collection_identity
 from app.services.ingestion.result import IngestionResult
 from app.tasks.execution_control import ExecutionAttemptControl
 from app.tasks.execution_runner import ExecutionAttemptRunner
@@ -101,30 +102,15 @@ async def test_postgres_runner_heartbeats_and_recovers_after_committed_page(
                     credential_version="version-1",
                     capabilities=[SYSTEM_VK_CAPABILITY],
                 )
-                identity = build_collection_identity(
-                    provider_account_key="system-vk",
-                    scope="selected",
-                    mode="recent_posts",
-                    group_ids=[1],
-                    post_limit=10,
-                    payload={},
-                )
-                attachment = await SqlAlchemySourceCollectionRepository(
-                    session
-                ).attach_demand(
+                command = make_command(
                     task_id=2860,
-                    owner_user_id="user-1",
-                    run_id="run-2860",
-                    provider_account_key=identity.provider_account_key,
-                    source_key=identity.source_key,
-                    fingerprint=identity.fingerprint,
-                    scope="selected",
-                    mode="recent_posts",
-                    group_ids=[1],
-                    post_limit=10,
-                    plan_snapshot=identity.normalized_plan,
+                    source_id=uuid4(),
+                    external_id=1,
                 )
-                assert attachment is not None
+                attachment = await CanonicalVkCommandRepository(
+                    session
+                ).attach_command(command)
+                assert attachment.outcome == "created"
 
         execution_store = ExecutionStore(session_factory)
         first = await execution_store.claim(

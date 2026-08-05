@@ -1,7 +1,8 @@
-"""Schema generation (JSON Schema, manifest, AsyncAPI)."""
+"""Schema generation entrypoint."""
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from parsevk_contracts.catalog import ContractCatalog
@@ -14,23 +15,21 @@ def generate_all(
     catalog: ContractCatalog,
     output_dir: str | Path = "generated",
 ) -> dict[str, list[str]]:
-    """Run all generators and return paths of created files."""
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
+    schema_dir = output_path / "json-schema"
+    if schema_dir.exists():
+        shutil.rmtree(schema_dir)
+    schema_dir.mkdir(parents=True)
     generated: dict[str, list[str]] = {
         "json_schema": [],
         "manifest": [],
         "asyncapi": [],
     }
-
     for contract in catalog.contracts:
-        path = write_json_schema(contract, output_path / "json-schema")
-        generated["json_schema"].append(str(path))
-
-    manifest_path = write_manifest(catalog, output_path)
-    generated["manifest"].append(str(manifest_path))
-
-    asyncapi_path = write_asyncapi(catalog, output_path)
-    generated["asyncapi"].append(str(asyncapi_path))
-
+        generated["json_schema"].append(
+            str(write_json_schema(contract, schema_dir))
+        )
+    generated["manifest"].append(str(write_manifest(catalog, output_path)))
+    generated["asyncapi"].append(str(write_asyncapi(catalog, output_path)))
     return generated

@@ -1,0 +1,90 @@
+{
+  "$defs": {
+    "VkExecutionCancelRequested": {
+      "additionalProperties": false,
+      "description": "Cancel one immutable TaskRun execution.",
+      "properties": {
+        "executionId": {
+          "format": "uuid",
+          "title": "Executionid",
+          "type": "string"
+        },
+        "ownerUserId": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Owneruserid",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "taskId": {
+          "exclusiveMinimum": 0,
+          "title": "Taskid",
+          "type": "integer"
+        },
+        "taskRunId": {
+          "format": "uuid",
+          "title": "Taskrunid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "taskId",
+        "taskRunId",
+        "executionId",
+        "ownerUserId",
+        "reason"
+      ],
+      "title": "VkExecutionCancelRequested",
+      "type": "object"
+    }
+  },
+  "$id": "urn:parsevk:contract:vk.execution.cancel_requested",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Schema for vk.execution.cancel_requested",
+  "properties": {
+    "causationId": {
+      "type": "null"
+    },
+    "correlationId": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "messageId": {
+      "format": "uuid",
+      "title": "Messageid",
+      "type": "string"
+    },
+    "messageType": {
+      "const": "vk.execution.cancel_requested"
+    },
+    "occurredAt": {
+      "format": "date-time",
+      "title": "Occurredat",
+      "type": "string"
+    },
+    "payload": {
+      "$ref": "#/$defs/VkExecutionCancelRequested"
+    },
+    "producer": {
+      "enum": [
+        "tasks-service"
+      ]
+    }
+  },
+  "required": [
+    "messageId",
+    "messageType",
+    "occurredAt",
+    "producer",
+    "payload",
+    "correlationId"
+  ],
+  "title": "vk.execution.cancel_requested",
+  "type": "object"
+}

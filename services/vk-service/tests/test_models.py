@@ -2,24 +2,35 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _service_path import use_service_path
+from _service_path import use_service_path  # noqa: E402
 
 use_service_path()
 
-from app.infrastructure.db.models.executions import VkExecution, VkExecutionAttempt
-from app.infrastructure.db.models.outbox import OutboxEvent
-from app.infrastructure.db.models.provider_accounts import VkProviderAccount
-from app.infrastructure.db.models.source_collections import (
+from app.infrastructure.db.models.executions import (  # noqa: E402
+    VkExecution,
+    VkExecutionAttempt,
+)
+from app.infrastructure.db.models.outbox import OutboxEvent  # noqa: E402
+from app.infrastructure.db.models.provider_accounts import (  # noqa: E402
+    VkProviderAccount,
+)
+from app.infrastructure.db.models.source_collections import (  # noqa: E402
     VkCollectionDemand,
     VkSourceCollection,
+    VkTaskRunBinding,
 )
-from app.infrastructure.db.models.tasks import ProcessedEvent
-from app.infrastructure.db.models.vk_friends import (
+from app.infrastructure.db.models.tasks import ProcessedEvent  # noqa: E402
+from app.infrastructure.db.models.vk_friends import (  # noqa: E402
     VkFriendsExportJob,
     VkFriendsJobLog,
     VkFriendsRecord,
 )
-from app.infrastructure.db.models.vk_ingestion import VkAuthor, VkComment, VkGroup, VkPost
+from app.infrastructure.db.models.vk_ingestion import (  # noqa: E402
+    VkAuthor,
+    VkComment,
+    VkGroup,
+    VkPost,
+)
 
 
 def constraint_names(model) -> set[str]:
@@ -37,6 +48,7 @@ def test_model_tables_exist():
     assert VkComment.__tablename__ == "vk_comments"
     assert VkExecution.__tablename__ == "vk_executions"
     assert VkExecutionAttempt.__tablename__ == "vk_execution_attempts"
+    assert VkTaskRunBinding.__tablename__ == "vk_task_run_bindings"
     assert VkSourceCollection.__tablename__ == "vk_source_collections"
     assert VkCollectionDemand.__tablename__ == "vk_collection_demands"
     assert ProcessedEvent.__tablename__ == "processed_events"
@@ -47,8 +59,9 @@ def test_model_tables_exist():
     assert VkProviderAccount.__tablename__ == "vk_provider_accounts"
 
 
-def test_execution_constraints_exist():
-    assert "uq_vk_executions_task_run" in constraint_names(VkExecution)
+def test_execution_constraints_are_physical_work_only():
+    assert "ix_vk_executions_task_run" in index_names(VkExecution)
+    assert "uq_vk_executions_task_run" not in constraint_names(VkExecution)
     assert "ix_vk_executions_claimable" in index_names(VkExecution)
     assert "uq_vk_executions_active_task" not in index_names(VkExecution)
     assert "uq_vk_execution_attempt_number" in constraint_names(VkExecutionAttempt)
@@ -58,20 +71,33 @@ def test_execution_constraints_exist():
     assert VkExecution.__table__.columns["current_fencing_token"].nullable is False
 
 
-def test_collection_constraints_exist():
+def test_task_run_identity_lives_on_binding():
+    constraints = constraint_names(VkTaskRunBinding)
+    indexes = index_names(VkTaskRunBinding)
+
+    assert "uq_vk_task_run_bindings_task_run" in constraints
+    assert "uq_vk_task_run_bindings_command_execution" in constraints
+    assert "uq_vk_task_run_bindings_active_task" in indexes
+    assert VkTaskRunBinding.__table__.columns["expected_demands"].nullable is False
+    assert VkTaskRunBinding.__table__.columns["snapshot_sha256"].nullable is False
+
+
+def test_source_collection_and_demand_constraints():
     assert "uq_vk_source_collections_execution" in constraint_names(
         VkSourceCollection
     )
     assert "uq_vk_source_collections_active_fingerprint" in index_names(
         VkSourceCollection
     )
-    assert "uq_vk_collection_demands_task_run" in constraint_names(
-        VkCollectionDemand
-    )
-    assert "uq_vk_collection_demands_active_task" in index_names(
+    demand_constraints = constraint_names(VkCollectionDemand)
+    assert "uq_vk_collection_demands_demand_id" in demand_constraints
+    assert "uq_vk_collection_demands_binding_source" in demand_constraints
+    assert "uq_vk_collection_demands_task_run" not in demand_constraints
+    assert "uq_vk_collection_demands_active_task" not in index_names(
         VkCollectionDemand
     )
     assert VkSourceCollection.__table__.columns["fingerprint"].nullable is False
+    assert VkCollectionDemand.__table__.columns["binding_id"].nullable is False
     assert VkCollectionDemand.__table__.columns["execution_sequence"].nullable is False
 
 
