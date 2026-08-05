@@ -21,7 +21,6 @@ class Settings(BaseSettings):
     outbox_publish_enabled: bool = False
     task_worker_enabled: bool = True
     vk_batch_events_enabled: bool = True
-    vk_legacy_comment_events_enabled: bool = True
     task_worker_concurrency: int = Field(default=2, ge=1, le=16)
     task_worker_poll_seconds: float = Field(default=1.0, gt=0, le=60)
     task_lease_seconds: int = Field(default=90, ge=30, le=3600)
@@ -39,7 +38,6 @@ class Settings(BaseSettings):
     hard_limit_cooldown_seconds: int = Field(default=3600, ge=0)
     ok_friends_export_dir: str = ".temp/ok-friends"
     vk_friends_export_dir: str = ".temp/vk-friends"
-    vk_token: str = Field(default="", repr=False)
     ok_access_token: str = Field(default="", repr=False)
     ok_application_key: str = Field(default="", repr=False)
     ok_application_secret_key: str = Field(default="", repr=False)
@@ -52,10 +50,8 @@ class Settings(BaseSettings):
             raise ValueError(
                 "task lease must be at least three heartbeat intervals"
             )
-        if "pytest" not in sys.modules and not self.token_file and not self.vk_token:
-            raise ValueError(
-                "VK_SERVICE_VK_TOKEN or VK_SERVICE_TOKEN_FILE is required"
-            )
+        if "pytest" not in sys.modules and not self.token_file:
+            raise ValueError("VK_SERVICE_TOKEN_FILE is required")
         return self
 
 
