@@ -16,6 +16,7 @@ from app.modules.execution_events.task_run_lifecycle import (
 from app.modules.outbox.service import OutboxService
 from app.modules.tasks.event_payloads import (
     task_identity_payload,
+    task_request_payload,
     task_snapshot,
     task_state_changed_payload,
 )
@@ -115,7 +116,7 @@ class TaskStateService:
             aggregate_type="task",
             aggregate_id=str(task.id),
             dedupe_key=f"task.resumed:{task.id}:{task.execution_run_id}",
-            payload=task_identity_payload(task, owner_user_id),
+            payload=task_request_payload(task, owner_user_id, run_meta),
         )
         await self.command_publisher(
             self.session,
