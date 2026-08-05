@@ -18,7 +18,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
-      - name: Expand SQL mock results for TaskRun lifecycle writes
+      - name: Align SQL mocks and UUID TaskRun ids
         shell: bash
         run: |
           python3 - <<'PY'
@@ -26,6 +26,18 @@ jobs:
 
           path = Path("services/tasks-service/tests/test_execution_consumer.py")
           text = path.read_text()
+          text = text.replace(
+              '"run-42"',
+              '"00000000-0000-0000-0000-000000000042"',
+          )
+          text = text.replace(
+              '"run-expected"',
+              '"00000000-0000-0000-0000-000000000043"',
+          )
+          text = text.replace(
+              '"run-wrong"',
+              '"00000000-0000-0000-0000-000000000044"',
+          )
           text = text.replace(
               '''    results.extend([_mock_result_task_row(row), MagicMock()])
           ''',
