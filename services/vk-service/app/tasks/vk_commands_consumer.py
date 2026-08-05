@@ -43,6 +43,7 @@ class VkExecutionCommandsConsumer(BaseEventConsumer):
     consumer_group = "vk-service-vk-commands"
     consumer_name = CONSUMER_NAME
     dlq_topic = settings.kafka_topic_vk_commands_dlq
+    auto_offset_reset = "earliest"
 
     def __init__(self, *, session_factory: async_sessionmaker):
         super().__init__(
