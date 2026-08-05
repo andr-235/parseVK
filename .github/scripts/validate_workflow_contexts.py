@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reject GitHub contexts that are unavailable in workflow and job env blocks."""
+"""Reject GitHub contexts unavailable in workflow and job env blocks."""
 
 from __future__ import annotations
 
@@ -9,7 +9,9 @@ from pathlib import Path
 
 KEY_RE = re.compile(r"^(?P<indent> *)(?P<key>[A-Za-z0-9_.-]+):")
 EXPRESSION_RE = re.compile(r"\$\{\{(.*?)\}\}")
-CONTEXT_RE = re.compile(r"\b([A-Za-z_][A-Za-z0-9_-]*)\.")
+CONTEXT_RE = re.compile(
+    r"\b(github|env|vars|job|jobs|steps|runner|secrets|strategy|matrix|needs|inputs)\."
+)
 
 WORKFLOW_ENV_CONTEXTS = frozenset({"github", "secrets", "inputs", "vars"})
 JOB_ENV_CONTEXTS = frozenset(
