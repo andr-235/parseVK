@@ -14,6 +14,9 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.core.config import settings
 from app.infrastructure.db.models.tasks import ProcessedEvent
+from app.infrastructure.db.repositories.canonical_cancellation import (
+    CanonicalCancellationRepository,
+)
 from app.infrastructure.db.repositories.canonical_commands import (
     CanonicalVkCommandRepository,
 )
@@ -66,7 +69,8 @@ class VkExecutionCommandsConsumer(BaseEventConsumer):
 
         async with self.session_factory() as session:
             inbox = SqlAlchemyTaskEventsRepository(session)
-            repository = CanonicalVkCommandRepository(session)
+            commands = CanonicalVkCommandRepository(session)
+            cancellations = CanonicalCancellationRepository(session)
             async with session.begin():
                 if await inbox.is_processed(
                     self.consumer_name,
@@ -75,16 +79,16 @@ class VkExecutionCommandsConsumer(BaseEventConsumer):
                     return
 
                 if isinstance(command, VkExecutionRequested):
-                    result = await repository.attach_command(command)
+                    result = await commands.attach_command(command)
                     outcome = result.outcome
                     attachments = result.attachments
                     if result.outcome == "conflict":
-                        await repository.emit_rejection(
+                        await commands.emit_rejection(
                             command,
                             result.reason or "canonical command conflict",
                         )
                 elif isinstance(command, VkExecutionCancelRequested):
-                    cancelled = await repository.request_cancellation(
+                    cancelled = await cancellations.request_cancellation(
                         task_id=command.task_id,
                         run_id=str(command.task_run_id),
                         execution_id=command.execution_id,
