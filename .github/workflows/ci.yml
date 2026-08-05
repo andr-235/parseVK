@@ -281,9 +281,10 @@ jobs:
           uv run pytest -v
           uv run mypy parsevk_contracts
           uv run python -m parsevk_contracts.generation.cli validate-registry
+          uv run python -m parsevk_contracts.generation.cli validate-policy
           uv run python -m parsevk_contracts.generation.cli check
 
-      - name: Check contract compatibility
+      - name: Check semantic contract evolution
         shell: bash
         env:
           BASE_SHA: ${{ inputs.base_sha }}
@@ -294,7 +295,7 @@ jobs:
           git archive "$BASE_SHA" libs/py/contracts/generated |
             tar -x -C "$BASELINE_DIR"
           cd libs/py/contracts
-          uv run python -m parsevk_contracts.generation.cli compatibility \
+          uv run python -m parsevk_contracts.generation.cli check-evolution \
             --baseline "$BASELINE_DIR/libs/py/contracts/generated" \
             --current generated
           uv run python "${GITHUB_WORKSPACE}/.github/scripts/validate_contract_examples.py"
