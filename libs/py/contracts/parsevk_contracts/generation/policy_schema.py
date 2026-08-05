@@ -1,4 +1,4 @@
-"""Backward-compatibility checks for generated JSON Schemas."""
+"""Backward-readable evolution checks for generated JSON Schemas."""
 
 from __future__ import annotations
 
