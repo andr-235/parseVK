@@ -1,4 +1,4 @@
-"""Tests for registry validation orchestration (validate_registry service)."""
+"""Tests for registry validation orchestration."""
 
 from __future__ import annotations
 
@@ -16,7 +16,6 @@ class TestService:
     def test_valid_contract_passes(self) -> None:
         contract = MessageContract(
             message_type="test.event",
-            schema_version=1,
             payload_model=SamplePayload,
             topic="test.topic",
             producers=frozenset({"producer-a"}),
@@ -25,27 +24,23 @@ class TestService:
             correlation_required=True,
             correlation_path="entityId",
             causation_policy="optional",
-            compatibility="backward",
         )
-        catalog = ContractCatalog.from_contracts((contract,))
-        violations = validate_registry(catalog)
-        assert len(violations) == 0
+        assert validate_registry(ContractCatalog.from_contracts((contract,))) == ()
 
     def test_valid_vk_catalog_passes(self) -> None:
         from parsevk_contracts.vk.commands import CATALOG as VK_CATALOG
-        violations = validate_registry(VK_CATALOG)
-        assert len(violations) == 0
 
-    def test_registry_violation_dataclass(self) -> None:
-        v = RegistryViolation(
+        assert validate_registry(VK_CATALOG) == ()
+
+    def test_registry_violation_is_unversioned(self) -> None:
+        violation = RegistryViolation(
             code="test_code",
             message_type="test.type",
-            schema_version=1,
             field="test_field",
             detail="Test detail",
         )
-        assert v.code == "test_code"
-        assert v.message_type == "test.type"
-        assert v.schema_version == 1
-        assert v.field == "test_field"
-        assert v.detail == "Test detail"
+        assert violation.code == "test_code"
+        assert violation.message_type == "test.type"
+        assert violation.field == "test_field"
+        assert violation.detail == "Test detail"
+        assert not hasattr(violation, "schema_version")
