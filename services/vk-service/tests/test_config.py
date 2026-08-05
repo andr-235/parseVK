@@ -1,6 +1,5 @@
 """Tests for the single canonical VK runtime configuration."""
 
-import subprocess
 import sys
 from pathlib import Path
 
@@ -13,7 +12,6 @@ use_service_path()
 
 from app.core.config import Settings
 
-SERVICE_DIR = str(Path(__file__).resolve().parents[1])
 TOKEN_FILE = "/run/secrets/vk_token"
 
 
@@ -24,20 +22,10 @@ def test_token_file_is_the_only_vk_secret_source():
     assert "vk_token" not in Settings.model_fields
 
 
-def test_missing_token_file_raises_outside_pytest():
-    code = (
-        "from app.core.config import Settings\n"
-        "Settings(token_file='')\n"
-    )
-    result = subprocess.run(  # noqa: S603
-        [sys.executable, "-c", code],
-        cwd=SERVICE_DIR,
-        capture_output=True,
-        text=True,
-    )
+def test_database_only_processes_do_not_require_vk_credentials():
+    settings = Settings(token_file="")
 
-    assert result.returncode != 0
-    assert "VK_SERVICE_TOKEN_FILE is required" in result.stderr
+    assert settings.token_file == ""
 
 
 def test_only_one_canonical_command_consumer_switch_exists():
