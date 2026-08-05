@@ -14,6 +14,9 @@ from sqlalchemy import select
 from app.domain.entities.provider_account import SYSTEM_VK_CAPABILITY
 from app.infrastructure.db.models.outbox import OutboxEvent
 from app.infrastructure.db.models.source_collections import VkTaskRunBinding
+from app.infrastructure.db.repositories.canonical_cancellation import (
+    CanonicalCancellationRepository,
+)
 from app.infrastructure.db.repositories.canonical_commands import (
     CanonicalVkCommandRepository,
 )
@@ -141,7 +144,9 @@ async def test_cancelling_one_binding_keeps_shared_source_running(db_session):
     first = await commands.attach_command(first_command)
     second = await commands.attach_command(second_command)
 
-    cancelled = await commands.request_cancellation(
+    cancelled = await CanonicalCancellationRepository(
+        db_session
+    ).request_cancellation(
         task_id=first_command.task_id,
         run_id=str(first_command.task_run_id),
         execution_id=first_command.execution_id,
