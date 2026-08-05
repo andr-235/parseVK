@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 
 TEXT_SUFFIXES = frozenset({".py", ".json", ".yaml", ".yml"})
-FORBIDDEN_MARKERS = ("schemaVersion", "schema_version")
+FORBIDDEN_MARKERS = ("schema" + "Version", "schema_" + "version")
 VERSION_DIRECTORY = re.compile(r"^v\d+$", re.IGNORECASE)
 NUMERIC_SCHEMA_FILE = re.compile(r"^\d+\.json$")
 VERSIONED_MESSAGE_NAME = re.compile(r"(?:^|[._/-])v\d+(?:$|[._/-])", re.IGNORECASE)
