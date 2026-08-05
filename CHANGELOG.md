@@ -1,3 +1,10 @@
+## [0.91.3](https://github.com/andr-235/parseVK/compare/v0.91.2...v0.91.3) (2026-08-05)
+
+
+### Bug Fixes
+
+* **tasks:** add authoritative source-set revision ([#422](https://github.com/andr-235/parseVK/issues/422)) ([eb9c5a0](https://github.com/andr-235/parseVK/commit/eb9c5a0465e5a7c18a4fc672e210681dac3198aa))
+
 ## [0.91.2](https://github.com/andr-235/parseVK/compare/v0.91.1...v0.91.2) (2026-08-05)
 
 
