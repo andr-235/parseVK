@@ -75,4 +75,4 @@ def test_quarantine_follows_source_level_cutover_revision():
     migration = load_migration()
 
     assert migration.revision == "pr6b2_quarantine_legacy_outbox"
-    assert migration.down_revision == "pr6b_source_level_collection_identity"
+    assert migration.down_revision == "pr6b_source_collection_identity"
