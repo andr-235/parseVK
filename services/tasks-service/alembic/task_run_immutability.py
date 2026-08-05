@@ -152,11 +152,14 @@ def _create_legacy_immutability_trigger() -> None:
             END IF;
             RETURN NEW;
         END;
-        $$ LANGUAGE plpgsql;
-
+        $$ LANGUAGE plpgsql
+        """
+    )
+    op.execute(
+        f"""
         CREATE TRIGGER {LEGACY_TRIGGER}
         BEFORE UPDATE ON task_runs
-        FOR EACH ROW EXECUTE FUNCTION {LEGACY_FUNCTION}();
+        FOR EACH ROW EXECUTE FUNCTION {LEGACY_FUNCTION}()
         """
     )
 
@@ -214,10 +217,13 @@ def _create_immutability_trigger() -> None:
             END IF;
             RETURN NEW;
         END;
-        $$ LANGUAGE plpgsql;
-
+        $$ LANGUAGE plpgsql
+        """
+    )
+    op.execute(
+        f"""
         CREATE TRIGGER {IMMUTABILITY_TRIGGER}
         BEFORE INSERT OR UPDATE ON task_runs
-        FOR EACH ROW EXECUTE FUNCTION {IMMUTABILITY_FUNCTION}();
+        FOR EACH ROW EXECUTE FUNCTION {IMMUTABILITY_FUNCTION}()
         """
     )
