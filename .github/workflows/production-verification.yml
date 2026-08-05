@@ -56,8 +56,6 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: [self-hosted]
     timeout-minutes: 10
-    env:
-      SMOKE_REPORT: ${{ runner.temp }}/production-verification.json
     steps:
       - name: Checkout trusted smoke verifier
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -70,6 +68,8 @@ jobs:
           sparse-checkout-cone-mode: false
 
       - name: Verify production HTTP entrypoints
+        env:
+          SMOKE_REPORT: ${{ runner.temp }}/production-verification.json
         run: python3 .github/scripts/production/post_deploy_smoke.py --report "$SMOKE_REPORT"
 
       - name: Upload verification report
@@ -83,6 +83,8 @@ jobs:
 
       - name: Write verification summary
         if: always()
+        env:
+          SMOKE_REPORT: ${{ runner.temp }}/production-verification.json
         run: |
           {
             echo "### Production verification"
