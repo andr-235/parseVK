@@ -155,6 +155,7 @@ async def freeze_task_run(
 
         sources_repo = SourcesRepository(session)
     links = await sources_repo.list_task_sources(task.id)
+    kind_by_source_id = {link.source_id: link.kind for link in links}
     sources = await sources_repo.list_sources_by_ids(
         link.source_id for link in links
     )
@@ -170,6 +171,7 @@ async def freeze_task_run(
             "sourceType": source.source_type,
             "externalId": source.external_id,
             "ownerId": source.owner_id,
+            "kind": kind_by_source_id[source.id],
             "sourceRevision": source.revision,
             "taskRevision": task.revision,
         }
