@@ -1,11 +1,18 @@
 import asyncio
 import os
+import sys
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from uuid import UUID
 
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from testcontainers.core.container import DockerContainer
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _service_path import use_service_path
+
+use_service_path()
 
 from app.db.base import Base
 from app.db.models import OutboxEvent
@@ -15,6 +22,11 @@ REPEATS = int(os.getenv("P0_P2_CONCURRENCY_REPEATS", "1"))
 REQUEST_ID = UUID("00000000-0000-0000-0000-000000000001")
 CANCEL_ID = UUID("00000000-0000-0000-0000-000000000002")
 pytestmark = pytest.mark.integration
+
+
+@pytest.fixture
+def anyio_backend():
+    return "asyncio"
 
 
 @pytest.fixture(scope="module")

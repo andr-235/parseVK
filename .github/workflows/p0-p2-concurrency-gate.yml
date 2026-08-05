@@ -83,6 +83,11 @@ jobs:
       - name: Install tasks-service dependencies
         working-directory: services/tasks-service
         run: uv sync --extra test --frozen
+      - name: Verify root pytest collection
+        run: >-
+          uv run --project services/tasks-service
+          pytest --collect-only -q
+          services/tasks-service/tests/test_vk_outbox_ordering_postgres.py
       - name: Run request-cancellation ordering repeatedly
         working-directory: services/tasks-service
         env:
