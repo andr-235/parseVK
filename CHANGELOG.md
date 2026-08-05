@@ -1,3 +1,11 @@
+## [0.91.1](https://github.com/andr-235/parseVK/compare/v0.91.0...v0.91.1) (2026-08-05)
+
+
+### Bug Fixes
+
+* **ci:** repair production deployment recorder workflow ([#417](https://github.com/andr-235/parseVK/issues/417)) ([f81ac9a](https://github.com/andr-235/parseVK/commit/f81ac9a4bccd8374e5a711305abfc199fef0decb))
+* **p2:** recover active TaskRuns after canonical cutover ([#418](https://github.com/andr-235/parseVK/issues/418)) ([7d986b2](https://github.com/andr-235/parseVK/commit/7d986b20b9e6059e41c52ed84a4d17220c73797e))
+
 # [0.91.0](https://github.com/andr-235/parseVK/compare/v0.90.0...v0.91.0) (2026-08-04)
 
 
