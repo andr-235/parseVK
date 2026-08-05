@@ -1,11 +1,12 @@
 """Durable retry and dead-letter handling for Kafka consumers."""
 
 import logging
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from common.events import decode_payload
 from common.kafka.consumer_backoff import PartitionResumeScheduler
 from common.kafka.consumer_dlq import build_dlq_headers
+from common.kafka.consumer_retry_store import record_retry_failure
 from common.kafka.message_identity import message_identity
 from common.kafka.producer import send_to_dlq
 
@@ -65,10 +66,12 @@ class ConsumerRetryController:
             return
 
         failure_reason = self._failure_reason(error)
-        retry_count, next_retry = await self._record_failure(
-            event_id,
-            event_type,
-            failure_reason,
+        retry_count, next_retry = await record_retry_failure(
+            session_factory=self.session_factory,
+            repository=self.repository,
+            event_id=event_id,
+            event_type=event_type,
+            failure_reason=failure_reason,
         )
         if retry_count >= self.max_retries:
             logger.error(
@@ -101,31 +104,6 @@ class ConsumerRetryController:
 
     async def cancel_pending_resumes(self) -> None:
         await self.resume_scheduler.cancel()
-
-    async def _record_failure(
-        self,
-        event_id: str,
-        event_type: str,
-        failure_reason: str,
-    ) -> tuple[int, datetime]:
-        async with self.session_factory() as session:
-            async with session.begin():
-                current = await self.repository.get_retry_count(session, event_id)
-                retry_count = (current or 0) + 1
-                now = datetime.now(UTC)
-                next_retry = now + timedelta(
-                    seconds=min(2**retry_count, 60)
-                )
-                await self.repository.upsert_retry(
-                    session,
-                    event_id,
-                    event_type,
-                    failure_reason,
-                    next_retry,
-                    now,
-                )
-            stored_count = await self.repository.get_retry_count(session, event_id)
-        return stored_count or retry_count, next_retry
 
     async def _send_exhausted(self, raw_value, row, consumer) -> None:
         logger.warning(
