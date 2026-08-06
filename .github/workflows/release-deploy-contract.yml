@@ -6,25 +6,33 @@ on:
     paths:
       - .github/scripts/latest_release.py
       - .github/scripts/test_latest_release.py
+      - .github/scripts/cancel-superseded-deploys.sh
       - .github/workflows/ci.yml
       - .github/workflows/security.yml
       - .github/workflows/deploy.yml
+      - .github/workflows/deploy-queue-cleanup.yml
       - .github/workflows/release-deploy-coordinator.yml
       - .github/workflows/publish-release-images.yml
       - .github/workflows/reusable-publish-image.yml
       - .github/workflows/release-deploy-contract.yml
+      - scripts/test-cancel-superseded-deploys.sh
+      - scripts/test-release-handoff-workflow.sh
   push:
     branches: [main]
     paths:
       - .github/scripts/latest_release.py
       - .github/scripts/test_latest_release.py
+      - .github/scripts/cancel-superseded-deploys.sh
       - .github/workflows/ci.yml
       - .github/workflows/security.yml
       - .github/workflows/deploy.yml
+      - .github/workflows/deploy-queue-cleanup.yml
       - .github/workflows/release-deploy-coordinator.yml
       - .github/workflows/publish-release-images.yml
       - .github/workflows/reusable-publish-image.yml
       - .github/workflows/release-deploy-contract.yml
+      - scripts/test-cancel-superseded-deploys.sh
+      - scripts/test-release-handoff-workflow.sh
 
 permissions:
   contents: read
@@ -41,7 +49,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Run resolver and workflow contract tests
+      - name: Run resolver tests
         env:
           PYTHONPATH: .github/scripts
         run: >-
@@ -49,6 +57,11 @@ jobs:
           -s .github/scripts
           -p 'test_latest_release.py'
           -v
+
+      - name: Validate release handoff and queue cleanup
+        run: |
+          bash scripts/test-release-handoff-workflow.sh
+          bash scripts/test-cancel-superseded-deploys.sh
 
       - name: Compile release resolver
         run: python3 -m py_compile .github/scripts/latest_release.py .github/scripts/test_latest_release.py
