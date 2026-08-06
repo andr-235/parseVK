@@ -7,10 +7,14 @@ SECURITY="$ROOT_DIR/.github/workflows/security.yml"
 PUBLISH="$ROOT_DIR/.github/workflows/publish-release-images.yml"
 REUSABLE_PUBLISH="$ROOT_DIR/.github/workflows/reusable-publish-image.yml"
 COORDINATOR="$ROOT_DIR/.github/workflows/release-deploy-coordinator.yml"
+CLEANUP_WORKFLOW="$ROOT_DIR/.github/workflows/deploy-queue-cleanup.yml"
+CLEANUP_SCRIPT="$ROOT_DIR/.github/scripts/cancel-superseded-deploys.sh"
 DEPLOY="$ROOT_DIR/.github/workflows/deploy.yml"
 RELEASE_CONFIG="$ROOT_DIR/.releaserc.json"
 
-for file in "$CI" "$SECURITY" "$PUBLISH" "$REUSABLE_PUBLISH" "$COORDINATOR" "$DEPLOY" "$RELEASE_CONFIG"; do
+for file in \
+  "$CI" "$SECURITY" "$PUBLISH" "$REUSABLE_PUBLISH" "$COORDINATOR" \
+  "$CLEANUP_WORKFLOW" "$CLEANUP_SCRIPT" "$DEPLOY" "$RELEASE_CONFIG"; do
   [[ -f "$file" ]] || { echo "Required release handoff file not found: $file"; exit 1; }
 done
 
@@ -93,12 +97,37 @@ require_pattern "$COORDINATOR" 'timeout-minutes: 350' \
   "Coordinator timeout cannot cover publication and deployment"
 require_pattern "$COORDINATOR" 'release/immutable-ghcr' \
   "Coordinator does not verify immutable release status"
+require_pattern "$COORDINATOR" 'cancel-superseded-deploys\.sh' \
+  "Coordinator does not include the trusted queue cleanup script"
+require_pattern "$COORDINATOR" 'Clean superseded production deploys' \
+  "Coordinator does not synchronously clean the production queue"
+require_pattern "$COORDINATOR" 'steps\.cleanup\.outcome == .success.' \
+  "Deploy dispatch is not blocked on successful queue cleanup"
 require_pattern "$COORDINATOR" 'actions/workflows/deploy\.yml/dispatches' \
   "Coordinator does not explicitly dispatch production deployment"
 require_pattern "$COORDINATOR" 'Wait for production deploy' \
   "Coordinator does not wait for production completion"
 reject_pattern "$COORDINATOR" 'head_sha=.*RELEASE_SHA' \
   "Coordinator still discovers release gates by workflow head SHA"
+
+require_pattern "$CLEANUP_WORKFLOW" 'workflow_dispatch:' \
+  "Standalone queue cleanup cannot be manually dispatched"
+reject_pattern "$CLEANUP_WORKFLOW" '^  workflow_run:' \
+  "Standalone queue cleanup still relies on a suppressed workflow_run chain"
+require_pattern "$CLEANUP_WORKFLOW" 'cancel-superseded-deploys\.sh' \
+  "Standalone recovery workflow does not run the trusted cleanup script"
+
+python3 - "$COORDINATOR" <<'PY'
+import sys
+from pathlib import Path
+
+workflow = Path(sys.argv[1]).read_text(encoding="utf-8")
+publication = workflow.index("- name: Wait for immutable publication")
+cleanup = workflow.index("- name: Clean superseded production deploys")
+deploy = workflow.index("- name: Dispatch production deploy")
+if not publication < cleanup < deploy:
+    raise SystemExit("Queue cleanup must run after publication and before deploy dispatch")
+PY
 
 require_pattern "$DEPLOY" 'workflow_dispatch:' "Production deploy cannot be explicitly dispatched"
 reject_pattern "$DEPLOY" '^  workflow_run:' \
@@ -125,4 +154,4 @@ if any(rules.get(scope) is not release for scope, release in expected.items()):
     raise SystemExit(f"Invalid non-product release rules: {rules}")
 PY
 
-echo "Explicit release publication and isolated production handoff contracts are valid"
+echo "Explicit release publication, synchronous queue cleanup and production handoff contracts are valid"

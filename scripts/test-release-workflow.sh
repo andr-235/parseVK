@@ -122,13 +122,13 @@ METADATA_LINE="$(grep -n 'name: Load deployment metadata' "$DEPLOY" | head -1 | 
   exit 1
 }
 
-require_pattern "$CLEANUP" 'workflows: \["Publish Release Images"\]' \
-  "Deploy queue cleanup is not tied to immutable publication"
+require_pattern "$CLEANUP" 'workflow_dispatch:' \
+  "Standalone deploy queue cleanup cannot be manually dispatched"
+reject_pattern "$CLEANUP" '^  workflow_run:' \
+  "Standalone deploy queue cleanup still relies on suppressed workflow_run delivery"
 require_pattern "$CLEANUP" 'actions: write' "Deploy queue cleanup cannot cancel workflow runs"
 require_pattern "$CLEANUP" 'cancel-superseded-deploys\.sh' \
   "Deploy queue cleanup does not invoke the safe cancellation script"
-reject_pattern "$CLEANUP" 'workflow_run\.head_sha' \
-  "Deploy queue cleanup still trusts workflow head_sha as release identity"
 require_pattern "$CANCEL_SCRIPT" '--paginate --slurp' \
   "Cancellation script does not enumerate every page of deploy runs"
 require_pattern "$CANCEL_SCRIPT" 'display_title' \
