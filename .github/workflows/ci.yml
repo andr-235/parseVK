@@ -306,7 +306,8 @@ jobs:
         working-directory: libs/py/contracts
         run: |
           uv run python -c "from parsevk_contracts.generation import generate_all; from parsevk_contracts.vk.commands import CATALOG; generate_all(CATALOG)"
-          npx --yes @asyncapi/cli@6.0.2 validate generated/asyncapi/parsevk-contracts.yaml
+          bash "${GITHUB_WORKSPACE}/.github/scripts/validate-asyncapi.sh" \
+            generated/asyncapi/parsevk-contracts.yaml
 
   release-gate:
     name: Full Release Gate
