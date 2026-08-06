@@ -1,0 +1,55 @@
+name: Clean Superseded Production Deploys
+
+on:
+  workflow_run:
+    workflows: ["Publish Release Images"]
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: production-deploy-queue-cleanup
+  cancel-in-progress: true
+
+jobs:
+  cleanup:
+    name: Cancel Superseded Queued Deploys
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main'
+      )
+    steps:
+      - name: Checkout trusted queue cleanup
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/latest_release.py
+            .github/scripts/cancel-superseded-deploys.sh
+          sparse-checkout-cone-mode: false
+
+      - name: Resolve latest semantic release
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          RELEASE_JSON="$(python .github/scripts/latest_release.py --ref HEAD)"
+          RELEASE_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
+          echo "release_sha=$RELEASE_SHA" >> "$GITHUB_OUTPUT"
+          echo "Cleaning deploy queue against latest release $RELEASE_SHA"
+
+      - name: Cancel safe superseded deploy runs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
+        run: bash .github/scripts/cancel-superseded-deploys.sh
