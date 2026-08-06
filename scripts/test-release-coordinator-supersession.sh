@@ -17,13 +17,24 @@ from pathlib import Path
 coordinator = Path(sys.argv[1]).read_text(encoding="utf-8")
 deploy = Path(sys.argv[2]).read_text(encoding="utf-8")
 
-block = re.search(
-    r"(?ms)^concurrency:\n(?P<body>(?:^[ ]+.*\n)+?)^\n",
-    coordinator,
-)
-if block is None:
-    raise SystemExit("Release coordinator concurrency block is missing")
-body = block.group("body")
+
+def concurrency_body(workflow: str, name: str) -> str:
+    lines = workflow.splitlines()
+    try:
+        start = lines.index("concurrency:") + 1
+    except ValueError as error:
+        raise SystemExit(f"{name} concurrency block is missing") from error
+    body = []
+    for line in lines[start:]:
+        if not line.startswith("  "):
+            break
+        body.append(line.strip())
+    if not body:
+        raise SystemExit(f"{name} concurrency block is empty")
+    return "\n".join(body)
+
+
+body = concurrency_body(coordinator, "Release coordinator")
 if "group: release-deploy-coordinator" not in body:
     raise SystemExit("Release coordinator concurrency group changed unexpectedly")
 if "cancel-in-progress: true" not in body:
@@ -48,13 +59,7 @@ if "steps.cleanup.outcome == 'success'" not in coordinator:
 if re.search(r"actions/runs/.+?/cancel", coordinator):
     raise SystemExit("Coordinator must not directly cancel child production runs")
 
-production_block = re.search(
-    r"(?ms)^concurrency:\n(?P<body>(?:^[ ]+.*\n)+?)^\n",
-    deploy,
-)
-if production_block is None:
-    raise SystemExit("Production deployment concurrency block is missing")
-production = production_block.group("body")
+production = concurrency_body(deploy, "Production deployment")
 if "group: production-deployment" not in production:
     raise SystemExit("Production deployment concurrency group changed unexpectedly")
 if "cancel-in-progress: false" not in production:
