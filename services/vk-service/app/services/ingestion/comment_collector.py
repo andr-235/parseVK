@@ -145,6 +145,6 @@ class CommentCollector:
         page: dict,
     ) -> None:
         for profile in page.get("profiles", []):
-            author_profiles.setdefault(int(profile["id"]), profile)
+            author_profiles[int(profile["id"])] = profile
         for group in page.get("groups", []):
-            author_profiles.setdefault(int(group["id"]), group)
+            author_profiles[int(group["id"])] = group
