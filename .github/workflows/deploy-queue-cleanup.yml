@@ -1,10 +1,6 @@
 name: Clean Superseded Production Deploys
 
 on:
-  workflow_run:
-    workflows: ["Publish Release Images"]
-    types:
-      - completed
   workflow_dispatch:
 
 permissions:
@@ -20,12 +16,6 @@ jobs:
     name: Cancel Superseded Queued Deploys
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (
-        github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.head_branch == 'main'
-      )
     steps:
       - name: Checkout trusted queue cleanup
         uses: actions/checkout@v7
