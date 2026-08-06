@@ -64,10 +64,22 @@ jobs:
         env:
           P0_P2_E2E_REPEATS: '3'
         run: |
+          set +e
           uv run pytest -q --strict-markers \
             -o addopts="--import-mode=importlib" \
             -m integration \
-            tests/p0_p2/test_canonical_command_e2e.py
+            tests/p0_p2/test_canonical_command_e2e.py \
+            2>&1 | tee canonical-e2e.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [[ "$status" -ne 0 ]]; then
+            detail=$(tail -n 120 canonical-e2e.log)
+            detail=${detail//'%'/'%25'}
+            detail=${detail//$'\r'/'%0D'}
+            detail=${detail//$'\n'/'%0A'}
+            echo "::error title=Canonical E2E failure::$detail"
+          fi
+          exit "$status"
 
   vk-postgres-concurrency:
     name: Repeated VK PostgreSQL Races
