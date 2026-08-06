@@ -43,9 +43,9 @@ class PostCollector:
         posts = posts_response["items"]
 
         for profile in posts_response.get("profiles", []):
-            author_profiles.setdefault(profile["id"], profile)
+            author_profiles.setdefault(int(profile["id"]), profile)
         for group_profile in posts_response.get("groups", []):
-            author_profiles.setdefault(group_profile["id"], group_profile)
+            author_profiles.setdefault(-abs(int(group_profile["id"])), group_profile)
 
         valid_posts: list[dict] = []
         for post in posts:
