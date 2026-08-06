@@ -45,7 +45,7 @@ case "$PATH_VALUE" in
     {"id":105,"display_title":"Deploy to Production Server","head_sha":"${OLD_SHA}","head_commit":{"message":"normal main commit"},"status":"queued"}
   ]},
   {"workflow_runs":[
-    {"id":101,"display_title":"Deploy release ${OLD_SHA}","head_sha":"later-main-tip","head_commit":{"message":"normal main commit"},"status":"queued"},
+    {"id":101,"display_title":"Deploy release ${OLD_SHA}","head_sha":"later-main-tip","head_commit":{"message":"normal main commit"},"status":"in_progress"},
     {"id":104,"display_title":"Deploy to Production Server","head_sha":"${LEGACY_SHA}","head_commit":{"message":"chore(release): 0.91.5 [skip ci]"},"status":"waiting"}
   ]}
 ]
@@ -54,9 +54,17 @@ JSON
   */actions/runs/*/jobs)
     run_id="$(sed -E 's#^.*/actions/runs/([0-9]+)/jobs$#\1#' <<<"$PATH_VALUE")"
     if [[ "${GH_SCENARIO:-safe}" == "active" && "$run_id" == "101" ]]; then
-      printf '%s\n' '{"jobs":[{"status":"in_progress"}]}'
+      printf '%s\n' '{"jobs":[{"name":"Verify Release Gates","status":"completed"},{"name":"Deploy to Debian Server","status":"in_progress"}]}'
+    elif [[ "${GH_SCENARIO:-safe}" == "started-before-cancel" && "$run_id" == "101" ]]; then
+      previous_calls="$(grep -cx 'jobs:101' "$GH_CALLS_FILE" 2>/dev/null || true)"
+      printf 'jobs:101\n' >> "$GH_CALLS_FILE"
+      if (( previous_calls > 0 )); then
+        printf '%s\n' '{"jobs":[{"name":"Verify Release Gates","status":"completed"},{"name":"Deploy to Debian Server","status":"in_progress"}]}'
+      else
+        printf '%s\n' '{"jobs":[{"name":"Verify Release Gates","status":"completed"},{"name":"Deploy to Debian Server","status":"queued"}]}'
+      fi
     else
-      printf '%s\n' '{"jobs":[{"status":"completed"},{"status":"queued"}]}'
+      printf '%s\n' '{"jobs":[{"name":"Verify Release Gates","status":"completed"},{"name":"Deploy to Debian Server","status":"queued"}]}'
     fi
     ;;
   */actions/runs/*/cancel)
@@ -68,14 +76,10 @@ JSON
     run_id="$(sed -E 's#^.*/actions/runs/([0-9]+)$#\1#' <<<"$PATH_VALUE")"
     if grep -qx "$run_id" "$GH_STATE_FILE" 2>/dev/null; then
       printf '%s\n' '{"status":"completed","conclusion":"cancelled"}'
-    elif [[ "${GH_SCENARIO:-safe}" == "started-before-cancel" && "$run_id" == "101" ]]; then
-      previous_calls="$(grep -cx '101' "$GH_CALLS_FILE" 2>/dev/null || true)"
-      printf '101\n' >> "$GH_CALLS_FILE"
-      if (( previous_calls > 0 )); then
-        printf '%s\n' '{"status":"in_progress","conclusion":null}'
-      else
-        printf '%s\n' '{"status":"queued","conclusion":null}'
-      fi
+    elif [[ "$run_id" == "101" ]]; then
+      printf '%s\n' '{"status":"in_progress","conclusion":null}'
+    elif [[ "$run_id" == "104" ]]; then
+      printf '%s\n' '{"status":"waiting","conclusion":null}'
     else
       printf '%s\n' '{"status":"queued","conclusion":null}'
     fi
@@ -91,61 +95,58 @@ chmod +x "$TMP_DIR/gh"
 STATE_FILE="$TMP_DIR/state"
 CALLS_FILE="$TMP_DIR/calls"
 CURRENT_SHA="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+run_cleanup() {
+  local scenario="$1" attempts="$2"
+  GITHUB_REPOSITORY=andr-235/parseVK \
+  RELEASE_SHA="$CURRENT_SHA" \
+  GH_BIN="$TMP_DIR/gh" \
+  GH_STATE_FILE="$STATE_FILE" \
+  GH_CALLS_FILE="$CALLS_FILE" \
+  GH_SCENARIO="$scenario" \
+  POLL_ATTEMPTS="$attempts" \
+  POLL_INTERVAL=0 \
+    bash "$SCRIPT"
+}
+
 : > "$STATE_FILE"
 : > "$CALLS_FILE"
-GITHUB_REPOSITORY=andr-235/parseVK \
-RELEASE_SHA="$CURRENT_SHA" \
-GH_BIN="$TMP_DIR/gh" \
-GH_STATE_FILE="$STATE_FILE" \
-GH_CALLS_FILE="$CALLS_FILE" \
-POLL_ATTEMPTS=2 \
-POLL_INTERVAL=0 \
-  bash "$SCRIPT"
+run_cleanup safe 2
 
 [[ "$(sort -n "$STATE_FILE" | tr '\n' ' ')" == "101 104 " ]] || {
-  echo "Expected only explicit and legacy superseded releases to be cancelled"
+  echo "Expected in-progress run with queued deploy job and legacy waiting run to be cancelled"
   cat "$STATE_FILE"
   exit 1
 }
 
 : > "$STATE_FILE"
 : > "$CALLS_FILE"
-if GITHUB_REPOSITORY=andr-235/parseVK \
-  RELEASE_SHA="$CURRENT_SHA" \
-  GH_BIN="$TMP_DIR/gh" \
-  GH_STATE_FILE="$STATE_FILE" \
-  GH_CALLS_FILE="$CALLS_FILE" \
-  GH_SCENARIO=active \
-  POLL_ATTEMPTS=1 \
-  POLL_INTERVAL=0 \
-    bash "$SCRIPT"; then
-  echo "Active superseded deployment was cancelled"
+if run_cleanup active 1; then
+  echo "Run with an active production job was cancelled"
   exit 1
 fi
 
 [[ ! -s "$STATE_FILE" ]] || {
-  echo "Cancellation was attempted for an active deployment"
+  echo "Cancellation was attempted for an active production job"
   exit 1
 }
 
 : > "$STATE_FILE"
 : > "$CALLS_FILE"
-if GITHUB_REPOSITORY=andr-235/parseVK \
-  RELEASE_SHA="$CURRENT_SHA" \
-  GH_BIN="$TMP_DIR/gh" \
-  GH_STATE_FILE="$STATE_FILE" \
-  GH_CALLS_FILE="$CALLS_FILE" \
-  GH_SCENARIO=started-before-cancel \
-  POLL_ATTEMPTS=1 \
-  POLL_INTERVAL=0 \
-    bash "$SCRIPT"; then
-  echo "Deployment that started before cancellation was cancelled"
+if run_cleanup started-before-cancel 1; then
+  echo "Deployment that started between safety checks was cancelled"
   exit 1
 fi
 
 [[ ! -s "$STATE_FILE" ]] || {
-  echo "Cancellation was attempted after the run changed to in_progress"
+  echo "Cancellation was attempted after the deploy job changed to in_progress"
   exit 1
 }
 
-echo "Paginated deploy cleanup rejects active and newly-started releases"
+[[ "$(grep -cx 'jobs:101' "$CALLS_FILE" 2>/dev/null || true)" == "2" ]] || {
+  echo "Expected two independent job safety checks before cancellation"
+  cat "$CALLS_FILE"
+  exit 1
+}
+
+echo "Deploy cleanup handles in-progress runs and fences newly-started production jobs"
