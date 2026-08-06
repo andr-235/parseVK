@@ -96,13 +96,15 @@ class DataCollector:
             if posts is None:
                 continue
             await enrich_user_profiles(self.adapter, profiles)
-            for post in posts:
+            total_posts = len(posts)
+            for post_index, post in enumerate(posts):
                 await self.post_pipeline.collect(
                     post=post,
                     task_run=task_run,
                     group_id=group_id,
                     profiles=profiles,
                     result=result,
+                    remaining_posts=total_posts - post_index - 1,
                     correlation_id=correlation_id,
                 )
         return result
