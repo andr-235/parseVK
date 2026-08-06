@@ -23,9 +23,7 @@ class MonitoringSource(Base):
     __tablename__ = "monitoring_sources"
     __table_args__ = (
         UniqueConstraint(
-            "provider",
-            "source_type",
-            "external_id",
+            "provider", "source_type", "external_id",
             name="uq_monitoring_sources_identity",
         ),
         CheckConstraint("owner_id < 0", name="ck_monitoring_sources_owner_negative"),
@@ -37,9 +35,7 @@ class MonitoringSource(Base):
     )
 
     id: Mapped[PyUUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid4,
+        UUID(as_uuid=True), primary_key=True, default=uuid4
     )
     owner_user_id: Mapped[str] = mapped_column(String(128), nullable=False)
     provider: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -48,15 +44,11 @@ class MonitoringSource(Base):
     owner_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(
-        String(32),
-        nullable=False,
-        default="active",
+        String(32), nullable=False, default="active"
     )
     revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utcnow,
+        DateTime(timezone=True), nullable=False, default=utcnow
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -66,34 +58,11 @@ class MonitoringSource(Base):
     )
 
 
-class SourceRegistration(Base):
-    """Durable per-user registration of one globally deduplicated source."""
-
-    __tablename__ = "source_registrations"
-    __table_args__ = (Index("ix_source_registrations_source", "source_id"),)
-
-    owner_user_id: Mapped[str] = mapped_column(
-        String(128),
-        primary_key=True,
-    )
-    source_id: Mapped[PyUUID] = mapped_column(
-        ForeignKey("monitoring_sources.id", ondelete="CASCADE"),
-        primary_key=True,
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utcnow,
-    )
-
-
 class TaskSource(Base):
     __tablename__ = "task_sources"
     __table_args__ = (
         UniqueConstraint(
-            "task_id",
-            "source_id",
-            name="uq_task_sources_task_source",
+            "task_id", "source_id", name="uq_task_sources_task_source"
         ),
         CheckConstraint(
             "kind IN ('target', 'reference')",
@@ -103,28 +72,21 @@ class TaskSource(Base):
     )
 
     id: Mapped[PyUUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid4,
+        UUID(as_uuid=True), primary_key=True, default=uuid4
     )
     task_id: Mapped[int] = mapped_column(
-        ForeignKey("tasks.id", ondelete="CASCADE"),
-        nullable=False,
+        ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False
     )
     source_id: Mapped[PyUUID] = mapped_column(
         ForeignKey("monitoring_sources.id", ondelete="CASCADE"),
         nullable=False,
     )
     kind: Mapped[str] = mapped_column(
-        String(32),
-        nullable=False,
-        default="target",
+        String(32), nullable=False, default="target"
     )
     revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utcnow,
+        DateTime(timezone=True), nullable=False, default=utcnow
     )
 
 
@@ -132,17 +94,13 @@ class AccessScope(Base):
     __tablename__ = "access_scopes"
 
     id: Mapped[PyUUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid4,
+        UUID(as_uuid=True), primary_key=True, default=uuid4
     )
     owner_user_id: Mapped[str] = mapped_column(String(128), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     created_by_user_id: Mapped[str] = mapped_column(String(128), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utcnow,
+        DateTime(timezone=True), nullable=False, default=utcnow
     )
 
 
@@ -150,26 +108,21 @@ class ScopeSourceAccess(Base):
     __tablename__ = "scope_source_access"
     __table_args__ = (
         UniqueConstraint(
-            "access_scope_id",
-            "source_id",
+            "access_scope_id", "source_id",
             name="uq_scope_source_access_scope_source",
         ),
         CheckConstraint(
-            "ref_count >= 0",
-            name="ck_scope_source_access_ref_count",
+            "ref_count >= 0", name="ck_scope_source_access_ref_count"
         ),
         Index("ix_scope_source_access_source", "source_id"),
         Index("ix_scope_source_access_scope", "access_scope_id"),
     )
 
     id: Mapped[PyUUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid4,
+        UUID(as_uuid=True), primary_key=True, default=uuid4
     )
     access_scope_id: Mapped[PyUUID] = mapped_column(
-        ForeignKey("access_scopes.id", ondelete="CASCADE"),
-        nullable=False,
+        ForeignKey("access_scopes.id", ondelete="CASCADE"), nullable=False
     )
     source_id: Mapped[PyUUID] = mapped_column(
         ForeignKey("monitoring_sources.id", ondelete="CASCADE"),
@@ -177,12 +130,9 @@ class ScopeSourceAccess(Base):
     )
     ref_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     revoked_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
+        DateTime(timezone=True), nullable=True
     )
     revoked_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utcnow,
+        DateTime(timezone=True), nullable=False, default=utcnow
     )
