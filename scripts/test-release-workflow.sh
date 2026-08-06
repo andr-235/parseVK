@@ -9,13 +9,16 @@ RELEASE_CONFIG="$ROOT_DIR/.releaserc.json"
 PUBLISH="$ROOT_DIR/.github/workflows/publish-release-images.yml"
 REUSABLE="$ROOT_DIR/.github/workflows/reusable-publish-image.yml"
 SECURITY="$ROOT_DIR/.github/workflows/security.yml"
+CLEANUP="$ROOT_DIR/.github/workflows/deploy-queue-cleanup.yml"
+CANCEL_SCRIPT="$ROOT_DIR/.github/scripts/cancel-superseded-deploys.sh"
+CANCEL_TEST="$ROOT_DIR/scripts/test-cancel-superseded-deploys.sh"
 HANDOFF="$ROOT_DIR/scripts/test-release-handoff-workflow.sh"
 SERVICE_CATALOG="$ROOT_DIR/.github/scripts/service_catalog.py"
 SERVICE_CATALOG_TEST="$ROOT_DIR/.github/scripts/test_service_catalog.py"
 MANIFEST="$ROOT_DIR/.github/scripts/release_manifest.py"
 MANIFEST_TEST="$ROOT_DIR/.github/scripts/test_release_manifest.py"
 
-for file in "$PR_CI" "$CI" "$RELEASE" "$RELEASE_CONFIG" "$PUBLISH" "$REUSABLE" "$SECURITY" "$HANDOFF" "$SERVICE_CATALOG" "$SERVICE_CATALOG_TEST" "$MANIFEST" "$MANIFEST_TEST"; do
+for file in "$PR_CI" "$CI" "$RELEASE" "$RELEASE_CONFIG" "$PUBLISH" "$REUSABLE" "$SECURITY" "$CLEANUP" "$CANCEL_SCRIPT" "$CANCEL_TEST" "$HANDOFF" "$SERVICE_CATALOG" "$SERVICE_CATALOG_TEST" "$MANIFEST" "$MANIFEST_TEST"; do
   [[ -f "$file" ]] || { echo "Required immutable release file not found: $file"; exit 1; }
 done
 
@@ -103,6 +106,18 @@ require_pattern "$REUSABLE" 'git ls-remote origin refs/heads/main' "Reusable pub
 require_pattern "$REUSABLE" 'sha256:\[0-9a-f\].*64' "Image digest is not validated"
 require_pattern "$REUSABLE" 'imagetools inspect' "Published digest is not checked in GHCR"
 
+require_pattern "$CLEANUP" 'workflows: \["Publish Release Images"\]' \
+  "Deploy queue cleanup is not tied to immutable publication"
+require_pattern "$CLEANUP" 'actions: write' "Deploy queue cleanup cannot cancel workflow runs"
+require_pattern "$CLEANUP" 'cancel-superseded-deploys\.sh' \
+  "Deploy queue cleanup does not invoke the safe cancellation script"
+require_pattern "$CANCEL_SCRIPT" 'status == "in_progress"' \
+  "Cancellation script does not protect an active deployment"
+require_pattern "$CANCEL_SCRIPT" 'head_sha != \$release_sha' \
+  "Cancellation script is not limited to superseded releases"
+require_pattern "$CANCEL_SCRIPT" '/cancel' \
+  "Cancellation script does not cancel superseded workflow runs"
+
 for file in "$SERVICE_CATALOG" "$MANIFEST" "$MANIFEST_TEST"; do
   lines="$(wc -l < "$file")"
   (( lines <= 150 )) || { echo "Python module exceeds 150 lines: $file ($lines)"; exit 1; }
@@ -111,5 +126,6 @@ done
 PYTHONPATH="$ROOT_DIR/.github/scripts" python3 "$SERVICE_CATALOG_TEST" -v
 PYTHONPATH="$ROOT_DIR/.github/scripts" python3 "$MANIFEST_TEST" -v
 python3 -m py_compile "$SERVICE_CATALOG" "$MANIFEST" "$MANIFEST_TEST"
+bash "$CANCEL_TEST"
 bash "$HANDOFF"
 echo "Explicit full release gates, immutable publication and production handoff contracts are valid"
