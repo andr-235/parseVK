@@ -4,29 +4,22 @@ set -euo pipefail
 SPEC_PATH="${1:-libs/py/contracts/generated/asyncapi/parsevk-contracts.yaml}"
 SPEC_PATH="$(realpath "$SPEC_PATH")"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPOSITORY_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PACKAGE_DIR="$REPOSITORY_ROOT/.github/asyncapi-validator"
 VALIDATOR_DIR="${RUNNER_TEMP:-/tmp}/parsevk-asyncapi-validator"
 LOG_PATH="${RUNNER_TEMP:-/tmp}/parsevk-asyncapi-validation.log"
 
 rm -rf "$VALIDATOR_DIR"
 mkdir -p "$VALIDATOR_DIR"
-cat > "$VALIDATOR_DIR/package.json" <<'JSON'
-{
-  "name": "parsevk-asyncapi-validator",
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "@asyncapi/parser": "3.6.0"
-  }
-}
-JSON
+cp "$PACKAGE_DIR/package.json" "$VALIDATOR_DIR/package.json"
+cp "$PACKAGE_DIR/package-lock.json" "$VALIDATOR_DIR/package-lock.json"
 cp "$SCRIPT_DIR/validate-asyncapi.mjs" "$VALIDATOR_DIR/validate-asyncapi.mjs"
 
-npm install \
+npm ci \
   --prefix "$VALIDATOR_DIR" \
   --ignore-scripts \
   --no-audit \
-  --no-fund \
-  --package-lock=false
+  --no-fund
 
 set +e
 (
