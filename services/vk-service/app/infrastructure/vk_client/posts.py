@@ -179,7 +179,7 @@ class PostsClient:
     ) -> AsyncIterator[dict]:
         """Asynchronously iterate comment pages for a wall post.
 
-        Yields dictionaries with ``items``, ``profiles`` and ``groups``.
+        Yields normalized entity collections together with provider response metadata.
         Stops when a page contains no items or the offset reaches the total count.
         """
         offset = start_offset
@@ -232,11 +232,20 @@ class PostsClient:
                 len(groups),
             )
 
-            yield {
+            page = {
                 "items": list(items),
                 "profiles": list(profiles),
                 "groups": list(groups),
             }
+            if items:
+                page.update(
+                    {
+                        key: value
+                        for key, value in response.items()
+                        if key not in {"items", "profiles", "groups"}
+                    }
+                )
+            yield page
 
             if not items:
                 break
