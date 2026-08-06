@@ -1,12 +1,12 @@
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from app.domain.exceptions.vk_api import VkApiAuthError
 from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
 from app.domain.repositories.checkpoint import IngestionCheckpointStore
 from app.infrastructure.tasks_client.client import TasksClient
 from app.services.ingestion.checkpoint_flow import CheckpointFlow
 from app.services.ingestion.comment_collector import CommentCollector
+from app.services.ingestion.group_collection_loader import GroupCollectionLoader
 from app.services.ingestion.group_collector import GroupCollector
 from app.services.ingestion.post_collector import PostCollector
 from app.services.ingestion.post_pipeline import PostCollectionPipeline
@@ -52,7 +52,7 @@ class DataCollector:
             require_staging=require_staging,
             page_committer=page_committer,
         )
-        self.checkpoint_flow = CheckpointFlow(
+        checkpoints = CheckpointFlow(
             store=checkpoint_store,
             commit_page=page_committer,
             on_error=self.on_error,
@@ -60,8 +60,13 @@ class DataCollector:
         self.post_pipeline = PostCollectionPipeline(
             post_collector=self.post_collector,
             comment_collector=self.comment_collector,
-            checkpoints=self.checkpoint_flow,
+            checkpoints=checkpoints,
             progress=ProgressReporter(demand_fanout=demand_fanout),
+        )
+        self._group_loader = GroupCollectionLoader(
+            group_collector=self.group_collector,
+            post_collector=self.post_collector,
+            on_error=self.on_error,
         )
 
     async def get_group_ids(self, task_run: Any) -> list[int]:
@@ -74,19 +79,19 @@ class DataCollector:
         *,
         correlation_id: str | None = None,
     ) -> IngestionResult:
-        result = IngestionResult()
-        result.errors = []
+        result = IngestionResult(errors=[])
         self.current_result = result
 
         for group_id in group_ids:
-            if not await self._collect_group(
+            accepted = await self._group_loader.collect_group(
                 group_id,
                 correlation_id,
                 result,
-            ):
+            )
+            if not accepted:
                 continue
             profiles: dict[int, dict] = {}
-            posts = await self._load_posts(
+            posts = await self._group_loader.load_posts(
                 group_id,
                 task_run,
                 profiles,
@@ -108,45 +113,3 @@ class DataCollector:
                     correlation_id=correlation_id,
                 )
         return result
-
-    async def _collect_group(
-        self,
-        group_id: int,
-        correlation_id: str | None,
-        result: IngestionResult,
-    ) -> bool:
-        try:
-            await self.group_collector.collect_group(
-                group_id,
-                correlation_id=correlation_id,
-            )
-        except VkApiAuthError:
-            raise
-        except Exception as error:
-            message = self.on_error(str(error))
-            result.errors.append({"group_id": group_id, "error": message})
-            return False
-        result.groups += 1
-        return True
-
-    async def _load_posts(
-        self,
-        group_id: int,
-        task_run: Any,
-        profiles: dict[int, dict],
-        correlation_id: str | None,
-        result: IngestionResult,
-    ) -> list[dict] | None:
-        try:
-            return await self.post_collector.collect_for_group(
-                group_id,
-                task_run,
-                profiles,
-                correlation_id=correlation_id,
-            )
-        except VkApiAuthError:
-            raise
-        except Exception as error:
-            message = self.on_error(str(error))
-            result.errors.append({"group_id": group_id, "error": message})
-            return None
