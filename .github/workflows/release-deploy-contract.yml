@@ -16,6 +16,7 @@ on:
       - .github/workflows/reusable-publish-image.yml
       - .github/workflows/release-deploy-contract.yml
       - scripts/test-cancel-superseded-deploys.sh
+      - scripts/test-release-coordinator-supersession.sh
       - scripts/test-release-handoff-workflow.sh
   push:
     branches: [main]
@@ -32,6 +33,7 @@ on:
       - .github/workflows/reusable-publish-image.yml
       - .github/workflows/release-deploy-contract.yml
       - scripts/test-cancel-superseded-deploys.sh
+      - scripts/test-release-coordinator-supersession.sh
       - scripts/test-release-handoff-workflow.sh
 
 permissions:
@@ -62,6 +64,7 @@ jobs:
         run: |
           bash scripts/test-release-handoff-workflow.sh
           bash scripts/test-cancel-superseded-deploys.sh
+          bash scripts/test-release-coordinator-supersession.sh
 
       - name: Compile release resolver
         run: python3 -m py_compile .github/scripts/latest_release.py .github/scripts/test_latest_release.py
