@@ -20,19 +20,39 @@ is_cancellable_status() {
   esac
 }
 
-RUNS="$(api --method GET \
+RUN_PAGES="$(api --paginate --slurp --method GET \
   "repos/${GITHUB_REPOSITORY}/actions/workflows/${DEPLOY_WORKFLOW}/runs" \
   -f event=workflow_dispatch \
   -f branch=main \
-  -f per_page=50)"
+  -f per_page=100)"
 
 mapfile -t CANDIDATES < <(
   jq -r --arg release_sha "$RELEASE_SHA" '
-    .workflow_runs[]
-    | select(.head_sha != $release_sha)
-    | select(.status == "queued" or .status == "pending" or .status == "waiting" or .status == "requested")
-    | .id
-  ' <<<"$RUNS"
+    [.[].workflow_runs[]]
+    | .[]
+    | . as $run
+    | (
+        if (($run.display_title // "") | test("^Deploy release [0-9a-f]{40}$")) then
+          (($run.display_title | capture("^Deploy release (?<sha>[0-9a-f]{40})$")).sha)
+        elif (
+          (($run.head_commit.message // "") | startswith("chore(release):")) and
+          (($run.head_commit.message // "") | contains("[skip ci]"))
+        ) then
+          $run.head_sha
+        else
+          null
+        end
+      ) as $run_release_sha
+    | select($run_release_sha != null)
+    | select($run_release_sha != $release_sha)
+    | select(
+        $run.status == "queued" or
+        $run.status == "pending" or
+        $run.status == "waiting" or
+        $run.status == "requested"
+      )
+    | $run.id
+  ' <<<"$RUN_PAGES"
 )
 
 if (( ${#CANDIDATES[@]} == 0 )); then
