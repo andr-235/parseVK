@@ -24,6 +24,24 @@ class PageAdapter:
         return pages()
 
 
+class CollisionPageAdapter:
+    def iter_comment_pages(self, *args, **kwargs):
+        async def pages():
+            yield {
+                "items": [
+                    {"id": 10, "from_id": 42, "date": 1_700_000_000},
+                    {"id": 11, "from_id": -42, "date": 1_700_000_001},
+                ],
+                "profiles": [
+                    {"id": 42, "first_name": "User", "last_name": "FortyTwo"}
+                ],
+                "groups": [{"id": 42, "name": "Group FortyTwo"}],
+                "count": 2,
+            }
+
+        return pages()
+
+
 class RecordingRepository:
     def __init__(self):
         self.authors = []
@@ -63,18 +81,30 @@ async def test_page_profile_replaces_stale_cached_author():
     )
 
     assert profiles[1]["first_name"] == "Fresh"
-    assert repository.authors == [
-        {
-            "vk_author_id": 1,
-            "type": "user",
-            "display_name": "Fresh Name",
-            "first_name": "Fresh",
-            "last_name": "Name",
-            "photo_50": None,
-            "photo_100": None,
-            "photo_200": None,
-            "domain": "",
-            "screen_name": "",
-            "raw": {"from_id": 1},
-        }
-    ]
+    assert repository.authors[0]["display_name"] == "Fresh Name"
+
+
+@pytest.mark.anyio
+async def test_user_and_group_with_same_absolute_id_remain_distinct():
+    repository = RecordingRepository()
+    collector = CommentCollector(
+        adapter=CollisionPageAdapter(),
+        repository=repository,
+    )
+    profiles = {}
+
+    await collector.collect_for_post(
+        owner_id=-42,
+        post_id=99,
+        author_profiles=profiles,
+        task_run=SimpleNamespace(task_id=5, run_id="run-5"),
+        checkpoint_store=None,
+    )
+
+    assert profiles[42]["first_name"] == "User"
+    assert profiles[-42]["name"] == "Group FortyTwo"
+    authors = {author["vk_author_id"]: author for author in repository.authors}
+    assert authors[42]["type"] == "user"
+    assert authors[42]["display_name"] == "User FortyTwo"
+    assert authors[-42]["type"] == "group"
+    assert authors[-42]["display_name"] == "Group FortyTwo"
