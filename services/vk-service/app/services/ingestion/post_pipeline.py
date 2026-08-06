@@ -33,13 +33,14 @@ class PostCollectionPipeline:
         remaining_posts: int,
         correlation_id: str | None,
     ) -> None:
-        owner_id, post_id = int(post["owner_id"]), int(post["id"])
-        author_added = await self.posts.save_post(
+        author_added, effective_post = await self.posts.save_post(
             post,
             task_run,
             profiles,
             correlation_id=correlation_id,
         )
+        owner_id = int(effective_post["owner_id"])
+        post_id = int(effective_post["id"])
         await self.checkpoints.commit()
         result.authors += int(author_added)
         result.posts += 1
@@ -59,7 +60,7 @@ class PostCollectionPipeline:
             count = await self.comments.collect_for_post(
                 owner_id=owner_id,
                 post_id=post_id,
-                post=post,
+                post=effective_post,
                 author_profiles=profiles,
                 task_run=task_run,
                 checkpoint_store=self.checkpoints.store,
