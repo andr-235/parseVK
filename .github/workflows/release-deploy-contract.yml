@@ -9,6 +9,7 @@ on:
       - .github/scripts/cancel-superseded-deploys.sh
       - .github/workflows/ci.yml
       - .github/workflows/security.yml
+      - .github/workflows/release.yml
       - .github/workflows/deploy.yml
       - .github/workflows/deploy-queue-cleanup.yml
       - .github/workflows/release-deploy-coordinator.yml
@@ -26,6 +27,7 @@ on:
       - .github/scripts/cancel-superseded-deploys.sh
       - .github/workflows/ci.yml
       - .github/workflows/security.yml
+      - .github/workflows/release.yml
       - .github/workflows/deploy.yml
       - .github/workflows/deploy-queue-cleanup.yml
       - .github/workflows/release-deploy-coordinator.yml
@@ -50,7 +52,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Validate latest-release supersession
+      - name: Validate created-release supersession
         run: bash scripts/test-release-coordinator-supersession.sh
 
   contract:
