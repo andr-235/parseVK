@@ -73,7 +73,8 @@ class CommentPageFetcher:
                         redact_vk_error(str(exc)),
                     )
                     raise
-                delay = min(2**attempt, 30) * (0.5 + random.random() * 0.5)  # noqa: S311
+                jitter = 0.5 + random.random() * 0.5  # noqa: S311
+                delay = min(2**attempt, 30) * jitter
                 logger.warning(
                     "Transient VK error owner_id=%d post_id=%d offset=%d; "
                     "retrying in %.2fs (%d/%d): %s",
