@@ -3,8 +3,14 @@ from uuid import UUID
 
 import pytest
 
+from app.domain.entities.ingestion_staging import StagedIngestionBatch
+from app.domain.repositories.ingestion_staging import StagingPayloadIntegrityError
 from app.services.ingestion.post_collector import PostCollector
-from app.services.ingestion.staging_writer import PhysicalIngestionStager
+from app.services.ingestion.staging_writer import (
+    POST_SNAPSHOT,
+    STAGING_SCHEMA_VERSION,
+    PhysicalIngestionStager,
+)
 
 
 class MemoryStagingRepository:
@@ -92,3 +98,42 @@ async def test_resume_reuses_the_first_immutable_post_snapshot():
     assert local_repository.posts[-1][0] == original
     assert local_repository.authors[-1]["display_name"] == "Group"
     assert local_repository.authors[-1]["photo_50"] == "old-photo"
+
+
+@pytest.mark.anyio
+async def test_reused_snapshot_rejects_author_without_required_fields():
+    collector, staging_repository, local_repository = make_collector()
+    post = {"owner_id": -42, "id": 99, "from_id": -42}
+    staging = collector.staging
+    batch = StagedIngestionBatch.create(
+        execution_id=staging.execution_id,
+        attempt_id=staging.attempt_id,
+        fencing_token=staging.fencing_token,
+        source_kind=POST_SNAPSHOT,
+        owner_id=-42,
+        post_id=99,
+        page_offset=0,
+        payload={
+            "schemaVersion": STAGING_SCHEMA_VERSION,
+            "source": {
+                "kind": POST_SNAPSHOT,
+                "ownerId": -42,
+                "postId": 99,
+                "pageOffset": 0,
+                "nextOffset": None,
+            },
+            "observed": {"post": post, "authors": [{}]},
+            "providerMetadata": {},
+        },
+    )
+    staging_repository.batches[batch.batch_id] = batch
+
+    with pytest.raises(StagingPayloadIntegrityError, match="author identity"):
+        await collector.save_post(
+            post,
+            SimpleNamespace(task_id=10),
+            {},
+        )
+
+    assert local_repository.authors == []
+    assert local_repository.posts == []
