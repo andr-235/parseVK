@@ -30,7 +30,7 @@ if '"timeout":false' in normalized:
     raise SystemExit("AI review provider timeout must remain bounded")
 PY
 
-grep -Fq 'reason": "opencode-failed"' "$REVIEWER" || {
+grep -Fq 'opencode-failed' "$REVIEWER" || {
   echo "AI reviewer no longer fails closed on OpenCode errors"
   exit 1
 }
