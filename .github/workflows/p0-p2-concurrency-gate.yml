@@ -131,14 +131,28 @@ jobs:
         env:
           P0_P2_CONCURRENCY_REPEATS: '5'
         run: |
-          uv run pytest -q --strict-markers \
-            -o addopts="--import-mode=importlib" \
-            -m integration \
-            tests/test_vk_outbox_ordering_postgres.py \
-            tests/test_source_registration_postgres.py
-          uv run pytest -q --strict-markers \
-            tests/test_outbox_publisher_delivery.py \
-            tests/test_vk_command_replay.py
+          set +e
+          (
+            set -e
+            uv run pytest -q --strict-markers \
+              -o addopts="--import-mode=importlib" \
+              -m integration \
+              tests/test_vk_outbox_ordering_postgres.py \
+              tests/test_source_registration_postgres.py
+            uv run pytest -q --strict-markers \
+              tests/test_outbox_publisher_delivery.py \
+              tests/test_vk_command_replay.py
+          ) 2>&1 | tee tasks-postgres.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [[ "$status" -ne 0 ]]; then
+            detail=$(tail -n 120 tasks-postgres.log)
+            detail=${detail//'%'/'%25'}
+            detail=${detail//$'\r'/'%0D'}
+            detail=${detail//$'\n'/'%0A'}
+            echo "::error title=Tasks PostgreSQL failure::$detail"
+          fi
+          exit "$status"
 
   services:
     name: Full Python Service Matrix
