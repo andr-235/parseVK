@@ -12,7 +12,11 @@ from app.db.models import MonitoringSource
 from app.modules.sources.errors import TaskNotFoundError
 from app.modules.sources.identity import canonical_source
 from app.modules.sources.repository import SourcesRepository
-from app.modules.sources.resolver import SourceIdentity, SourceResolver
+from app.modules.sources.resolver import (
+    ResolverError,
+    SourceIdentity,
+    SourceResolver,
+)
 from app.modules.sources.schemas import CreateSourceRequest, TaskSourceRequest
 from app.modules.tasks.repository import TasksRepository
 
@@ -35,17 +39,13 @@ class SourcesService:
     async def create_source(
         self, owner_user_id: str, request: CreateSourceRequest
     ) -> MonitoringSource:
-        identity = SourceIdentity(request.provider, request.source_type, request.external_id)
-        resolved = await self.resolver.resolve(identity)
-
-        existing = await self.sources_repo.get_source_by_identity(
-            resolved.provider, resolved.source_type, resolved.external_id
+        identity = SourceIdentity(
+            request.provider,
+            request.source_type,
+            request.external_id,
         )
-        if existing is not None:
-            logger.debug("Source already registered: id=%s", existing.id)
-            return existing
-
-        source = MonitoringSource(
+        resolved = await self.resolver.resolve(identity)
+        candidate = MonitoringSource(
             id=resolved.source_id,
             owner_user_id=owner_user_id,
             provider=resolved.provider,
@@ -55,11 +55,31 @@ class SourcesService:
             display_name=request.display_name,
             revision=resolved.source_revision,
         )
-        source = await self.sources_repo.create_source(source)
-        logger.info("Source registered: id=%s external=%s", source.id, source.external_id)
+        source = await self.sources_repo.get_or_create_source(candidate)
+        if source.id != resolved.source_id or source.owner_id != resolved.owner_id:
+            logger.error(
+                "Canonical source mismatch: stored=%s resolved=%s",
+                source.id,
+                resolved.source_id,
+            )
+            raise ResolverError("Stored source does not match resolver identity")
+
+        await self.sources_repo.ensure_source_registration(
+            owner_user_id,
+            source.id,
+        )
+        logger.info(
+            "Source registered for user: id=%s owner=%s external=%s",
+            source.id,
+            owner_user_id,
+            source.external_id,
+        )
         return source
 
-    async def list_sources(self, owner_user_id: str) -> tuple[list[MonitoringSource], int]:
+    async def list_sources(
+        self,
+        owner_user_id: str,
+    ) -> tuple[list[MonitoringSource], int]:
         return await self.sources_repo.list_sources(owner_user_id)
 
     async def attach_source_to_task(
@@ -68,7 +88,11 @@ class SourcesService:
         task = await self.tasks_repo.get_task(owner_user_id, task_id)
         if task is None:
             raise TaskNotFoundError(f"Task {task_id} not found")
-        identity = SourceIdentity(request.provider, request.source_type, request.external_id)
+        identity = SourceIdentity(
+            request.provider,
+            request.source_type,
+            request.external_id,
+        )
         source = await canonical_source(self.resolver, self.sources_repo, identity)
         await self.sources_repo.link_task_source(task_id, source.id, request.kind)
         logger.info(

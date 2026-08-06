@@ -6,6 +6,7 @@ imports from ``app.db.models`` remain stable for services, tests, and Alembic.
 
 from app.db.infra_models import OutboxEvent, ProcessedEvent, TaskAutomationSettings
 from app.db.model_utils import utcnow
+from app.db.registration_models import SourceRegistration
 from app.db.run_models import TaskRun, TaskRunSourceDemand
 from app.db.source_models import (
     AccessScope,
@@ -21,6 +22,7 @@ __all__ = [
     "OutboxEvent",
     "ProcessedEvent",
     "ScopeSourceAccess",
+    "SourceRegistration",
     "Task",
     "TaskAuditLog",
     "TaskAutomationSettings",
