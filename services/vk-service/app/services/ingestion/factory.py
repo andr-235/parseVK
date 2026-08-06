@@ -26,20 +26,22 @@ def build_ingestion_service(
     tasks_client: TasksClient,
     attempt_control=None,
 ) -> IngestionService:
+    if attempt_control is None:
+        raise ValueError(
+            "attempt_control is required for physical ingestion staging"
+        )
+
     repository = SqlAlchemyIngestionRepository(session)
     outbox = OutboxService(SqlAlchemyOutboxRepository(session), session=session)
     checkpoints = SqlAlchemyIngestionCheckpointStore(session)
     demand_fanout = DemandLifecycleFanout(session=session)
-    staging = None
-    if attempt_control is not None:
-        staging = PhysicalIngestionStager.from_claim(
-            SqlAlchemyIngestionStagingRepository(session),
-            attempt_control.claim,
-        )
+    staging = PhysicalIngestionStager.from_claim(
+        SqlAlchemyIngestionStagingRepository(session),
+        attempt_control.claim,
+    )
 
     async def commit_page() -> None:
-        if attempt_control is not None:
-            await attempt_control.ensure_active_in_session(session)
+        await attempt_control.ensure_active_in_session(session)
         await session.commit()
 
     collector = DataCollector(
