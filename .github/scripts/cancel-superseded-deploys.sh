@@ -13,6 +13,13 @@ api() {
   "$GH_BIN" api "$@"
 }
 
+is_cancellable_status() {
+  case "$1" in
+    queued|pending|waiting|requested) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 RUNS="$(api --method GET \
   "repos/${GITHUB_REPOSITORY}/actions/workflows/${DEPLOY_WORKFLOW}/runs" \
   -f event=workflow_dispatch \
@@ -23,27 +30,40 @@ mapfile -t CANDIDATES < <(
   jq -r --arg release_sha "$RELEASE_SHA" '
     .workflow_runs[]
     | select(.head_sha != $release_sha)
-    | select(.status != "completed")
+    | select(.status == "queued" or .status == "pending" or .status == "waiting" or .status == "requested")
     | .id
   ' <<<"$RUNS"
 )
 
 if (( ${#CANDIDATES[@]} == 0 )); then
-  echo "No superseded production deploy runs found."
+  echo "No superseded queued production deploy runs found."
   exit 0
 fi
 
 for run_id in "${CANDIDATES[@]}"; do
+  RUN="$(api --method GET "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}")"
+  STATUS="$(jq -r '.status' <<<"$RUN")"
+  is_cancellable_status "$STATUS" || {
+    echo "::error::Superseded production deploy ${run_id} changed to ${STATUS}; refusing to cancel it."
+    exit 1
+  }
+
   JOBS="$(api --method GET \
     "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs" \
     -f filter=latest \
     -f per_page=100)"
-
   ACTIVE_JOBS="$(jq '[.jobs[] | select(.status == "in_progress")] | length' <<<"$JOBS")"
   if (( ACTIVE_JOBS > 0 )); then
     echo "::error::Superseded production deploy ${run_id} has an active job; refusing to cancel it."
     exit 1
   fi
+
+  RUN="$(api --method GET "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}")"
+  STATUS="$(jq -r '.status' <<<"$RUN")"
+  is_cancellable_status "$STATUS" || {
+    echo "::error::Superseded production deploy ${run_id} changed to ${STATUS} before cancellation."
+    exit 1
+  }
 
   echo "Cancelling superseded queued production deploy ${run_id}."
   if ! api --method POST \
