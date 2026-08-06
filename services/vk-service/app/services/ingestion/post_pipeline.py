@@ -1,6 +1,10 @@
 from typing import Any
 
 from app.domain.exceptions.vk_api import VkApiAuthError
+from app.domain.repositories.ingestion_staging import (
+    StagingPayloadConflictError,
+    StagingPayloadIntegrityError,
+)
 from app.services.ingestion.checkpoint_flow import CheckpointFlow
 from app.services.ingestion.comment_collector import CommentCollector
 from app.services.ingestion.post_collector import PostCollector
@@ -72,6 +76,8 @@ class PostCollectionPipeline:
             result.comments += base_processed + count
             await self.checkpoints.complete(task_run, owner_id, post_id)
         except VkApiAuthError:
+            raise
+        except (StagingPayloadConflictError, StagingPayloadIntegrityError):
             raise
         except Exception as error:
             await self.checkpoints.fail(
