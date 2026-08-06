@@ -13,11 +13,26 @@ api() {
   "$GH_BIN" api "$@"
 }
 
-is_cancellable_status() {
+is_incomplete_status() {
   case "$1" in
-    queued|pending|waiting|requested) return 0 ;;
+    queued|pending|waiting|requested|in_progress) return 0 ;;
     *) return 1 ;;
   esac
+}
+
+assert_no_active_jobs() {
+  local run_id="$1" phase="$2"
+  local jobs active_jobs
+
+  jobs="$(api --method GET \
+    "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs" \
+    -f filter=latest \
+    -f per_page=100)"
+  active_jobs="$(jq '[.jobs[] | select(.status == "in_progress")] | length' <<<"$jobs")"
+  if (( active_jobs > 0 )); then
+    echo "::error::Superseded production deploy ${run_id} has an active job ${phase}; refusing to cancel it."
+    return 1
+  fi
 }
 
 RUN_PAGES="$(api --paginate --slurp --method GET \
@@ -49,7 +64,8 @@ mapfile -t CANDIDATES < <(
         $run.status == "queued" or
         $run.status == "pending" or
         $run.status == "waiting" or
-        $run.status == "requested"
+        $run.status == "requested" or
+        $run.status == "in_progress"
       )
     | $run.id
   ' <<<"$RUN_PAGES"
@@ -63,27 +79,29 @@ fi
 for run_id in "${CANDIDATES[@]}"; do
   RUN="$(api --method GET "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}")"
   STATUS="$(jq -r '.status' <<<"$RUN")"
-  is_cancellable_status "$STATUS" || {
+  if [[ "$STATUS" == "completed" ]]; then
+    echo "Superseded production deploy ${run_id} already completed before cleanup."
+    continue
+  fi
+  is_incomplete_status "$STATUS" || {
     echo "::error::Superseded production deploy ${run_id} changed to ${STATUS}; refusing to cancel it."
     exit 1
   }
 
-  JOBS="$(api --method GET \
-    "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs" \
-    -f filter=latest \
-    -f per_page=100)"
-  ACTIVE_JOBS="$(jq '[.jobs[] | select(.status == "in_progress")] | length' <<<"$JOBS")"
-  if (( ACTIVE_JOBS > 0 )); then
-    echo "::error::Superseded production deploy ${run_id} has an active job; refusing to cancel it."
-    exit 1
-  fi
+  assert_no_active_jobs "$run_id" "during the first safety check"
 
   RUN="$(api --method GET "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}")"
   STATUS="$(jq -r '.status' <<<"$RUN")"
-  is_cancellable_status "$STATUS" || {
+  if [[ "$STATUS" == "completed" ]]; then
+    echo "Superseded production deploy ${run_id} completed before cancellation."
+    continue
+  fi
+  is_incomplete_status "$STATUS" || {
     echo "::error::Superseded production deploy ${run_id} changed to ${STATUS} before cancellation."
     exit 1
   }
+
+  assert_no_active_jobs "$run_id" "immediately before cancellation"
 
   echo "Cancelling superseded queued production deploy ${run_id}."
   if ! api --method POST \
@@ -117,4 +135,4 @@ for run_id in "${CANDIDATES[@]}"; do
   }
 done
 
-printf 'Cancelled %d superseded queued production deploy run(s).\n' "${#CANDIDATES[@]}"
+printf 'Settled %d superseded production deploy run(s).\n' "${#CANDIDATES[@]}"
