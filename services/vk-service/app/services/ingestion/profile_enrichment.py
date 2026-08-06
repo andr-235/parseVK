@@ -1,4 +1,8 @@
+import logging
+
 from app.domain.ports.vk_api import VkApiPort
+
+logger = logging.getLogger(__name__)
 
 _PROFILE_FIELDS = [
     "photo_50",
@@ -23,6 +27,13 @@ async def enrich_user_profiles(
     try:
         enriched_users = await adapter.get_users(missing, fields=_PROFILE_FIELDS)
     except Exception:
+        logger.exception(
+            "Failed to enrich VK user profiles",
+            extra={
+                "missing_profile_count": len(missing),
+                "requested_profile_fields": _PROFILE_FIELDS,
+            },
+        )
         return
     for user in enriched_users:
         user_id = user.get("id")
