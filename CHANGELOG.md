@@ -1,3 +1,10 @@
+## [0.91.9](https://github.com/andr-235/parseVK/compare/v0.91.8...v0.91.9) (2026-08-06)
+
+
+### Bug Fixes
+
+* **release:** supersede stale coordinator waits ([#442](https://github.com/andr-235/parseVK/issues/442)) ([474cd4d](https://github.com/andr-235/parseVK/commit/474cd4d1fd2f01506fe42980d257b2980fa093f5))
+
 ## [0.91.8](https://github.com/andr-235/parseVK/compare/v0.91.7...v0.91.8) (2026-08-06)
 
 
