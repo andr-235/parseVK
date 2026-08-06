@@ -9,7 +9,9 @@ import pytest
 from aiokafka import AIOKafkaConsumer
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+TEST_DIR = Path(__file__).resolve().parent
+REPO_ROOT = TEST_DIR.parents[3]
+sys.path.insert(0, str(TEST_DIR))
 from canonical_e2e_flows import run_cancel_flow, run_recovery_flow
 from canonical_e2e_support import (
     TOPIC,
@@ -60,12 +62,11 @@ async def test_tasks_outbox_to_canonical_vk_runtime_e2e(tmp_path: Path):
             await connection.run_sync(Base.metadata.create_all)
         await consumer.start()
         consumer_started = True
-        repo_root = Path(__file__).resolve().parents[4]
         repeats = int(os.getenv("P0_P2_E2E_REPEATS", "1"))
 
         for iteration in range(repeats):
             cancel_metadata = await _publish_scenario(
-                repo_root,
+                REPO_ROOT,
                 infra,
                 tmp_path / f"cancel-{iteration}.json",
                 "cancel",
@@ -78,7 +79,7 @@ async def test_tasks_outbox_to_canonical_vk_runtime_e2e(tmp_path: Path):
             )
 
             recovery_metadata = await _publish_scenario(
-                repo_root,
+                REPO_ROOT,
                 infra,
                 tmp_path / f"recovery-{iteration}.json",
                 "recovery",
