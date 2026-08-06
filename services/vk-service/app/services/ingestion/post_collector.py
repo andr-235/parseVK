@@ -2,6 +2,7 @@ import logging
 from typing import Any
 
 from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
+from app.services.ingestion.staging_writer import PhysicalIngestionStager
 
 logger = logging.getLogger("vk-service.ingestion")
 
@@ -16,11 +17,13 @@ class PostCollector:
         *,
         adapter: VkApiAdapter,
         repository,
-        outbox=None,
+        staging: PhysicalIngestionStager | None = None,
+        require_staging: bool = False,
     ) -> None:
         self.adapter = adapter
         self.repository = repository
-        self.outbox = outbox
+        self.staging = staging
+        self.require_staging = require_staging
 
     async def collect_for_group(
         self,
@@ -47,10 +50,9 @@ class PostCollector:
             owner_id = post.get("owner_id")
             post_id = post.get("id")
             if owner_id is None or post_id is None:
-                logger.warning("Skipping post without owner_id or id: %s", post.get("id"))
+                logger.warning("Skipping post without owner_id or id: %s", post_id)
                 continue
             valid_posts.append(post)
-
         return valid_posts
 
     async def save_post(
@@ -61,31 +63,24 @@ class PostCollector:
         *,
         correlation_id: str | None = None,
     ) -> bool:
-        author_added = await self._upsert_post_author(post, author_profiles)
+        author_payload = _post_author_payload(post, author_profiles)
+        if self.staging is None:
+            if self.require_staging:
+                raise RuntimeError("durable post staging requires a fenced execution")
+        else:
+            await self.staging.stage_post(
+                post=post,
+                authors=[author_payload] if author_payload is not None else [],
+            )
+
+        if author_payload is not None:
+            await self.repository.upsert_author(author_payload)
         await self.repository.upsert_post(
             post,
             task_id=task_run.task_id,
             group_id=post.get("owner_id"),
         )
-        if self.outbox:
-            await self.outbox.emit_post_collected(
-                post,
-                task_id=task_run.task_id,
-                correlation_id=correlation_id,
-            )
-        return author_added
-
-    async def _upsert_post_author(
-        self,
-        post: dict,
-        profiles: dict[int, dict],
-    ) -> bool:
-        from_id = post.get("from_id")
-        if from_id is None:
-            return False
-        payload = _author_payload(from_id, profiles)
-        await self.repository.upsert_author(payload)
-        return True
+        return author_payload is not None
 
 
 def post_collection_mode(task_run: Any) -> str:
@@ -98,10 +93,18 @@ def post_collection_mode(task_run: Any) -> str:
     )
     mode = _POST_STRATEGY_TO_MODE.get(strategy)
     if mode is None:
-        raise RuntimeError(
-            "Execution plan has unsupported postSelection strategy"
-        )
+        raise RuntimeError("Execution plan has unsupported postSelection strategy")
     return mode
+
+
+def _post_author_payload(
+    post: dict,
+    profiles: dict[int, dict],
+) -> dict | None:
+    from_id = post.get("from_id")
+    if from_id is None:
+        return None
+    return _author_payload(int(from_id), profiles)
 
 
 def _author_payload(

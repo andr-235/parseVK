@@ -27,8 +27,6 @@
 | `REALTIME_DATABASE_URL` | `postgresql+asyncpg://realtime:realtime@realtime-db:5432/realtime` | Realtime DB |
 | `REALTIME_KAFKA_CONSUMER_ENABLED` | `false` | Enable Kafka consumer |
 | `REALTIME_RETENTION_HOURS` | `24` | Event retention window |
-| `VK_SERVICE_VK_BATCH_EVENTS_ENABLED` | `true` | Enable batch events |
-| `VK_SERVICE_VK_LEGACY_COMMENT_EVENTS_ENABLED` | `true` | Legacy per-comment events |
 | `VK_SERVICE_TOKEN_FILE` | — | Path to the mounted VK token file (preferred secret source, see below) |
 | `VK_SERVICE_TARGET_REQUESTS_PER_SECOND` | `3.0` | Scheduler rate target per account |
 | `VK_SERVICE_RATE_LIMIT_MAX_RETRIES` | `5` | Retry budget for transient/rate-limit errors |
