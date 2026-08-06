@@ -9,6 +9,9 @@ from app.domain.repositories.ingestion_staging import (
     StagingPayloadConflictError,
     StagingPayloadIntegrityError,
 )
+from app.infrastructure.metrics.ingestion_staging_metrics import (
+    observe_staging_result,
+)
 from app.services.ingestion.staging_writer import (
     POST_SNAPSHOT,
     STAGING_SCHEMA_VERSION,
@@ -40,7 +43,7 @@ async def stage_or_reuse_post_snapshot(
     )
     existing = await staging.repository.get(batch_id)
     if existing is not None:
-        return _resolve(existing, owner_id=owner_id, post_id=post_id, created=False)
+        return _reuse(existing, owner_id=owner_id, post_id=post_id)
 
     try:
         batch, created = await staging.stage_post(post=post, authors=authors)
@@ -48,8 +51,19 @@ async def stage_or_reuse_post_snapshot(
         existing = await staging.repository.get(batch_id)
         if existing is None:
             raise
-        return _resolve(existing, owner_id=owner_id, post_id=post_id, created=False)
+        return _reuse(existing, owner_id=owner_id, post_id=post_id)
     return _resolve(batch, owner_id=owner_id, post_id=post_id, created=created)
+
+
+def _reuse(
+    batch: StagedIngestionBatch,
+    *,
+    owner_id: int,
+    post_id: int,
+) -> PostSnapshotResolution:
+    resolved = _resolve(batch, owner_id=owner_id, post_id=post_id, created=False)
+    observe_staging_result(POST_SNAPSHOT, "reused")
+    return resolved
 
 
 def _resolve(
@@ -76,9 +90,13 @@ def _resolve(
     stored_authors = observed.get("authors")
     if not isinstance(stored_post, dict) or not isinstance(stored_authors, list):
         raise StagingPayloadIntegrityError("stored post snapshot has invalid observations")
-    if int(stored_post.get("owner_id", 0)) != owner_id or int(
-        stored_post.get("id", 0)
-    ) != post_id:
+    try:
+        identity = int(stored_post["owner_id"]), int(stored_post["id"])
+    except (KeyError, TypeError, ValueError) as error:
+        raise StagingPayloadIntegrityError(
+            "stored post snapshot identity is invalid"
+        ) from error
+    if identity != (owner_id, post_id):
         raise StagingPayloadIntegrityError("stored post snapshot identity changed")
     if any(not isinstance(author, dict) for author in stored_authors):
         raise StagingPayloadIntegrityError("stored post snapshot authors are invalid")
