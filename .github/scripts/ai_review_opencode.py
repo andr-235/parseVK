@@ -25,7 +25,7 @@ except ImportError:
         validate_model_result,
     )
 
-PRIMARY_TIMEOUT, RETRY_TIMEOUT = 180.0, 120.0
+PRIMARY_TIMEOUT, RETRY_TIMEOUT = 600.0, 300.0
 HEAD_RE = re.compile(r"Проверяемый HEAD:\s*([0-9a-fA-F]{40})")
 
 

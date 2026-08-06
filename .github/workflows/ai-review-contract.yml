@@ -8,6 +8,12 @@ on:
       - .github/workflows/ai-code-review.yml
       - .github/workflows/ai-review-contract.yml
       - .github/scripts/ai_review.py
+      - .github/scripts/ai_review_agents_install.py
+      - .github/scripts/ai_review_agents_wrapper.py
+      - .github/scripts/ai_review_agents_merge.py
+      - .github/scripts/ai_review_opencode.py
+      - .github/scripts/test_ai_review_opencode.py
+      - .github/scripts/test_ai_review_opencode_runtime.py
       - scripts/test-ai-review-provider-timeout.sh
   push:
     branches:
@@ -16,6 +22,12 @@ on:
       - .github/workflows/ai-code-review.yml
       - .github/workflows/ai-review-contract.yml
       - .github/scripts/ai_review.py
+      - .github/scripts/ai_review_agents_install.py
+      - .github/scripts/ai_review_agents_wrapper.py
+      - .github/scripts/ai_review_agents_merge.py
+      - .github/scripts/ai_review_opencode.py
+      - .github/scripts/test_ai_review_opencode.py
+      - .github/scripts/test_ai_review_opencode_runtime.py
       - scripts/test-ai-review-provider-timeout.sh
   workflow_dispatch:
 
@@ -24,7 +36,7 @@ permissions:
 
 jobs:
   contract:
-    name: Validate AI Review Timeout
+    name: Validate AI Review Runtime
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -35,3 +47,12 @@ jobs:
 
       - name: Validate bounded provider timeout
         run: bash scripts/test-ai-review-provider-timeout.sh
+
+      - name: Test bounded OpenCode wrapper
+        env:
+          PYTHONPATH: .github/scripts
+        run: >-
+          python3 -m unittest discover
+          -s .github/scripts
+          -p 'test_ai_review_opencode*.py'
+          -v

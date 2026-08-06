@@ -8,9 +8,52 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import ai_review_opencode
 from ai_review_agents_install import install
 
 SCRIPTS = Path(__file__).resolve().parent
+
+
+class TimeoutBudgetTests(unittest.TestCase):
+    @staticmethod
+    def write_scope(directory: Path, chunk_count: int) -> None:
+        chunks = [[f"service-{index}.py"] for index in range(chunk_count)]
+        (directory / "scope.json").write_text(
+            json.dumps({"chunks": chunks}), encoding="utf-8"
+        )
+
+    def test_default_budget_is_nine_hundred_seconds(self) -> None:
+        with tempfile.TemporaryDirectory() as value:
+            directory = Path(value)
+            self.write_scope(directory, 1)
+            with patch.dict(os.environ, {}, clear=True):
+                primary, retry = ai_review_opencode.timeouts(directory)
+            self.assertEqual((primary, retry), (600.0, 300.0))
+            self.assertEqual(primary + retry, 900.0)
+
+    def test_budget_is_divided_across_review_chunks(self) -> None:
+        with tempfile.TemporaryDirectory() as value:
+            directory = Path(value)
+            self.write_scope(directory, 4)
+            with patch.dict(os.environ, {}, clear=True):
+                primary, retry = ai_review_opencode.timeouts(directory)
+            self.assertEqual((primary, retry), (150.0, 75.0))
+            self.assertEqual((primary + retry) * 4, 900.0)
+
+    def test_environment_overrides_are_divided_across_chunks(self) -> None:
+        with tempfile.TemporaryDirectory() as value:
+            directory = Path(value)
+            self.write_scope(directory, 3)
+            with patch.dict(
+                os.environ,
+                {
+                    "AI_REVIEW_PRIMARY_TIMEOUT": "90",
+                    "AI_REVIEW_RETRY_TIMEOUT": "30",
+                },
+                clear=True,
+            ):
+                primary, retry = ai_review_opencode.timeouts(directory)
+            self.assertEqual((primary, retry), (30.0, 10.0))
 
 
 class OpenCodeRuntimeTests(unittest.TestCase):
