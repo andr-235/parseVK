@@ -6,8 +6,8 @@ from pathlib import Path
 SOURCE_WORKFLOW = Path(".github/workflows/ai-code-review.yml")
 PUBLISHER_WORKFLOW = Path(".github/workflows/ai-review-inline-publisher.yml")
 
-UPLOAD_V6_SHA = "b7c566a772e6b6bfb58ed0dc250532a479d7789f"
-DOWNLOAD_V7_SHA = "37930b1c2abaa49bbe596cd826c3c89aef350131"
+UPLOAD_V7_SHA = "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+DOWNLOAD_V8_SHA = "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"
 
 
 class WorkflowContractTests(unittest.TestCase):
@@ -47,9 +47,9 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("name: ai-review-result-${{ github.run_id }}", self.source)
 
     def test_artifact_actions_use_node24_releases(self) -> None:
-        self.assertIn(f"actions/upload-artifact@{UPLOAD_V6_SHA} # v6", self.source)
-        self.assertIn(f"actions/download-artifact@{DOWNLOAD_V7_SHA} # v7", self.source)
-        self.assertIn(f"actions/download-artifact@{DOWNLOAD_V7_SHA} # v7", self.publisher)
+        self.assertIn(f"actions/upload-artifact@{UPLOAD_V7_SHA} # v7.0.1", self.source)
+        self.assertIn(f"actions/download-artifact@{DOWNLOAD_V8_SHA} # v8.0.1", self.source)
+        self.assertIn(f"actions/download-artifact@{DOWNLOAD_V8_SHA} # v8.0.1", self.publisher)
         self.assertNotIn("actions/upload-artifact@ea165f8d", self.source)
         self.assertNotIn("actions/download-artifact@d3f86a106", self.source)
         self.assertNotIn("actions/download-artifact@d3f86a106", self.publisher)
