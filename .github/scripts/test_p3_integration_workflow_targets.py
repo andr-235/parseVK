@@ -1,5 +1,5 @@
-import unittest
 from pathlib import Path
+from unittest import TestCase, main
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -12,7 +12,7 @@ VALIDATION_WORKFLOWS = {
 }
 
 
-class IntegrationWorkflowTargetTests(unittest.TestCase):
+class IntegrationWorkflowTargetTests(TestCase):
     def test_validation_workflows_accept_integration_pull_requests(self) -> None:
         expected = (
             "pull_request:\n"
@@ -46,4 +46,4 @@ class IntegrationWorkflowTargetTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    main()
