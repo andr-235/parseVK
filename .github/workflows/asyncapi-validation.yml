@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - '.github/scripts/validate-asyncapi.sh'
+      - '.github/scripts/validate-asyncapi.mjs'
       - '.github/workflows/asyncapi-validation.yml'
       - 'libs/py/contracts/**'
   workflow_dispatch:
