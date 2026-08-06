@@ -12,8 +12,12 @@ use_service_path()
 
 from app.db.base import Base
 from app.db.models import MonitoringSource, SourceRegistration
-from app.modules.sources.repository import SourcesRepository
-from app.modules.sources.resolver import canonical_source_id
+from app.modules.sources.resolver import (
+    InternalVkSourceResolver,
+    canonical_source_id,
+)
+from app.modules.sources.schemas import CreateSourceRequest
+from app.modules.sources.service import SourcesService
 
 pytestmark = pytest.mark.integration
 
@@ -40,24 +44,20 @@ async def _wait_for_postgres(host: str, port: int) -> None:
 async def _register(
     sessions,
     owner_user_id: str,
-    source_id,
     external_id: str,
 ):
+    request = CreateSourceRequest(
+        externalId=external_id,
+        displayName=f"registered by {owner_user_id}",
+    )
     async with sessions() as session, session.begin():
-        repository = SourcesRepository(session)
-        source = await repository.get_or_create_source(
-            MonitoringSource(
-                id=source_id,
-                owner_user_id=owner_user_id,
-                provider="vk",
-                source_type="community",
-                external_id=external_id,
-                owner_id=-int(external_id),
-                display_name=f"registered by {owner_user_id}",
-            )
-        )
-        await repository.ensure_source_registration(owner_user_id, source.id)
-        await repository.ensure_source_registration(owner_user_id, source.id)
+        service = SourcesService(session, InternalVkSourceResolver())
+        source = await service.create_source(owner_user_id, request)
+        repeated = await service.create_source(owner_user_id, request)
+        visible, total = await service.list_sources(owner_user_id)
+        assert repeated.id == source.id
+        assert total == 1
+        assert [item.id for item in visible] == [source.id]
         return source.id
 
 
@@ -95,18 +95,16 @@ async def test_concurrent_registration_returns_one_global_source_per_identity():
             owners = [f"user-{iteration}-{index}" for index in range(6)]
             source_ids = await asyncio.gather(
                 *(
-                    _register(
-                        sessions,
-                        owner,
-                        expected_source_id,
-                        external_id,
-                    )
+                    _register(sessions, owner, external_id)
                     for owner in owners
                 )
             )
             assert source_ids == [expected_source_id] * len(owners)
 
             async with sessions() as session:
+                source = await session.get(MonitoringSource, expected_source_id)
+                assert source is not None
+                initial_metadata_owner = source.owner_user_id
                 source_count = await session.scalar(
                     select(func.count())
                     .select_from(MonitoringSource)
@@ -120,13 +118,16 @@ async def test_concurrent_registration_returns_one_global_source_per_identity():
                 assert source_count == 1
                 assert registration_count == len(owners)
 
-                repository = SourcesRepository(session)
-                for owner in owners:
-                    visible, total = await repository.list_sources(owner)
-                    assert total == 1
-                    assert [source.id for source in visible] == [
-                        expected_source_id
-                    ]
+            late_owner = f"user-{iteration}-late"
+            assert await _register(
+                sessions,
+                late_owner,
+                external_id,
+            ) == expected_source_id
+            async with sessions() as session:
+                source = await session.get(MonitoringSource, expected_source_id)
+                assert source is not None
+                assert source.owner_user_id == initial_metadata_owner
     finally:
         if engine is not None:
             await engine.dispose()
