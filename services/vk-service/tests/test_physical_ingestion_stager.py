@@ -3,6 +3,7 @@ from uuid import UUID
 
 import pytest
 
+from app.domain.repositories.ingestion_staging import StagingPayloadIntegrityError
 from app.services.ingestion.staging_writer import (
     COMMENT_PAGE,
     POST_SNAPSHOT,
@@ -78,7 +79,10 @@ async def test_stages_comment_page_with_stable_source_position():
 async def test_rejects_nested_task_attribution_before_repository_write():
     writer, repository = stager()
 
-    with pytest.raises(ValueError, match=r"observed\.post\.taskId"):
+    with pytest.raises(
+        StagingPayloadIntegrityError,
+        match="invalid post_snapshot staging payload",
+    ):
         await writer.stage_post(
             post={"owner_id": -1, "id": 9, "taskId": 10},
             authors=[],
