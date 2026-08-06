@@ -68,6 +68,14 @@ JSON
     run_id="$(sed -E 's#^.*/actions/runs/([0-9]+)$#\1#' <<<"$PATH_VALUE")"
     if grep -qx "$run_id" "$GH_STATE_FILE" 2>/dev/null; then
       printf '%s\n' '{"status":"completed","conclusion":"cancelled"}'
+    elif [[ "${GH_SCENARIO:-safe}" == "started-before-cancel" && "$run_id" == "101" ]]; then
+      previous_calls="$(grep -cx '101' "$GH_CALLS_FILE" 2>/dev/null || true)"
+      printf '101\n' >> "$GH_CALLS_FILE"
+      if (( previous_calls > 0 )); then
+        printf '%s\n' '{"status":"in_progress","conclusion":null}'
+      else
+        printf '%s\n' '{"status":"queued","conclusion":null}'
+      fi
     else
       printf '%s\n' '{"status":"queued","conclusion":null}'
     fi
@@ -81,12 +89,15 @@ STUB
 chmod +x "$TMP_DIR/gh"
 
 STATE_FILE="$TMP_DIR/state"
+CALLS_FILE="$TMP_DIR/calls"
 CURRENT_SHA="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 : > "$STATE_FILE"
+: > "$CALLS_FILE"
 GITHUB_REPOSITORY=andr-235/parseVK \
 RELEASE_SHA="$CURRENT_SHA" \
 GH_BIN="$TMP_DIR/gh" \
 GH_STATE_FILE="$STATE_FILE" \
+GH_CALLS_FILE="$CALLS_FILE" \
 POLL_ATTEMPTS=2 \
 POLL_INTERVAL=0 \
   bash "$SCRIPT"
@@ -98,10 +109,12 @@ POLL_INTERVAL=0 \
 }
 
 : > "$STATE_FILE"
+: > "$CALLS_FILE"
 if GITHUB_REPOSITORY=andr-235/parseVK \
   RELEASE_SHA="$CURRENT_SHA" \
   GH_BIN="$TMP_DIR/gh" \
   GH_STATE_FILE="$STATE_FILE" \
+  GH_CALLS_FILE="$CALLS_FILE" \
   GH_SCENARIO=active \
   POLL_ATTEMPTS=1 \
   POLL_INTERVAL=0 \
@@ -115,4 +128,24 @@ fi
   exit 1
 }
 
-echo "Paginated superseded deployment cancellation is safe and deterministic"
+: > "$STATE_FILE"
+: > "$CALLS_FILE"
+if GITHUB_REPOSITORY=andr-235/parseVK \
+  RELEASE_SHA="$CURRENT_SHA" \
+  GH_BIN="$TMP_DIR/gh" \
+  GH_STATE_FILE="$STATE_FILE" \
+  GH_CALLS_FILE="$CALLS_FILE" \
+  GH_SCENARIO=started-before-cancel \
+  POLL_ATTEMPTS=1 \
+  POLL_INTERVAL=0 \
+    bash "$SCRIPT"; then
+  echo "Deployment that started before cancellation was cancelled"
+  exit 1
+fi
+
+[[ ! -s "$STATE_FILE" ]] || {
+  echo "Cancellation was attempted after the run changed to in_progress"
+  exit 1
+}
+
+echo "Paginated deploy cleanup rejects active and newly-started releases"
