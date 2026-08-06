@@ -12,6 +12,7 @@ on:
       - .github/scripts/ai_review_agents_wrapper.py
       - .github/scripts/ai_review_agents_merge.py
       - .github/scripts/ai_review_opencode.py
+      - .github/scripts/test_ai_review_opencode.py
       - .github/scripts/test_ai_review_opencode_runtime.py
       - scripts/test-ai-review-provider-timeout.sh
   push:
@@ -25,6 +26,7 @@ on:
       - .github/scripts/ai_review_agents_wrapper.py
       - .github/scripts/ai_review_agents_merge.py
       - .github/scripts/ai_review_opencode.py
+      - .github/scripts/test_ai_review_opencode.py
       - .github/scripts/test_ai_review_opencode_runtime.py
       - scripts/test-ai-review-provider-timeout.sh
   workflow_dispatch:
@@ -52,5 +54,5 @@ jobs:
         run: >-
           python3 -m unittest discover
           -s .github/scripts
-          -p 'test_ai_review_opencode_runtime.py'
+          -p 'test_ai_review_opencode*.py'
           -v
