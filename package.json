@@ -5,8 +5,5 @@
   "scripts": {},
   "devDependencies": {
     "shadcn": "^3.4.0"
-  },
-  "overrides": {
-    "@asyncapi/generator-hooks": "0.1.0"
   }
 }
