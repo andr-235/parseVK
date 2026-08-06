@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import BigInteger
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.compiler import compiles
 
@@ -21,6 +21,9 @@ from app.infrastructure.db.base import Base
 from app.infrastructure.db.models.executions import (  # noqa: F401
     VkExecution,
     VkExecutionAttempt,
+)
+from app.infrastructure.db.models.ingestion_staging import (  # noqa: F401
+    VkIngestionStagingBatch,
 )
 from app.infrastructure.db.models.ok_friends import (  # noqa: F401
     OkFriendsExportJob,
@@ -56,6 +59,13 @@ def compile_jsonb_sqlite(type_, compiler, **kw):
 @compiles(ARRAY, "sqlite")
 def compile_array_sqlite(type_, compiler, **kw):
     return "TEXT"
+
+
+@compiles(UUID, "sqlite")
+def compile_uuid_sqlite(type_, compiler, **kw):
+    # PostgreSQL UUID bind processors emit a 32-character hexadecimal string.
+    # CHAR affinity prevents SQLite from coercing all-numeric UUIDs to floats.
+    return "CHAR(32)"
 
 
 @compiles(BigInteger, "sqlite")

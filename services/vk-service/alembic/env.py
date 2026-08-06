@@ -11,6 +11,9 @@ from app.infrastructure.db.models.executions import (  # noqa: F401
     VkExecution,
     VkExecutionAttempt,
 )
+from app.infrastructure.db.models.ingestion_staging import (  # noqa: F401
+    VkIngestionStagingBatch,
+)
 from app.infrastructure.db.models.ok_friends import (  # noqa: F401
     OkFriendsExportJob,
     OkFriendsJobLog,
