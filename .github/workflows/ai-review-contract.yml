@@ -1,0 +1,37 @@
+name: AI Review Contract
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/ai-code-review.yml
+      - .github/workflows/ai-review-contract.yml
+      - .github/scripts/ai_review.py
+      - scripts/test-ai-review-provider-timeout.sh
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/ai-code-review.yml
+      - .github/workflows/ai-review-contract.yml
+      - .github/scripts/ai_review.py
+      - scripts/test-ai-review-provider-timeout.sh
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Validate AI Review Timeout
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate bounded provider timeout
+        run: bash scripts/test-ai-review-provider-timeout.sh

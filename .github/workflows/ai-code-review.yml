@@ -292,7 +292,7 @@ jobs:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           OPENCODE_DISABLE_PROJECT_CONFIG: "true"
           OPENCODE_CONFIG_CONTENT: >-
-            {"default_agent":"plan","agent":{"plan":{"temperature":0,"prompt":"You are an automated commit code reviewer. Analyze only the attached commit diff and obey the exact JSON contract in the user prompt. Never return prose, Markdown, a plan, or tool-only output. If analysis cannot be completed, return status technical-error with the exact head_sha and an empty findings array."},"title":{"disable":true}}}
+            {"provider":{"opencode":{"options":{"timeout":900000}}},"default_agent":"plan","agent":{"plan":{"temperature":0,"prompt":"You are an automated commit code reviewer. Analyze only the attached commit diff and obey the exact JSON contract in the user prompt. Never return prose, Markdown, a plan, or tool-only output. If analysis cannot be completed, return status technical-error with the exact head_sha and an empty findings array."},"title":{"disable":true}}}
           OPENCODE_PERMISSION: >-
             {"read":{"*":"allow",".github/workflows/ai-code-review.yml":"deny","*.md":"deny","**/*.md":"deny","README*":"deny","**/README*":"deny","docs/**":"deny",".github/ai-review/**":"deny",".github/scripts/ai_review*":"deny"},"bash":"deny","edit":"deny","task":"deny","todowrite":"deny","skill":"deny","lsp":"deny","webfetch":"deny","websearch":"deny","external_directory":"deny","doom_loop":"deny"}
         run: |
