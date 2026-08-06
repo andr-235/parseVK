@@ -31,7 +31,7 @@ async def _publish_duplicate(infra, message) -> None:
             TOPIC,
             key=message.key,
             value=message.value,
-            headers=message.headers,
+            headers=list(message.headers),
         )
     finally:
         await producer.stop()
