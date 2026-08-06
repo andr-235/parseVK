@@ -5,8 +5,8 @@ from typing import Any
 
 from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
 from app.domain.repositories.checkpoint import CheckpointData, IngestionCheckpointStore
+from app.services.ingestion.author_payload import author_payload
 from app.services.ingestion.comment_values import comment_date
-from app.services.ingestion.post_collector import _author_payload
 from app.services.ingestion.staging_writer import PhysicalIngestionStager
 
 logger = logging.getLogger("vk-service.ingestion")
@@ -77,7 +77,7 @@ class CommentCollector:
             }
             for from_id in sorted(unique_from_ids):
                 await self.repository.upsert_author(
-                    _author_payload(from_id, author_profiles)
+                    author_payload(from_id, author_profiles)
                 )
             for comment in page_items:
                 await self.repository.upsert_comment(
