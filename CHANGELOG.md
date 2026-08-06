@@ -1,3 +1,10 @@
+# [0.92.0](https://github.com/andr-235/parseVK/compare/v0.91.9...v0.92.0) (2026-08-06)
+
+
+### Features
+
+* **vk:** add durable ingestion staging foundation ([#438](https://github.com/andr-235/parseVK/issues/438)) ([8fec0c1](https://github.com/andr-235/parseVK/commit/8fec0c1ee1ab2aee2172bf2d8f5c6ef1ab00565c)), closes [#443](https://github.com/andr-235/parseVK/issues/443) [#444](https://github.com/andr-235/parseVK/issues/444) [#445](https://github.com/andr-235/parseVK/issues/445) [#446](https://github.com/andr-235/parseVK/issues/446) [#447](https://github.com/andr-235/parseVK/issues/447)
+
 ## [0.91.9](https://github.com/andr-235/parseVK/compare/v0.91.8...v0.91.9) (2026-08-06)
 
 
