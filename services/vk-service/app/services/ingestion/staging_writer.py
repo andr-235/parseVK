@@ -136,8 +136,13 @@ class PhysicalIngestionStager:
         except StagingPayloadConflictError:
             observe_staging_result(source_kind, "conflict")
             raise
-        except (StagingPayloadIntegrityError, ValueError):
+        except StagingPayloadIntegrityError:
             observe_staging_result(source_kind, "integrity_error")
             raise
+        except ValueError as error:
+            observe_staging_result(source_kind, "integrity_error")
+            raise StagingPayloadIntegrityError(
+                f"invalid {source_kind} staging payload"
+            ) from error
         observe_staging_result(source_kind, "created" if created else "reused")
         return stored, created
