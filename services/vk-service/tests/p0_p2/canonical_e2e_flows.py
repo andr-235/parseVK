@@ -2,6 +2,8 @@ import json
 from uuid import UUID
 
 from aiokafka import AIOKafkaProducer
+from canonical_e2e_recovery import run_crash_recovery
+from canonical_e2e_support import TOPIC
 from sqlalchemy import select
 
 from app.infrastructure.db.models.executions import VkExecution
@@ -12,8 +14,6 @@ from app.infrastructure.db.models.source_collections import (
 )
 from app.infrastructure.db.models.tasks import ProcessedEvent
 from app.tasks.vk_commands_consumer import VkExecutionCommandsConsumer
-from canonical_e2e_recovery import run_crash_recovery
-from canonical_e2e_support import TOPIC
 
 
 async def _publish_duplicate(infra, message) -> None:
