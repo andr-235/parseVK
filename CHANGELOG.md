@@ -1,3 +1,10 @@
+## [0.91.8](https://github.com/andr-235/parseVK/compare/v0.91.7...v0.91.8) (2026-08-06)
+
+
+### Bug Fixes
+
+* **release:** clean deploy queue inside coordinator ([#440](https://github.com/andr-235/parseVK/issues/440)) ([0f3475f](https://github.com/andr-235/parseVK/commit/0f3475fa60163e19363799beff08328019be876f))
+
 ## [0.91.7](https://github.com/andr-235/parseVK/compare/v0.91.6...v0.91.7) (2026-08-06)
 
 
