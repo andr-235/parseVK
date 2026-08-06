@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: asyncapi-validation-${{ github.event.pull_request.number || github.ref }}
@@ -26,6 +26,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -40,12 +42,24 @@ jobs:
           --ignore-scripts
           --no-audit
           --no-fund
-      - name: Upload validator lock
-        uses: actions/upload-artifact@v4
-        with:
-          name: asyncapi-validator-lock
-          path: .github/asyncapi-validator/package-lock.json
-          if-no-files-found: error
+      - name: Commit generated validator lock once
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.actor == 'andr-235' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/asyncapi-validator/package-lock.json
+          if git diff --cached --quiet; then
+            echo "Validator lock is already committed."
+            exit 0
+          fi
+          git commit -m "build(contracts): lock AsyncAPI validator dependencies"
+          git push origin "HEAD:${HEAD_REF}"
       - name: Install contract dependencies
         working-directory: libs/py/contracts
         run: uv sync --group dev --frozen
