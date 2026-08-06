@@ -1,8 +1,8 @@
-from pathlib import Path
-from unittest import TestCase, main
+import pathlib
+import unittest
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = pathlib.Path(__file__).resolve().parents[2]
 WORKFLOWS = ROOT / ".github" / "workflows"
 INTEGRATION_BRANCH = "agent/p3-hard-cutover"
 VALIDATION_WORKFLOWS = {
@@ -12,7 +12,7 @@ VALIDATION_WORKFLOWS = {
 }
 
 
-class IntegrationWorkflowTargetTests(TestCase):
+class IntegrationWorkflowTargetTests(unittest.TestCase):
     def test_validation_workflows_accept_integration_pull_requests(self) -> None:
         expected = (
             "pull_request:\n"
@@ -46,4 +46,4 @@ class IntegrationWorkflowTargetTests(TestCase):
 
 
 if __name__ == "__main__":
-    main()
+    unittest.main()
