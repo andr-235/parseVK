@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - '.github/asyncapi-validator/**'
       - '.github/scripts/validate-asyncapi.sh'
       - '.github/scripts/validate-asyncapi.mjs'
       - '.github/workflows/asyncapi-validation.yml'
@@ -31,6 +32,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Generate validator lock
+        run: >-
+          npm install
+          --prefix .github/asyncapi-validator
+          --package-lock-only
+          --ignore-scripts
+          --no-audit
+          --no-fund
+      - name: Upload validator lock
+        uses: actions/upload-artifact@v4
+        with:
+          name: asyncapi-validator-lock
+          path: .github/asyncapi-validator/package-lock.json
+          if-no-files-found: error
       - name: Install contract dependencies
         working-directory: libs/py/contracts
         run: uv sync --group dev --frozen
