@@ -1,3 +1,10 @@
+## [0.91.5](https://github.com/andr-235/parseVK/compare/v0.91.4...v0.91.5) (2026-08-06)
+
+
+### Bug Fixes
+
+* **p0-p2:** close canonical E2E and source registration gaps ([#429](https://github.com/andr-235/parseVK/issues/429)) ([9300c59](https://github.com/andr-235/parseVK/commit/9300c59a7927c6861ab1090b3e346e1e6bd702a0)), closes [#428](https://github.com/andr-235/parseVK/issues/428) [#864](https://github.com/andr-235/parseVK/issues/864) [#1788](https://github.com/andr-235/parseVK/issues/1788) [#35](https://github.com/andr-235/parseVK/issues/35)
+
 ## [0.91.4](https://github.com/andr-235/parseVK/compare/v0.91.3...v0.91.4) (2026-08-05)
 
 
