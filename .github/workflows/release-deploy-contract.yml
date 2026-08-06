@@ -9,6 +9,7 @@ on:
       - .github/scripts/cancel-superseded-deploys.sh
       - .github/workflows/ci.yml
       - .github/workflows/security.yml
+      - .github/workflows/release.yml
       - .github/workflows/deploy.yml
       - .github/workflows/deploy-queue-cleanup.yml
       - .github/workflows/release-deploy-coordinator.yml
@@ -16,6 +17,7 @@ on:
       - .github/workflows/reusable-publish-image.yml
       - .github/workflows/release-deploy-contract.yml
       - scripts/test-cancel-superseded-deploys.sh
+      - scripts/test-release-coordinator-supersession.sh
       - scripts/test-release-handoff-workflow.sh
   push:
     branches: [main]
@@ -25,6 +27,7 @@ on:
       - .github/scripts/cancel-superseded-deploys.sh
       - .github/workflows/ci.yml
       - .github/workflows/security.yml
+      - .github/workflows/release.yml
       - .github/workflows/deploy.yml
       - .github/workflows/deploy-queue-cleanup.yml
       - .github/workflows/release-deploy-coordinator.yml
@@ -32,16 +35,30 @@ on:
       - .github/workflows/reusable-publish-image.yml
       - .github/workflows/release-deploy-contract.yml
       - scripts/test-cancel-superseded-deploys.sh
+      - scripts/test-release-coordinator-supersession.sh
       - scripts/test-release-handoff-workflow.sh
 
 permissions:
   contents: read
 
 jobs:
+  supersession:
+    name: Validate Coordinator Supersession
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout coordinator policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate created-release supersession
+        run: bash scripts/test-release-coordinator-supersession.sh
+
   contract:
     name: Validate Latest Release Deploy
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Checkout complete release history
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

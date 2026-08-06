@@ -184,6 +184,7 @@ jobs:
 
           PRE_CI_RUN_ID="$(latest_dispatch_run_id ci.yml)"
           PRE_SECURITY_RUN_ID="$(latest_dispatch_run_id security.yml)"
+          PRE_COORDINATOR_RUN_ID="$(latest_dispatch_run_id release-deploy-coordinator.yml)"
 
           CI_PAYLOAD="$(jq -nc \
             --arg target_sha "$RELEASE_SHA" \
@@ -199,6 +200,16 @@ jobs:
           SECURITY_PAYLOAD="$(jq -nc \
             --arg target_sha "$RELEASE_SHA" \
             '{ref: "main", inputs: {target_sha: $target_sha}}')"
+          COORDINATOR_PAYLOAD="$(jq -nc \
+            --arg release_sha "$RELEASE_SHA" \
+            --arg source_sha "$SOURCE_SHA" \
+            '{
+              ref: "main",
+              inputs: {
+                release_sha: $release_sha,
+                source_sha: $source_sha
+              }
+            }')"
 
           printf '%s' "$CI_PAYLOAD" |
             gh api --method POST \
@@ -208,19 +219,26 @@ jobs:
             gh api --method POST \
               "repos/${GITHUB_REPOSITORY}/actions/workflows/security.yml/dispatches" \
               --input -
+          printf '%s' "$COORDINATOR_PAYLOAD" |
+            gh api --method POST \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/release-deploy-coordinator.yml/dispatches" \
+              --input -
 
           CI_RUN_ID=""
           SECURITY_RUN_ID=""
+          COORDINATOR_RUN_ID=""
           for attempt in $(seq 1 15); do
             CI_RUN_ID="$(latest_dispatch_run_id ci.yml)"
             SECURITY_RUN_ID="$(latest_dispatch_run_id security.yml)"
+            COORDINATOR_RUN_ID="$(latest_dispatch_run_id release-deploy-coordinator.yml)"
 
             if [[ -n "$CI_RUN_ID" && "$CI_RUN_ID" != "$PRE_CI_RUN_ID" && \
-                  -n "$SECURITY_RUN_ID" && "$SECURITY_RUN_ID" != "$PRE_SECURITY_RUN_ID" ]]; then
+                  -n "$SECURITY_RUN_ID" && "$SECURITY_RUN_ID" != "$PRE_SECURITY_RUN_ID" && \
+                  -n "$COORDINATOR_RUN_ID" && "$COORDINATOR_RUN_ID" != "$PRE_COORDINATOR_RUN_ID" ]]; then
               break
             fi
 
-            echo "Waiting for dispatched release gates: attempt ${attempt}/15"
+            echo "Waiting for dispatched release workflows: attempt ${attempt}/15"
             sleep 2
           done
 
@@ -232,18 +250,25 @@ jobs:
             echo "::error::GitHub did not create a new Security Scanning run for $RELEASE_SHA"
             exit 1
           }
+          [[ -n "$COORDINATOR_RUN_ID" && "$COORDINATOR_RUN_ID" != "$PRE_COORDINATOR_RUN_ID" ]] || {
+            echo "::error::GitHub did not create a new Release Deploy Coordinator run for $RELEASE_SHA"
+            exit 1
+          }
 
           CI_RUN_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${CI_RUN_ID}"
           SECURITY_RUN_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${SECURITY_RUN_ID}"
+          COORDINATOR_RUN_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${COORDINATOR_RUN_ID}"
           {
-            echo "### Release gates dispatched"
+            echo "### Release workflows dispatched"
             echo "- Full Release CI: ${CI_RUN_URL}"
             echo "- Security Scanning: ${SECURITY_RUN_URL}"
+            echo "- Release Deploy Coordinator: ${COORDINATOR_RUN_URL}"
             echo "- Release SHA: \`${RELEASE_SHA}\`"
             echo "- Validated source SHA: \`${SOURCE_SHA}\`"
           } >> "$GITHUB_STEP_SUMMARY"
           echo "Confirmed Full Release CI run: $CI_RUN_URL"
           echo "Confirmed Security Scanning run: $SECURITY_RUN_URL"
+          echo "Confirmed Release Deploy Coordinator run: $COORDINATOR_RUN_URL"
 
       - name: Release status
         if: steps.release_commit.outputs.skip_release == 'true'
