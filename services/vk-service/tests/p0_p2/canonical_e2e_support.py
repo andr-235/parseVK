@@ -81,7 +81,7 @@ class CanonicalE2EInfra:
             .with_env("POSTGRES_DB", "postgres")
             .with_exposed_ports(5432)
         )
-        kafka = KafkaContainer(image="apache/kafka:4.1.0")
+        kafka = KafkaContainer()
         postgres.start()
         kafka_started = False
         try:
