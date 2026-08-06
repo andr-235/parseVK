@@ -11,7 +11,7 @@ async def get_or_create_source(
     session: AsyncSession,
     source: MonitoringSource,
 ) -> MonitoringSource:
-    """Return one canonical source under concurrent registration."""
+    """Return one canonical source under every uniqueness race."""
     now = utcnow()
     statement = (
         insert(MonitoringSource)
@@ -28,9 +28,7 @@ async def get_or_create_source(
             created_at=source.created_at or now,
             updated_at=source.updated_at or now,
         )
-        .on_conflict_do_nothing(
-            constraint="uq_monitoring_sources_identity",
-        )
+        .on_conflict_do_nothing()
         .returning(MonitoringSource)
     )
     persisted = await session.scalar(statement)
@@ -47,6 +45,10 @@ async def get_or_create_source(
     if persisted is None:
         raise RuntimeError(
             "canonical source insert conflicted without an identity row"
+        )
+    if persisted.id != source.id:
+        raise RuntimeError(
+            "canonical source identity maps to a different deterministic id"
         )
     return persisted
 
