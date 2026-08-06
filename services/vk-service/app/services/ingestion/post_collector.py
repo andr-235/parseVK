@@ -2,6 +2,8 @@ import logging
 from typing import Any
 
 from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
+from app.services.ingestion.author_payload import post_author_payload
+from app.services.ingestion.post_snapshot_reuse import stage_or_reuse_post_snapshot
 from app.services.ingestion.staging_writer import PhysicalIngestionStager
 
 logger = logging.getLogger("vk-service.ingestion")
@@ -62,25 +64,31 @@ class PostCollector:
         author_profiles: dict[int, dict],
         *,
         correlation_id: str | None = None,
-    ) -> bool:
-        author_payload = _post_author_payload(post, author_profiles)
+    ) -> tuple[bool, dict]:
+        author = post_author_payload(post, author_profiles)
+        effective_post = post
+        effective_authors = [author] if author is not None else []
+
         if self.staging is None:
             if self.require_staging:
                 raise RuntimeError("durable post staging requires a fenced execution")
         else:
-            await self.staging.stage_post(
+            resolved = await stage_or_reuse_post_snapshot(
+                self.staging,
                 post=post,
-                authors=[author_payload] if author_payload is not None else [],
+                authors=effective_authors,
             )
+            effective_post = resolved.post
+            effective_authors = list(resolved.authors)
 
-        if author_payload is not None:
-            await self.repository.upsert_author(author_payload)
+        for stored_author in effective_authors:
+            await self.repository.upsert_author(stored_author)
         await self.repository.upsert_post(
-            post,
+            effective_post,
             task_id=task_run.task_id,
-            group_id=post.get("owner_id"),
+            group_id=effective_post.get("owner_id"),
         )
-        return author_payload is not None
+        return bool(effective_authors), effective_post
 
 
 def post_collection_mode(task_run: Any) -> str:
@@ -95,48 +103,3 @@ def post_collection_mode(task_run: Any) -> str:
     if mode is None:
         raise RuntimeError("Execution plan has unsupported postSelection strategy")
     return mode
-
-
-def _post_author_payload(
-    post: dict,
-    profiles: dict[int, dict],
-) -> dict | None:
-    from_id = post.get("from_id")
-    if from_id is None:
-        return None
-    return _author_payload(int(from_id), profiles)
-
-
-def _author_payload(
-    from_id: int,
-    profiles: dict[int, dict] | None = None,
-) -> dict:
-    author_vk_id = int(from_id)
-    profile = profiles.get(author_vk_id) if profiles else None
-    if profile is None and author_vk_id < 0:
-        profile = profiles.get(abs(author_vk_id)) if profiles else None
-    if profile:
-        display_name = (
-            profile.get("name")
-            or f"{profile.get('first_name', '')} {profile.get('last_name', '')}".strip()
-            or str(author_vk_id)
-        )
-        return {
-            "vk_author_id": author_vk_id,
-            "type": "group" if author_vk_id < 0 else "user",
-            "display_name": display_name,
-            "first_name": profile.get("first_name", ""),
-            "last_name": profile.get("last_name", ""),
-            "photo_50": profile.get("photo_50") or profile.get("photo"),
-            "photo_100": profile.get("photo_100") or profile.get("photo"),
-            "photo_200": profile.get("photo_200") or profile.get("photo"),
-            "domain": profile.get("domain", ""),
-            "screen_name": profile.get("screen_name", ""),
-            "raw": {"from_id": from_id},
-        }
-    return {
-        "vk_author_id": author_vk_id,
-        "type": "group" if author_vk_id < 0 else "user",
-        "display_name": str(author_vk_id),
-        "raw": {"from_id": from_id},
-    }
