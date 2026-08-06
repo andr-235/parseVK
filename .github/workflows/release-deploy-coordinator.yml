@@ -1,11 +1,16 @@
 name: Release Deploy Coordinator
 
 on:
-  workflow_run:
-    workflows: ["Release"]
-    types:
-      - completed
   workflow_dispatch:
+    inputs:
+      release_sha:
+        description: "Immutable semantic-release commit SHA"
+        required: true
+        type: string
+      source_sha:
+        description: "Validated source commit that produced the release"
+        required: true
+        type: string
 
 permissions:
   actions: write
@@ -20,12 +25,6 @@ jobs:
     name: Publish And Deploy Validated Release
     runs-on: ubuntu-latest
     timeout-minutes: 350
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (
-        github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.head_branch == 'main'
-      )
 
     steps:
       - name: Checkout release history and resolver
@@ -39,31 +38,43 @@ jobs:
             .github/scripts/cancel-superseded-deploys.sh
           sparse-checkout-cone-mode: false
 
-      - name: Resolve latest semantic release
+      - name: Resolve exact semantic release
         id: release
         shell: bash
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+          EXPECTED_RELEASE_SHA: ${{ inputs.release_sha }}
+          EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
           set -euo pipefail
+
+          [[ "$EXPECTED_RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "::error::Invalid release SHA input: $EXPECTED_RELEASE_SHA"
+            exit 1
+          }
+          [[ "$EXPECTED_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "::error::Invalid source SHA input: $EXPECTED_SOURCE_SHA"
+            exit 1
+          }
 
           RELEASE_JSON="$(python .github/scripts/latest_release.py --ref HEAD)"
           RELEASE_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
           RELEASE_PARENT="$(jq -r '.source_sha' <<<"$RELEASE_JSON")"
 
-          if [[ "$EVENT_NAME" == "workflow_run" && "$RELEASE_PARENT" != "$SOURCE_SHA" ]]; then
-            echo "proceed=false" >> "$GITHUB_OUTPUT"
-            echo "Release run source $SOURCE_SHA is stale; latest release $RELEASE_SHA has parent $RELEASE_PARENT"
-            exit 0
-          fi
+          [[ "$RELEASE_SHA" == "$EXPECTED_RELEASE_SHA" ]] || {
+            echo "::error::Coordinator expected release $EXPECTED_RELEASE_SHA, latest semantic release is $RELEASE_SHA"
+            exit 1
+          }
+          [[ "$RELEASE_PARENT" == "$EXPECTED_SOURCE_SHA" ]] || {
+            echo "::error::Coordinator expected source $EXPECTED_SOURCE_SHA, release parent is $RELEASE_PARENT"
+            exit 1
+          }
 
           {
             echo "proceed=true"
             echo "release_sha=$RELEASE_SHA"
             echo "source_sha=$RELEASE_PARENT"
           } >> "$GITHUB_OUTPUT"
-          echo "Resolved latest semantic release reachable from main: $RELEASE_SHA"
+          echo "Resolved exact semantic release $RELEASE_SHA from source $RELEASE_PARENT"
 
       - name: Wait for release gates
         id: gates
