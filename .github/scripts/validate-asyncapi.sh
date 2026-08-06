@@ -6,8 +6,6 @@ LOG_PATH="${RUNNER_TEMP:-/tmp}/parsevk-asyncapi-validation.log"
 
 set +e
 CI=true npx --yes @asyncapi/cli@6.0.2 validate "$SPEC_PATH" \
-  --log-diagnostics \
-  --diagnostics-format text \
   2>&1 | tee "$LOG_PATH"
 status=${PIPESTATUS[0]}
 set -e
