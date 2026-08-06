@@ -1,3 +1,12 @@
+## [0.91.7](https://github.com/andr-235/parseVK/compare/v0.91.6...v0.91.7) (2026-08-06)
+
+
+### Bug Fixes
+
+* **ai-review:** extend bounded runtime budget ([#437](https://github.com/andr-235/parseVK/issues/437)) ([2fda6b9](https://github.com/andr-235/parseVK/commit/2fda6b998afba7bd401c321f74253c7c2b2fd9de))
+* **ai-review:** extend provider request timeout ([#435](https://github.com/andr-235/parseVK/issues/435)) ([c28b197](https://github.com/andr-235/parseVK/commit/c28b197af1fe2c837d991d085587689ae2e06e51))
+* **release:** safely clean superseded deploy queue ([#433](https://github.com/andr-235/parseVK/issues/433)) ([b94c0e1](https://github.com/andr-235/parseVK/commit/b94c0e178509ede3be10e8d3b38145e115e02e2e))
+
 ## [0.91.6](https://github.com/andr-235/parseVK/compare/v0.91.5...v0.91.6) (2026-08-06)
 
 
