@@ -98,10 +98,24 @@ def _resolve(
         ) from error
     if identity != (owner_id, post_id):
         raise StagingPayloadIntegrityError("stored post snapshot identity changed")
-    if any(not isinstance(author, dict) for author in stored_authors):
-        raise StagingPayloadIntegrityError("stored post snapshot authors are invalid")
     return PostSnapshotResolution(
         post=dict(stored_post),
-        authors=tuple(dict(author) for author in stored_authors),
+        authors=tuple(_validated_author(author) for author in stored_authors),
         created=created,
     )
+
+
+def _validated_author(author: object) -> dict[str, Any]:
+    if not isinstance(author, dict):
+        raise StagingPayloadIntegrityError("stored post snapshot author is not an object")
+    try:
+        int(author["vk_author_id"])
+    except (KeyError, TypeError, ValueError) as error:
+        raise StagingPayloadIntegrityError(
+            "stored post snapshot author identity is invalid"
+        ) from error
+    if author.get("type") not in {"user", "group"}:
+        raise StagingPayloadIntegrityError(
+            "stored post snapshot author type is invalid"
+        )
+    return dict(author)
