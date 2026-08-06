@@ -1,0 +1,48 @@
+name: AsyncAPI Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/asyncapi-validator/**'
+      - '.github/scripts/validate-asyncapi.sh'
+      - '.github/scripts/validate-asyncapi.mjs'
+      - '.github/workflows/asyncapi-validation.yml'
+      - 'libs/py/contracts/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: asyncapi-validation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate Generated AsyncAPI
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install contract dependencies
+        working-directory: libs/py/contracts
+        run: uv sync --group dev --frozen
+      - name: Regenerate AsyncAPI
+        working-directory: libs/py/contracts
+        run: >-
+          uv run python -c
+          "from parsevk_contracts.generation import generate_all;
+          from parsevk_contracts.vk.commands import CATALOG;
+          generate_all(CATALOG)"
+      - name: Validate AsyncAPI with diagnostics
+        run: >-
+          bash .github/scripts/validate-asyncapi.sh
+          libs/py/contracts/generated/asyncapi/parsevk-contracts.yaml

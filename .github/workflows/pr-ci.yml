@@ -86,7 +86,7 @@ jobs:
               COMMON_CHANGED=true
             fi
 
-            if grep -qE '^libs/py/contracts/|^\.github/scripts/validate_contract_examples\.py$|^\.github/workflows/ci\.yml$' <<<"$CHANGED_FILES"; then
+            if grep -qE '^libs/py/contracts/|^\.github/scripts/validate_contract_examples\.py$|^\.github/scripts/validate-asyncapi\.(sh|mjs)$|^\.github/workflows/asyncapi-validation\.yml$|^\.github/workflows/ci\.yml$' <<<"$CHANGED_FILES"; then
               CONTRACTS_CHANGED=true
             fi
 
@@ -423,7 +423,9 @@ jobs:
         working-directory: libs/py/contracts
         run: uv run python -c "from parsevk_contracts.generation import generate_all; from parsevk_contracts.vk.commands import CATALOG; generate_all(CATALOG)"
       - name: Validate AsyncAPI
-        run: npx --yes @asyncapi/cli@6.0.2 validate libs/py/contracts/generated/asyncapi/parsevk-contracts.yaml
+        run: >-
+          bash .github/scripts/validate-asyncapi.sh
+          libs/py/contracts/generated/asyncapi/parsevk-contracts.yaml
 
   release-gate:
     name: Release Gate

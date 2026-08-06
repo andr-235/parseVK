@@ -1,0 +1,8 @@
+{
+  "name": "parsevk-asyncapi-validator",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@asyncapi/parser": "3.6.0"
+  }
+}
