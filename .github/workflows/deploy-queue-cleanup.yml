@@ -38,28 +38,17 @@ jobs:
             .github/scripts/cancel-superseded-deploys.sh
           sparse-checkout-cone-mode: false
 
-      - name: Resolve current semantic release
+      - name: Resolve latest semantic release
         id: release
         shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
           RELEASE_JSON="$(python .github/scripts/latest_release.py --ref HEAD)"
           RELEASE_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
-
-          if [[ "$EVENT_NAME" == "workflow_run" && "$SOURCE_SHA" != "$RELEASE_SHA" ]]; then
-            echo "proceed=false" >> "$GITHUB_OUTPUT"
-            echo "Publisher release $SOURCE_SHA is stale; latest release is $RELEASE_SHA"
-            exit 0
-          fi
-
-          echo "proceed=true" >> "$GITHUB_OUTPUT"
           echo "release_sha=$RELEASE_SHA" >> "$GITHUB_OUTPUT"
+          echo "Cleaning deploy queue against latest release $RELEASE_SHA"
 
       - name: Cancel safe superseded deploy runs
-        if: steps.release.outputs.proceed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
