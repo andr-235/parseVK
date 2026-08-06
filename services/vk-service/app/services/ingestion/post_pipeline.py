@@ -30,6 +30,7 @@ class PostCollectionPipeline:
         group_id: int,
         profiles: dict[int, dict],
         result: IngestionResult,
+        remaining_posts: int,
         correlation_id: str | None,
     ) -> None:
         owner_id, post_id = int(post["owner_id"]), int(post["id"])
@@ -84,5 +85,5 @@ class PostCollectionPipeline:
         await self.progress.report(
             task_run,
             processed=result.processed_items,
-            total=result.processed_items,
+            total=result.processed_items + remaining_posts,
         )
