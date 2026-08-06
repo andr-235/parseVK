@@ -1,3 +1,10 @@
+## [0.91.6](https://github.com/andr-235/parseVK/compare/v0.91.5...v0.91.6) (2026-08-06)
+
+
+### Bug Fixes
+
+* **release:** use locked AsyncAPI parser validation ([#431](https://github.com/andr-235/parseVK/issues/431)) ([93324f6](https://github.com/andr-235/parseVK/commit/93324f668867bccdfa1ec3e7935bd8677caa8239))
+
 ## [0.91.5](https://github.com/andr-235/parseVK/compare/v0.91.4...v0.91.5) (2026-08-06)
 
 
