@@ -70,7 +70,7 @@ class OpenCodeRunnerTests(unittest.TestCase):
 
     def test_timeout_exhaustion_returns_nonzero(self) -> None:
         code, _, _, calls = self.run_with(
-            [(124, b"", b"timeout", 180_000), (124, b"", b"timeout", 120_000)]
+            [(124, b"", b"timeout", 600_000), (124, b"", b"timeout", 300_000)]
         )
         self.assertEqual((code, calls), (124, 2))
 
@@ -85,7 +85,7 @@ class OpenCodeRunnerTests(unittest.TestCase):
         (self.directory / "scope.json").write_text(
             json.dumps({"chunks": chunks}), encoding="utf-8"
         )
-        self.assertEqual(ai_review_opencode.timeouts(self.directory), (45.0, 30.0))
+        self.assertEqual(ai_review_opencode.timeouts(self.directory), (150.0, 75.0))
 
 
 if __name__ == "__main__":
