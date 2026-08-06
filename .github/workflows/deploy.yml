@@ -1,4 +1,5 @@
 name: Deploy to Production Server
+run-name: Deploy release ${{ inputs.expected_release_sha || 'latest' }}
 
 on:
   workflow_dispatch:
@@ -161,6 +162,25 @@ jobs:
           fetch-depth: 1
           ref: ${{ needs.gate.outputs.target_sha }}
           persist-credentials: false
+
+      - name: Fence stale queued release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "$(git rev-parse --is-shallow-repository)" == "true" ]]; then
+            git fetch --no-tags --unshallow origin main:refs/remotes/origin/main
+          else
+            git fetch --no-tags origin main:refs/remotes/origin/main
+          fi
+
+          RELEASE_JSON="$(python .github/scripts/latest_release.py --ref origin/main)"
+          LATEST_RELEASE_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
+          [[ "$LATEST_RELEASE_SHA" == "$TARGET_SHA" ]] || {
+            echo "::error::Queued production release $TARGET_SHA is stale; latest release is $LATEST_RELEASE_SHA"
+            exit 1
+          }
+          echo "Production release fence accepted $TARGET_SHA"
 
       - name: Load deployment metadata
         id: deployment_metadata
