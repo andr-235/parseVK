@@ -1,3 +1,4 @@
+import asyncio
 import json
 from uuid import UUID
 
@@ -14,6 +15,10 @@ from app.infrastructure.db.models.source_collections import (
 )
 from app.infrastructure.db.models.tasks import ProcessedEvent
 from app.tasks.vk_commands_consumer import VkExecutionCommandsConsumer
+
+
+async def _getone(consumer):
+    return await asyncio.wait_for(consumer.getone(), timeout=30)
 
 
 async def _publish_duplicate(infra, message) -> None:
@@ -34,7 +39,7 @@ async def _publish_duplicate(infra, message) -> None:
 
 async def _consume_duplicate(consumer, infra, request):
     await _publish_duplicate(infra, request)
-    return await consumer.getone(timeout_ms=30000)
+    return await _getone(consumer)
 
 
 async def _assert_processed(sessions, metadata, *, include_cancel: bool) -> None:
@@ -85,8 +90,8 @@ async def _assert_cancelled(sessions, metadata) -> None:
 
 
 async def run_cancel_flow(consumer, infra, sessions, metadata) -> None:
-    request = await consumer.getone(timeout_ms=30000)
-    cancellation = await consumer.getone(timeout_ms=30000)
+    request = await _getone(consumer)
+    cancellation = await _getone(consumer)
     assert json.loads(request.value)["messageType"] == "vk.execution.requested"
     assert json.loads(cancellation.value)["messageType"] == (
         "vk.execution.cancel_requested"
@@ -104,7 +109,7 @@ async def run_cancel_flow(consumer, infra, sessions, metadata) -> None:
 
 
 async def run_recovery_flow(consumer, infra, sessions, metadata) -> None:
-    request = await consumer.getone(timeout_ms=30000)
+    request = await _getone(consumer)
     assert json.loads(request.value)["messageType"] == "vk.execution.requested"
     assert request.key == metadata["executionId"].encode()
     duplicate = await _consume_duplicate(consumer, infra, request)
