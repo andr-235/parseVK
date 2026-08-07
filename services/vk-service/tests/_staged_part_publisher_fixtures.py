@@ -18,7 +18,11 @@ ATTEMPT_ID = UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
 PREPARED_AT = datetime(2026, 8, 7, tzinfo=UTC)
 
 
-async def seed_publishable_post(session):
+async def seed_publishable_post(
+    session,
+    *,
+    versions: IngestionPartVersions = IngestionPartVersions(),
+):
     session.add(
         VkExecution(
             id=EXECUTION_ID,
@@ -69,7 +73,7 @@ async def seed_publishable_post(session):
     stored, _ = await SqlAlchemyIngestionStagingRepository(session).stage(batch)
     prepared = prepare_staged_batch(
         stored,
-        versions=IngestionPartVersions(),
+        versions=versions,
         prepared_at=stored.staged_at,
     )
     parts, _created = await SqlAlchemyIngestionPartRepository(session).prepare(
