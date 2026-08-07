@@ -11,7 +11,7 @@ from app.bootstrap import (
     get_vk_client,
 )
 from app.infrastructure.db.session import SessionLocal
-from app.tasks.lifespan_workers import start_background_runtime
+from app.tasks.lifespan_workers import start_background_runtime, supervise
 from app.tasks.provider_reconciliation import reconcile_provider_account
 from app.tasks.startup_checks import schedule_startup_checks
 
