@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -109,7 +110,7 @@ async def test_producer_consumer_roundtrip(bootstrap_servers, topics):
     )
     await consumer.start()
     try:
-        msg = await consumer.getone(timeout_ms=10000)
+        msg = await asyncio.wait_for(consumer.getone(), timeout=10)
         decoded = json.loads(msg.value.decode())
         assert decoded["event_id"] == event_id
         assert decoded["event_type"] == "vk.post_collected"
@@ -175,7 +176,7 @@ async def test_staged_ingestion_max_application_event_reaches_broker(
     )
     await consumer.start()
     try:
-        msg = await consumer.getone(timeout_ms=10000)
+        msg = await asyncio.wait_for(consumer.getone(), timeout=10)
         assert msg.key == key
         assert msg.headers == headers
         assert msg.value == value
@@ -219,7 +220,7 @@ async def test_dlq_flow(bootstrap_servers):
     )
     await consumer.start()
     try:
-        msg = await consumer.getone(timeout_ms=10000)
+        msg = await asyncio.wait_for(consumer.getone(), timeout=10)
         decoded = json.loads(msg.value.decode())
         assert decoded["dlq_reason"] == "max_retries_exceeded"
     finally:
@@ -264,7 +265,7 @@ async def test_consumer_idempotency(bootstrap_servers):
     try:
         seen_event_ids: set[str] = set()
         for _ in range(2):
-            msg = await consumer.getone(timeout_ms=10000)
+            msg = await asyncio.wait_for(consumer.getone(), timeout=10)
             decoded = json.loads(msg.value.decode())
             seen_event_ids.add(decoded["event_id"])
         assert event_id in seen_event_ids
