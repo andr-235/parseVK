@@ -14,9 +14,12 @@ from parsevk_contracts.generation.policy_layout import validate_unversioned_layo
 from parsevk_contracts.registry_validation import validate_registry
 from parsevk_contracts.sources import SOURCES_CATALOG
 from parsevk_contracts.vk.commands import CATALOG as VK_CATALOG
+from parsevk_contracts.vk.ingestion import CATALOG as VK_INGESTION_CATALOG
 
 CATALOG = ContractCatalog.from_contracts(
-    VK_CATALOG.contracts + SOURCES_CATALOG.contracts
+    VK_CATALOG.contracts
+    + VK_INGESTION_CATALOG.contracts
+    + SOURCES_CATALOG.contracts
 )
 
 
