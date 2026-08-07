@@ -10,10 +10,10 @@ from app.services.ingestion.group_collection_loader import GroupCollectionLoader
 from app.services.ingestion.group_collector import GroupCollector
 from app.services.ingestion.post_collector import PostCollector
 from app.services.ingestion.post_pipeline import PostCollectionPipeline
+from app.services.ingestion.prepared_stager import PreparedPhysicalIngestionStager
 from app.services.ingestion.profile_enrichment import enrich_user_profiles
 from app.services.ingestion.progress_reporter import ProgressReporter
 from app.services.ingestion.result import IngestionResult
-from app.services.ingestion.staging_writer import PhysicalIngestionStager
 
 
 class DataCollector:
@@ -24,10 +24,11 @@ class DataCollector:
         repository,
         tasks_client: TasksClient,
         outbox=None,
-        staging: PhysicalIngestionStager | None = None,
+        staging: PreparedPhysicalIngestionStager | None = None,
         require_staging: bool = False,
         on_error: Callable[[str], str] | None = None,
         page_committer: Callable[[], Awaitable[None]] | None = None,
+        page_rollback: Callable[[], Awaitable[None]] | None = None,
         checkpoint_store: IngestionCheckpointStore | None = None,
         demand_fanout=None,
     ) -> None:
@@ -55,6 +56,7 @@ class DataCollector:
         checkpoints = CheckpointFlow(
             store=checkpoint_store,
             commit_page=page_committer,
+            rollback_page=page_rollback,
             on_error=self.on_error,
         )
         self.post_pipeline = PostCollectionPipeline(

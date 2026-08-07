@@ -1,15 +1,30 @@
 from typing import Any
 
 from app.domain.exceptions.vk_api import VkApiAuthError
+from app.domain.repositories.ingestion_parts import (
+    IngestionPartConflictError,
+    IngestionPartIntegrityError,
+)
 from app.domain.repositories.ingestion_staging import (
     StagingPayloadConflictError,
     StagingPayloadIntegrityError,
 )
 from app.services.ingestion.checkpoint_flow import CheckpointFlow
 from app.services.ingestion.comment_collector import CommentCollector
+from app.services.ingestion.part_authors import PartSourceIntegrityError
+from app.services.ingestion.part_errors import OversizedIngestionItemError
 from app.services.ingestion.post_collector import PostCollector
 from app.services.ingestion.progress_reporter import ProgressReporter
 from app.services.ingestion.result import IngestionResult
+
+_TERMINAL_INGESTION_ERRORS = (
+    StagingPayloadConflictError,
+    StagingPayloadIntegrityError,
+    IngestionPartConflictError,
+    IngestionPartIntegrityError,
+    PartSourceIntegrityError,
+    OversizedIngestionItemError,
+)
 
 
 class PostCollectionPipeline:
@@ -77,11 +92,12 @@ class PostCollectionPipeline:
             await self.checkpoints.complete(task_run, owner_id, post_id)
         except VkApiAuthError:
             raise
-        except (StagingPayloadConflictError, StagingPayloadIntegrityError):
+        except _TERMINAL_INGESTION_ERRORS:
             raise
         except Exception as error:
             await self.checkpoints.fail(
                 task_run,
+                group_id,
                 owner_id,
                 post_id,
                 error,

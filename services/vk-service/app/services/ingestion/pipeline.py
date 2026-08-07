@@ -6,13 +6,9 @@ from typing import Any
 import httpx
 import sqlalchemy.exc
 
-from app.domain.exceptions.vk_api import (
-    VkApiAuthError,
-    VkApiDomainError,
-    VkApiInfrastructureError,
-    VkApiRateLimitError,
-)
+from app.domain.exceptions.vk_api import VkApiAuthError
 from app.infrastructure.tasks_client.client import TasksClient
+from app.services.ingestion.part_errors import OversizedIngestionItemError
 from app.services.ingestion.result import IngestionResult
 
 logger = logging.getLogger("vk-service.ingestion")
@@ -43,11 +39,18 @@ class IngestionPipeline:
         self.demand_fanout = demand_fanout
         self._on_error = on_error or (lambda msg: msg)
 
-    async def execute(self, task_run: Any, *, correlation_id: str | None = None) -> IngestionResult:
+    async def execute(
+        self,
+        task_run: Any,
+        *,
+        correlation_id: str | None = None,
+    ) -> IngestionResult:
         try:
             group_ids = await self.collector.get_group_ids(task_run)
             result = await self.collector.collect(
-                task_run, group_ids, correlation_id=correlation_id
+                task_run,
+                group_ids,
+                correlation_id=correlation_id,
             )
 
             # Collection-backed executions record terminal lifecycle only through
@@ -72,8 +75,16 @@ class IngestionPipeline:
             )
             raise
 
+        except OversizedIngestionItemError:
+            # The attempt runner owns the rollback and persists deterministic
+            # quarantine evidence only after the ingestion transaction is gone.
+            raise
+
         except Exception as exc:
-            logger.exception("Task execution failed for task_run.task_id=%s", task_run.task_id)
+            logger.exception(
+                "Task execution failed for task_run.task_id=%s",
+                task_run.task_id,
+            )
             sanitized_error = self._on_error(str(exc))
             result = self.collector.current_result
 
@@ -99,7 +110,6 @@ class IngestionPipeline:
                         sanitized_error,
                         exc,
                     )
-
                 except (
                     httpx.RequestError,
                     sqlalchemy.exc.DBAPIError,
@@ -108,21 +118,6 @@ class IngestionPipeline:
                     raise callback_exc from exc
 
             raise IngestionFailedError(sanitized_error, result) from exc
-
-    @staticmethod
-    def _is_infrastructure_error(exc: Exception) -> bool:
-        if isinstance(exc, (sqlalchemy.exc.DBAPIError, asyncio.CancelledError)):
-            return True
-        if isinstance(exc, httpx.RequestError) and not isinstance(exc, httpx.HTTPStatusError):
-            return True
-        if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code >= 500:
-            return True
-        if isinstance(exc, (VkApiRateLimitError, VkApiInfrastructureError)):
-            return True
-        if isinstance(exc, VkApiDomainError) and exc.code == 1:
-            logger.debug("VK API error code 1 (Unknown error) treated as infrastructure error")
-            return True
-        return False
 
     def _handle_fail_callback_conflict(
         self,
@@ -134,7 +129,10 @@ class IngestionPipeline:
         if callback_exc.response.status_code == 409:
             conflict_detail = "Unknown conflict"
             try:
-                conflict_detail = callback_exc.response.json().get("detail", conflict_detail)
+                conflict_detail = callback_exc.response.json().get(
+                    "detail",
+                    conflict_detail,
+                )
             except Exception:
                 pass
             logger.warning(

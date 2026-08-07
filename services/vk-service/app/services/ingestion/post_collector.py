@@ -4,7 +4,7 @@ from typing import Any
 from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
 from app.services.ingestion.author_payload import post_author_payload
 from app.services.ingestion.post_snapshot_reuse import stage_or_reuse_post_snapshot
-from app.services.ingestion.staging_writer import PhysicalIngestionStager
+from app.services.ingestion.prepared_stager import PreparedPhysicalIngestionStager
 
 logger = logging.getLogger("vk-service.ingestion")
 
@@ -19,7 +19,7 @@ class PostCollector:
         *,
         adapter: VkApiAdapter,
         repository,
-        staging: PhysicalIngestionStager | None = None,
+        staging: PreparedPhysicalIngestionStager | None = None,
         require_staging: bool = False,
     ) -> None:
         self.adapter = adapter
