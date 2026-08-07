@@ -37,14 +37,11 @@ def add_publication_claims() -> None:
         ),
     )
     op.add_column(REFERENCE_TABLE, sa.Column("last_error", sa.String(2000)))
-    op.add_column(
-        REFERENCE_TABLE,
-        sa.Column("published_at", sa.DateTime(timezone=True)),
-    )
-    op.add_column(
-        REFERENCE_TABLE,
-        sa.Column("quarantined_at", sa.DateTime(timezone=True)),
-    )
+    for column in ("published_at", "failed_at", "quarantined_at"):
+        op.add_column(
+            REFERENCE_TABLE,
+            sa.Column(column, sa.DateTime(timezone=True)),
+        )
     _create_reference_constraints()
 
 
@@ -114,6 +111,7 @@ def drop_publication_claims() -> None:
         op.drop_constraint(constraint, REFERENCE_TABLE, type_="check")
     for column in (
         "quarantined_at",
+        "failed_at",
         "published_at",
         "last_error",
         "next_attempt_at",
