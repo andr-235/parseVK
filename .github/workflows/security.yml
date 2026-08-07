@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - agent/p3-hard-cutover
   push:
     branches:
       - main
