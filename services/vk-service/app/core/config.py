@@ -20,7 +20,6 @@ class Settings(BaseSettings):
     kafka_consumer_enabled: bool = False
     outbox_publish_enabled: bool = False
     task_worker_enabled: bool = True
-    vk_batch_events_enabled: bool = True
     task_worker_concurrency: int = Field(default=2, ge=1, le=16)
     task_worker_poll_seconds: float = Field(default=1.0, gt=0, le=60)
     task_lease_seconds: int = Field(default=90, ge=30, le=3600)

@@ -21,7 +21,6 @@ async def test_outbox_service_uses_deterministic_dedupe_keys():
     service = OutboxService(repository)
 
     await service.emit_group_collected({"id": 1})
-    await service.emit_post_collected({"owner_id": -1, "id": 2}, task_id=10)
     await service.emit_execution_completed(
         task_id=10,
         run_id="run-10",
@@ -35,9 +34,15 @@ async def test_outbox_service_uses_deterministic_dedupe_keys():
 
     assert [event.get("dedupe_key") for event in repository.events] == [
         None,
-        "vk.post_collected:-1:2",
         "task.execution_completed:10:run-10:1",
     ]
+
+
+def test_outbox_service_has_no_legacy_post_comment_emitters():
+    service = OutboxService(FakeOutboxRepository())
+
+    assert not hasattr(service, "emit_post_collected")
+    assert not hasattr(service, "emit_comments_collected_batch")
 
 
 def test_kafka_key_for_task_events_uses_task_id():
@@ -53,10 +58,7 @@ def test_kafka_key_for_task_events_uses_task_id():
         )
         == "10"
     )
-    assert (
-        kafka_key_for_event("vk.post_collected", {"taskId": 10}, "-1:2")
-        == "-1:2"
-    )
+    assert kafka_key_for_event("vk.group_collected", {}, "1") == "1"
 
 
 @pytest.mark.anyio
