@@ -28,6 +28,7 @@ class DataCollector:
         require_staging: bool = False,
         on_error: Callable[[str], str] | None = None,
         page_committer: Callable[[], Awaitable[None]] | None = None,
+        page_rollback: Callable[[], Awaitable[None]] | None = None,
         checkpoint_store: IngestionCheckpointStore | None = None,
         demand_fanout=None,
     ) -> None:
@@ -55,6 +56,7 @@ class DataCollector:
         checkpoints = CheckpointFlow(
             store=checkpoint_store,
             commit_page=page_committer,
+            rollback_page=page_rollback,
             on_error=self.on_error,
         )
         self.post_pipeline = PostCollectionPipeline(
