@@ -16,6 +16,11 @@ from app.domain.entities.ingestion_part_publication import (
 )
 from app.domain.entities.ingestion_parts import IngestionPart
 
+# Compatibility exports for existing contract tests and downstream imports.
+# The canonical values live in ingestion_part_publication.
+POST_PART_EVENT_TYPE = POST_PART_EVENT
+COMMENT_PART_EVENT_TYPE = COMMENT_PART_EVENT
+
 _EVENT_TYPES = {
     POST_PART: POST_PART_EVENT,
     COMMENT_PART: COMMENT_PART_EVENT,
