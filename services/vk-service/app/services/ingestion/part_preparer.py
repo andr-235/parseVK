@@ -98,6 +98,7 @@ def _prepare_post_part(
             item_identity=post_identity,
             wire_bytes_count=len(wire_bytes),
             hard_limit_bytes=APPLICATION_HARD_LIMIT_BYTES,
+            versions=versions,
         )
     return build_ingestion_part(
         batch_id=batch.batch_id,

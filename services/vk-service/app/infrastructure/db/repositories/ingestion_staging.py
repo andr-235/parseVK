@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC
 from uuid import UUID
 
 from sqlalchemy import select
@@ -36,6 +37,8 @@ class SqlAlchemyIngestionStagingRepository:
             "payload_bytes": expected.payload_bytes,
             "payload": expected.payload,
             "status": expected.status,
+            "created_at": expected.staged_at,
+            "updated_at": expected.staged_at,
         }
         dialect = self.session.get_bind().dialect.name
         if dialect == "postgresql":
@@ -98,6 +101,9 @@ class SqlAlchemyIngestionStagingRepository:
 
     @classmethod
     def _to_domain(cls, model: VkIngestionStagingBatch) -> StagedIngestionBatch:
+        staged_at = model.created_at
+        if staged_at.tzinfo is None:
+            staged_at = staged_at.replace(tzinfo=UTC)
         return cls._verified(
             StagedIngestionBatch(
                 batch_id=model.id,
@@ -111,6 +117,7 @@ class SqlAlchemyIngestionStagingRepository:
                 payload=dict(model.payload),
                 payload_digest=model.payload_digest,
                 payload_bytes=model.payload_bytes,
+                staged_at=staged_at,
                 status=model.status,
             )
         )

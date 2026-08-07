@@ -4,7 +4,6 @@ from uuid import UUID as PyUUID
 from sqlalchemy import (
     CheckConstraint,
     DateTime,
-    ForeignKey,
     Index,
     Integer,
     String,
@@ -50,11 +49,10 @@ class VkIngestionOversizedDiagnostic(Base):
     )
 
     id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
-    batch_id: Mapped[PyUUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("vk_ingestion_staging_batches.id", ondelete="RESTRICT"),
-        nullable=False,
-    )
+    # The normal ingestion transaction rolls the staged batch back before this
+    # diagnostic is recorded in an independent transaction. Keep the deterministic
+    # batch identity without an FK so quarantine evidence can survive that rollback.
+    batch_id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     item_kind: Mapped[str] = mapped_column(String(16), nullable=False)
     item_identity: Mapped[str] = mapped_column(String(128), nullable=False)
     staging_schema_version: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -64,10 +62,14 @@ class VkIngestionOversizedDiagnostic(Base):
     hard_limit_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
     reason: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(
-        String(32), nullable=False, default="quarantined",
-        server_default=text("'quarantined'")
+        String(32),
+        nullable=False,
+        default="quarantined",
+        server_default=text("'quarantined'"),
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utcnow,
-        server_default=text("CURRENT_TIMESTAMP")
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        server_default=text("CURRENT_TIMESTAMP"),
     )

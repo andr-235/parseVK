@@ -68,6 +68,7 @@ def prepare_comment_parts(
                 item_identity=identity,
                 wire_bytes_count=len(wire_bytes),
                 hard_limit_bytes=APPLICATION_HARD_LIMIT_BYTES,
+                versions=versions,
             )
         parts.append(
             build_ingestion_part(
