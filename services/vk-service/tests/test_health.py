@@ -77,6 +77,34 @@ async def test_ready_returns_ready():
 
 
 @pytest.mark.anyio
+async def test_ready_rejects_unhealthy_staged_kafka(monkeypatch):
+    monkeypatch.setattr(
+        "app.main.settings.staged_part_publisher_enabled",
+        True,
+    )
+    monkeypatch.setattr(
+        "app.main.get_staged_part_publisher_healthy",
+        lambda: False,
+    )
+    app = create_app()
+
+    with patch("app.infrastructure.db.session.engine") as mock_engine:
+        mock_conn = AsyncMock()
+        mock_engine.connect.return_value.__aenter__.return_value = mock_conn
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+        ) as client:
+            response = await client.get("/ready")
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == (
+        "Staged ingestion Kafka topology is not ready"
+    )
+    mock_engine.connect.assert_not_called()
+
+
+@pytest.mark.anyio
 async def test_ready_returns_service_unavailable():
     app = create_app()
     with patch("app.infrastructure.db.session.engine") as mock_engine:
