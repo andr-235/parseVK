@@ -4,12 +4,8 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from uuid import UUID
 
-from app.domain.entities.ingestion_parts import (
-    COMMENT_PART,
-    POST_PART,
-    PREPARED,
-    IngestionPart,
-)
+from app.domain.entities.ingestion_part_identity import COMMENT_PART, POST_PART
+from app.domain.entities.ingestion_parts import PREPARED, IngestionPart
 
 POST_PART_EVENT = "vk.ingestion.post-part-prepared"
 COMMENT_PART_EVENT = "vk.ingestion.comment-part-prepared"
