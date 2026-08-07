@@ -24,8 +24,7 @@ class ExistingBatchRepository:
         raise AssertionError("existing snapshot must be reused")
 
 
-@pytest.mark.anyio
-async def test_reused_author_type_must_match_signed_vk_id():
+def make_staging(author):
     claim = SimpleNamespace(
         execution_id=UUID("11111111-1111-1111-1111-111111111111"),
         attempt_id=UUID("22222222-2222-2222-2222-222222222222"),
@@ -49,10 +48,7 @@ async def test_reused_author_type_must_match_signed_vk_id():
                 "pageOffset": 0,
                 "nextOffset": None,
             },
-            "observed": {
-                "post": post,
-                "authors": [{"vk_author_id": -42, "type": "user"}],
-            },
+            "observed": {"post": post, "authors": [author]},
             "providerMetadata": {},
         },
     )
@@ -60,8 +56,29 @@ async def test_reused_author_type_must_match_signed_vk_id():
         ExistingBatchRepository(batch),
         claim,
     )
+    return staging, post
+
+
+@pytest.mark.anyio
+async def test_reused_author_type_must_match_signed_vk_id():
+    staging, post = make_staging({"vk_author_id": -42, "type": "user"})
 
     with pytest.raises(StagingPayloadIntegrityError, match="type conflicts"):
+        await stage_or_reuse_post_snapshot(
+            staging,
+            post=post,
+            authors=[],
+        )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("author_id", [42.5, True, 0, "42"])
+async def test_reused_author_id_must_be_a_nonzero_integer(author_id):
+    staging, post = make_staging(
+        {"vk_author_id": author_id, "type": "user"}
+    )
+
+    with pytest.raises(StagingPayloadIntegrityError, match="identity is invalid"):
         await stage_or_reuse_post_snapshot(
             staging,
             post=post,
