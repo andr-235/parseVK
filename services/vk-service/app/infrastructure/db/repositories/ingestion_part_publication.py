@@ -2,8 +2,6 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import or_, select
-from sqlalchemy.dialects.postgresql import insert as postgresql_insert
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.entities.ingestion_part_publication import (
@@ -16,13 +14,18 @@ from app.infrastructure.db.models.ingestion_part_publication import (
 )
 from app.infrastructure.db.models.ingestion_parts import VkIngestionStagingPart
 from app.infrastructure.db.models.ingestion_staging import VkIngestionStagingBatch
+from app.infrastructure.db.repositories.ingestion_part_publication_failure import (
+    quarantine,
+    release_for_retry,
+)
 from app.infrastructure.db.repositories.ingestion_part_publication_records import (
     claim_from_models,
 )
-from app.infrastructure.db.repositories.ingestion_part_publication_transitions import (
+from app.infrastructure.db.repositories.ingestion_part_publication_success import (
     mark_published,
-    quarantine,
-    release_for_retry,
+)
+from app.infrastructure.db.repositories.ingestion_part_reference_recovery import (
+    recover_missing_references,
 )
 
 
@@ -149,49 +152,7 @@ class SqlAlchemyIngestionPartPublicationRepository:
         )
 
     async def recover_missing_references(self, *, limit: int) -> int:
-        if not 1 <= limit <= 1000:
-            raise ValueError("recovery limit must be between 1 and 1000")
-        statement = (
-            select(VkIngestionStagingPart.id)
-            .join(
-                VkIngestionStagingBatch,
-                VkIngestionStagingBatch.id == VkIngestionStagingPart.batch_id,
-            )
-            .outerjoin(
-                VkIngestionPartReference,
-                VkIngestionPartReference.part_id == VkIngestionStagingPart.id,
-            )
-            .where(
-                VkIngestionStagingPart.status == PREPARED,
-                VkIngestionStagingBatch.status == BATCH_PREPARED,
-                VkIngestionPartReference.part_id.is_(None),
-            )
-            .order_by(VkIngestionStagingPart.prepared_at)
-            .limit(limit)
-        )
-        if self.session.get_bind().dialect.name == "postgresql":
-            statement = statement.with_for_update(
-                of=VkIngestionStagingPart,
-                skip_locked=True,
-            )
-        part_ids = (await self.session.scalars(statement)).all()
-        inserted = 0
-        for part_id in part_ids:
-            result = await self.session.execute(self._reference_insert(part_id))
-            inserted += int(result.rowcount == 1)
-        await self.session.flush()
-        return inserted
-
-    def _reference_insert(self, part_id: UUID):
-        dialect = self.session.get_bind().dialect.name
-        values = {"part_id": part_id, "status": "pending"}
-        if dialect == "postgresql":
-            statement = postgresql_insert(VkIngestionPartReference).values(**values)
-        elif dialect == "sqlite":
-            statement = sqlite_insert(VkIngestionPartReference).values(**values)
-        else:
-            raise RuntimeError(f"unsupported publication dialect: {dialect}")
-        return statement.on_conflict_do_nothing()
+        return await recover_missing_references(self.session, limit=limit)
 
 
 def _aware(value: datetime, label: str) -> None:
