@@ -42,6 +42,15 @@ class IngestionPartPublicationRepository(Protocol):
         next_attempt_at: datetime,
     ) -> None: ...
 
+    async def mark_failed(
+        self,
+        *,
+        claim_id: UUID,
+        part_id: UUID,
+        error: str,
+        failed_at: datetime,
+    ) -> None: ...
+
     async def quarantine(
         self,
         *,
