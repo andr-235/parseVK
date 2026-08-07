@@ -7,6 +7,7 @@ from app.domain.entities.ingestion_staging import StagedIngestionBatch
 from app.domain.repositories.ingestion_part_publication import (
     IngestionPartPublicationIntegrityError,
 )
+from app.domain.repositories.ingestion_parts import IngestionPartIntegrityError
 from app.infrastructure.db.models.ingestion_part_publication import (
     VkIngestionPartReference,
 )
@@ -40,7 +41,7 @@ def claim_from_models(
             batch=batch_from_model(batch_model),
             part=part_from_model(part_model),
         ).verified_copy()
-    except ValueError as error:
+    except (ValueError, IngestionPartIntegrityError) as error:
         raise IngestionPartPublicationIntegrityError(str(error)) from error
 
 
