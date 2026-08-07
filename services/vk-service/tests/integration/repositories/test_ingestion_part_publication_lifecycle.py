@@ -85,7 +85,7 @@ async def test_retry_releases_claim_with_backoff(db_session) -> None:
     assert reference.claim_id is None
     assert reference.attempts == 1
     assert reference.last_error == "broker unavailable"
-    assert reference.next_attempt_at == retry_at
+    assert _as_utc(reference.next_attempt_at) == retry_at
     assert await repository.claim_pending(
         worker_id="publisher-2",
         limit=10,
@@ -131,3 +131,7 @@ async def test_quarantine_is_terminal_for_entire_batch(db_session) -> None:
         limit=10,
         lease_expires_at=future_lease(),
     ) == ()
+
+
+def _as_utc(value: datetime) -> datetime:
+    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
