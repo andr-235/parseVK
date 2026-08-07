@@ -5,7 +5,11 @@ from datetime import datetime
 from uuid import UUID
 
 from app.domain.entities.ingestion_part_identity import COMMENT_PART, POST_PART
-from app.domain.entities.ingestion_parts import PREPARED, IngestionPart
+from app.domain.entities.ingestion_parts import PREPARED as PART_PREPARED, IngestionPart
+from app.domain.entities.ingestion_staging import (
+    PREPARED as BATCH_PREPARED,
+    StagedIngestionBatch,
+)
 
 POST_PART_EVENT = "vk.ingestion.post-part-prepared"
 COMMENT_PART_EVENT = "vk.ingestion.comment-part-prepared"
@@ -25,10 +29,7 @@ class IngestionPartPublicationClaim:
     worker_id: str
     lease_expires_at: datetime
     attempts: int
-    source_kind: str
-    owner_id: int
-    post_id: int
-    page_offset: int
+    batch: StagedIngestionBatch
     part: IngestionPart
 
     def __post_init__(self) -> None:
@@ -38,17 +39,18 @@ class IngestionPartPublicationClaim:
             raise ValueError("lease_expires_at must be timezone-aware")
         if self.attempts < 1:
             raise ValueError("publication claim attempts must be positive")
-        if self.post_id == 0:
-            raise ValueError("post_id must be nonzero")
-        if self.page_offset < 0:
-            raise ValueError("page_offset must be non-negative")
-        if self.part.status != PREPARED:
+        if self.batch.status != BATCH_PREPARED:
+            raise ValueError("only prepared staged batches can be claimed")
+        if self.part.status != PART_PREPARED:
             raise ValueError("only prepared ingestion parts can be claimed")
+        if self.part.batch_id != self.batch.batch_id:
+            raise ValueError("claimed part does not belong to staged batch")
         expected_source = _SOURCE_KINDS.get(self.part.part_kind)
         if expected_source is None:
             raise ValueError("unsupported ingestion part kind")
-        if self.source_kind != expected_source:
+        if self.batch.source_kind != expected_source:
             raise ValueError("part kind conflicts with staged source kind")
+        self.batch.verified_copy()
         self.part.verified_copy()
 
     @property
@@ -61,8 +63,12 @@ class IngestionPartPublicationClaim:
 
     @property
     def kafka_key(self) -> str:
-        return f"{self.owner_id}:{self.post_id}"
+        return f"{self.batch.owner_id}:{self.batch.post_id}"
 
     def verified_copy(self) -> IngestionPartPublicationClaim:
         self.__post_init__()
-        return replace(self, part=self.part.verified_copy())
+        return replace(
+            self,
+            batch=self.batch.verified_copy(),
+            part=self.part.verified_copy(),
+        )
