@@ -13,8 +13,11 @@ logger = logging.getLogger(__name__)
 class PostsClient:
     def __init__(self, call_method: Callable[..., Any]):
         self._call = call_method
-        self._comment_pages = CommentPagesClient(call_method)
-        self._author_comments = AuthorCommentsClient(call_method)
+        self._comment_pages = CommentPagesClient(self._call_current)
+        self._author_comments = AuthorCommentsClient(self._call_current)
+
+    async def _call_current(self, method: str, **params) -> dict:
+        return await self._call(method, **params)
 
     async def get_posts(
         self,
