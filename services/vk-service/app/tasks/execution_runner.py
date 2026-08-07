@@ -4,6 +4,10 @@ import asyncio
 import inspect
 from datetime import UTC, datetime, timedelta
 
+from app.services.ingestion.oversized_diagnostic_recorder import (
+    OversizedDiagnosticRecorder,
+)
+from app.services.ingestion.part_errors import OversizedIngestionItemError
 from app.tasks.execution_control import FencedVkApiClient, FenceLostError
 
 
@@ -26,6 +30,7 @@ class ExecutionAttemptRunner:
         self.heartbeat_seconds = heartbeat_seconds
         self.timeout_seconds = timeout_seconds
         self.adapter_factory = adapter_factory
+        self.oversized_diagnostics = OversizedDiagnosticRecorder(session_factory)
 
     async def run(self, claim, control):
         ingestion_task = asyncio.create_task(self._run_ingestion(claim, control))
@@ -69,6 +74,10 @@ class ExecutionAttemptRunner:
                 return result
             except asyncio.CancelledError:
                 await session.rollback()
+                raise
+            except OversizedIngestionItemError as error:
+                await session.rollback()
+                await self.oversized_diagnostics.record(error)
                 raise
             except Exception:
                 await session.rollback()

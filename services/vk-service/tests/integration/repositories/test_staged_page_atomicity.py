@@ -6,16 +6,27 @@ import pytest
 from sqlalchemy import func, select
 
 from app.infrastructure.db.models.executions import VkExecution, VkExecutionAttempt
+from app.infrastructure.db.models.ingestion_parts import (
+    VkIngestionPartReference,
+    VkIngestionStagingPart,
+)
 from app.infrastructure.db.models.ingestion_staging import VkIngestionStagingBatch
 from app.infrastructure.db.repositories.checkpoint import (
     SqlAlchemyIngestionCheckpointStore,
 )
 from app.infrastructure.db.repositories.ingestion import SqlAlchemyIngestionRepository
+from app.infrastructure.db.repositories.ingestion_parts import (
+    SqlAlchemyIngestionPartRepository,
+)
 from app.infrastructure.db.repositories.ingestion_staging import (
     SqlAlchemyIngestionStagingRepository,
 )
 from app.infrastructure.db.session import SessionLocal
 from app.services.ingestion.comment_collector import CommentCollector
+from app.services.ingestion.part_preparation_service import (
+    IngestionPartPreparationService,
+)
+from app.services.ingestion.prepared_stager import PreparedPhysicalIngestionStager
 from app.services.ingestion.staging_writer import PhysicalIngestionStager
 
 pytestmark = pytest.mark.anyio
@@ -79,13 +90,33 @@ async def persisted_state(execution_id, owner_id, post_id, run_id):
                 VkIngestionStagingBatch.source_kind == "comment_page",
             )
         )
+        parts = await session.scalar(
+            select(func.count(VkIngestionStagingPart.id))
+            .join(
+                VkIngestionStagingBatch,
+                VkIngestionStagingPart.batch_id == VkIngestionStagingBatch.id,
+            )
+            .where(VkIngestionStagingBatch.execution_id == execution_id)
+        )
+        references = await session.scalar(
+            select(func.count(VkIngestionPartReference.part_id))
+            .join(
+                VkIngestionStagingPart,
+                VkIngestionPartReference.part_id == VkIngestionStagingPart.id,
+            )
+            .join(
+                VkIngestionStagingBatch,
+                VkIngestionStagingPart.batch_id == VkIngestionStagingBatch.id,
+            )
+            .where(VkIngestionStagingBatch.execution_id == execution_id)
+        )
         comments = await SqlAlchemyIngestionRepository(
             session
         ).count_comments_for_post(owner_id, post_id)
         checkpoint = await SqlAlchemyIngestionCheckpointStore(session).load(
             run_id, owner_id, post_id
         )
-    return staged, comments, checkpoint
+    return staged, parts, references, comments, checkpoint
 
 
 async def run_page(marker: int, *, reject: bool):
@@ -100,12 +131,19 @@ async def run_page(marker: int, *, reject: bool):
                 raise RuntimeError("fence lost")
             await session.commit()
 
+        physical = PhysicalIngestionStager.from_claim(
+            SqlAlchemyIngestionStagingRepository(session), claim
+        )
+        staging = PreparedPhysicalIngestionStager(
+            staging=physical,
+            parts=IngestionPartPreparationService(
+                SqlAlchemyIngestionPartRepository(session)
+            ),
+        )
         collector = CommentCollector(
             adapter=adapter_for_one_page(owner_id, post_id, marker),
             repository=SqlAlchemyIngestionRepository(session),
-            staging=PhysicalIngestionStager.from_claim(
-                SqlAlchemyIngestionStagingRepository(session), claim
-            ),
+            staging=staging,
             require_staging=True,
             page_committer=commit_page,
         )
@@ -125,17 +163,21 @@ async def run_page(marker: int, *, reject: bool):
     return await persisted_state(claim.execution_id, owner_id, post_id, run_id)
 
 
-async def test_stage_comment_and_checkpoint_commit_atomically():
-    staged, comments, checkpoint = await run_page(4, reject=False)
+async def test_stage_parts_references_comment_and_checkpoint_commit_atomically():
+    staged, parts, references, comments, checkpoint = await run_page(4, reject=False)
 
     assert staged == 1
+    assert parts == 1
+    assert references == 1
     assert comments == 1
     assert checkpoint is not None
 
 
-async def test_fence_rejection_rolls_back_stage_comment_and_checkpoint():
-    staged, comments, checkpoint = await run_page(5, reject=True)
+async def test_fence_rejection_rolls_back_complete_page_preparation():
+    staged, parts, references, comments, checkpoint = await run_page(5, reject=True)
 
     assert staged == 0
+    assert parts == 0
+    assert references == 0
     assert comments == 0
     assert checkpoint is None

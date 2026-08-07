@@ -16,6 +16,7 @@ from app.services.ingestion.prepared_stager import PreparedPhysicalIngestionStag
 from app.services.ingestion.staging_writer import (
     POST_SNAPSHOT,
     STAGING_SCHEMA_VERSION,
+    PhysicalIngestionStager,
 )
 
 
@@ -27,7 +28,7 @@ class PostSnapshotResolution:
 
 
 async def stage_or_reuse_post_snapshot(
-    staging: PreparedPhysicalIngestionStager,
+    staging: PreparedPhysicalIngestionStager | PhysicalIngestionStager,
     *,
     post: dict[str, Any],
     authors: list[dict[str, Any]],
@@ -43,7 +44,7 @@ async def stage_or_reuse_post_snapshot(
     )
     existing = await staging.repository.get(batch_id)
     if existing is not None:
-        await staging.prepare_existing(existing)
+        await _prepare_existing(staging, existing)
         return _reuse(existing, owner_id=owner_id, post_id=post_id)
 
     try:
@@ -52,9 +53,18 @@ async def stage_or_reuse_post_snapshot(
         existing = await staging.repository.get(batch_id)
         if existing is None:
             raise
-        await staging.prepare_existing(existing)
+        await _prepare_existing(staging, existing)
         return _reuse(existing, owner_id=owner_id, post_id=post_id)
     return _resolve(batch, owner_id=owner_id, post_id=post_id, created=created)
+
+
+async def _prepare_existing(
+    staging: PreparedPhysicalIngestionStager | PhysicalIngestionStager,
+    batch: StagedIngestionBatch,
+) -> None:
+    prepare = getattr(staging, "prepare_existing", None)
+    if prepare is not None:
+        await prepare(batch)
 
 
 def _reuse(

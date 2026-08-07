@@ -65,8 +65,8 @@ async def create_batch(session):
             "providerMetadata": {},
         },
     )
-    await SqlAlchemyIngestionStagingRepository(session).stage(batch)
-    return batch
+    stored, _ = await SqlAlchemyIngestionStagingRepository(session).stage(batch)
+    return stored
 
 
 def make_parts(batch_id, *, versions=IngestionPartVersions(), suffix=""):
@@ -108,6 +108,32 @@ async def test_prepare_persists_complete_idempotent_set(db_session):
     assert {(row.part_id, row.status) for row in rows} == {
         (part.message_id, "pending") for part in parts
     }
+
+
+@pytest.mark.anyio
+async def test_preparation_replay_accepts_published_lifecycle_state(db_session):
+    batch = await create_batch(db_session)
+    parts, references = make_parts(batch.batch_id)
+    repository = SqlAlchemyIngestionPartRepository(db_session)
+    await repository.prepare(parts, references)
+
+    stored_parts = (
+        await db_session.scalars(select(VkIngestionStagingPart))
+    ).all()
+    stored_references = (
+        await db_session.scalars(select(VkIngestionPartReference))
+    ).all()
+    for part in stored_parts:
+        part.status = "published"
+    for reference in stored_references:
+        reference.status = "published"
+    await db_session.flush()
+
+    replayed, created = await repository.prepare(parts, references)
+
+    assert created is False
+    assert all(part.status == "published" for part in replayed)
+    assert [part.wire_bytes for part in replayed] == [part.wire_bytes for part in parts]
 
 
 @pytest.mark.anyio

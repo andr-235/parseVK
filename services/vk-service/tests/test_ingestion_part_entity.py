@@ -71,12 +71,15 @@ def test_part_records_exact_wire_bytes_and_digest():
     assert part.verified_copy() == part
 
 
-def test_part_rejects_invalid_position_and_hard_limit():
+def test_part_rejects_invalid_position_hard_limit_and_status():
     with pytest.raises(ValueError, match="part_index"):
         make_part(part_index=1, part_count=1)
 
     with pytest.raises(ValueError, match="hard limit"):
         make_part(wire_bytes=b"x" * (APPLICATION_HARD_LIMIT_BYTES + 1))
+
+    with pytest.raises(ValueError, match="part status"):
+        make_part(status="unknown")
 
 
 def test_verified_copy_detects_manifest_or_wire_drift():
@@ -89,6 +92,27 @@ def test_verified_copy_detects_manifest_or_wire_drift():
         replace(part, author_manifest=(42,)).verified_copy()
 
 
+def test_lifecycle_status_does_not_change_immutable_manifest():
+    prepared = make_part()
+    published = IngestionPart.create(
+        batch_id=prepared.batch_id,
+        part_kind=prepared.part_kind,
+        part_index=prepared.part_index,
+        part_count=prepared.part_count,
+        versions=prepared.versions,
+        item_manifest=prepared.item_manifest,
+        author_manifest=prepared.author_manifest,
+        prepared_at=prepared.prepared_at,
+        wire_bytes=prepared.wire_bytes,
+        status="published",
+    )
+
+    assert published.verified_copy() == published
+    assert published.message_id == prepared.message_id
+    assert published.part_digest == prepared.part_digest
+    assert published.wire_digest == prepared.wire_digest
+
+
 def test_reference_contains_only_part_identity_and_status():
     part = make_part()
     reference = IngestionPartReference(part_id=part.message_id)
@@ -96,3 +120,6 @@ def test_reference_contains_only_part_identity_and_status():
     assert reference.part_id == part.message_id
     assert reference.status == "pending"
     assert not hasattr(reference, "payload")
+
+    with pytest.raises(ValueError, match="reference status"):
+        IngestionPartReference(part_id=part.message_id, status="unknown")

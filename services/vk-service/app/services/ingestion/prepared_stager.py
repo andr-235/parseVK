@@ -21,6 +21,14 @@ class PreparedPhysicalIngestionStager:
     def execution_id(self):
         return self.staging.execution_id
 
+    @property
+    def attempt_id(self):
+        return self.staging.attempt_id
+
+    @property
+    def fencing_token(self):
+        return self.staging.fencing_token
+
     async def stage_post(
         self,
         *,

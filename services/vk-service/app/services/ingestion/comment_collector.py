@@ -7,7 +7,7 @@ from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
 from app.domain.repositories.checkpoint import CheckpointData, IngestionCheckpointStore
 from app.services.ingestion.author_payload import author_payload
 from app.services.ingestion.comment_values import comment_date
-from app.services.ingestion.staging_writer import PhysicalIngestionStager
+from app.services.ingestion.prepared_stager import PreparedPhysicalIngestionStager
 
 logger = logging.getLogger("vk-service.ingestion")
 
@@ -18,7 +18,7 @@ class CommentCollector:
         *,
         adapter: VkApiAdapter,
         repository,
-        staging: PhysicalIngestionStager | None = None,
+        staging: PreparedPhysicalIngestionStager | None = None,
         require_staging: bool = False,
         page_committer: Callable[[], Awaitable[None]] | None = None,
     ) -> None:

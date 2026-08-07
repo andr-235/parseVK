@@ -10,10 +10,10 @@ from app.services.ingestion.group_collection_loader import GroupCollectionLoader
 from app.services.ingestion.group_collector import GroupCollector
 from app.services.ingestion.post_collector import PostCollector
 from app.services.ingestion.post_pipeline import PostCollectionPipeline
+from app.services.ingestion.prepared_stager import PreparedPhysicalIngestionStager
 from app.services.ingestion.profile_enrichment import enrich_user_profiles
 from app.services.ingestion.progress_reporter import ProgressReporter
 from app.services.ingestion.result import IngestionResult
-from app.services.ingestion.staging_writer import PhysicalIngestionStager
 
 
 class DataCollector:
@@ -24,7 +24,7 @@ class DataCollector:
         repository,
         tasks_client: TasksClient,
         outbox=None,
-        staging: PhysicalIngestionStager | None = None,
+        staging: PreparedPhysicalIngestionStager | None = None,
         require_staging: bool = False,
         on_error: Callable[[str], str] | None = None,
         page_committer: Callable[[], Awaitable[None]] | None = None,

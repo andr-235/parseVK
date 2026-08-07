@@ -12,9 +12,11 @@ from app.domain.entities.ingestion_part_identity import (
 )
 from app.domain.entities.ingestion_parts import IngestionPart
 
+POST_PART_EVENT_TYPE = "vk.ingestion.post-part-prepared"
+COMMENT_PART_EVENT_TYPE = "vk.ingestion.comment-part-prepared"
 _EVENT_TYPES = {
-    POST_PART: "vk.content_ingestion.post_part",
-    COMMENT_PART: "vk.content_ingestion.comment_part",
+    POST_PART: POST_PART_EVENT_TYPE,
+    COMMENT_PART: COMMENT_PART_EVENT_TYPE,
 }
 
 

@@ -13,7 +13,12 @@ from app.domain.entities.ingestion_part_identity import (
 from app.domain.entities.ingestion_staging import canonical_payload
 
 PREPARED = "prepared"
+PUBLISHED = "published"
+FAILED = "failed"
+QUARANTINED = "quarantined"
 PENDING = "pending"
+PART_STATUSES = frozenset({PREPARED, PUBLISHED, FAILED, QUARANTINED})
+REFERENCE_STATUSES = frozenset({PENDING, PUBLISHED, FAILED, QUARANTINED})
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +51,7 @@ class IngestionPart:
         author_manifest: tuple[int, ...],
         prepared_at: datetime,
         wire_bytes: bytes,
+        status: str = PREPARED,
     ) -> IngestionPart:
         if part_count < 1 or not 0 <= part_index < part_count:
             raise ValueError("part_index must identify one part in part_count")
@@ -55,6 +61,8 @@ class IngestionPart:
             raise ValueError("wire bytes must not be empty")
         if len(wire_bytes) > APPLICATION_HARD_LIMIT_BYTES:
             raise ValueError("wire bytes exceed the application hard limit")
+        if status not in PART_STATUSES:
+            raise ValueError("unsupported ingestion part status")
         message_id = deterministic_part_id(
             batch_id=batch_id,
             part_kind=part_kind,
@@ -94,6 +102,7 @@ class IngestionPart:
             wire_bytes=bytes(wire_bytes),
             wire_bytes_count=len(wire_bytes),
             wire_digest=wire_digest,
+            status=status,
         )
 
     def verified_copy(self) -> IngestionPart:
@@ -107,6 +116,7 @@ class IngestionPart:
             author_manifest=self.author_manifest,
             prepared_at=self.prepared_at,
             wire_bytes=self.wire_bytes,
+            status=self.status,
         )
         if recreated != self:
             raise ValueError("ingestion part no longer matches its immutable manifest")
@@ -117,3 +127,7 @@ class IngestionPart:
 class IngestionPartReference:
     part_id: UUID
     status: str = PENDING
+
+    def __post_init__(self) -> None:
+        if self.status not in REFERENCE_STATUSES:
+            raise ValueError("unsupported ingestion part reference status")

@@ -1,3 +1,4 @@
+from dataclasses import replace
 from uuid import UUID
 
 from sqlalchemy import select
@@ -6,6 +7,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.entities.ingestion_parts import (
+    REFERENCE_STATUSES,
     IngestionPart,
     IngestionPartReference,
 )
@@ -14,6 +16,7 @@ from app.infrastructure.db.models.ingestion_parts import (
     VkIngestionPartReference,
     VkIngestionStagingPart,
 )
+from app.infrastructure.db.models.ingestion_staging import VkIngestionStagingBatch
 from app.infrastructure.db.repositories.ingestion_part_records import (
     part_from_model,
     part_values,
@@ -30,6 +33,7 @@ class SqlAlchemyIngestionPartRepository:
         references: tuple[IngestionPartReference, ...],
     ) -> tuple[tuple[IngestionPart, ...], bool]:
         self._validate_set(parts, references)
+        await self._lock_batch(parts[0].batch_id)
         existing = await self.list_for_batch(parts[0].batch_id)
         if existing:
             self._verify_set(existing, parts)
@@ -71,21 +75,33 @@ class SqlAlchemyIngestionPartRepository:
         ).all()
         return tuple(part_from_model(model) for model in models)
 
+    async def _lock_batch(self, batch_id: UUID) -> None:
+        locked = await self.session.scalar(
+            select(VkIngestionStagingBatch.id)
+            .where(VkIngestionStagingBatch.id == batch_id)
+            .with_for_update()
+        )
+        if locked is None:
+            raise IngestionPartConflictError(
+                "ingestion part preparation requires a durable staged batch"
+            )
+
     async def _verify_references(
         self,
         expected: tuple[IngestionPartReference, ...],
     ) -> None:
-        part_ids = [reference.part_id for reference in expected]
+        expected_ids = {reference.part_id for reference in expected}
         models = (
             await self.session.scalars(
                 select(VkIngestionPartReference).where(
-                    VkIngestionPartReference.part_id.in_(part_ids)
+                    VkIngestionPartReference.part_id.in_(expected_ids)
                 )
             )
         ).all()
-        actual = {(model.part_id, model.status) for model in models}
-        wanted = {(reference.part_id, reference.status) for reference in expected}
-        if actual != wanted:
+        actual_ids = {model.part_id for model in models}
+        if actual_ids != expected_ids or any(
+            model.status not in REFERENCE_STATUSES for model in models
+        ):
             raise IngestionPartConflictError(
                 "ingestion part references are missing or incompatible"
             )
@@ -126,7 +142,15 @@ class SqlAlchemyIngestionPartRepository:
         stored: tuple[IngestionPart, ...],
         expected: tuple[IngestionPart, ...],
     ) -> None:
-        if stored != expected:
+        if len(stored) != len(expected):
+            raise IngestionPartConflictError(
+                "batch already contains an incomplete ingestion part set"
+            )
+        normalized = tuple(
+            replace(part, status=expected_part.status)
+            for part, expected_part in zip(stored, expected, strict=True)
+        )
+        if normalized != expected:
             raise IngestionPartConflictError(
                 "batch already contains another immutable ingestion part set"
             )
