@@ -15,6 +15,10 @@ from app.domain.repositories.ingestion_part_publication import (
 from app.services.ingestion.part_publication_verifier import (
     verify_publication_claim,
 )
+from app.services.ingestion.part_publisher_contract import (
+    publication_headers,
+    validate_publisher_settings,
+)
 from app.services.ingestion.part_publisher_state import PartPublisherStateStore
 
 
@@ -48,7 +52,7 @@ class StagedIngestionPartPublisher:
         retry_max_seconds: float,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
-        _validate_settings(
+        validate_publisher_settings(
             topic=topic,
             worker_id=worker_id,
             batch_size=batch_size,
@@ -87,7 +91,7 @@ class StagedIngestionPartPublisher:
                 self.topic,
                 value=verified.part.wire_bytes,
                 key=verified.kafka_key.encode("utf-8"),
-                headers=_headers(verified),
+                headers=publication_headers(verified),
             )
         except IngestionPartPublicationIntegrityError as error:
             await self.state.quarantined(
@@ -123,24 +127,3 @@ class StagedIngestionPartPublisher:
         if value.tzinfo is None:
             raise ValueError("publisher clock must return timezone-aware values")
         return value
-
-
-def _headers(claim: IngestionPartPublicationClaim) -> list[tuple[str, bytes]]:
-    return [
-        ("event-id", str(claim.event_id).encode()),
-        ("event-type", claim.event_type.encode()),
-        ("batch-id", str(claim.batch.batch_id).encode()),
-        ("wire-digest", claim.part.wire_digest.encode()),
-    ]
-
-
-def _validate_settings(**values) -> None:
-    if not values["topic"] or not values["worker_id"]:
-        raise ValueError("publisher topic and worker_id must not be empty")
-    for name in ("batch_size", "lease_seconds", "max_attempts"):
-        if values[name] < 1:
-            raise ValueError(f"{name} must be positive")
-    if values["retry_base_seconds"] <= 0:
-        raise ValueError("retry_base_seconds must be positive")
-    if values["retry_max_seconds"] < values["retry_base_seconds"]:
-        raise ValueError("retry_max_seconds must not be below retry_base_seconds")
