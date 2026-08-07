@@ -17,11 +17,8 @@ async def verify_staged_ingestion_topology(
     if min_message_bytes < 1:
         raise RuntimeError("staged ingestion Kafka message limit must be positive")
 
-    from aiokafka.admin import (
-        AIOKafkaAdminClient,
-        ConfigResource,
-        ConfigResourceType,
-    )
+    from aiokafka.admin import AIOKafkaAdminClient
+    from aiokafka.admin.config_resource import ConfigResource, ConfigResourceType
 
     admin = AIOKafkaAdminClient(bootstrap_servers=bootstrap_servers)
     await admin.start()
