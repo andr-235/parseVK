@@ -9,6 +9,8 @@ def comment_item_manifest(comments: list[dict[str, Any]]) -> tuple[str, ...]:
     values: list[str] = []
     for comment in comments:
         values.extend(_comment_identities(comment))
+    if len(values) != len(set(values)):
+        raise PartSourceIntegrityError("staged comments contain duplicate identities")
     return tuple(values)
 
 
@@ -32,16 +34,20 @@ def author_records(
 ) -> list[dict[str, Any]]:
     providers: dict[int, dict[str, Any]] = {}
     for profile in profiles:
-        providers[_positive_id(profile, "profile")] = profile
+        _add_provider(providers, _positive_id(profile, "profile"), profile)
     for group in groups:
-        providers[-_positive_id(group, "group")] = group
+        _add_provider(providers, -_positive_id(group, "group"), group)
     return [_author_record(author_id, providers.get(author_id)) for author_id in author_ids]
 
 
 def normalized_staged_authors(authors: list[dict[str, Any]]) -> list[dict[str, Any]]:
     records = []
+    seen: set[int] = set()
     for author in authors:
         author_id = _integer(author.get("vk_author_id"), "staged author id")
+        if author_id in seen:
+            raise PartSourceIntegrityError("staged authors contain duplicate identities")
+        seen.add(author_id)
         author_type = author.get("type")
         expected = "group" if author_id < 0 else "user"
         if author_type != expected:
@@ -60,8 +66,7 @@ def normalized_staged_authors(authors: list[dict[str, Any]]) -> list[dict[str, A
 def _comment_identities(comment: dict[str, Any]) -> list[str]:
     comment_id = _integer(comment.get("id"), "comment id")
     values = [f"comment:{comment_id}"]
-    thread = comment.get("thread") or {}
-    for child in thread.get("items") or []:
+    for child in _children(comment):
         values.extend(_comment_identities(child))
     return values
 
@@ -69,9 +74,31 @@ def _comment_identities(comment: dict[str, Any]) -> list[str]:
 def _collect_author_ids(comment: dict[str, Any], values: set[int]) -> None:
     if comment.get("from_id") is not None:
         values.add(_integer(comment["from_id"], "comment from_id"))
-    thread = comment.get("thread") or {}
-    for child in thread.get("items") or []:
+    for child in _children(comment):
         _collect_author_ids(child, values)
+
+
+def _children(comment: dict[str, Any]) -> list[dict[str, Any]]:
+    thread = comment.get("thread")
+    if thread is None:
+        return []
+    if not isinstance(thread, dict):
+        raise PartSourceIntegrityError("comment thread must be an object")
+    items = thread.get("items") or []
+    if not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
+        raise PartSourceIntegrityError("comment thread items must be objects")
+    return items
+
+
+def _add_provider(
+    providers: dict[int, dict[str, Any]],
+    author_id: int,
+    provider: dict[str, Any],
+) -> None:
+    existing = providers.get(author_id)
+    if existing is not None and existing != provider:
+        raise PartSourceIntegrityError("provider identity has conflicting records")
+    providers[author_id] = provider
 
 
 def _author_record(author_id: int, provider: dict[str, Any] | None) -> dict[str, Any]:

@@ -18,6 +18,7 @@ from app.services.ingestion.part_authors import (
     normalized_staged_authors,
 )
 from app.services.ingestion.part_errors import OversizedIngestionItemError
+from app.services.ingestion.part_source_validation import mapping, mapping_list
 from app.services.ingestion.part_wire import (
     build_ingestion_part,
     serialize_ingestion_part_wire,
@@ -46,8 +47,12 @@ def prepare_staged_batch(
         raise PartSourceIntegrityError("unsupported staged ingestion schema")
     if versions.staging_schema != STAGING_SCHEMA_VERSION:
         raise PartSourceIntegrityError("part preparer does not support staged schema")
-    source = _mapping(payload.get("source"), "staged source")
-    observed = _mapping(payload.get("observed"), "staged observations")
+    source = mapping(payload.get("source"), "staged source")
+    source["providerMetadata"] = mapping(
+        payload.get("providerMetadata"),
+        "staged provider metadata",
+    )
+    observed = mapping(payload.get("observed"), "staged observations")
     if source.get("kind") != batch.source_kind:
         raise PartSourceIntegrityError("staged source kind conflicts with batch")
 
@@ -72,7 +77,7 @@ def _prepare_post_part(
     versions: IngestionPartVersions,
     prepared_at: datetime,
 ) -> IngestionPart:
-    post = _mapping(observed.get("post"), "staged post")
+    post = mapping(observed.get("post"), "staged post")
     authors_value = observed.get("authors")
     if not isinstance(authors_value, list):
         raise PartSourceIntegrityError("staged post authors must be a list")
@@ -123,10 +128,10 @@ def _prepare_comment_page(
     versions: IngestionPartVersions,
     prepared_at: datetime,
 ) -> tuple[IngestionPart, ...]:
-    post = _mapping(observed.get("post"), "staged comment-page post")
-    comments = _mapping_list(observed.get("comments"), "staged comments")
-    profiles = _mapping_list(observed.get("profiles"), "staged profiles")
-    groups = _mapping_list(observed.get("groups"), "staged groups")
+    post = mapping(observed.get("post"), "staged comment-page post")
+    comments = mapping_list(observed.get("comments"), "staged comments")
+    profiles = mapping_list(observed.get("profiles"), "staged profiles")
+    groups = mapping_list(observed.get("groups"), "staged groups")
     return prepare_comment_parts(
         batch_id=batch.batch_id,
         source=source,
@@ -137,15 +142,3 @@ def _prepare_comment_page(
         versions=versions,
         prepared_at=prepared_at,
     )
-
-
-def _mapping(value: object, label: str) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        raise PartSourceIntegrityError(f"{label} must be an object")
-    return dict(value)
-
-
-def _mapping_list(value: object, label: str) -> list[dict[str, Any]]:
-    if not isinstance(value, list) or any(not isinstance(item, dict) for item in value):
-        raise PartSourceIntegrityError(f"{label} must be a list of objects")
-    return [dict(item) for item in value]

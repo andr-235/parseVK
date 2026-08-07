@@ -1,4 +1,3 @@
-from dataclasses import replace
 from uuid import UUID
 
 from sqlalchemy import select
@@ -21,6 +20,10 @@ from app.infrastructure.db.repositories.ingestion_part_records import (
     part_from_model,
     part_values,
 )
+from app.infrastructure.db.repositories.ingestion_part_set_validation import (
+    validate_part_set,
+    verify_part_set,
+)
 
 
 class SqlAlchemyIngestionPartRepository:
@@ -32,11 +35,11 @@ class SqlAlchemyIngestionPartRepository:
         parts: tuple[IngestionPart, ...],
         references: tuple[IngestionPartReference, ...],
     ) -> tuple[tuple[IngestionPart, ...], bool]:
-        self._validate_set(parts, references)
+        validate_part_set(parts, references)
         await self._lock_batch(parts[0].batch_id)
         existing = await self.list_for_batch(parts[0].batch_id)
         if existing:
-            self._verify_set(existing, parts)
+            verify_part_set(existing, parts)
             await self._verify_references(references)
             return existing, False
 
@@ -57,7 +60,7 @@ class SqlAlchemyIngestionPartRepository:
             )
 
         stored = await self.list_for_batch(parts[0].batch_id)
-        self._verify_set(stored, parts)
+        verify_part_set(stored, parts)
         await self._verify_references(references)
         if inserted not in {0, len(parts)}:
             raise IngestionPartConflictError(
@@ -115,42 +118,3 @@ class SqlAlchemyIngestionPartRepository:
         else:
             raise RuntimeError(f"unsupported ingestion part dialect: {dialect}")
         return statement.on_conflict_do_nothing()
-
-    @staticmethod
-    def _validate_set(
-        parts: tuple[IngestionPart, ...],
-        references: tuple[IngestionPartReference, ...],
-    ) -> None:
-        if not parts:
-            raise ValueError("ingestion part set must not be empty")
-        batch_ids = {part.batch_id for part in parts}
-        expected_count = len(parts)
-        indexes = [part.part_index for part in parts]
-        if len(batch_ids) != 1:
-            raise ValueError("ingestion parts must belong to one batch")
-        if any(part.part_count != expected_count for part in parts):
-            raise ValueError("part_count must equal the complete prepared set")
-        if indexes != list(range(expected_count)):
-            raise ValueError("part indexes must be ordered and contiguous")
-        part_ids = {part.message_id for part in parts}
-        reference_ids = {reference.part_id for reference in references}
-        if part_ids != reference_ids or len(references) != expected_count:
-            raise ValueError("each ingestion part requires one lightweight reference")
-
-    @staticmethod
-    def _verify_set(
-        stored: tuple[IngestionPart, ...],
-        expected: tuple[IngestionPart, ...],
-    ) -> None:
-        if len(stored) != len(expected):
-            raise IngestionPartConflictError(
-                "batch already contains an incomplete ingestion part set"
-            )
-        normalized = tuple(
-            replace(part, status=expected_part.status)
-            for part, expected_part in zip(stored, expected, strict=True)
-        )
-        if normalized != expected:
-            raise IngestionPartConflictError(
-                "batch already contains another immutable ingestion part set"
-            )

@@ -2,9 +2,9 @@ import asyncio
 from datetime import UTC, datetime
 
 import pytest
+from _ingestion_staging_postgres import staging_postgres
 from sqlalchemy import func, select
 
-from _ingestion_staging_postgres import staging_postgres
 from app.domain.entities.ingestion_part_identity import IngestionPartVersions
 from app.domain.entities.ingestion_staging import StagedIngestionBatch
 from app.domain.repositories.ingestion_parts import IngestionPartConflictError
