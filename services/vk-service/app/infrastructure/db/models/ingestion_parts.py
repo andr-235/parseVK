@@ -73,45 +73,35 @@ class VkIngestionStagingPart(Base):
     event_contract_version: Mapped[int] = mapped_column(Integer, nullable=False)
     item_manifest: Mapped[list] = mapped_column(JSONB, nullable=False)
     author_manifest: Mapped[list] = mapped_column(JSONB, nullable=False)
-    prepared_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    prepared_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
     part_digest: Mapped[str] = mapped_column(String(64), nullable=False)
     wire_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     wire_bytes_count: Mapped[int] = mapped_column(Integer, nullable=False)
     wire_digest: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[str] = mapped_column(
-        String(32), nullable=False, default="prepared", server_default=text("'prepared'")
+        String(32),
+        nullable=False,
+        default="prepared",
+        server_default=text("'prepared'"),
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utcnow, server_default=text("CURRENT_TIMESTAMP")
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        server_default=text("CURRENT_TIMESTAMP"),
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow,
-        server_default=text("CURRENT_TIMESTAMP")
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+        server_default=text("CURRENT_TIMESTAMP"),
     )
 
 
-class VkIngestionPartReference(Base):
-    __tablename__ = "vk_ingestion_part_references"
-    __table_args__ = (
-        CheckConstraint(
-            "status IN ('pending', 'published', 'failed', 'quarantined')",
-            name="ck_vk_ingestion_part_reference_status",
-        ),
-        Index("ix_vk_ingestion_part_references_status", "status", "created_at"),
-    )
-
-    part_id: Mapped[PyUUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("vk_ingestion_staging_parts.id", ondelete="RESTRICT"),
-        primary_key=True,
-    )
-    status: Mapped[str] = mapped_column(
-        String(32), nullable=False, default="pending", server_default=text("'pending'")
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utcnow, server_default=text("CURRENT_TIMESTAMP")
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow,
-        server_default=text("CURRENT_TIMESTAMP")
-    )
+from app.infrastructure.db.models.ingestion_part_publication import (  # noqa: E402, F401
+    VkIngestionPartReference,
+)

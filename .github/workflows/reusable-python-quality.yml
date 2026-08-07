@@ -29,3 +29,7 @@ jobs:
       - name: Run tests
         working-directory: services/${{ inputs.service }}
         run: uv run pytest -v
+      - name: Run VK Docker integration tests
+        if: inputs.service == 'vk-service'
+        working-directory: services/${{ inputs.service }}
+        run: uv run pytest -v --import-mode=importlib -o addopts='' -m integration

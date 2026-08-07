@@ -9,6 +9,14 @@ from typing import Any
 from uuid import UUID, uuid5
 
 STAGING_BATCH_NAMESPACE = UUID("659168a2-aabb-4b95-8f6f-96b2714f4d4e")
+STAGED = "staged"
+PREPARED = "prepared"
+PUBLISHED = "published"
+FAILED = "failed"
+QUARANTINED = "quarantined"
+STAGING_BATCH_STATUSES = frozenset(
+    {STAGED, PREPARED, PUBLISHED, FAILED, QUARANTINED}
+)
 
 
 def canonical_payload(payload: Mapping[str, Any]) -> tuple[dict[str, Any], str, int]:
@@ -59,7 +67,7 @@ class StagedIngestionBatch:
     payload_digest: str
     payload_bytes: int
     staged_at: datetime = field(default_factory=lambda: datetime.now(UTC))
-    status: str = "staged"
+    status: str = STAGED
 
     @classmethod
     def create(
@@ -108,6 +116,8 @@ class StagedIngestionBatch:
             raise ValueError("staging fencing token must remain positive")
         if self.staged_at.tzinfo is None:
             raise ValueError("staging timestamp must remain timezone-aware")
+        if self.status not in STAGING_BATCH_STATUSES:
+            raise ValueError("unsupported staging batch status")
         expected_id = deterministic_batch_id(
             execution_id=self.execution_id,
             source_kind=self.source_kind,

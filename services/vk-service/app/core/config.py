@@ -17,8 +17,30 @@ class Settings(BaseSettings):
     kafka_topic_vk_commands: str = "parsevk.vk.commands"
     kafka_topic_vk_commands_dlq: str = "parsevk.vk.commands.dlq"
     kafka_topic_vk: str = "parsevk.vk.events"
+    kafka_topic_vk_ingestion: str = "parsevk.content.ingestion.vk"
+    kafka_topic_vk_ingestion_dlq: str = "parsevk.content.ingestion.vk.dlq"
     kafka_consumer_enabled: bool = False
     outbox_publish_enabled: bool = False
+    staged_part_publisher_enabled: bool = False
+    staged_part_publisher_batch_size: int = Field(default=50, ge=1, le=1000)
+    staged_part_publisher_poll_seconds: float = Field(default=1.0, gt=0, le=60)
+    staged_part_publisher_lease_seconds: int = Field(default=90, ge=30, le=3600)
+    staged_part_publisher_max_attempts: int = Field(default=5, ge=1, le=100)
+    staged_part_publisher_retry_base_seconds: float = Field(
+        default=2.0,
+        gt=0,
+        le=300,
+    )
+    staged_part_publisher_retry_max_seconds: float = Field(
+        default=300.0,
+        gt=0,
+        le=3600,
+    )
+    staged_part_producer_max_request_bytes: int = Field(
+        default=1_048_576,
+        ge=786_432,
+        le=10_485_760,
+    )
     task_worker_enabled: bool = True
     task_worker_concurrency: int = Field(default=2, ge=1, le=16)
     task_worker_poll_seconds: float = Field(default=1.0, gt=0, le=60)
@@ -46,6 +68,19 @@ class Settings(BaseSettings):
         if self.task_heartbeat_seconds * 3 > self.task_lease_seconds:
             raise ValueError(
                 "task lease must be at least three heartbeat intervals"
+            )
+        if (
+            self.staged_part_publisher_retry_max_seconds
+            < self.staged_part_publisher_retry_base_seconds
+        ):
+            raise ValueError(
+                "staged part retry max must not be below its base delay"
+            )
+        if self.staged_part_publisher_poll_seconds * 3 >= (
+            self.staged_part_publisher_lease_seconds
+        ):
+            raise ValueError(
+                "staged part lease must exceed three polling intervals"
             )
         return self
 

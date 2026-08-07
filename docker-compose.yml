@@ -137,7 +137,9 @@ services:
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic identity.dlq --partitions 3 --replication-factor 1;
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.realtime.dlq --partitions 3 --replication-factor 1 --config cleanup.policy=delete --config retention.ms=604800000;
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.content.events --partitions 3 --replication-factor 1;
-      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.content.dlq --partitions 3 --replication-factor 1
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.content.dlq --partitions 3 --replication-factor 1;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.content.ingestion.vk --partitions 3 --replication-factor 1 --config max.message.bytes=1048576;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.content.ingestion.vk.dlq --partitions 3 --replication-factor 1 --config max.message.bytes=1048576 --config cleanup.policy=delete --config retention.ms=604800000
       "
     networks:
       - backend
@@ -316,6 +318,10 @@ services:
       VK_SERVICE_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       VK_SERVICE_KAFKA_CONSUMER_ENABLED: ${VK_SERVICE_KAFKA_CONSUMER_ENABLED:-true}
       VK_SERVICE_OUTBOX_PUBLISH_ENABLED: ${VK_SERVICE_OUTBOX_PUBLISH_ENABLED:-true}
+      VK_SERVICE_STAGED_PART_PUBLISHER_ENABLED: ${VK_SERVICE_STAGED_PART_PUBLISHER_ENABLED:-false}
+      VK_SERVICE_KAFKA_TOPIC_VK_INGESTION: ${VK_SERVICE_KAFKA_TOPIC_VK_INGESTION:-parsevk.content.ingestion.vk}
+      VK_SERVICE_KAFKA_TOPIC_VK_INGESTION_DLQ: ${VK_SERVICE_KAFKA_TOPIC_VK_INGESTION_DLQ:-parsevk.content.ingestion.vk.dlq}
+      VK_SERVICE_STAGED_PART_PRODUCER_MAX_REQUEST_BYTES: ${VK_SERVICE_STAGED_PART_PRODUCER_MAX_REQUEST_BYTES:-1048576}
       VK_SERVICE_DEFAULT_GROUP_IDS: '${VK_SERVICE_DEFAULT_GROUP_IDS:-[1]}'
       VK_SERVICE_VK_TOKEN: ${VK_SERVICE_VK_TOKEN:-${VK_TOKEN:-}}
       # Preferred secret path: mount the token file and point VK_SERVICE_TOKEN_FILE at it.

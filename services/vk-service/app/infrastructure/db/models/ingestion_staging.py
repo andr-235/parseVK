@@ -33,10 +33,16 @@ class VkIngestionStagingBatch(Base):
             "page_offset",
             name="uq_vk_ingestion_staging_position",
         ),
-        CheckConstraint("page_offset >= 0", name="ck_vk_ingestion_staging_page_offset"),
-        CheckConstraint("payload_bytes >= 2", name="ck_vk_ingestion_staging_payload_bytes"),
         CheckConstraint(
-            "status IN ('staged', 'persisted', 'failed')",
+            "page_offset >= 0",
+            name="ck_vk_ingestion_staging_page_offset",
+        ),
+        CheckConstraint(
+            "payload_bytes >= 2",
+            name="ck_vk_ingestion_staging_payload_bytes",
+        ),
+        CheckConstraint(
+            "status IN ('staged', 'prepared', 'published', 'failed', 'quarantined')",
             name="ck_vk_ingestion_staging_status",
         ),
         Index("ix_vk_ingestion_staging_status", "status", "created_at"),
@@ -51,8 +57,14 @@ class VkIngestionStagingBatch(Base):
     )
     # Attempt identity is immutable provenance, not lifecycle ownership. Keeping
     # the UUID without an FK lets durable recovery data outlive attempt cleanup.
-    staged_by_attempt_id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), nullable=False)
-    staged_by_fencing_token: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    staged_by_attempt_id: Mapped[PyUUID] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=False,
+    )
+    staged_by_fencing_token: Mapped[int] = mapped_column(
+        BigInteger,
+        nullable=False,
+    )
     source_kind: Mapped[str] = mapped_column(String(32), nullable=False)
     owner_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     post_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
@@ -61,7 +73,10 @@ class VkIngestionStagingBatch(Base):
     payload_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
     payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
     status: Mapped[str] = mapped_column(
-        String(32), nullable=False, default="staged", server_default=text("'staged'")
+        String(32),
+        nullable=False,
+        default="staged",
+        server_default=text("'staged'"),
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

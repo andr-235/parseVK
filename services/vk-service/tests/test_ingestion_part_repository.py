@@ -8,6 +8,7 @@ from app.infrastructure.db.models.ingestion_parts import (
     VkIngestionPartReference,
     VkIngestionStagingPart,
 )
+from app.infrastructure.db.models.ingestion_staging import VkIngestionStagingBatch
 from app.infrastructure.db.repositories.ingestion_part_records import part_values
 from app.infrastructure.db.repositories.ingestion_parts import (
     SqlAlchemyIngestionPartRepository,
@@ -33,6 +34,9 @@ async def test_prepare_persists_complete_idempotent_set(db_session):
     assert {(row.part_id, row.status) for row in rows} == {
         (part.message_id, "pending") for part in parts
     }
+    persisted_batch = await db_session.get(VkIngestionStagingBatch, batch.batch_id)
+    assert persisted_batch is not None
+    assert persisted_batch.status == "prepared"
 
 
 async def test_prepare_rejects_repacking_or_changed_wire_bytes(db_session):

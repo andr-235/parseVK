@@ -12,6 +12,7 @@ from app.tasks.lifespan import (
     get_consumer_healthy,
     get_execution_worker_healthy,
     get_publisher_healthy,
+    get_staged_part_publisher_healthy,
     lifespan,
 )
 
@@ -79,11 +80,17 @@ def create_app() -> FastAPI:
                 if settings.ok_access_token
                 else ""
             ),
-            "kafkaConsumer": (
-                "healthy" if get_consumer_healthy() else "unhealthy"
+            "kafkaConsumer": _worker_status(
+                settings.kafka_consumer_enabled,
+                get_consumer_healthy(),
             ),
-            "outboxPublisher": (
-                "healthy" if get_publisher_healthy() else "unhealthy"
+            "outboxPublisher": _worker_status(
+                settings.outbox_publish_enabled,
+                get_publisher_healthy(),
+            ),
+            "stagedPartPublisher": _worker_status(
+                settings.staged_part_publisher_enabled,
+                get_staged_part_publisher_healthy(),
             ),
             "executionWorker": execution_worker_status,
         }
@@ -94,6 +101,15 @@ def create_app() -> FastAPI:
         from sqlalchemy import text
 
         from app.infrastructure.db.session import engine
+
+        if (
+            settings.staged_part_publisher_enabled
+            and not get_staged_part_publisher_healthy()
+        ):
+            raise HTTPException(
+                status_code=503,
+                detail="Staged ingestion Kafka topology is not ready",
+            )
 
         try:
             async with engine.connect() as conn:
@@ -111,6 +127,12 @@ def create_app() -> FastAPI:
 
     Instrumentator().instrument(app).expose(app)
     return app
+
+
+def _worker_status(enabled: bool, healthy: bool) -> str:
+    if not enabled:
+        return "disabled"
+    return "healthy" if healthy else "unhealthy"
 
 
 app = create_app()
