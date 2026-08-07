@@ -35,8 +35,9 @@ async def test_publisher_sends_persisted_bytes_before_marking_published(
     assert call["value"] == seeded.part.wire_bytes
     assert call["key"] == b"-42:99"
     headers = dict(call["headers"])
-    assert headers[b"missing"] if False else True
     assert headers["event-id"] == str(seeded.part.message_id).encode()
+    assert headers["event-type"] == b"vk.ingestion.post-part-prepared"
+    assert headers["batch-id"] == str(seeded.batch_id).encode()
     assert headers["wire-digest"] == seeded.part.wire_digest.encode()
 
     async with SessionLocal() as session:
