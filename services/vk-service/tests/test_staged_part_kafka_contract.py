@@ -3,7 +3,6 @@ from pathlib import Path
 from app.core.config import Settings
 from app.domain.entities.ingestion_part_identity import APPLICATION_HARD_LIMIT_BYTES
 
-
 ROOT = Path(__file__).resolve().parents[3]
 COMPOSE = ROOT / "docker-compose.yml"
 
