@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.core.config import settings
 from app.domain.exceptions.vk_api import VkApiAuthError
+from app.services.ingestion.kafka_topology import verify_staged_ingestion_topology
 from app.tasks import publish_outbox_forever
 from app.tasks.staged_part_publisher import publish_staged_parts_forever
 from app.tasks.task_runtime import build_execution_worker
@@ -36,10 +37,15 @@ async def supervise(
     name: str,
     coro_factory,
     health_flag: list[bool] | None = None,
+    preflight=None,
 ) -> None:
     retry_delay = 1
     while True:
         try:
+            if health_flag is not None:
+                health_flag[0] = False
+            if preflight is not None:
+                await preflight()
             if health_flag is not None:
                 health_flag[0] = True
             await coro_factory()
@@ -111,6 +117,7 @@ def start_background_runtime(
         name="Staged ingestion part publisher",
         factory=lambda: publish_staged_parts_forever(session_factory),
         health=staged_publisher_health,
+        preflight=_verify_staged_publisher_topology,
     )
 
     if settings.task_worker_enabled:
@@ -136,10 +143,27 @@ def _start_simple_worker(
     name: str,
     factory,
     health: list[bool],
+    preflight=None,
 ) -> None:
     if enabled:
         tasks.append(
-            asyncio.create_task(supervise(name, factory, health_flag=health))
+            asyncio.create_task(
+                supervise(
+                    name,
+                    factory,
+                    health_flag=health,
+                    preflight=preflight,
+                )
+            )
         )
     else:
         logger.info("%s disabled by configuration", name)
+
+
+async def _verify_staged_publisher_topology() -> None:
+    await verify_staged_ingestion_topology(
+        bootstrap_servers=settings.kafka_bootstrap_servers,
+        topic=settings.kafka_topic_vk_ingestion,
+        dlq_topic=settings.kafka_topic_vk_ingestion_dlq,
+        min_message_bytes=settings.staged_part_producer_max_request_bytes,
+    )
