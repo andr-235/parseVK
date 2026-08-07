@@ -18,7 +18,11 @@ from app.services.ingestion.part_authors import (
     normalized_staged_authors,
 )
 from app.services.ingestion.part_errors import OversizedIngestionItemError
-from app.services.ingestion.part_source_validation import mapping, mapping_list
+from app.services.ingestion.part_source_validation import (
+    mapping,
+    mapping_list,
+    validate_staged_position,
+)
 from app.services.ingestion.part_wire import (
     build_ingestion_part,
     serialize_ingestion_part_wire,
@@ -53,8 +57,7 @@ def prepare_staged_batch(
         "staged provider metadata",
     )
     observed = mapping(payload.get("observed"), "staged observations")
-    if source.get("kind") != batch.source_kind:
-        raise PartSourceIntegrityError("staged source kind conflicts with batch")
+    validate_staged_position(batch, source, observed)
 
     if batch.source_kind == POST_SNAPSHOT:
         parts = (_prepare_post_part(batch, source, observed, versions, prepared_at),)
