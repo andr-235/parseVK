@@ -13,10 +13,11 @@ from app.domain.repositories.ingestion_staging import (
 from app.infrastructure.metrics.ingestion_staging_metrics import (
     observe_staging_result,
 )
-from app.services.ingestion.staging_payload import (
-    assert_physical_payload,
-    stable_entities,
+from app.services.ingestion.staging_envelopes import (
+    comment_page_payload,
+    post_snapshot_payload,
 )
+from app.services.ingestion.staging_payload import assert_physical_payload
 
 STAGING_SCHEMA_VERSION = 1
 POST_SNAPSHOT = "post_snapshot"
@@ -49,28 +50,26 @@ class PhysicalIngestionStager:
         post: dict[str, Any],
         authors: list[dict[str, Any]],
     ) -> tuple[StagedIngestionBatch, bool]:
-        owner_id = int(post["owner_id"])
-        post_id = int(post["id"])
+        source_kind = POST_SNAPSHOT
+        try:
+            owner_id = int(post["owner_id"])
+            post_id = int(post["id"])
+            payload = post_snapshot_payload(
+                schema_version=STAGING_SCHEMA_VERSION,
+                source_kind=source_kind,
+                owner_id=owner_id,
+                post_id=post_id,
+                post=post,
+                authors=authors,
+            )
+        except (KeyError, TypeError, ValueError) as error:
+            self._raise_integrity(source_kind, error)
         return await self._stage(
-            source_kind=POST_SNAPSHOT,
+            source_kind=source_kind,
             owner_id=owner_id,
             post_id=post_id,
             page_offset=0,
-            payload={
-                "schemaVersion": STAGING_SCHEMA_VERSION,
-                "source": {
-                    "kind": POST_SNAPSHOT,
-                    "ownerId": owner_id,
-                    "postId": post_id,
-                    "pageOffset": 0,
-                    "nextOffset": None,
-                },
-                "observed": {
-                    "post": dict(post),
-                    "authors": stable_entities(authors),
-                },
-                "providerMetadata": {},
-            },
+            payload=payload,
         )
 
     async def stage_comment_page(
@@ -81,34 +80,28 @@ class PhysicalIngestionStager:
         page_offset: int,
         next_offset: int,
     ) -> tuple[StagedIngestionBatch, bool]:
-        owner_id = int(post["owner_id"])
-        post_id = int(post["id"])
+        source_kind = COMMENT_PAGE
+        try:
+            owner_id = int(post["owner_id"])
+            post_id = int(post["id"])
+            payload = comment_page_payload(
+                schema_version=STAGING_SCHEMA_VERSION,
+                source_kind=source_kind,
+                owner_id=owner_id,
+                post_id=post_id,
+                post=post,
+                page=page,
+                page_offset=page_offset,
+                next_offset=next_offset,
+            )
+        except (KeyError, TypeError, ValueError) as error:
+            self._raise_integrity(source_kind, error)
         return await self._stage(
-            source_kind=COMMENT_PAGE,
+            source_kind=source_kind,
             owner_id=owner_id,
             post_id=post_id,
             page_offset=page_offset,
-            payload={
-                "schemaVersion": STAGING_SCHEMA_VERSION,
-                "source": {
-                    "kind": COMMENT_PAGE,
-                    "ownerId": owner_id,
-                    "postId": post_id,
-                    "pageOffset": page_offset,
-                    "nextOffset": next_offset,
-                },
-                "observed": {
-                    "post": dict(post),
-                    "comments": [dict(item) for item in page.get("items") or []],
-                    "profiles": stable_entities(page.get("profiles")),
-                    "groups": stable_entities(page.get("groups")),
-                },
-                "providerMetadata": {
-                    key: value
-                    for key, value in page.items()
-                    if key not in {"items", "profiles", "groups"}
-                },
-            },
+            payload=payload,
         )
 
     async def _stage(
@@ -140,9 +133,13 @@ class PhysicalIngestionStager:
             observe_staging_result(source_kind, "integrity_error")
             raise
         except ValueError as error:
-            observe_staging_result(source_kind, "integrity_error")
-            raise StagingPayloadIntegrityError(
-                f"invalid {source_kind} staging payload"
-            ) from error
+            self._raise_integrity(source_kind, error)
         observe_staging_result(source_kind, "created" if created else "reused")
         return stored, created
+
+    @staticmethod
+    def _raise_integrity(source_kind: str, error: Exception) -> None:
+        observe_staging_result(source_kind, "integrity_error")
+        raise StagingPayloadIntegrityError(
+            f"invalid {source_kind} staging payload"
+        ) from error
