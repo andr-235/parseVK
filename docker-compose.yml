@@ -437,7 +437,7 @@ services:
       listings-db:
         condition: service_healthy
     environment:
-      LISTINGS_DATABASE_URL: ${LISTINGS_DATABASE_URL:-postgresql+asyncpg://listings:listings_dev_password_change_me@listings-db:5432/${LISTINGS_POSTGRES_DB:-listings}
+      LISTINGS_DATABASE_URL: ${LISTINGS_DATABASE_URL:-postgresql+asyncpg://listings:listings_dev_password_change_me@listings-db:5432/listings}
       UV_CACHE_DIR: /tmp/uv-cache
     command: ["uv", "run", "alembic", "upgrade", "head"]
     networks:
@@ -452,7 +452,7 @@ services:
       listings-migrate:
         condition: service_completed_successfully
     environment:
-      LISTINGS_DATABASE_URL: ${LISTINGS_DATABASE_URL:-postgresql+asyncpg://listings:listings_dev_password_change_me@listings-db:5432/${LISTINGS_POSTGRES_DB:-listings}
+      LISTINGS_DATABASE_URL: ${LISTINGS_DATABASE_URL:-postgresql+asyncpg://listings:listings_dev_password_change_me@listings-db:5432/listings}
       LISTINGS_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
@@ -492,7 +492,7 @@ services:
       moderation-db:
         condition: service_healthy
     environment:
-      MODERATION_DATABASE_URL: ${MODERATION_DATABASE_URL:-postgresql+asyncpg://moderation:moderation_dev_password_change_me@moderation-db:5432/${MODERATION_POSTGRES_DB:-moderation}
+      MODERATION_DATABASE_URL: ${MODERATION_DATABASE_URL:-postgresql+asyncpg://moderation:moderation_dev_password_change_me@moderation-db:5432/moderation}
       UV_CACHE_DIR: /tmp/uv-cache
     command: ["uv", "run", "alembic", "upgrade", "head"]
     networks:
@@ -509,7 +509,7 @@ services:
       kafka-init:
         condition: service_completed_successfully
     environment:
-      MODERATION_DATABASE_URL: ${MODERATION_DATABASE_URL:-postgresql+asyncpg://moderation:moderation_dev_password_change_me@moderation-db:5432/${MODERATION_POSTGRES_DB:-moderation}
+      MODERATION_DATABASE_URL: ${MODERATION_DATABASE_URL:-postgresql+asyncpg://moderation:moderation_dev_password_change_me@moderation-db:5432/moderation}
       MODERATION_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
       MODERATION_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       MODERATION_KAFKA_CONSUMER_ENABLED: ${MODERATION_KAFKA_CONSUMER_ENABLED:-true}
@@ -606,7 +606,7 @@ services:
       telegram-db:
         condition: service_healthy
     environment:
-      TELEGRAM_SERVICE_DATABASE_URL: ${TELEGRAM_SERVICE_DATABASE_URL:-postgresql+asyncpg://telegram_service:telegram_dev_password_change_me@telegram-db:5432/${TELEGRAM_POSTGRES_DB:-telegram_service}
+      TELEGRAM_SERVICE_DATABASE_URL: ${TELEGRAM_SERVICE_DATABASE_URL:-postgresql+asyncpg://telegram_service:telegram_dev_password_change_me@telegram-db:5432/telegram_service}
       UV_CACHE_DIR: /tmp/uv-cache
     command: ["uv", "run", "alembic", "upgrade", "heads"]
     networks:
@@ -620,7 +620,7 @@ services:
       telegram-migrate:
         condition: service_completed_successfully
     environment:
-      TELEGRAM_SERVICE_DATABASE_URL: ${TELEGRAM_SERVICE_DATABASE_URL:-postgresql+asyncpg://telegram_service:telegram_dev_password_change_me@telegram-db:5432/${TELEGRAM_POSTGRES_DB:-telegram_service}
+      TELEGRAM_SERVICE_DATABASE_URL: ${TELEGRAM_SERVICE_DATABASE_URL:-postgresql+asyncpg://telegram_service:telegram_dev_password_change_me@telegram-db:5432/telegram_service}
       TELEGRAM_SERVICE_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
       VPN_SERVICE_TELEGRAM_URL: ${VPN_SERVICE_TELEGRAM_URL:-}
       TELEGRAM_API_ID: ${TELEGRAM_API_ID:-}
