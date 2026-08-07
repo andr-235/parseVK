@@ -10,13 +10,15 @@ from app.domain.entities.ingestion_part_identity import (
     IngestionPartVersions,
     deterministic_part_id,
 )
+from app.domain.entities.ingestion_part_publication import (
+    COMMENT_PART_EVENT,
+    POST_PART_EVENT,
+)
 from app.domain.entities.ingestion_parts import IngestionPart
 
-POST_PART_EVENT_TYPE = "vk.ingestion.post-part-prepared"
-COMMENT_PART_EVENT_TYPE = "vk.ingestion.comment-part-prepared"
 _EVENT_TYPES = {
-    POST_PART: POST_PART_EVENT_TYPE,
-    COMMENT_PART: COMMENT_PART_EVENT_TYPE,
+    POST_PART: POST_PART_EVENT,
+    COMMENT_PART: COMMENT_PART_EVENT,
 }
 
 
