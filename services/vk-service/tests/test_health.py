@@ -52,8 +52,9 @@ async def test_health_reports_unconfigured_provider_as_degraded(monkeypatch):
         "vkAccountStatus": "unconfigured",
         "okCredentialsConfigured": "no",
         "okTokenMasked": "",
-        "kafkaConsumer": "unhealthy",
-        "outboxPublisher": "unhealthy",
+        "kafkaConsumer": "disabled",
+        "outboxPublisher": "disabled",
+        "stagedPartPublisher": "disabled",
         "executionWorker": "blocked",
     }
 
