@@ -17,8 +17,6 @@ def author_payload(
 ) -> dict[str, Any]:
     author_vk_id = int(from_id)
     profile = profiles.get(author_vk_id) if profiles else None
-    if profile is None and author_vk_id < 0:
-        profile = profiles.get(abs(author_vk_id)) if profiles else None
     if profile is None:
         return {
             "vk_author_id": author_vk_id,
