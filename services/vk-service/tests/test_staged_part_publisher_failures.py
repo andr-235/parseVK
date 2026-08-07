@@ -39,7 +39,7 @@ async def test_transient_broker_failure_releases_claim_for_retry(db_session) -> 
     assert reference.status == "pending" and reference.claim_id is None
     assert reference.attempts == 1
     assert reference.last_error == "broker unavailable"
-    assert reference.next_attempt_at > now
+    assert _as_utc(reference.next_attempt_at) > now
     assert part is not None and part.status == "prepared"
     assert batch is not None and batch.status == "prepared"
 
@@ -64,7 +64,7 @@ async def test_max_attempt_failure_terminates_entire_batch(db_session) -> None:
         part = await session.get(VkIngestionStagingPart, seeded.part.message_id)
         batch = await session.get(VkIngestionStagingBatch, seeded.batch_id)
     assert reference is not None and reference.status == "failed"
-    assert reference.failed_at == now
+    assert _as_utc(reference.failed_at) == now
     assert reference.last_error == "broker rejected message"
     assert part is not None and part.status == "failed"
     assert batch is not None and batch.status == "failed"
@@ -88,7 +88,12 @@ async def test_unsupported_version_is_quarantined_without_send(db_session) -> No
         part = await session.get(VkIngestionStagingPart, seeded.part.message_id)
         batch = await session.get(VkIngestionStagingBatch, seeded.batch_id)
     assert reference is not None and reference.status == "quarantined"
-    assert reference.quarantined_at == now
+    assert _as_utc(reference.quarantined_at) == now
     assert "unsupported ingestion part version tuple" in reference.last_error
     assert part is not None and part.status == "quarantined"
     assert batch is not None and batch.status == "quarantined"
+
+
+def _as_utc(value: datetime | None) -> datetime:
+    assert value is not None
+    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
