@@ -97,6 +97,7 @@ class PostCollectionPipeline:
         except Exception as error:
             await self.checkpoints.fail(
                 task_run,
+                group_id,
                 owner_id,
                 post_id,
                 error,
