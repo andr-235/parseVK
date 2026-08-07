@@ -89,3 +89,25 @@ async def test_rejects_nested_task_attribution_before_repository_write():
         )
 
     assert repository.batches == []
+
+
+@pytest.mark.anyio
+async def test_rejects_invalid_page_entity_before_repository_write():
+    writer, repository = stager()
+
+    with pytest.raises(
+        StagingPayloadIntegrityError,
+        match="invalid comment_page staging payload",
+    ):
+        await writer.stage_comment_page(
+            post={"owner_id": -1, "id": 9},
+            page={
+                "items": [{"id": 1}],
+                "profiles": [{"id": "not-an-integer"}],
+                "groups": [],
+            },
+            page_offset=0,
+            next_offset=1,
+        )
+
+    assert repository.batches == []
