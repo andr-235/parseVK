@@ -108,12 +108,11 @@ def _resolve(
 def _validated_author(author: object) -> dict[str, Any]:
     if not isinstance(author, dict):
         raise StagingPayloadIntegrityError("stored post snapshot author is not an object")
-    try:
-        author_id = int(author["vk_author_id"])
-    except (KeyError, TypeError, ValueError) as error:
+    author_id = author.get("vk_author_id")
+    if type(author_id) is not int or author_id == 0:
         raise StagingPayloadIntegrityError(
             "stored post snapshot author identity is invalid"
-        ) from error
+        )
     author_type = author.get("type")
     if author_type not in {"user", "group"}:
         raise StagingPayloadIntegrityError(
