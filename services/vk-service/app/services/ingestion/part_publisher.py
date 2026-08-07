@@ -1,6 +1,6 @@
 import asyncio
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -12,12 +12,10 @@ from app.domain.ports.ingestion_part_transport import IngestionPartTransport
 from app.domain.repositories.ingestion_part_publication import (
     IngestionPartPublicationIntegrityError,
 )
-from app.infrastructure.db.repositories.ingestion_part_publication import (
-    SqlAlchemyIngestionPartPublicationRepository,
-)
 from app.services.ingestion.part_publication_verifier import (
     verify_publication_claim,
 )
+from app.services.ingestion.part_publisher_state import PartPublisherStateStore
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,6 +26,11 @@ class PartPublishResult:
     retried: int = 0
     failed: int = 0
     quarantined: int = 0
+
+    def increment(self, outcome: str) -> "PartPublishResult":
+        if outcome not in {"published", "retried", "failed", "quarantined"}:
+            raise ValueError("unsupported publication outcome")
+        return replace(self, **{outcome: getattr(self, outcome) + 1})
 
 
 class StagedIngestionPartPublisher:
@@ -45,11 +48,16 @@ class StagedIngestionPartPublisher:
         retry_max_seconds: float,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
-        if not topic:
-            raise ValueError("publication topic must not be empty")
-        if max_attempts < 1:
-            raise ValueError("max_attempts must be positive")
-        self.session_factory = session_factory
+        _validate_settings(
+            topic=topic,
+            worker_id=worker_id,
+            batch_size=batch_size,
+            lease_seconds=lease_seconds,
+            max_attempts=max_attempts,
+            retry_base_seconds=retry_base_seconds,
+            retry_max_seconds=retry_max_seconds,
+        )
+        self.state = PartPublisherStateStore(session_factory)
         self.transport = transport
         self.topic = topic
         self.worker_id = worker_id
@@ -61,34 +69,16 @@ class StagedIngestionPartPublisher:
         self.clock = clock or (lambda: datetime.now(UTC))
 
     async def publish_once(self) -> PartPublishResult:
-        recovered, claims = await self._claim()
+        now = self._now()
+        recovered, claims = await self.state.claim(
+            worker_id=self.worker_id,
+            batch_size=self.batch_size,
+            lease_expires_at=now + timedelta(seconds=self.lease_seconds),
+        )
         result = PartPublishResult(recovered=recovered, claimed=len(claims))
         for claim in claims:
-            outcome = await self._publish_claim(claim)
-            result = PartPublishResult(
-                recovered=result.recovered,
-                claimed=result.claimed,
-                published=result.published + int(outcome == "published"),
-                retried=result.retried + int(outcome == "retried"),
-                failed=result.failed + int(outcome == "failed"),
-                quarantined=result.quarantined + int(outcome == "quarantined"),
-            )
+            result = result.increment(await self._publish_claim(claim))
         return result
-
-    async def _claim(self) -> tuple[int, tuple[IngestionPartPublicationClaim, ...]]:
-        now = self._now()
-        async with self.session_factory() as session:
-            async with session.begin():
-                repository = SqlAlchemyIngestionPartPublicationRepository(session)
-                recovered = await repository.recover_missing_references(
-                    limit=self.batch_size
-                )
-                claims = await repository.claim_pending(
-                    worker_id=self.worker_id,
-                    limit=self.batch_size,
-                    lease_expires_at=now + timedelta(seconds=self.lease_seconds),
-                )
-        return recovered, claims
 
     async def _publish_claim(self, claim: IngestionPartPublicationClaim) -> str:
         try:
@@ -100,71 +90,33 @@ class StagedIngestionPartPublisher:
                 headers=_headers(verified),
             )
         except IngestionPartPublicationIntegrityError as error:
-            await self._quarantine(claim, str(error))
+            await self.state.quarantined(
+                claim,
+                reason=str(error),
+                at=self._now(),
+            )
             return "quarantined"
         except asyncio.CancelledError:
             raise
         except Exception as error:
             if claim.attempts >= self.max_attempts:
-                await self._fail(claim, str(error))
+                await self.state.failed(claim, error=str(error), at=self._now())
                 return "failed"
-            await self._retry(claim, str(error))
+            await self.state.retry(
+                claim,
+                error=str(error),
+                at=self._now(),
+                delay_seconds=self._retry_delay(claim.attempts),
+            )
             return "retried"
-        await self._published(claim)
+        await self.state.published(claim, self._now())
         return "published"
 
-    async def _published(self, claim: IngestionPartPublicationClaim) -> None:
-        now = self._now()
-        async with self.session_factory() as session:
-            async with session.begin():
-                await SqlAlchemyIngestionPartPublicationRepository(
-                    session
-                ).mark_published(
-                    claim_id=claim.claim_id,
-                    part_id=claim.part.message_id,
-                    wire_digest=claim.part.wire_digest,
-                    published_at=now,
-                )
-
-    async def _retry(self, claim: IngestionPartPublicationClaim, error: str) -> None:
-        delay = min(
-            self.retry_base_seconds * (2 ** max(claim.attempts - 1, 0)),
+    def _retry_delay(self, attempts: int) -> float:
+        return min(
+            self.retry_base_seconds * (2 ** max(attempts - 1, 0)),
             self.retry_max_seconds,
         )
-        async with self.session_factory() as session:
-            async with session.begin():
-                await SqlAlchemyIngestionPartPublicationRepository(
-                    session
-                ).release_for_retry(
-                    claim_id=claim.claim_id,
-                    part_id=claim.part.message_id,
-                    error=error,
-                    next_attempt_at=self._now() + timedelta(seconds=delay),
-                )
-
-    async def _fail(self, claim: IngestionPartPublicationClaim, error: str) -> None:
-        async with self.session_factory() as session:
-            async with session.begin():
-                await SqlAlchemyIngestionPartPublicationRepository(session).mark_failed(
-                    claim_id=claim.claim_id,
-                    part_id=claim.part.message_id,
-                    error=error,
-                    failed_at=self._now(),
-                )
-
-    async def _quarantine(
-        self,
-        claim: IngestionPartPublicationClaim,
-        reason: str,
-    ) -> None:
-        async with self.session_factory() as session:
-            async with session.begin():
-                await SqlAlchemyIngestionPartPublicationRepository(session).quarantine(
-                    claim_id=claim.claim_id,
-                    part_id=claim.part.message_id,
-                    reason=reason,
-                    quarantined_at=self._now(),
-                )
 
     def _now(self) -> datetime:
         value = self.clock()
@@ -180,3 +132,15 @@ def _headers(claim: IngestionPartPublicationClaim) -> list[tuple[str, bytes]]:
         ("batch-id", str(claim.batch.batch_id).encode()),
         ("wire-digest", claim.part.wire_digest.encode()),
     ]
+
+
+def _validate_settings(**values) -> None:
+    if not values["topic"] or not values["worker_id"]:
+        raise ValueError("publisher topic and worker_id must not be empty")
+    for name in ("batch_size", "lease_seconds", "max_attempts"):
+        if values[name] < 1:
+            raise ValueError(f"{name} must be positive")
+    if values["retry_base_seconds"] <= 0:
+        raise ValueError("retry_base_seconds must be positive")
+    if values["retry_max_seconds"] < values["retry_base_seconds"]:
+        raise ValueError("retry_max_seconds must not be below retry_base_seconds")
