@@ -102,6 +102,15 @@ def create_app() -> FastAPI:
 
         from app.infrastructure.db.session import engine
 
+        if (
+            settings.staged_part_publisher_enabled
+            and not get_staged_part_publisher_healthy()
+        ):
+            raise HTTPException(
+                status_code=503,
+                detail="Staged ingestion Kafka topology is not ready",
+            )
+
         try:
             async with engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))
