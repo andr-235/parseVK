@@ -13,6 +13,7 @@ from app.domain.exceptions.vk_api import (
     VkApiRateLimitError,
 )
 from app.infrastructure.tasks_client.client import TasksClient
+from app.services.ingestion.part_errors import OversizedIngestionItemError
 from app.services.ingestion.result import IngestionResult
 
 logger = logging.getLogger("vk-service.ingestion")
@@ -70,6 +71,11 @@ class IngestionPipeline:
                 "VK auth error for task_id=%s; aborting without terminal failure",
                 task_run.task_id,
             )
+            raise
+
+        except OversizedIngestionItemError:
+            # The attempt runner owns the rollback and persists deterministic
+            # quarantine evidence only after the ingestion transaction is gone.
             raise
 
         except Exception as exc:
