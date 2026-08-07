@@ -57,6 +57,9 @@ def build_ingestion_service(
         await attempt_control.ensure_active_in_session(session)
         await session.commit()
 
+    async def rollback_page() -> None:
+        await session.rollback()
+
     collector = DataCollector(
         adapter=adapter,
         repository=repository,
@@ -66,6 +69,7 @@ def build_ingestion_service(
         require_staging=True,
         on_error=redact_secrets,
         page_committer=commit_page,
+        page_rollback=rollback_page,
         checkpoint_store=checkpoints,
         demand_fanout=demand_fanout,
     )
