@@ -35,10 +35,11 @@ def build_publisher(
     *,
     now: datetime | None = None,
     max_attempts: int = 3,
+    session_factory=SessionLocal,
 ) -> StagedIngestionPartPublisher:
     timestamp = now or datetime.now(UTC)
     return StagedIngestionPartPublisher(
-        session_factory=SessionLocal,
+        session_factory=session_factory,
         transport=transport,
         topic="parsevk.content.ingestion.vk",
         worker_id="publisher-test",
