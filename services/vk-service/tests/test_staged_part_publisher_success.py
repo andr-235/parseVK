@@ -48,7 +48,8 @@ async def test_publisher_sends_persisted_bytes_before_marking_published(
         part = await session.get(VkIngestionStagingPart, seeded.part.message_id)
         batch = await session.get(VkIngestionStagingBatch, seeded.batch_id)
     assert reference is not None and reference.status == "published"
-    assert reference.claim_id is None and reference.published_at == now
+    assert reference.claim_id is None
+    assert _as_utc(reference.published_at) == now
     assert part is not None and part.status == "published"
     assert batch is not None and batch.status == "published"
 
@@ -97,3 +98,8 @@ async def test_post_ack_crash_retries_identical_id_and_bytes(db_session) -> None
     assert dict(transport.calls[1]["headers"])["event-id"] == str(
         seeded.part.message_id
     ).encode()
+
+
+def _as_utc(value: datetime | None) -> datetime:
+    assert value is not None
+    return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
