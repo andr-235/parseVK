@@ -73,6 +73,44 @@
         "tasks-service"
       ],
       "topic": "parsevk.vk.commands"
+    },
+    {
+      "causationPolicy": "optional",
+      "consumers": [
+        "content-service"
+      ],
+      "correlationRequired": false,
+      "messageType": "vk.ingestion.comment-part-prepared",
+      "partitionKey": {
+        "paths": [
+          "payload.source.ownerId",
+          "payload.source.postId"
+        ],
+        "separator": ":"
+      },
+      "producers": [
+        "vk-service"
+      ],
+      "topic": "parsevk.content.ingestion.vk"
+    },
+    {
+      "causationPolicy": "optional",
+      "consumers": [
+        "content-service"
+      ],
+      "correlationRequired": false,
+      "messageType": "vk.ingestion.post-part-prepared",
+      "partitionKey": {
+        "paths": [
+          "payload.source.ownerId",
+          "payload.source.postId"
+        ],
+        "separator": ":"
+      },
+      "producers": [
+        "vk-service"
+      ],
+      "topic": "parsevk.content.ingestion.vk"
     }
   ],
   "package": {

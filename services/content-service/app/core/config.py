@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +13,18 @@ class Settings(BaseSettings):
     kafka_topic_im: str = "parsevk.im.events"
     kafka_topic_content: str = "parsevk.content.events"
     kafka_topic_content_dlq: str = "parsevk.content.dlq"
+    kafka_topic_vk_ingestion: str = "parsevk.content.ingestion.vk"
+    kafka_topic_vk_ingestion_dlq: str = "parsevk.content.ingestion.vk.dlq"
+    kafka_vk_ingestion_fetch_max_bytes: int = Field(
+        default=1_048_576,
+        ge=1_048_576,
+        le=10_485_760,
+    )
+    kafka_vk_ingestion_max_partition_fetch_bytes: int = Field(
+        default=1_048_576,
+        ge=1_048_576,
+        le=10_485_760,
+    )
     kafka_consumer_enabled: bool = False
     kafka_producer_enabled: bool = False
     content_projection_events_enabled: bool = True
@@ -36,6 +48,16 @@ class Settings(BaseSettings):
     monitor_keywords_table: str | None = Field(default=None, validation_alias="MONITOR_KEYWORDS_TABLE")
     monitor_keyword_word_column: str = Field(default="word", validation_alias="MONITOR_KEYWORD_WORD_COLUMN")
 
+    @model_validator(mode="after")
+    def validate_vk_ingestion_transport_limits(self) -> "Settings":
+        if (
+            self.kafka_vk_ingestion_fetch_max_bytes
+            < self.kafka_vk_ingestion_max_partition_fetch_bytes
+        ):
+            raise ValueError(
+                "VK ingestion fetch max bytes must be at least the per-partition fetch limit"
+            )
+        return self
+
 
 settings = Settings()
-
