@@ -1,24 +1,14 @@
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.entities.ingestion_part_publication import (
     IngestionPartPublicationClaim,
 )
-from app.domain.entities.ingestion_parts import PREPARED
-from app.domain.entities.ingestion_staging import PREPARED as BATCH_PREPARED
-from app.infrastructure.db.models.ingestion_part_publication import (
-    VkIngestionPartReference,
-)
-from app.infrastructure.db.models.ingestion_parts import VkIngestionStagingPart
-from app.infrastructure.db.models.ingestion_staging import VkIngestionStagingBatch
+from app.infrastructure.db.repositories.ingestion_part_claims import claim_pending
 from app.infrastructure.db.repositories.ingestion_part_publication_failure import (
     release_for_retry,
-)
-from app.infrastructure.db.repositories.ingestion_part_publication_records import (
-    claim_from_models,
 )
 from app.infrastructure.db.repositories.ingestion_part_publication_success import (
     mark_published,
@@ -47,59 +37,12 @@ class SqlAlchemyIngestionPartPublicationRepository:
         limit: int,
         lease_expires_at: datetime,
     ) -> tuple[IngestionPartPublicationClaim, ...]:
-        now = utcnow()
-        if not worker_id or len(worker_id) > 128:
-            raise ValueError("worker_id must contain 1..128 characters")
-        if not 1 <= limit <= 1000:
-            raise ValueError("claim limit must be between 1 and 1000")
-        if lease_expires_at.tzinfo is None or lease_expires_at <= now:
-            raise ValueError("claim lease must expire in the future")
-
-        statement = (
-            select(
-                VkIngestionPartReference,
-                VkIngestionStagingPart,
-                VkIngestionStagingBatch,
-            )
-            .join(
-                VkIngestionStagingPart,
-                VkIngestionStagingPart.id == VkIngestionPartReference.part_id,
-            )
-            .join(
-                VkIngestionStagingBatch,
-                VkIngestionStagingBatch.id == VkIngestionStagingPart.batch_id,
-            )
-            .where(
-                VkIngestionPartReference.status == "pending",
-                VkIngestionPartReference.next_attempt_at <= now,
-                or_(
-                    VkIngestionPartReference.claim_id.is_(None),
-                    VkIngestionPartReference.claim_expires_at <= now,
-                ),
-                VkIngestionStagingPart.status == PREPARED,
-                VkIngestionStagingBatch.status == BATCH_PREPARED,
-            )
-            .order_by(
-                VkIngestionPartReference.next_attempt_at,
-                VkIngestionPartReference.created_at,
-                VkIngestionStagingPart.part_index,
-            )
-            .limit(limit)
+        return await claim_pending(
+            self.session,
+            worker_id=worker_id,
+            limit=limit,
+            lease_expires_at=lease_expires_at,
         )
-        if self.session.get_bind().dialect.name == "postgresql":
-            statement = statement.with_for_update(
-                of=VkIngestionPartReference,
-                skip_locked=True,
-            )
-        rows = (await self.session.execute(statement)).all()
-        for reference, _part, _batch in rows:
-            reference.claim_id = uuid4()
-            reference.claimed_by = worker_id
-            reference.claim_expires_at = lease_expires_at
-            reference.attempts += 1
-            reference.updated_at = now
-        await self.session.flush()
-        return tuple(claim_from_models(*row) for row in rows)
 
     async def mark_published(
         self,
