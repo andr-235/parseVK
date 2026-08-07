@@ -22,22 +22,27 @@ async def seed_publishable_post(
     session,
     *,
     versions: IngestionPartVersions = IngestionPartVersions(),
+    execution_id: UUID = EXECUTION_ID,
+    attempt_id: UUID = ATTEMPT_ID,
+    fencing_token: int = 7,
+    add_execution: bool = True,
 ):
-    session.add(
-        VkExecution(
-            id=EXECUTION_ID,
-            task_id=100,
-            owner_user_id="publisher-test-user",
-            run_id="publisher-test-run",
-            status="running",
-            plan_snapshot={"source": {"externalId": "42"}},
+    if add_execution:
+        session.add(
+            VkExecution(
+                id=execution_id,
+                task_id=100,
+                owner_user_id="publisher-test-user",
+                run_id="publisher-test-run",
+                status="running",
+                plan_snapshot={"source": {"externalId": "42"}},
+            )
         )
-    )
-    await session.flush()
+        await session.flush()
     batch = StagedIngestionBatch.create(
-        execution_id=EXECUTION_ID,
-        attempt_id=ATTEMPT_ID,
-        fencing_token=7,
+        execution_id=execution_id,
+        attempt_id=attempt_id,
+        fencing_token=fencing_token,
         source_kind="post_snapshot",
         owner_id=-42,
         post_id=99,
