@@ -17,24 +17,25 @@ INGESTION_TOPIC = "parsevk.content.ingestion.vk"
 INGESTION_DLQ_TOPIC = "parsevk.content.ingestion.vk.dlq"
 TRANSPORT_LIMIT_BYTES = 1_048_576
 APPLICATION_HARD_LIMIT_BYTES = 768 * 1024
+KAFKA_TEST_IMAGE = "confluentinc/cp-kafka:7.6.0"
 
 
 @pytest.fixture(scope="module")
 def bootstrap_servers():
-    # testcontainers fixture is session-scoped; this fixture provides it
-    # to the module. Actual integration tests use docker-compose or manual
-    # Kafka setup — testcontainers is the automated path.
     tc = os.environ.get("TESTCONTAINERS_KAFKA_BOOTSTRAP")
     if tc:
         yield tc
         return
+
     try:
         from testcontainers.kafka import KafkaContainer
 
-        with KafkaContainer(image="apache/kafka:4.1.0") as kafka:
+        with KafkaContainer(image=KAFKA_TEST_IMAGE).with_kraft() as kafka:
             yield kafka.get_bootstrap_server()
-    except Exception as e:
-        pytest.skip(f"KafkaContainer not available: {e}")
+    except Exception as exc:
+        if os.environ.get("CI"):
+            pytest.fail(f"KafkaContainer is required in CI but failed to start: {exc}")
+        pytest.skip(f"KafkaContainer not available: {exc}")
 
 
 @pytest.fixture(scope="module")
@@ -244,7 +245,6 @@ async def test_consumer_idempotency(bootstrap_servers):
     producer = AIOKafkaProducer(bootstrap_servers=bootstrap_servers)
     await producer.start()
     try:
-        # Publish the same event twice (simulating at-least-once delivery)
         for _ in range(2):
             await producer.send_and_wait(
                 "parsevk.vk.events",
@@ -254,7 +254,6 @@ async def test_consumer_idempotency(bootstrap_servers):
     finally:
         await producer.stop()
 
-    # Consume both messages — consumer should handle duplicates
     consumer = AIOKafkaConsumer(
         "parsevk.vk.events",
         bootstrap_servers=bootstrap_servers,
