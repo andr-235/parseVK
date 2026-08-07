@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import update
@@ -25,12 +25,14 @@ async def release_for_retry(
     error: str,
     next_attempt_at: datetime,
 ) -> None:
+    released_at = datetime.now(UTC)
     result = await session.execute(
         update(VkIngestionPartReference)
         .where(
             VkIngestionPartReference.part_id == part_id,
             VkIngestionPartReference.claim_id == claim_id,
             VkIngestionPartReference.status == "pending",
+            VkIngestionPartReference.claim_expires_at > released_at,
         )
         .values(
             claim_id=None,
@@ -38,12 +40,12 @@ async def release_for_retry(
             claim_expires_at=None,
             last_error=error,
             next_attempt_at=next_attempt_at,
-            updated_at=next_attempt_at,
+            updated_at=released_at,
         )
     )
     if result.rowcount != 1:
         raise IngestionPartPublicationConflictError(
-            "publication retry lost its claim"
+            "publication retry lost or expired its claim"
         )
 
 
@@ -61,6 +63,7 @@ async def quarantine(
             VkIngestionPartReference.part_id == part_id,
             VkIngestionPartReference.claim_id == claim_id,
             VkIngestionPartReference.status == "pending",
+            VkIngestionPartReference.claim_expires_at > quarantined_at,
         )
         .values(
             status=QUARANTINED,
