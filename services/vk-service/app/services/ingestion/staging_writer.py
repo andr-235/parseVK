@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, NoReturn
 from uuid import UUID
 
 from app.domain.entities.ingestion_staging import StagedIngestionBatch
@@ -138,7 +138,7 @@ class PhysicalIngestionStager:
         return stored, created
 
     @staticmethod
-    def _raise_integrity(source_kind: str, error: Exception) -> None:
+    def _raise_integrity(source_kind: str, error: Exception) -> NoReturn:
         observe_staging_result(source_kind, "integrity_error")
         raise StagingPayloadIntegrityError(
             f"invalid {source_kind} staging payload"
