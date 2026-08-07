@@ -15,7 +15,6 @@ from app.infrastructure.db.models.ingestion_part_publication import (
 from app.infrastructure.db.models.ingestion_parts import VkIngestionStagingPart
 from app.infrastructure.db.models.ingestion_staging import VkIngestionStagingBatch
 from app.infrastructure.db.repositories.ingestion_part_publication_failure import (
-    quarantine,
     release_for_retry,
 )
 from app.infrastructure.db.repositories.ingestion_part_publication_records import (
@@ -23,6 +22,10 @@ from app.infrastructure.db.repositories.ingestion_part_publication_records impor
 )
 from app.infrastructure.db.repositories.ingestion_part_publication_success import (
     mark_published,
+)
+from app.infrastructure.db.repositories.ingestion_part_publication_terminal import (
+    mark_failed,
+    quarantine,
 )
 from app.infrastructure.db.repositories.ingestion_part_reference_recovery import (
     recover_missing_references,
@@ -107,8 +110,7 @@ class SqlAlchemyIngestionPartPublicationRepository:
         published_at: datetime,
     ) -> None:
         _aware(published_at, "published_at")
-        if len(wire_digest) != 64:
-            raise ValueError("wire_digest must be a SHA-256 hex digest")
+        _sha256(wire_digest)
         await mark_published(
             self.session,
             claim_id=claim_id,
@@ -126,12 +128,31 @@ class SqlAlchemyIngestionPartPublicationRepository:
         next_attempt_at: datetime,
     ) -> None:
         _aware(next_attempt_at, "next_attempt_at")
+        if next_attempt_at <= utcnow():
+            raise ValueError("next_attempt_at must be in the future")
         await release_for_retry(
             self.session,
             claim_id=claim_id,
             part_id=part_id,
             error=_reason(error),
             next_attempt_at=next_attempt_at,
+        )
+
+    async def mark_failed(
+        self,
+        *,
+        claim_id: UUID,
+        part_id: UUID,
+        error: str,
+        failed_at: datetime,
+    ) -> None:
+        _aware(failed_at, "failed_at")
+        await mark_failed(
+            self.session,
+            claim_id=claim_id,
+            part_id=part_id,
+            error=_reason(error),
+            failed_at=failed_at,
         )
 
     async def quarantine(
@@ -165,3 +186,12 @@ def _reason(value: str) -> str:
     if not normalized:
         raise ValueError("publication failure reason must not be empty")
     return normalized[:2000]
+
+
+def _sha256(value: str) -> None:
+    if len(value) != 64:
+        raise ValueError("wire_digest must be a SHA-256 hex digest")
+    try:
+        int(value, 16)
+    except ValueError as error:
+        raise ValueError("wire_digest must be a SHA-256 hex digest") from error
