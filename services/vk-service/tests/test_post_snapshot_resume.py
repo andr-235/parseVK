@@ -73,10 +73,10 @@ async def test_resume_reuses_the_first_immutable_post_snapshot():
         "likes": {"count": 2},
     }
     original_profiles = {
-        42: {"id": 42, "name": "Group", "photo_50": "old-photo"}
+        -42: {"id": 42, "name": "Group", "photo_50": "old-photo"}
     }
     changed_profiles = {
-        42: {"id": 42, "name": "Renamed", "photo_50": "new-photo"}
+        -42: {"id": 42, "name": "Renamed", "photo_50": "new-photo"}
     }
 
     first_author, first_post = await collector.save_post(
