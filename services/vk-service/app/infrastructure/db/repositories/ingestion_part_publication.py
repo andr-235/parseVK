@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,13 +17,15 @@ from app.infrastructure.db.repositories.ingestion_part_publication_terminal impo
     mark_failed,
     quarantine,
 )
+from app.infrastructure.db.repositories.ingestion_part_publication_validation import (
+    normalized_reason,
+    require_aware,
+    require_future,
+    require_sha256,
+)
 from app.infrastructure.db.repositories.ingestion_part_reference_recovery import (
     recover_missing_references,
 )
-
-
-def utcnow() -> datetime:
-    return datetime.now(UTC)
 
 
 class SqlAlchemyIngestionPartPublicationRepository:
@@ -52,8 +54,8 @@ class SqlAlchemyIngestionPartPublicationRepository:
         wire_digest: str,
         published_at: datetime,
     ) -> None:
-        _aware(published_at, "published_at")
-        _sha256(wire_digest)
+        require_aware(published_at, "published_at")
+        require_sha256(wire_digest)
         await mark_published(
             self.session,
             claim_id=claim_id,
@@ -70,14 +72,12 @@ class SqlAlchemyIngestionPartPublicationRepository:
         error: str,
         next_attempt_at: datetime,
     ) -> None:
-        _aware(next_attempt_at, "next_attempt_at")
-        if next_attempt_at <= utcnow():
-            raise ValueError("next_attempt_at must be in the future")
+        require_future(next_attempt_at, "next_attempt_at")
         await release_for_retry(
             self.session,
             claim_id=claim_id,
             part_id=part_id,
-            error=_reason(error),
+            error=normalized_reason(error),
             next_attempt_at=next_attempt_at,
         )
 
@@ -89,12 +89,12 @@ class SqlAlchemyIngestionPartPublicationRepository:
         error: str,
         failed_at: datetime,
     ) -> None:
-        _aware(failed_at, "failed_at")
+        require_aware(failed_at, "failed_at")
         await mark_failed(
             self.session,
             claim_id=claim_id,
             part_id=part_id,
-            error=_reason(error),
+            error=normalized_reason(error),
             failed_at=failed_at,
         )
 
@@ -106,35 +106,14 @@ class SqlAlchemyIngestionPartPublicationRepository:
         reason: str,
         quarantined_at: datetime,
     ) -> None:
-        _aware(quarantined_at, "quarantined_at")
+        require_aware(quarantined_at, "quarantined_at")
         await quarantine(
             self.session,
             claim_id=claim_id,
             part_id=part_id,
-            reason=_reason(reason),
+            reason=normalized_reason(reason),
             quarantined_at=quarantined_at,
         )
 
     async def recover_missing_references(self, *, limit: int) -> int:
         return await recover_missing_references(self.session, limit=limit)
-
-
-def _aware(value: datetime, label: str) -> None:
-    if value.tzinfo is None:
-        raise ValueError(f"{label} must be timezone-aware")
-
-
-def _reason(value: str) -> str:
-    normalized = value.strip()
-    if not normalized:
-        raise ValueError("publication failure reason must not be empty")
-    return normalized[:2000]
-
-
-def _sha256(value: str) -> None:
-    if len(value) != 64:
-        raise ValueError("wire_digest must be a SHA-256 hex digest")
-    try:
-        int(value, 16)
-    except ValueError as error:
-        raise ValueError("wire_digest must be a SHA-256 hex digest") from error
