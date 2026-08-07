@@ -35,6 +35,7 @@ def comment_page_payload(
     source_kind: str,
     owner_id: int,
     post_id: int,
+    post: dict[str, Any],
     page: dict[str, Any],
     page_offset: int,
     next_offset: int,
@@ -49,7 +50,7 @@ def comment_page_payload(
             "nextOffset": next_offset,
         },
         "observed": {
-            "post": dict(page["post"]),
+            "post": dict(post),
             "comments": [dict(item) for item in page.get("items") or []],
             "profiles": stable_entities(page.get("profiles")),
             "groups": stable_entities(page.get("groups")),
@@ -57,6 +58,6 @@ def comment_page_payload(
         "providerMetadata": {
             key: value
             for key, value in page.items()
-            if key not in {"post", "items", "profiles", "groups"}
+            if key not in {"items", "profiles", "groups"}
         },
     }
