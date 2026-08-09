@@ -34,7 +34,7 @@ class ConsumerRetryController:
         self.max_retries = max_retries
         self.resume_scheduler = PartitionResumeScheduler()
 
-    async def skip_due_to_backoff(self, raw_value: bytes, consumer) -> bool:
+    async def skip_due_to_backoff(self, raw_value: bytes, consumer, *, headers=None) -> bool:
         payload = decode_payload(raw_value)
         event_id, event_type = message_identity(payload)
         if not event_id:
@@ -44,16 +44,10 @@ class ConsumerRetryController:
             if row is None:
                 return False
             if row.next_retry_at and datetime.now(UTC) < row.next_retry_at:
-                logger.debug(
-                    "Skipping event %s (type=%s): next_retry_at=%s",
-                    event_id,
-                    event_type,
-                    row.next_retry_at,
-                )
                 return True
             if row.retry_count < self.max_retries:
                 return False
-            await self._send_exhausted(raw_value, row, consumer)
+            await self._send_exhausted(raw_value, row, consumer, headers=headers)
             return True
 
     async def handle_failure(self, message, error: Exception, consumer) -> None:
@@ -64,12 +58,10 @@ class ConsumerRetryController:
         except Exception:
             await self._handle_poison_pill(message, error, consumer)
             return
-
         event_id, event_type = message_identity(payload)
         if not event_id:
             await self._handle_poison_pill(message, error, consumer)
             return
-
         failure_reason = self._failure_reason(error)
         retry_count, next_retry = await record_retry_failure(
             session_factory=self.session_factory,
@@ -79,14 +71,10 @@ class ConsumerRetryController:
             failure_reason=failure_reason,
         )
         if retry_count >= self.max_retries:
-            logger.error(
-                "Failed event %s after %d retries; sending to DLQ",
-                event_id,
-                retry_count,
-                exc_info=(type(error), error, error.__traceback__),
-            )
+            logger.error("Failed event %s after %d retries; sending to DLQ", event_id, retry_count)
             await self._send_to_dlq(
                 message.value,
+                original_headers=message.headers,
                 event_id=event_id,
                 event_type=event_type,
                 retry_count=retry_count,
@@ -94,15 +82,6 @@ class ConsumerRetryController:
             )
             await consumer.commit()
             return
-
-        logger.error(
-            "Failed event %s (retry %d/%d, next at %s)",
-            event_id,
-            retry_count,
-            self.max_retries,
-            next_retry,
-            exc_info=(type(error), error, error.__traceback__),
-        )
         partition = TopicPartition(message.topic, message.partition)
         delay = max((next_retry - datetime.now(UTC)).total_seconds(), 0)
         self.resume_scheduler.pause_until(consumer, partition, delay)
@@ -110,15 +89,10 @@ class ConsumerRetryController:
     async def cancel_pending_resumes(self) -> None:
         await self.resume_scheduler.cancel()
 
-    async def _send_exhausted(self, raw_value, row, consumer) -> None:
-        logger.warning(
-            "Event %s (type=%s) exceeded max retries (%d)",
-            row.event_id,
-            row.event_type,
-            self.max_retries,
-        )
+    async def _send_exhausted(self, raw_value, row, consumer, *, headers=None) -> None:
         await self._send_to_dlq(
             raw_value,
+            original_headers=headers,
             event_id=str(row.event_id),
             event_type=row.event_type,
             retry_count=row.retry_count,
@@ -128,16 +102,20 @@ class ConsumerRetryController:
 
     async def _handle_poison_pill(self, message, error, consumer) -> None:
         reason = f"Poison pill at offset {message.offset}: {self._failure_reason(error)}"
-        logger.warning(reason)
-        await self._send_to_dlq(message.value, failure_reason=reason)
+        await self._send_to_dlq(
+            message.value,
+            original_headers=getattr(message, "headers", None),
+            failure_reason=reason,
+        )
         await consumer.commit()
 
-    async def _send_to_dlq(self, raw_value: bytes, **metadata) -> None:
+    async def _send_to_dlq(self, raw_value: bytes, *, original_headers=None, **metadata) -> None:
         headers = build_dlq_headers(
             consumer_name=self.consumer_name,
             original_topic=self.kafka_topic,
             **metadata,
         )
+        headers.extend(_preserved_headers(original_headers))
         await send_to_dlq(
             raw_value,
             self.dlq_topic,
@@ -148,3 +126,20 @@ class ConsumerRetryController:
     @staticmethod
     def _failure_reason(error: Exception) -> str:
         return f"{type(error).__name__}: {error}"[:2000]
+
+
+def _preserved_headers(headers) -> list[tuple[str, bytes]]:
+    allowed = {
+        "event-id",
+        "event-type",
+        "source-service",
+        "batch-id",
+        "wire-digest",
+        "page-digest",
+        "part-digest",
+    }
+    return [
+        (key, value)
+        for key, value in headers or []
+        if key in allowed and isinstance(value, bytes)
+    ]
