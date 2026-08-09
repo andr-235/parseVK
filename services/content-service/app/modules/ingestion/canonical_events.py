@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid5
 
@@ -13,7 +14,11 @@ CANONICAL_COMMENTS_NAMESPACE = UUID("c74c2c3f-c74e-4d3c-95c3-4e50f1a3900d")
 MANIFEST_KEY = "canonicalModeration"
 
 
-def build_canonical_moderation_manifest(part: IngestionPartEnvelope) -> dict[str, Any]:
+def build_canonical_moderation_manifest(
+    part: IngestionPartEnvelope,
+    *,
+    created_at: datetime,
+) -> dict[str, Any]:
     owner_id = int(part.source["ownerId"])
     post_id = int(part.source["postId"])
     post_key = f"{owner_id}:{post_id}"
@@ -34,6 +39,8 @@ def build_canonical_moderation_manifest(part: IngestionPartEnvelope) -> dict[str
                 "dedupeKey": f"canonical-comments:{part.source_message_id}:{chunk_index}",
                 "aggregateType": "content_post",
                 "aggregateId": post_key,
+                "correlationId": part.event.correlation_id,
+                "createdAt": created_at.isoformat(),
                 "payload": {
                     "sourceService": "content-service",
                     "sourceMessageId": str(part.source_message_id),
