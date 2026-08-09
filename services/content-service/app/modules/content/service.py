@@ -46,6 +46,11 @@ class ContentService:
     async def list_comments(self, page: int, limit: int) -> dict:
         return await self._posts.list_comments(page, limit)
 
+    async def list_comments_reconciliation(
+        self, after_id: int | None, limit: int
+    ) -> dict:
+        return await self._posts.list_comments_reconciliation(after_id, limit)
+
     async def list_authors(
         self,
         limit: int = 20,
@@ -59,9 +64,7 @@ class ContentService:
         sort_order: str = "desc",
     ) -> dict:
         return await self._authors.list_authors(
-            limit=limit, page=page, offset=offset, search=search,
-            city=city, verified=verified, author_type=author_type,
-            sort_by=sort_by, sort_order=sort_order,
+            limit=limit, page=page, offset=offset, search=search, keywords=keywords, keyword_source=keyword_source
         )
 
     async def get_author(self, vk_author_id: int) -> dict | None:
