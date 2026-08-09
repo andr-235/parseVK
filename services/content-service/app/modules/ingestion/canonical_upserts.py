@@ -38,7 +38,7 @@ async def upsert_author(session: AsyncSession, author: dict[str, Any]) -> None:
     await session.execute(stmt)
 
 
-async def upsert_post(session: AsyncSession, post: dict[str, Any]) -> None:
+async def upsert_post(session: AsyncSession, post: dict[str, Any]) -> int:
     now = utcnow()
     owner_id = int(post["owner_id"])
     post_id = int(post["id"])
@@ -50,6 +50,7 @@ async def upsert_post(session: AsyncSession, post: dict[str, Any]) -> None:
         author_vk_id=post.get("from_id"),
         date=vk_timestamp(post.get("date")),
         text=post.get("text"),
+        projection_revision=1,
         last_collected_task_id=None,
         updated_at=now,
     )
@@ -59,10 +60,12 @@ async def upsert_post(session: AsyncSession, post: dict[str, Any]) -> None:
             "author_vk_id": stmt.excluded.author_vk_id,
             "date": stmt.excluded.date,
             "text": stmt.excluded.text,
+            "projection_revision": ContentPost.projection_revision + 1,
             "updated_at": now,
         },
-    )
-    await session.execute(stmt)
+    ).returning(ContentPost.projection_revision)
+    result = await session.execute(stmt)
+    return int(result.scalar_one())
 
 
 async def upsert_comment(session: AsyncSession, comment: dict[str, Any]) -> None:
