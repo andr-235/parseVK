@@ -4,10 +4,12 @@ from uuid import uuid4
 import pytest
 from _kafka_integration_fixtures import (
     APPLICATION_HARD_LIMIT_BYTES,
-    bootstrap_servers as bootstrap_servers,
     INGESTION_DLQ_TOPIC,
     INGESTION_TOPIC,
     TRANSPORT_LIMIT_BYTES,
+)
+from _kafka_integration_fixtures import (
+    bootstrap_servers as bootstrap_servers,
 )
 from _kafka_integration_fixtures import topics as topics
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
