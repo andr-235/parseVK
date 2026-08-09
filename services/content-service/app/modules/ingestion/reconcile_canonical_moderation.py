@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -15,6 +15,12 @@ from app.modules.ingestion.canonical_events import (
 )
 from app.modules.ingestion.models import ContentIngestionReceipt
 from app.modules.projections.outbox_service import ContentOutboxService
+
+
+def _utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
 
 
 async def reconcile_canonical_moderation_outbox() -> dict[str, int]:
@@ -41,6 +47,9 @@ async def reconcile_canonical_moderation_outbox() -> dict[str, int]:
                 stats["receiptsScanned"] += 1
                 manifest = (receipt.effect_summary or {}).get(MANIFEST_KEY)
                 if not isinstance(manifest, dict):
+                    # Pre-cutover receipts intentionally have no canonical moderation
+                    # manifest. Existing rows are backfilled through the content API,
+                    # never reconstructed from historical staged payloads.
                     stats["receiptsWithoutManifest"] += 1
                     continue
                 version = manifest.get("contractVersion")
@@ -100,7 +109,11 @@ async def reconcile_canonical_moderation_outbox() -> dict[str, int]:
                 )
             ).all()
             orphan_ids = sorted(
-                (event_id for event_id in canonical_outbox_ids if event_id not in expected_event_ids),
+                (
+                    event_id
+                    for event_id in canonical_outbox_ids
+                    if event_id not in expected_event_ids
+                ),
                 key=str,
             )
             if orphan_ids:
@@ -120,7 +133,7 @@ def _verify_existing(existing: ContentOutboxEvent, version: int, item: dict) -> 
         item.get("correlationId"),
         item["dedupeKey"],
         item["payload"],
-        datetime.fromisoformat(item["createdAt"]),
+        _utc(datetime.fromisoformat(item["createdAt"])),
     )
     actual = (
         existing.event_type,
@@ -130,7 +143,7 @@ def _verify_existing(existing: ContentOutboxEvent, version: int, item: dict) -> 
         existing.correlation_id,
         existing.dedupe_key,
         existing.payload,
-        existing.created_at,
+        _utc(existing.created_at),
     )
     if actual != expected:
         raise RuntimeError(
