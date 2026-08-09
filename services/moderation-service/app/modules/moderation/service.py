@@ -1,33 +1,29 @@
-import asyncio
 import logging
-from datetime import UTC, datetime
 
-from app.db.models import KeywordRecalculationJob
 from app.modules.keywords.matcher import KeywordMatcher
-from app.modules.keywords.recalculation import RecalculationWorker
 from app.modules.keywords.repository import KeywordMatchRepository
 from app.modules.moderation.comment_event_mapper import (
-    InvalidVkCommentEvent,
-    map_vk_comment_event,
+    InvalidCanonicalCommentEvent,
+    map_canonical_comment_event,
 )
 from app.modules.moderation.crud_service import ModerationCrudService
-from common.events import VkEvent
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from common.events import ContentCanonicalCommentsChangedV1, WireEvent
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
+CANONICAL_COMMENTS_EVENT_TYPE = "content.canonical_comments_changed"
+
 
 class ModerationService:
-    def __init__(self, session: AsyncSession, session_maker: async_sessionmaker | None = None):
+    def __init__(self, session: AsyncSession):
         self.session = session
-        self.session_maker = session_maker
         svc = self
         self.crud = ModerationCrudService(
             session,
             on_enrich=lambda records: svc._enrich_comments(records),
         )
         self.keyword_repository = KeywordMatchRepository(session)
-        self._pending_tasks: list[asyncio.Task] = []
 
     def _enrich_comments(self, records):
         return records
@@ -67,86 +63,63 @@ class ModerationService:
     async def update_status(self, id: int, status: str):
         return await self.crud.update_status(id, status)
 
-    async def handle_event(self, event: VkEvent) -> bool:
-        logger.debug("ModerationService.handle_event: event_id=%s type=%s", event.event_id, event.event_type)
+    async def handle_event(
+        self,
+        event: WireEvent,
+        payload: ContentCanonicalCommentsChangedV1,
+    ) -> bool:
+        logger.debug(
+            "ModerationService.handle_event: event_id=%s type=%s",
+            event.event_id,
+            event.event_type,
+        )
         if await self.crud.is_processed(event.event_id):
-            logger.info("ModerationService.handle_event: duplicate event skipped event_id=%s", event.event_id)
+            logger.info(
+                "ModerationService.handle_event: duplicate event skipped event_id=%s",
+                event.event_id,
+            )
             return False
-        if event.event_type == "vk.comments_collected":
-            await self._handle_comments_collected_batch(event)
-        elif event.event_type == "vk.task_completed":
-            await self._handle_task_completed(event)
-        else:
-            logger.warning("ModerationService.handle_event: unsupported event type=%s", event.event_type)
+        if event.event_type != CANONICAL_COMMENTS_EVENT_TYPE:
+            raise ValueError(f"unsupported canonical moderation event: {event.event_type}")
+        await self._handle_canonical_comments(event, payload)
         await self.crud.mark_processed(event.event_id, event.event_type)
         return True
 
-    def drain_pending_tasks(self) -> list[asyncio.Task]:
-        tasks = list(self._pending_tasks)
-        self._pending_tasks.clear()
-        return tasks
-
-    async def _handle_comments_collected_batch(self, event: VkEvent) -> None:
-        """Handle vk.comments_collected batch event."""
-        payload = event.payload
-        comments = payload.get("comments", [])
-
-        if not comments:
+    async def _handle_canonical_comments(
+        self,
+        event: WireEvent,
+        payload: ContentCanonicalCommentsChangedV1,
+    ) -> None:
+        if payload.postKey != event.aggregate_id:
+            raise InvalidCanonicalCommentEvent(
+                "canonical payload postKey does not match aggregate_id"
+            )
+        if payload.chunkIndex >= payload.chunkCount:
+            raise InvalidCanonicalCommentEvent(
+                "canonical payload chunkIndex must be smaller than chunkCount"
+            )
+        if not payload.comments:
             logger.debug(
-                "ModerationService._handle_comments_collected_batch: empty batch event_id=%s",
+                "ModerationService._handle_canonical_comments: empty batch event_id=%s",
                 event.event_id,
             )
             return
 
-        # Load keyword candidates once for the entire batch
         candidates = await self.keyword_repository.load_candidates()
         matcher = KeywordMatcher(candidates)
         saved_count = 0
-
-        for comment in comments:
-            # Skip comments without text
-            text = comment.get("text") or ""
+        for comment in payload.comments:
+            text = comment.text or ""
             matched_keywords = matcher.match_text(text)
             if not matched_keywords:
                 continue
-
-            try:
-                payload = map_vk_comment_event(comment, matched_keywords)
-            except InvalidVkCommentEvent:
-                logger.exception(
-                    "ModerationService._handle_comments_collected_batch: invalid comment in batch event_id=%s comment_id=%s",
-                    event.event_id, comment.get("id"),
-                )
-                continue
-
-            await self.crud.upsert_comment(payload)
+            mapped = map_canonical_comment_event(comment, matched_keywords)
+            await self.crud.upsert_comment(mapped)
             saved_count += 1
 
         logger.info(
-            "Processed batch event_id=%s total_comments=%d matched_saved=%d",
-            event.event_id, len(comments), saved_count,
+            "Processed canonical batch event_id=%s total_comments=%d matched_saved=%d",
+            event.event_id,
+            len(payload.comments),
+            saved_count,
         )
-
-    async def _handle_task_completed(self, event: VkEvent) -> None:
-        sm = self.session_maker
-        if not sm:
-            logger.warning(
-                "ModerationService._handle_task_completed: session_maker not available, skipping recalculation"
-            )
-            return
-        async with sm() as session:
-            job = KeywordRecalculationJob(
-                status="pending",
-                created_at=datetime.now(UTC),
-            )
-            session.add(job)
-            await session.commit()
-            job_id = job.id
-        logger.info(
-            "ModerationService._handle_task_completed: created recalculation job=%d from event=%s",
-            job_id, event.event_id,
-        )
-        worker = RecalculationWorker(sm)
-        task = asyncio.create_task(worker.run_recalculation(job_id))
-        self._pending_tasks.append(task)
-        task.add_done_callback(lambda t: self._pending_tasks.remove(t))
