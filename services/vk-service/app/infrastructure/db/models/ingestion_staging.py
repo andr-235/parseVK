@@ -64,7 +64,9 @@ class VkIngestionStagingBatch(Base):
     page_offset: Mapped[int] = mapped_column(Integer, nullable=False)
     payload_digest: Mapped[str] = mapped_column(String(64), nullable=False)
     payload_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
-    payload: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    payload: Mapped[dict | None] = mapped_column(
+        JSONB(none_as_null=True), nullable=True
+    )
     purge_manifest: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     status: Mapped[str] = mapped_column(
         String(32), nullable=False, default="staged", server_default=text("'staged'")
@@ -72,9 +74,15 @@ class VkIngestionStagingBatch(Base):
     applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     payload_purged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utcnow, server_default=text("CURRENT_TIMESTAMP")
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        server_default=text("CURRENT_TIMESTAMP"),
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow,
-        server_default=text("CURRENT_TIMESTAMP")
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+        server_default=text("CURRENT_TIMESTAMP"),
     )

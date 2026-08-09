@@ -22,18 +22,31 @@ def upgrade_ack_lifecycle() -> None:
     op.add_column(REFERENCE, sa.Column("ack_received_at", sa.DateTime(timezone=True)))
     op.add_column(REFERENCE, sa.Column("ack_source_position", JSONB()))
     op.add_column(REFERENCE, sa.Column("ack_effect_summary", JSONB()))
-    op.create_unique_constraint("uq_vk_ingestion_part_reference_ack_event", REFERENCE, ["ack_event_id"])
-    op.create_unique_constraint("uq_vk_ingestion_part_reference_ack_receipt", REFERENCE, ["ack_receipt_id"])
+    op.create_unique_constraint(
+        "uq_vk_ingestion_part_reference_ack_event", REFERENCE, ["ack_event_id"]
+    )
+    op.create_unique_constraint(
+        "uq_vk_ingestion_part_reference_ack_receipt", REFERENCE, ["ack_receipt_id"]
+    )
     _create_evidence_constraints()
 
 
 def downgrade_ack_lifecycle() -> None:
+    _normalize_for_legacy_schema()
     _drop_evidence_constraints()
-    op.drop_constraint("uq_vk_ingestion_part_reference_ack_receipt", REFERENCE, type_="unique")
-    op.drop_constraint("uq_vk_ingestion_part_reference_ack_event", REFERENCE, type_="unique")
+    op.drop_constraint(
+        "uq_vk_ingestion_part_reference_ack_receipt", REFERENCE, type_="unique"
+    )
+    op.drop_constraint(
+        "uq_vk_ingestion_part_reference_ack_event", REFERENCE, type_="unique"
+    )
     for name in (
-        "ack_effect_summary", "ack_source_position", "ack_received_at", "ack_applied_at",
-        "ack_receipt_id", "ack_event_id",
+        "ack_effect_summary",
+        "ack_source_position",
+        "ack_received_at",
+        "ack_applied_at",
+        "ack_receipt_id",
+        "ack_event_id",
     ):
         op.drop_column(REFERENCE, name)
     op.alter_column(PART, "wire_bytes", existing_type=sa.LargeBinary(), nullable=False)
@@ -46,6 +59,21 @@ def downgrade_ack_lifecycle() -> None:
     _replace_status_constraints(extended=False)
 
 
+def _normalize_for_legacy_schema() -> None:
+    # Purged heavy bytes cannot be reconstructed. Remove those batches while the
+    # original CASCADE relationships are still intact rather than fabricating data.
+    op.execute(
+        sa.text(
+            f"DELETE FROM {BATCH} WHERE status = 'payload_purged' OR payload IS NULL "
+            f"OR id IN (SELECT batch_id FROM {PART} "
+            "WHERE status = 'payload_purged' OR wire_bytes IS NULL)"
+        )
+    )
+    op.execute(sa.text(f"UPDATE {REFERENCE} SET status = 'published' WHERE status = 'applied'"))
+    op.execute(sa.text(f"UPDATE {PART} SET status = 'published' WHERE status = 'applied'"))
+    op.execute(sa.text(f"UPDATE {BATCH} SET status = 'published' WHERE status = 'applied'"))
+
+
 def _create_evidence_constraints() -> None:
     op.create_check_constraint(
         "ck_vk_ingestion_staging_purge_atomic",
@@ -56,7 +84,8 @@ def _create_evidence_constraints() -> None:
     op.create_check_constraint(
         "ck_vk_ingestion_part_purge_atomic",
         PART,
-        "status != 'payload_purged' OR (wire_bytes IS NULL AND payload_purged_at IS NOT NULL)",
+        "status != 'payload_purged' OR "
+        "(wire_bytes IS NULL AND payload_purged_at IS NOT NULL)",
     )
     op.create_check_constraint(
         "ck_vk_ingestion_part_reference_applied_evidence",
@@ -68,9 +97,15 @@ def _create_evidence_constraints() -> None:
 
 
 def _drop_evidence_constraints() -> None:
-    op.drop_constraint("ck_vk_ingestion_part_reference_applied_evidence", REFERENCE, type_="check")
-    op.drop_constraint("ck_vk_ingestion_part_purge_atomic", PART, type_="check")
-    op.drop_constraint("ck_vk_ingestion_staging_purge_atomic", BATCH, type_="check")
+    op.drop_constraint(
+        "ck_vk_ingestion_part_reference_applied_evidence", REFERENCE, type_="check"
+    )
+    op.drop_constraint(
+        "ck_vk_ingestion_part_purge_atomic", PART, type_="check"
+    )
+    op.drop_constraint(
+        "ck_vk_ingestion_staging_purge_atomic", BATCH, type_="check"
+    )
 
 
 def _replace_status_constraints(*, extended: bool) -> None:
@@ -87,9 +122,15 @@ def _replace_status_constraints(*, extended: bool) -> None:
         batch[3:3] = ["applied", "payload_purged"]
         part[2:2] = ["applied", "payload_purged"]
         reference[2:2] = ["applied"]
-    op.create_check_constraint("ck_vk_ingestion_staging_status", BATCH, _status_sql(batch))
-    op.create_check_constraint("ck_vk_ingestion_part_status", PART, _status_sql(part))
-    op.create_check_constraint("ck_vk_ingestion_part_reference_status", REFERENCE, _status_sql(reference))
+    op.create_check_constraint(
+        "ck_vk_ingestion_staging_status", BATCH, _status_sql(batch)
+    )
+    op.create_check_constraint(
+        "ck_vk_ingestion_part_status", PART, _status_sql(part)
+    )
+    op.create_check_constraint(
+        "ck_vk_ingestion_part_reference_status", REFERENCE, _status_sql(reference)
+    )
 
 
 def _status_sql(values: list[str]) -> str:
