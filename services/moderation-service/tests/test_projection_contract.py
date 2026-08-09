@@ -11,16 +11,13 @@ from _service_path import use_service_path
 use_service_path()
 
 from app.modules.keywords.matcher import build_keyword_candidates
-from common.events import VkEvent
 from app.modules.moderation.service import ModerationService
+from common.events import ContentCanonicalCommentsChangedV1, WireEvent
 
 
 class FakeSession:
-    def __init__(self):
-        self.commits = 0
-
     async def commit(self):
-        self.commits += 1
+        return None
 
 
 class InMemoryModerationCrud:
@@ -58,42 +55,51 @@ class KeywordRepository:
         return self.candidates
 
 
-def event(payload):
-    return VkEvent.model_validate(
+def event(comments):
+    payload = ContentCanonicalCommentsChangedV1.model_validate(
         {
-            "event_id": str(uuid4()),
-            "event_type": "vk.comments_collected",
-            "event_version": 1,
-            "aggregate_id": "-1:2:3",
-            "payload": payload,
+            "sourceService": "content-service",
+            "sourceMessageId": str(uuid4()),
+            "batchId": str(uuid4()),
+            "postKey": "-1:2",
+            "chunkIndex": 0,
+            "chunkCount": 1,
+            "comments": comments,
         }
     )
+    wire = WireEvent.model_validate(
+        {
+            "event_id": str(uuid4()),
+            "event_type": "content.canonical_comments_changed",
+            "event_version": 1,
+            "aggregate_type": "content_post",
+            "aggregate_id": "-1:2",
+            "payload": payload.model_dump(),
+            "created_at": "2026-08-09T00:00:00+00:00",
+        }
+    )
+    return wire, payload
 
 
 @pytest.mark.anyio
-async def test_matching_vk_comment_is_returned_by_comments_list():
-    session = FakeSession()
-    service = ModerationService(session)
+async def test_matching_canonical_comment_is_returned_by_comments_list():
+    service = ModerationService(FakeSession())
     service.crud = InMemoryModerationCrud()
     service.keyword_repository = KeywordRepository(["опасно"])
-
-    await service.handle_event(
-        event(
+    wire, payload = event(
+        [
             {
-                "comments": [
-                    {
-                        "id": 3,
-                        "owner_id": -1,
-                        "post_id": 2,
-                        "from_id": 42,
-                        "date": 1700000000,
-                        "text": "Это опасно",
-                    }
-                ]
+                "commentId": 3,
+                "ownerId": -1,
+                "postId": 2,
+                "authorId": 42,
+                "createdAt": "2023-11-14T22:13:20+00:00",
+                "text": "Это опасно",
             }
-        )
+        ]
     )
 
+    await service.handle_event(wire, payload)
     result = await service.get_comments(page=1, limit=25)
 
     assert result["total"] == 1
@@ -105,16 +111,17 @@ async def test_matching_vk_comment_is_returned_by_comments_list():
 
 
 @pytest.mark.anyio
-async def test_non_matching_vk_comment_is_processed_but_not_listed():
-    session = FakeSession()
-    service = ModerationService(session)
+async def test_non_matching_canonical_comment_is_processed_but_not_listed():
+    service = ModerationService(FakeSession())
     service.crud = InMemoryModerationCrud()
     service.keyword_repository = KeywordRepository(["опасно"])
-    vk_event = event({"comments": [{"id": 3, "owner_id": -1, "post_id": 2, "text": "обычно"}]})
+    wire, payload = event(
+        [{"commentId": 3, "ownerId": -1, "postId": 2, "text": "обычно"}]
+    )
 
-    await service.handle_event(vk_event)
+    await service.handle_event(wire, payload)
     result = await service.get_comments(page=1, limit=25)
 
-    assert vk_event.event_id in service.crud.processed
+    assert wire.event_id in service.crud.processed
     assert result["items"] == []
     assert result["total"] == 0
