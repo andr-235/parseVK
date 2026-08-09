@@ -1,81 +1,18 @@
 import asyncio
 import logging
-from contextlib import suppress
-from dataclasses import dataclass
 
 from common.runtime import WorkerHealth
 from common.runtime import supervise as supervise_worker
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.core.config import settings
-from app.domain.exceptions.vk_api import VkApiAuthError
-from app.services.ingestion.kafka_topology import verify_staged_ingestion_topology
 from app.tasks import publish_outbox_forever
+from app.tasks.runtime_supervision import BackgroundRuntime, supervise
 from app.tasks.staged_part_publisher import publish_staged_parts_forever
 from app.tasks.task_runtime import build_execution_worker
 from app.tasks.vk_commands_consumer import VkExecutionCommandsConsumer
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass(slots=True)
-class BackgroundRuntime:
-    tasks: list[asyncio.Task]
-    consumers: list[VkExecutionCommandsConsumer]
-
-    async def stop(self) -> None:
-        for task in self.tasks:
-            task.cancel()
-        for task in self.tasks:
-            with suppress(asyncio.CancelledError):
-                await task
-        for consumer in self.consumers:
-            await consumer.stop()
-
-
-async def supervise(
-    name: str,
-    coro_factory,
-    health_flag: list[bool] | None = None,
-    preflight=None,
-) -> None:
-    retry_delay = 1
-    while True:
-        try:
-            if health_flag is not None:
-                health_flag[0] = False
-            if preflight is not None:
-                await preflight()
-            if health_flag is not None:
-                health_flag[0] = True
-            await coro_factory()
-            return
-        except asyncio.CancelledError:
-            logger.info("%s cancelled, stopping supervise", name)
-            if health_flag is not None:
-                health_flag[0] = False
-            return
-        except VkApiAuthError as error:
-            logger.critical(
-                "%s failed with VK API auth error [%d]: %s. Stopping retries.",
-                name,
-                error.code,
-                error.error_msg,
-            )
-            if health_flag is not None:
-                health_flag[0] = False
-            return
-        except Exception as error:
-            if health_flag is not None:
-                health_flag[0] = False
-            logger.error(
-                "%s crashed: %s. Restarting in %ds...",
-                name,
-                error,
-                retry_delay,
-            )
-            await asyncio.sleep(retry_delay)
-            retry_delay = min(retry_delay * 2, 30)
 
 
 def start_background_runtime(
@@ -111,13 +48,10 @@ def start_background_runtime(
         factory=lambda: publish_outbox_forever(session_factory),
         health=outbox_health,
     )
-    _start_simple_worker(
+    _start_staged_publisher(
         tasks,
-        enabled=settings.staged_part_publisher_enabled,
-        name="Staged ingestion part publisher",
-        factory=lambda: publish_staged_parts_forever(session_factory),
+        session_factory=session_factory,
         health=staged_publisher_health,
-        preflight=_verify_staged_publisher_topology,
     )
 
     if settings.task_worker_enabled:
@@ -143,7 +77,6 @@ def _start_simple_worker(
     name: str,
     factory,
     health: list[bool],
-    preflight=None,
 ) -> None:
     if enabled:
         tasks.append(
@@ -152,7 +85,6 @@ def _start_simple_worker(
                     name,
                     factory,
                     health_flag=health,
-                    preflight=preflight,
                 )
             )
         )
@@ -160,10 +92,24 @@ def _start_simple_worker(
         logger.info("%s disabled by configuration", name)
 
 
-async def _verify_staged_publisher_topology() -> None:
-    await verify_staged_ingestion_topology(
-        bootstrap_servers=settings.kafka_bootstrap_servers,
-        topic=settings.kafka_topic_vk_ingestion,
-        dlq_topic=settings.kafka_topic_vk_ingestion_dlq,
-        min_message_bytes=settings.staged_part_producer_max_request_bytes,
+def _start_staged_publisher(
+    tasks: list[asyncio.Task],
+    *,
+    session_factory: async_sessionmaker,
+    health: list[bool],
+) -> None:
+    if not settings.staged_part_publisher_enabled:
+        logger.info("Staged ingestion part publisher disabled by configuration")
+        return
+
+    tasks.append(
+        asyncio.create_task(
+            supervise(
+                "Staged ingestion part publisher",
+                lambda: publish_staged_parts_forever(
+                    session_factory,
+                    health_flag=health,
+                ),
+            )
+        )
     )

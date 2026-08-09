@@ -28,17 +28,7 @@ async def seed_publishable_post(
     add_execution: bool = True,
 ):
     if add_execution:
-        session.add(
-            VkExecution(
-                id=execution_id,
-                task_id=100,
-                owner_user_id="publisher-test-user",
-                run_id="publisher-test-run",
-                status="running",
-                plan_snapshot={"source": {"externalId": "42"}},
-            )
-        )
-        await session.flush()
+        await _add_execution(session, execution_id)
     batch = StagedIngestionBatch.create(
         execution_id=execution_id,
         attempt_id=attempt_id,
@@ -75,6 +65,66 @@ async def seed_publishable_post(
         },
         staged_at=PREPARED_AT,
     )
+    stored, parts = await _prepare(session, batch, versions)
+    return SimpleNamespace(batch_id=stored.batch_id, part=parts[0])
+
+
+async def seed_publishable_comment_parts(session):
+    await _add_execution(session, EXECUTION_ID)
+    comments = [
+        {"id": 10, "from_id": 1, "text": "a" * 300_000},
+        {"id": 20, "from_id": 2, "text": "b" * 300_000},
+    ]
+    batch = StagedIngestionBatch.create(
+        execution_id=EXECUTION_ID,
+        attempt_id=ATTEMPT_ID,
+        fencing_token=7,
+        source_kind="comment_page",
+        owner_id=-42,
+        post_id=99,
+        page_offset=0,
+        payload={
+            "schemaVersion": 1,
+            "source": {
+                "kind": "comment_page",
+                "ownerId": -42,
+                "postId": 99,
+                "pageOffset": 0,
+                "nextOffset": None,
+            },
+            "observed": {
+                "post": {"owner_id": -42, "id": 99, "from_id": -42},
+                "comments": comments,
+                "profiles": [
+                    {"id": 1, "first_name": "One"},
+                    {"id": 2, "first_name": "Two"},
+                ],
+                "groups": [{"id": 42, "name": "Publisher test group"}],
+            },
+            "providerMetadata": {"count": len(comments)},
+        },
+        staged_at=PREPARED_AT,
+    )
+    stored, parts = await _prepare(session, batch, IngestionPartVersions())
+    assert len(parts) == 2
+    return SimpleNamespace(batch_id=stored.batch_id, parts=parts)
+
+
+async def _add_execution(session, execution_id: UUID) -> None:
+    session.add(
+        VkExecution(
+            id=execution_id,
+            task_id=100,
+            owner_user_id="publisher-test-user",
+            run_id="publisher-test-run",
+            status="running",
+            plan_snapshot={"source": {"externalId": "42"}},
+        )
+    )
+    await session.flush()
+
+
+async def _prepare(session, batch, versions: IngestionPartVersions):
     stored, _ = await SqlAlchemyIngestionStagingRepository(session).stage(batch)
     prepared = prepare_staged_batch(
         stored,
@@ -86,4 +136,4 @@ async def seed_publishable_post(
         prepared.references,
     )
     await session.flush()
-    return SimpleNamespace(batch_id=stored.batch_id, part=parts[0])
+    return stored, parts

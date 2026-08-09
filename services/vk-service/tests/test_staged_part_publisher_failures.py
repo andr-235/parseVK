@@ -2,7 +2,11 @@ from datetime import UTC, datetime
 
 import pytest
 from _part_publisher_test_support import RecordingTransport, build_publisher
-from _staged_part_publisher_fixtures import seed_publishable_post
+from _staged_part_publisher_fixtures import (
+    seed_publishable_comment_parts,
+    seed_publishable_post,
+)
+from sqlalchemy import select
 
 from app.domain.entities.ingestion_part_identity import IngestionPartVersions
 from app.infrastructure.db.models.ingestion_part_publication import (
@@ -68,6 +72,52 @@ async def test_max_attempt_failure_terminates_entire_batch(db_session) -> None:
     assert reference.last_error == "broker rejected message"
     assert part is not None and part.status == "failed"
     assert batch is not None and batch.status == "failed"
+
+
+async def test_terminal_batch_does_not_send_stale_sibling_claim(db_session) -> None:
+    async with SessionLocal.begin() as session:
+        seeded = await seed_publishable_comment_parts(session)
+    transport = RecordingTransport(RuntimeError("broker rejected message"))
+
+    result = await build_publisher(
+        transport,
+        now=datetime.now(UTC),
+        max_attempts=1,
+    ).publish_once()
+
+    assert len(seeded.parts) == 2
+    assert result.claimed == result.failed == 1
+    assert len(transport.calls) == 1
+    async with SessionLocal() as session:
+        statuses = (
+            await session.scalars(
+                select(VkIngestionPartReference.status).where(
+                    VkIngestionPartReference.part_id.in_(
+                        [part.message_id for part in seeded.parts]
+                    )
+                )
+            )
+        ).all()
+    assert statuses.count("failed") == 2
+
+
+async def test_empty_transport_error_uses_exception_name(db_session) -> None:
+    seeded = await _seed()
+    transport = RecordingTransport(TimeoutError())
+
+    result = await build_publisher(
+        transport,
+        now=datetime.now(UTC),
+        max_attempts=1,
+    ).publish_once()
+
+    assert result.claimed == result.failed == 1
+    async with SessionLocal() as session:
+        reference = await session.get(
+            VkIngestionPartReference,
+            seeded.part.message_id,
+        )
+    assert reference is not None and reference.last_error == "TimeoutError"
 
 
 async def test_unsupported_version_is_quarantined_without_send(db_session) -> None:

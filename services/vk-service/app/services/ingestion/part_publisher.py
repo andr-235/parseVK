@@ -73,15 +73,25 @@ class StagedIngestionPartPublisher:
         self.clock = clock or (lambda: datetime.now(UTC))
 
     async def publish_once(self) -> PartPublishResult:
-        now = self._now()
-        recovered, claims = await self.state.claim(
-            worker_id=self.worker_id,
-            batch_size=self.batch_size,
-            lease_expires_at=now + timedelta(seconds=self.lease_seconds),
-        )
-        result = PartPublishResult(recovered=recovered, claimed=len(claims))
-        for claim in claims:
-            result = result.increment(await self._publish_claim(claim))
+        recovered = await self.state.recover(limit=self.batch_size)
+        result = PartPublishResult(recovered=recovered)
+
+        for _ in range(self.batch_size):
+            now = self._now()
+            claims = await self.state.claim(
+                worker_id=self.worker_id,
+                batch_size=1,
+                lease_expires_at=now + timedelta(seconds=self.lease_seconds),
+            )
+            if not claims:
+                break
+
+            claim = claims[0]
+            result = replace(result, claimed=result.claimed + 1)
+            outcome = await self._publish_claim(claim)
+            result = result.increment(outcome)
+            if outcome in {"retried", "failed"}:
+                break
         return result
 
     async def _publish_claim(self, claim: IngestionPartPublicationClaim) -> str:
@@ -96,19 +106,20 @@ class StagedIngestionPartPublisher:
         except IngestionPartPublicationIntegrityError as error:
             await self.state.quarantined(
                 claim,
-                reason=str(error),
+                reason=_error_reason(error),
                 at=self._now(),
             )
             return "quarantined"
         except asyncio.CancelledError:
             raise
         except Exception as error:
+            reason = _error_reason(error)
             if claim.attempts >= self.max_attempts:
-                await self.state.failed(claim, error=str(error), at=self._now())
+                await self.state.failed(claim, error=reason, at=self._now())
                 return "failed"
             await self.state.retry(
                 claim,
-                error=str(error),
+                error=reason,
                 at=self._now(),
                 delay_seconds=self._retry_delay(claim.attempts),
             )
@@ -127,3 +138,7 @@ class StagedIngestionPartPublisher:
         if value.tzinfo is None:
             raise ValueError("publisher clock must return timezone-aware values")
         return value
+
+
+def _error_reason(error: Exception) -> str:
+    return str(error).strip() or type(error).__name__

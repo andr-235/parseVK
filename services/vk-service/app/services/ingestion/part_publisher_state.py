@@ -17,25 +17,30 @@ class PartPublisherStateStore:
     ) -> None:
         self.session_factory = session_factory
 
+    async def recover(self, *, limit: int) -> int:
+        async with self.session_factory() as session:
+            async with session.begin():
+                return await SqlAlchemyIngestionPartPublicationRepository(
+                    session
+                ).recover_missing_references(limit=limit)
+
     async def claim(
         self,
         *,
         worker_id: str,
         batch_size: int,
         lease_expires_at: datetime,
-    ) -> tuple[int, tuple[IngestionPartPublicationClaim, ...]]:
+    ) -> tuple[IngestionPartPublicationClaim, ...]:
         async with self.session_factory() as session:
             async with session.begin():
-                repository = SqlAlchemyIngestionPartPublicationRepository(session)
-                recovered = await repository.recover_missing_references(
-                    limit=batch_size
-                )
-                claims = await repository.claim_pending(
+                claims = await SqlAlchemyIngestionPartPublicationRepository(
+                    session
+                ).claim_pending(
                     worker_id=worker_id,
                     limit=batch_size,
                     lease_expires_at=lease_expires_at,
                 )
-        return recovered, claims
+        return claims
 
     async def published(
         self,

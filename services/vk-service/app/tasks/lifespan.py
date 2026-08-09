@@ -12,8 +12,8 @@ from app.bootstrap import (
 )
 from app.infrastructure.db.session import SessionLocal
 from app.tasks.lifespan_workers import start_background_runtime
-from app.tasks.lifespan_workers import supervise as supervise  # noqa: F401
 from app.tasks.provider_reconciliation import reconcile_provider_account
+from app.tasks.runtime_supervision import supervise as supervise  # noqa: F401
 from app.tasks.startup_checks import schedule_startup_checks
 
 logger = logging.getLogger(__name__)
