@@ -15,7 +15,7 @@ use_service_path()
 
 from app.db.models import ModerationComment, ProcessedEvent
 from app.modules.keywords.matcher import build_keyword_candidates
-from app.modules.moderation.consumer import ProjectionConsumer
+from app.modules.moderation.consumer import ProjectionConsumer, TaskLifecycleConsumer
 from app.modules.moderation.service import ModerationService
 from common.events import ContentCanonicalCommentsChangedV1, WireEvent
 
@@ -81,6 +81,26 @@ def canonical_event(comments, *, post_key="-123:456"):
     return event, payload
 
 
+def task_completed_event(*, version: int = 1):
+    task_id = 42
+    return WireEvent.model_validate(
+        {
+            "event_id": str(uuid4()),
+            "event_type": "task.completed",
+            "event_version": version,
+            "aggregate_type": "task",
+            "aggregate_id": str(task_id),
+            "payload": {
+                "taskId": task_id,
+                "runId": str(uuid4()),
+                "ownerUserId": 7,
+                "taskRevision": 3,
+            },
+            "created_at": "2026-08-09T00:00:00+00:00",
+        }
+    )
+
+
 def service_with(crud, repository):
     service = ModerationService(FakeSession())
     service.crud = crud
@@ -130,6 +150,23 @@ async def test_duplicate_canonical_event_is_replay_safe():
     assert crud.marked == []
 
 
+@pytest.mark.anyio
+async def test_task_completed_schedules_recalculation_once():
+    crud = FakeCrud()
+    service = service_with(crud, FakeKeywordRepository([]))
+    service._schedule_recalculation = AsyncMock()
+    event = task_completed_event()
+
+    assert await service.handle_task_completed(event) is True
+    service._schedule_recalculation.assert_awaited_once_with(event)
+    assert crud.marked == [(event.event_id, "task.completed")]
+
+    crud.processed = True
+    service._schedule_recalculation.reset_mock()
+    assert await service.handle_task_completed(event) is False
+    service._schedule_recalculation.assert_not_awaited()
+
+
 def test_unowned_canonical_payload_is_rejected():
     with pytest.raises(ValidationError):
         ContentCanonicalCommentsChangedV1.model_validate(
@@ -161,6 +198,15 @@ async def test_consumer_ignores_unrelated_content_event():
     ).encode()
 
     await consumer.handle_message(raw)
+
+
+@pytest.mark.anyio
+async def test_task_consumer_rejects_unsupported_version_before_db_access():
+    consumer = TaskLifecycleConsumer()
+    raw = task_completed_event(version=2).model_dump_json().encode()
+
+    with pytest.raises(ValueError, match="unsupported task.completed version"):
+        await consumer.handle_message(raw)
 
 
 @pytest.mark.anyio
