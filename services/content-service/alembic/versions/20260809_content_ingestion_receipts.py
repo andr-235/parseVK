@@ -1,6 +1,6 @@
 """add durable content ingestion receipts
 
-Revision ID: 20260809_content_ingestion_receipts
+Revision ID: 20260809_0007
 Revises: 20260728_0006
 Create Date: 2026-08-09
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "20260809_content_ingestion_receipts"
+revision: str = "20260809_0007"
 down_revision: str | Sequence[str] | None = "20260728_0006"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
