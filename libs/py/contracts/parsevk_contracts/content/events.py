@@ -28,6 +28,7 @@ class ContentCanonicalCommentsChanged(ContractModel):
     source_message_id: UUID
     batch_id: UUID
     post_key: str = Field(min_length=3)
+    post_revision: Annotated[int, Field(gt=0)]
     chunk_index: Annotated[int, Field(ge=0)]
     chunk_count: Annotated[int, Field(gt=0)]
     comments: tuple[ContentCanonicalComment, ...]
