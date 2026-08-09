@@ -35,6 +35,7 @@ class ProjectionConsumer(BaseEventConsumer):
     consumer_group = "moderation-service-content-group"
     consumer_name = "moderation-service-content"
     dlq_topic = CONTENT_DLQ_TOPIC
+    auto_offset_reset = "earliest"
 
     def __init__(self):
         super().__init__(
