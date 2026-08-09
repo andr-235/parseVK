@@ -19,7 +19,10 @@ class Settings(BaseSettings):
     kafka_topic_vk: str = "parsevk.vk.events"
     kafka_topic_vk_ingestion: str = "parsevk.content.ingestion.vk"
     kafka_topic_vk_ingestion_dlq: str = "parsevk.content.ingestion.vk.dlq"
+    kafka_topic_vk_ingestion_ack: str = "parsevk.content.ingestion.acks"
+    kafka_topic_vk_ingestion_ack_dlq: str = "parsevk.content.ingestion.acks.dlq"
     kafka_consumer_enabled: bool = False
+    ingestion_ack_consumer_enabled: bool = False
     outbox_publish_enabled: bool = False
     staged_part_publisher_enabled: bool = False
     staged_part_publisher_batch_size: int = Field(default=50, ge=1, le=1000)

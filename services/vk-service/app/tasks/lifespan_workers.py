@@ -1,12 +1,14 @@
 import asyncio
 import logging
 
+from common.kafka.consumer import BaseEventConsumer
 from common.runtime import WorkerHealth
 from common.runtime import supervise as supervise_worker
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.core.config import settings
 from app.tasks import publish_outbox_forever
+from app.tasks.ingestion_ack_consumer import VkIngestionAckConsumer
 from app.tasks.runtime_supervision import BackgroundRuntime, supervise
 from app.tasks.staged_part_publisher import publish_staged_parts_forever
 from app.tasks.task_runtime import build_execution_worker
@@ -19,12 +21,13 @@ def start_background_runtime(
     session_factory: async_sessionmaker,
     *,
     consumer_health: list[bool],
+    ack_health: list[bool],
     outbox_health: list[bool],
     staged_publisher_health: list[bool],
     execution_health: WorkerHealth,
 ) -> BackgroundRuntime:
     tasks: list[asyncio.Task] = []
-    consumers: list[VkExecutionCommandsConsumer] = []
+    consumers: list[BaseEventConsumer] = []
 
     if settings.kafka_consumer_enabled:
         consumer = VkExecutionCommandsConsumer(session_factory=session_factory)
@@ -40,6 +43,21 @@ def start_background_runtime(
         )
     else:
         logger.info("VK command consumer disabled by configuration")
+
+    if settings.ingestion_ack_consumer_enabled:
+        ack_consumer = VkIngestionAckConsumer(session_factory=session_factory)
+        consumers.append(ack_consumer)
+        tasks.append(
+            asyncio.create_task(
+                supervise(
+                    "Ingestion ACK consumer",
+                    ack_consumer.run_forever,
+                    health_flag=ack_health,
+                )
+            )
+        )
+    else:
+        logger.info("Ingestion ACK consumer disabled by configuration")
 
     _start_simple_worker(
         tasks,

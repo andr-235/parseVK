@@ -19,6 +19,7 @@ from app.tasks.startup_checks import schedule_startup_checks
 logger = logging.getLogger(__name__)
 
 _consumer_healthy: list[bool] = [False]
+_ingestion_ack_consumer_healthy: list[bool] = [False]
 _outbox_publisher_healthy: list[bool] = [False]
 _staged_part_publisher_healthy: list[bool] = [False]
 _execution_worker_health = WorkerHealth()
@@ -37,6 +38,7 @@ async def lifespan(app: FastAPI):
     runtime = start_background_runtime(
         session_factory,
         consumer_health=_consumer_healthy,
+        ack_health=_ingestion_ack_consumer_healthy,
         outbox_health=_outbox_publisher_healthy,
         staged_publisher_health=_staged_part_publisher_healthy,
         execution_health=_execution_worker_health,
@@ -69,6 +71,10 @@ def _token_display_version() -> str:
 
 def get_consumer_healthy() -> bool:
     return _consumer_healthy[0]
+
+
+def get_ingestion_ack_consumer_healthy() -> bool:
+    return _ingestion_ack_consumer_healthy[0]
 
 
 def get_publisher_healthy() -> bool:

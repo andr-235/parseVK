@@ -3,8 +3,9 @@ import logging
 from contextlib import suppress
 from dataclasses import dataclass
 
+from common.kafka.consumer import BaseEventConsumer
+
 from app.domain.exceptions.vk_api import VkApiAuthError
-from app.tasks.vk_commands_consumer import VkExecutionCommandsConsumer
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 @dataclass(slots=True)
 class BackgroundRuntime:
     tasks: list[asyncio.Task]
-    consumers: list[VkExecutionCommandsConsumer]
+    consumers: list[BaseEventConsumer]
 
     async def stop(self) -> None:
         for task in self.tasks:
