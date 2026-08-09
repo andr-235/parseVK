@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from uuid import UUID
 
 from app.modules.ingestion.ack import (
     ACK_EVENT_TYPE,
@@ -9,6 +10,11 @@ from app.modules.ingestion.ack import (
     ack_id_for,
     ack_payload,
     verify_ack,
+)
+from app.modules.ingestion.canonical_events import (
+    CANONICAL_COMMENTS_EVENT_TYPE,
+    MANIFEST_KEY,
+    build_canonical_moderation_manifest,
 )
 from app.modules.ingestion.canonical_repository import CanonicalIngestionRepository
 from app.modules.ingestion.contract import IngestionPartEnvelope
@@ -40,12 +46,28 @@ class IngestionApplicationService:
         if receipt is None:
             await self._assert_no_orphans(part)
             receipt = await self.receipts.create(part)
-            receipt.effect_summary = await self.canonical.apply(part)
+            effects = await self.canonical.apply(part)
             receipt.applied_at = datetime.now(UTC)
+            receipt.effect_summary = {
+                **effects,
+                MANIFEST_KEY: build_canonical_moderation_manifest(
+                    part, created_at=receipt.applied_at
+                ),
+            }
         else:
             self._verify_receipt(receipt, part)
             if receipt.applied_at is None:
                 raise IngestionCorruptionError("committed receipt is not marked applied")
+            # Receipts created during the previous P3 step have no moderation manifest yet.
+            # The immutable replayed part is enough to backfill it without reapplying canonical state.
+            if MANIFEST_KEY not in receipt.effect_summary:
+                receipt.effect_summary = {
+                    **receipt.effect_summary,
+                    MANIFEST_KEY: build_canonical_moderation_manifest(
+                        part, created_at=receipt.applied_at
+                    ),
+                }
+        await self._ensure_canonical_events(receipt)
         await self.receipts.ensure_processed(part.source_message_id, part.event.event_type)
         await self._ensure_ack(receipt, part.event.correlation_id)
         await self.receipts.flush()
@@ -56,6 +78,52 @@ class IngestionApplicationService:
             raise IngestionCorruptionError("processed marker exists without ingestion receipt")
         if await self.receipts.get_ack(ack_id_for(part.source_message_id)) is not None:
             raise IngestionCorruptionError("ACK outbox exists without ingestion receipt")
+
+    async def _ensure_canonical_events(self, receipt: ContentIngestionReceipt) -> None:
+        manifest = receipt.effect_summary.get(MANIFEST_KEY)
+        if not isinstance(manifest, dict) or manifest.get("contractVersion") != 1:
+            raise IngestionCorruptionError("canonical moderation manifest is invalid")
+        events = manifest.get("events")
+        if not isinstance(events, list):
+            raise IngestionCorruptionError("canonical moderation manifest events are invalid")
+        for item in events:
+            event_id = UUID(item["eventId"])
+            existing = await self.receipts.get_outbox(event_id)
+            if existing is not None:
+                expected = (
+                    CANONICAL_COMMENTS_EVENT_TYPE,
+                    manifest["contractVersion"],
+                    item["aggregateType"],
+                    item["aggregateId"],
+                    item.get("correlationId"),
+                    item["dedupeKey"],
+                    item["payload"],
+                    datetime.fromisoformat(item["createdAt"]),
+                )
+                actual = (
+                    existing.event_type,
+                    existing.event_version,
+                    existing.aggregate_type,
+                    existing.aggregate_id,
+                    existing.correlation_id,
+                    existing.dedupe_key,
+                    existing.payload,
+                    existing.created_at,
+                )
+                if actual != expected:
+                    raise IngestionCorruptionError("canonical moderation outbox differs from manifest")
+                continue
+            await self.outbox.add_event(
+                event_id=event_id,
+                event_type=CANONICAL_COMMENTS_EVENT_TYPE,
+                event_version=manifest["contractVersion"],
+                aggregate_type=item["aggregateType"],
+                aggregate_id=item["aggregateId"],
+                correlation_id=item.get("correlationId"),
+                dedupe_key=item["dedupeKey"],
+                payload=item["payload"],
+                created_at=datetime.fromisoformat(item["createdAt"]),
+            )
 
     async def _ensure_ack(
         self, receipt: ContentIngestionReceipt, correlation_id: str | None
