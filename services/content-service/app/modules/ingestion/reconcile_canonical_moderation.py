@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 
+from app.db.models import ContentOutboxEvent
 from app.db.session import SessionLocal
 from app.modules.ingestion.canonical_events import (
     CANONICAL_COMMENTS_EVENT_TYPE,
@@ -47,9 +48,7 @@ async def reconcile_canonical_moderation_outbox() -> dict[str, int]:
                     )
                 for item in events:
                     event_id = UUID(item["eventId"])
-                    existing = await session.get(__import__(
-                        "app.db.models", fromlist=["ContentOutboxEvent"]
-                    ).ContentOutboxEvent, event_id)
+                    existing = await session.get(ContentOutboxEvent, event_id)
                     if existing is not None:
                         expected = (
                             CANONICAL_COMMENTS_EVENT_TYPE,
