@@ -120,7 +120,7 @@ class ModerationCanonicalReconciler:
                             stats.upserted += 1
                             continue
 
-                        external_key = _external_key(comment)
+                        external_key = _moderation_external_key(comment)
                         existing = await session.scalar(
                             select(ModerationComment).where(
                                 ModerationComment.external_key == external_key
@@ -167,16 +167,16 @@ def _canonical_comment_from_api(row: Any) -> ContentCanonicalCommentV1:
     except (KeyError, TypeError, ValueError) as exc:
         raise CanonicalReconciliationError("invalid canonical content row") from exc
 
-    expected_external_key = _external_key(comment)
-    expected_post_key = f"vk_{comment.ownerId}_{comment.postId}"
-    if row.get("externalKey") != expected_external_key:
+    expected_content_key = f"{comment.ownerId}:{comment.postId}:{comment.commentId}"
+    expected_content_post_key = f"{comment.ownerId}:{comment.postId}"
+    if row.get("externalKey") != expected_content_key:
         raise CanonicalReconciliationError("canonical comment externalKey mismatch")
-    if row.get("postExternalKey") != expected_post_key:
+    if row.get("postExternalKey") != expected_content_post_key:
         raise CanonicalReconciliationError("canonical comment postExternalKey mismatch")
     return comment
 
 
-def _external_key(comment: ContentCanonicalCommentV1) -> str:
+def _moderation_external_key(comment: ContentCanonicalCommentV1) -> str:
     return f"vk_{comment.ownerId}_{comment.postId}_{comment.commentId}"
 
 
