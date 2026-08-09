@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +51,31 @@ class ContentCommentsProjectedV1(BaseModel):
     postId: int | None = None
     batchId: str | None = None
     projectedAt: str  # ISO 8601 datetime
+
+
+class ContentCanonicalCommentV1(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ownerId: int
+    postId: int
+    commentId: int
+    authorId: int | None = None
+    text: str | None = None
+    createdAt: str | None = None
+
+
+class ContentCanonicalCommentsChangedV1(BaseModel):
+    """Content-owned moderation feed emitted from durable canonical ingestion."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    sourceService: Literal["content-service"]
+    sourceMessageId: str
+    batchId: str
+    postKey: str
+    chunkIndex: int = Field(ge=0)
+    chunkCount: int = Field(gt=0)
+    comments: list[ContentCanonicalCommentV1]
 
 
 class TaskStateChangedV1(BaseModel):
