@@ -2,17 +2,18 @@ import asyncio
 import json
 import logging
 
+from common.events import ContentCanonicalCommentsChangedV1, WireEvent
+from common.kafka.consumer import BaseEventConsumer
+from prometheus_client import Gauge
+
 from app.core.config import settings
 from app.db.models import ProcessedEvent
 from app.db.session import async_session_maker
 from app.modules.moderation.service import (
     CANONICAL_COMMENTS_EVENT_TYPE,
-    TASK_COMPLETED_EVENT_TYPE,
     ModerationService,
+    TASK_COMPLETED_EVENT_TYPE,
 )
-from common.events import ContentCanonicalCommentsChangedV1, WireEvent
-from common.kafka.consumer import BaseEventConsumer
-from prometheus_client import Gauge
 
 logger = logging.getLogger(__name__)
 
