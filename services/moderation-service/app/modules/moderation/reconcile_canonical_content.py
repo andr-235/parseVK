@@ -8,11 +8,9 @@ from typing import Any
 
 import httpx
 from common.events import ContentCanonicalCommentV1
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.core.config import settings
-from app.db.models import ModerationComment
 from app.db.session import async_session_maker
 from app.modules.keywords.matcher import KeywordMatcher
 from app.modules.keywords.repository import KeywordMatchRepository
@@ -31,9 +29,8 @@ class ReconciliationStats:
     pages: int = 0
     scanned: int = 0
     matching: int = 0
-    upserted: int = 0
-    cleared: int = 0
-    skipped_unmatched: int = 0
+    applied: int = 0
+    stale: int = 0
 
 
 class CanonicalContentClient:
@@ -109,30 +106,20 @@ class ModerationCanonicalReconciler:
                 async with session.begin():
                     crud = ModerationCrudService(session, on_enrich=lambda records: records)
                     for row in items:
-                        comment = _canonical_comment_from_api(row)
+                        comment, post_revision = _canonical_comment_from_api(row)
                         matched_keywords = matcher.match_text(comment.text)
                         stats.scanned += 1
                         if matched_keywords:
                             stats.matching += 1
-                            await crud.upsert_comment(
-                                map_canonical_comment_snapshot(comment, matched_keywords)
-                            )
-                            stats.upserted += 1
-                            continue
-
-                        external_key = _moderation_external_key(comment)
-                        existing = await session.scalar(
-                            select(ModerationComment).where(
-                                ModerationComment.external_key == external_key
-                            )
+                        applied = await crud.apply_canonical_comment(
+                            map_canonical_comment_snapshot(comment, matched_keywords),
+                            post_revision,
+                            allow_equal_revision=True,
                         )
-                        if existing is None:
-                            stats.skipped_unmatched += 1
-                            continue
-                        await crud.upsert_comment(
-                            map_canonical_comment_snapshot(comment, [])
-                        )
-                        stats.cleared += 1
+                        if applied:
+                            stats.applied += 1
+                        else:
+                            stats.stale += 1
 
             next_after_id = page.get("nextAfterId")
             if not isinstance(next_after_id, int):
@@ -150,10 +137,15 @@ class ModerationCanonicalReconciler:
         return stats
 
 
-def _canonical_comment_from_api(row: Any) -> ContentCanonicalCommentV1:
+def _canonical_comment_from_api(
+    row: Any,
+) -> tuple[ContentCanonicalCommentV1, int]:
     if not isinstance(row, dict):
         raise CanonicalReconciliationError("canonical content row must be an object")
     try:
+        post_revision = int(row["postRevision"])
+        if post_revision <= 0:
+            raise ValueError("postRevision must be positive")
         comment = ContentCanonicalCommentV1.model_validate(
             {
                 "ownerId": row["vkOwnerId"],
@@ -173,11 +165,7 @@ def _canonical_comment_from_api(row: Any) -> ContentCanonicalCommentV1:
         raise CanonicalReconciliationError("canonical comment externalKey mismatch")
     if row.get("postExternalKey") != expected_content_post_key:
         raise CanonicalReconciliationError("canonical comment postExternalKey mismatch")
-    return comment
-
-
-def _moderation_external_key(comment: ContentCanonicalCommentV1) -> str:
-    return f"vk_{comment.ownerId}_{comment.postId}_{comment.commentId}"
+    return comment, post_revision
 
 
 async def _run(limit: int) -> int:
