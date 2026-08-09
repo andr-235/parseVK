@@ -53,6 +53,11 @@ class VkIngestionStagingPart(Base):
             "'failed', 'quarantined')",
             name="ck_vk_ingestion_part_status",
         ),
+        CheckConstraint(
+            "status != 'payload_purged' OR "
+            "(wire_bytes IS NULL AND payload_purged_at IS NOT NULL)",
+            name="ck_vk_ingestion_part_purge_atomic",
+        ),
         Index("ix_vk_ingestion_parts_batch", "batch_id", "part_index"),
         Index("ix_vk_ingestion_parts_status", "status", "prepared_at"),
     )
@@ -60,7 +65,7 @@ class VkIngestionStagingPart(Base):
     id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
     batch_id: Mapped[PyUUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("vk_ingestion_staging_batches.id", ondelete="RESTRICT"),
+        ForeignKey("vk_ingestion_staging_batches.id", ondelete="CASCADE"),
         nullable=False,
     )
     part_kind: Mapped[str] = mapped_column(String(16), nullable=False)

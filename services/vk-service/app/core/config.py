@@ -3,11 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_prefix="VK_SERVICE_",
-        extra="ignore",
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_prefix="VK_SERVICE_", extra="ignore")
 
     app_name: str = "parseVK VK Service"
     database_url: str = "postgresql+asyncpg://vk:vk@vk-db:5432/vk"
@@ -28,6 +24,10 @@ class Settings(BaseSettings):
     ingestion_ack_reconciliation_batch_size: int = Field(default=100, ge=1, le=500)
     ingestion_ack_reconciliation_poll_seconds: float = Field(default=30.0, gt=0, le=3600)
     ingestion_ack_reconciliation_min_age_seconds: int = Field(default=60, ge=1, le=86400)
+    ingestion_payload_purge_enabled: bool = False
+    ingestion_payload_purge_batch_size: int = Field(default=50, ge=1, le=500)
+    ingestion_payload_purge_poll_seconds: float = Field(default=60.0, gt=0, le=3600)
+    ingestion_payload_purge_grace_seconds: int = Field(default=3600, ge=60, le=2592000)
     outbox_publish_enabled: bool = False
     staged_part_publisher_enabled: bool = False
     staged_part_publisher_batch_size: int = Field(default=50, ge=1, le=1000)
@@ -36,9 +36,7 @@ class Settings(BaseSettings):
     staged_part_publisher_max_attempts: int = Field(default=5, ge=1, le=100)
     staged_part_publisher_retry_base_seconds: float = Field(default=2.0, gt=0, le=300)
     staged_part_publisher_retry_max_seconds: float = Field(default=300.0, gt=0, le=3600)
-    staged_part_producer_max_request_bytes: int = Field(
-        default=1_048_576, ge=786_432, le=10_485_760
-    )
+    staged_part_producer_max_request_bytes: int = Field(default=1_048_576, ge=786_432, le=10_485_760)
     task_worker_enabled: bool = True
     task_worker_concurrency: int = Field(default=2, ge=1, le=16)
     task_worker_poll_seconds: float = Field(default=1.0, gt=0, le=60)
