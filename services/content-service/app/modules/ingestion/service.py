@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from uuid import UUID
 
 from app.modules.ingestion.ack import (
     ACK_EVENT_TYPE,
@@ -12,10 +11,10 @@ from app.modules.ingestion.ack import (
     verify_ack,
 )
 from app.modules.ingestion.canonical_events import (
-    CANONICAL_COMMENTS_EVENT_TYPE,
     MANIFEST_KEY,
     build_canonical_moderation_manifest,
 )
+from app.modules.ingestion.canonical_outbox import CanonicalModerationOutboxManager
 from app.modules.ingestion.canonical_repository import CanonicalIngestionRepository
 from app.modules.ingestion.contract import IngestionPartEnvelope
 from app.modules.ingestion.models import ContentIngestionReceipt
@@ -30,12 +29,6 @@ __all__ = [
 ]
 
 
-def _utc(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value.replace(tzinfo=UTC)
-    return value.astimezone(UTC)
-
-
 class IngestionApplicationService:
     def __init__(
         self,
@@ -46,6 +39,7 @@ class IngestionApplicationService:
         self.receipts = receipts
         self.canonical = canonical
         self.outbox = outbox
+        self.canonical_outbox = CanonicalModerationOutboxManager(receipts, outbox)
 
     async def apply(self, part: IngestionPartEnvelope) -> ContentIngestionReceipt:
         receipt = await self.receipts.load(part)
@@ -73,7 +67,7 @@ class IngestionApplicationService:
                 raise IngestionCorruptionError("committed receipt is not marked applied")
 
         if MANIFEST_KEY in receipt.effect_summary:
-            await self._ensure_canonical_events(receipt)
+            await self.canonical_outbox.ensure(receipt)
         await self.receipts.ensure_processed(part.source_message_id, part.event.event_type)
         await self._ensure_ack(receipt, part.event.correlation_id)
         await self.receipts.flush()
@@ -88,66 +82,6 @@ class IngestionApplicationService:
         if await self.receipts.has_outbox_dedupe_prefix(canonical_prefix):
             raise IngestionCorruptionError(
                 "canonical moderation outbox exists without ingestion receipt"
-            )
-
-    async def _ensure_canonical_events(self, receipt: ContentIngestionReceipt) -> None:
-        manifest = receipt.effect_summary.get(MANIFEST_KEY)
-        if not isinstance(manifest, dict) or manifest.get("contractVersion") != 1:
-            raise IngestionCorruptionError("canonical moderation manifest is invalid")
-        events = manifest.get("events")
-        if not isinstance(events, list):
-            raise IngestionCorruptionError("canonical moderation manifest events are invalid")
-        for item in events:
-            event_id = UUID(item["eventId"])
-            dedupe_key = item["dedupeKey"]
-            existing = await self.receipts.get_outbox(event_id)
-            by_dedupe = await self.receipts.get_outbox_by_dedupe_key(dedupe_key)
-            if by_dedupe is not None and by_dedupe.id != event_id:
-                raise IngestionCorruptionError(
-                    "canonical moderation dedupe key belongs to a different event"
-                )
-            if existing is not None:
-                self._verify_canonical_outbox(existing, manifest["contractVersion"], item)
-                continue
-            await self.outbox.add_event(
-                event_id=event_id,
-                event_type=CANONICAL_COMMENTS_EVENT_TYPE,
-                event_version=manifest["contractVersion"],
-                aggregate_type=item["aggregateType"],
-                aggregate_id=item["aggregateId"],
-                correlation_id=item.get("correlationId"),
-                dedupe_key=dedupe_key,
-                payload=item["payload"],
-                created_at=datetime.fromisoformat(item["createdAt"]),
-            )
-
-    @staticmethod
-    def _verify_canonical_outbox(existing, version: int, item: dict) -> None:
-        expected_created_at = _utc(datetime.fromisoformat(item["createdAt"]))
-        actual_created_at = _utc(existing.created_at)
-        expected = (
-            CANONICAL_COMMENTS_EVENT_TYPE,
-            version,
-            item["aggregateType"],
-            item["aggregateId"],
-            item.get("correlationId"),
-            item["dedupeKey"],
-            item["payload"],
-            expected_created_at,
-        )
-        actual = (
-            existing.event_type,
-            existing.event_version,
-            existing.aggregate_type,
-            existing.aggregate_id,
-            existing.correlation_id,
-            existing.dedupe_key,
-            existing.payload,
-            actual_created_at,
-        )
-        if actual != expected:
-            raise IngestionCorruptionError(
-                "canonical moderation outbox differs from manifest"
             )
 
     async def _ensure_ack(
