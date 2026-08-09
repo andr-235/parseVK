@@ -1,6 +1,8 @@
 import json
 import logging
 
+from common.events import VkEvent
+from common.kafka.consumer import BaseEventConsumer
 from prometheus_client import Gauge
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
@@ -9,8 +11,6 @@ from app.db.models import ProcessedEvent
 from app.db.session import SessionLocal
 from app.modules.projections.processor import ProjectionRepository
 from app.modules.projections.service import ProjectionService
-from common.events import VkEvent
-from common.kafka.consumer import BaseEventConsumer
 
 logger = logging.getLogger(__name__)
 
