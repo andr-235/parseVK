@@ -17,8 +17,8 @@ from common.events.helpers import (
     get_task_id,
 )
 from common.events.payloads import (
-    ContentCanonicalCommentV1,
     ContentCanonicalCommentsChangedV1,
+    ContentCanonicalCommentV1,
     ContentCommentsProjectedV1,
     ImMessageCollectedPayload,
     TaskStateChangedV1,

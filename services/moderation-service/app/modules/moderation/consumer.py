@@ -11,8 +11,8 @@ from app.db.models import ProcessedEvent
 from app.db.session import async_session_maker
 from app.modules.moderation.service import (
     CANONICAL_COMMENTS_EVENT_TYPE,
-    ModerationService,
     TASK_COMPLETED_EVENT_TYPE,
+    ModerationService,
 )
 
 logger = logging.getLogger(__name__)
