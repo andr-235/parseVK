@@ -7,10 +7,10 @@ OutboxPublisher through the ContentOutboxRepositoryAdapter.
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import ContentOutboxEvent, utcnow
@@ -41,6 +41,17 @@ class OutboxRepository:
             event.locked_at = utcnow()
         await self.session.flush()
         return events
+
+    async def pending_stats(self) -> tuple[int, datetime | None]:
+        row = (
+            await self.session.execute(
+                select(
+                    func.count(ContentOutboxEvent.id),
+                    func.min(ContentOutboxEvent.created_at),
+                ).where(ContentOutboxEvent.status == "pending")
+            )
+        ).one()
+        return int(row[0] or 0), row[1]
 
     async def mark_published(self, event: ContentOutboxEvent) -> None:
         event.status = "published"
