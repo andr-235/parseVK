@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from common.kafka.consumer import BaseEventConsumer
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.core.config import settings
@@ -10,7 +11,6 @@ from app.modules.ingestion.contract import IngressValidationError, parse_ingesti
 from app.modules.ingestion.receipt_repository import IngestionReceiptRepository
 from app.modules.ingestion.service import IngestionApplicationService
 from app.modules.projections.outbox_service import ContentOutboxService
-from common.kafka.consumer import BaseEventConsumer
 
 
 class VkIngestionConsumer(BaseEventConsumer):

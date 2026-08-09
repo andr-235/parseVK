@@ -74,7 +74,7 @@ class ConsumerRetryController:
             logger.error("Failed event %s after %d retries; sending to DLQ", event_id, retry_count)
             await self._send_to_dlq(
                 message.value,
-                original_headers=message.headers,
+                original_headers=getattr(message, "headers", None),
                 event_id=event_id,
                 event_type=event_type,
                 retry_count=retry_count,

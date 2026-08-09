@@ -100,7 +100,7 @@ async def test_duplicate_event_is_noop():
 async def test_unsupported_projection_does_not_create_processed_marker():
     repository = FakeRepository()
     service = ProjectionService(repository)
-    event = envelope("vk.unknown", {})
+    event = envelope("vk.task_failed", {})
 
     assert await service.handle(event) is False
     assert repository.processed == set()
