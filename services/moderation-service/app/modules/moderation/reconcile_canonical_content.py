@@ -14,6 +14,8 @@ from app.modules.keywords.repository import KeywordMatchRepository
 from app.modules.moderation.canonical_reconciliation_client import (
     CanonicalContentClient,
     CanonicalReconciliationError,
+)
+from app.modules.moderation.canonical_reconciliation_client import (
     canonical_comment_from_api as _canonical_comment_from_api,
 )
 from app.modules.moderation.comment_event_mapper import map_canonical_comment_snapshot
