@@ -12,9 +12,9 @@ from app.db.session import async_session_maker
 from app.modules.keywords.matcher import KeywordMatcher
 from app.modules.keywords.repository import KeywordMatchRepository
 from app.modules.moderation.canonical_reconciliation_client import (
+    canonical_comment_from_api as _canonical_comment_from_api,
     CanonicalContentClient,
     CanonicalReconciliationError,
-    canonical_comment_from_api as _canonical_comment_from_api,
 )
 from app.modules.moderation.comment_event_mapper import map_canonical_comment_snapshot
 from app.modules.moderation.crud_service import ModerationCrudService
