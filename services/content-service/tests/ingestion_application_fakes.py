@@ -68,6 +68,22 @@ class FakeReceipts:
     async def get_outbox(self, event_id):
         return self.outbox.get(event_id)
 
+    async def get_outbox_by_dedupe_key(self, dedupe_key):
+        return next(
+            (
+                event
+                for event in self.outbox.values()
+                if event.dedupe_key == dedupe_key
+            ),
+            None,
+        )
+
+    async def has_outbox_dedupe_prefix(self, prefix):
+        return any(
+            event.dedupe_key is not None and event.dedupe_key.startswith(prefix)
+            for event in self.outbox.values()
+        )
+
     async def get_ack(self, event_id):
         return await self.get_outbox(event_id)
 
