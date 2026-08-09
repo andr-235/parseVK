@@ -29,7 +29,8 @@ class FakeReceipts:
     def __init__(self):
         self.receipt = None
         self.processed = set()
-        self.acks = {}
+        self.outbox = {}
+        self.acks = self.outbox
 
     async def load(self, part):
         return self.receipt
@@ -64,8 +65,11 @@ class FakeReceipts:
     async def ensure_processed(self, event_id, event_type):
         self.processed.add(event_id)
 
+    async def get_outbox(self, event_id):
+        return self.outbox.get(event_id)
+
     async def get_ack(self, event_id):
-        return self.acks.get(event_id)
+        return await self.get_outbox(event_id)
 
     async def flush(self):
         return None
@@ -78,9 +82,17 @@ class FakeOutbox:
 
     async def add_event(self, **kwargs):
         self.calls += 1
-        self.receipts.acks[kwargs["event_id"]] = SimpleNamespace(
+        created_at = kwargs.get("created_at") or datetime.now(UTC)
+        self.receipts.outbox[kwargs["event_id"]] = SimpleNamespace(
+            id=kwargs["event_id"],
             event_type=kwargs["event_type"],
+            event_version=kwargs.get("event_version", 1),
+            aggregate_type=kwargs["aggregate_type"],
+            aggregate_id=kwargs["aggregate_id"],
+            correlation_id=kwargs.get("correlation_id"),
+            dedupe_key=kwargs.get("dedupe_key"),
             payload=kwargs["payload"],
+            created_at=created_at,
         )
 
 
