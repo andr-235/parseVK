@@ -42,6 +42,26 @@ class MessageRepository(BaseContentRepository):
             [self.comment_to_dict(row) for row in rows], total, page, limit
         )
 
+    async def list_comments_reconciliation(
+        self,
+        after_id: int | None,
+        limit: int,
+    ) -> dict:
+        stmt = select(ContentComment)
+        if after_id is not None:
+            stmt = stmt.where(ContentComment.id > after_id)
+        result = await self.session.scalars(
+            stmt.order_by(ContentComment.id.asc()).limit(limit + 1)
+        )
+        rows = list(result)
+        has_more = len(rows) > limit
+        items = rows[:limit]
+        return {
+            "items": [self.comment_to_dict(row) for row in items],
+            "nextAfterId": items[-1].id if items else None,
+            "hasMore": has_more,
+        }
+
     async def list_posts_bulk(self, external_keys: list[str]) -> list[dict]:
         rows = await self.session.scalars(
             select(ContentPost).where(
