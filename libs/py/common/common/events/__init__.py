@@ -1,4 +1,11 @@
-from common.events.base import ConsumerEvent, EventEnvelope, ImEvent, TaskEvent, VkEvent, WireEvent
+from common.events.base import (
+    ConsumerEvent,
+    EventEnvelope,
+    ImEvent,
+    TaskEvent,
+    VkEvent,
+    WireEvent,
+)
 from common.events.codec import decode_payload
 from common.events.helpers import (
     get_group_ids,
@@ -10,6 +17,8 @@ from common.events.helpers import (
     get_task_id,
 )
 from common.events.payloads import (
+    ContentCanonicalCommentsChangedV1,
+    ContentCanonicalCommentV1,
     ContentCommentsProjectedV1,
     ImMessageCollectedPayload,
     TaskStateChangedV1,
@@ -53,6 +62,8 @@ __all__ = [
     "ImMessageCollectedPayload",
     "VkCommentsCollectedV1",
     "ContentCommentsProjectedV1",
+    "ContentCanonicalCommentV1",
+    "ContentCanonicalCommentsChangedV1",
     "TaskStateChangedV1",
     "TaskExecutionProgressedPayload",
     "TaskExecutionProgressedV1",

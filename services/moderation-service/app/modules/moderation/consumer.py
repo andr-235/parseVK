@@ -1,20 +1,24 @@
 import asyncio
 import json
 import logging
-from datetime import UTC, datetime, timedelta
+
+from common.events import ContentCanonicalCommentsChangedV1, WireEvent
+from common.kafka.consumer import BaseEventConsumer
+from prometheus_client import Gauge
 
 from app.core.config import settings
 from app.db.models import ProcessedEvent
 from app.db.session import async_session_maker
-from common.events import VkEvent
-from common.kafka.consumer import BaseEventConsumer
-from app.modules.moderation.service import ModerationService
-from prometheus_client import Gauge
+from app.modules.moderation.service import (
+    CANONICAL_COMMENTS_EVENT_TYPE,
+    TASK_COMPLETED_EVENT_TYPE,
+    ModerationService,
+)
 
 logger = logging.getLogger(__name__)
 
-DLQ_TOPIC = "parsevk.vk.dlq"
-CONSUMER_NAME = "moderation-service"
+CONTENT_DLQ_TOPIC = "parsevk.moderation.dlq"
+TASKS_DLQ_TOPIC = "parsevk.tasks.dlq"
 
 try:
     _consumer_lag = Gauge(
@@ -29,14 +33,45 @@ except ValueError:
 
 
 class ProjectionConsumer(BaseEventConsumer):
-    consumer_group = "moderation-service-group"
-    consumer_name = CONSUMER_NAME
-    dlq_topic = DLQ_TOPIC
+    consumer_group = "moderation-service-content-group"
+    consumer_name = "moderation-service-content"
+    dlq_topic = CONTENT_DLQ_TOPIC
+    auto_offset_reset = "earliest"
 
     def __init__(self):
         super().__init__(
             session_factory=async_session_maker,
-            kafka_topic=settings.kafka_topic_vk,
+            kafka_topic=settings.kafka_topic_content,
+            bootstrap_servers=settings.kafka_bootstrap_servers,
+            model_class=ProcessedEvent,
+            lag_gauge=_consumer_lag,
+        )
+
+    async def handle_message(self, raw_value: bytes) -> None:
+        event = WireEvent.model_validate(json.loads(raw_value.decode("utf-8")))
+        if event.event_type != CANONICAL_COMMENTS_EVENT_TYPE:
+            logger.debug("Ignoring unrelated content event type=%s", event.event_type)
+            return
+        if event.event_version != 1:
+            raise ValueError(
+                f"unsupported {CANONICAL_COMMENTS_EVENT_TYPE} version: {event.event_version}"
+            )
+        payload = ContentCanonicalCommentsChangedV1.model_validate(event.payload)
+        async with self.session_factory() as session:
+            async with session.begin():
+                service = ModerationService(session)
+                await service.handle_event(event, payload)
+
+
+class TaskLifecycleConsumer(BaseEventConsumer):
+    consumer_group = "moderation-service-tasks-group"
+    consumer_name = "moderation-service-tasks"
+    dlq_topic = TASKS_DLQ_TOPIC
+
+    def __init__(self):
+        super().__init__(
+            session_factory=async_session_maker,
+            kafka_topic=settings.kafka_topic_tasks,
             bootstrap_servers=settings.kafka_bootstrap_servers,
             model_class=ProcessedEvent,
             lag_gauge=_consumer_lag,
@@ -44,38 +79,39 @@ class ProjectionConsumer(BaseEventConsumer):
         self._pending_recalculation_tasks: set[asyncio.Task] = set()
 
     async def handle_message(self, raw_value: bytes) -> None:
-        payload = json.loads(raw_value.decode("utf-8"))
-        event = VkEvent.model_validate(payload)
-        if event.event_version != 1:
-            logger.warning(
-                "Skipping unsupported event version %d for type %s",
-                event.event_version, event.event_type,
-            )
+        event = WireEvent.model_validate(json.loads(raw_value.decode("utf-8")))
+        if event.event_type != TASK_COMPLETED_EVENT_TYPE:
+            logger.debug("Ignoring unrelated task event type=%s", event.event_type)
             return
-        logger.debug(
-            "Moderation Kafka message received event_id=%s type=%s",
-            event.event_id, event.event_type,
-        )
+        if event.event_version != 1:
+            raise ValueError(
+                f"unsupported {TASK_COMPLETED_EVENT_TYPE} version: {event.event_version}"
+            )
+        required = {"taskId", "runId", "ownerUserId", "taskRevision"}
+        if not required.issubset(event.payload):
+            raise ValueError("task.completed payload is missing required domain fields")
+        if str(event.payload["taskId"]) != event.aggregate_id:
+            raise ValueError("task.completed taskId does not match aggregate_id")
+
         async with self.session_factory() as session:
             async with session.begin():
-                service = ModerationService(session, session_maker=async_session_maker)
-                await service.handle_event(event)
-                # Track any fire-and-forget recalculation tasks
-                for pending_task in service.drain_pending_tasks():
-                    self._pending_recalculation_tasks.add(pending_task)
-                    pending_task.add_done_callback(self._pending_recalculation_tasks.discard)
-                    logger.debug(
-                        "Tracking recalculation task %s",
-                        pending_task.get_name(),
+                service = ModerationService(
+                    session,
+                    session_maker=async_session_maker,
+                )
+                await service.handle_task_completed(event)
+                for pending in service.drain_pending_tasks():
+                    self._pending_recalculation_tasks.add(pending)
+                    pending.add_done_callback(
+                        self._pending_recalculation_tasks.discard
                     )
 
     async def stop(self) -> None:
-        logger.info(
-            "Stopping ProjectionConsumer, cancelling %d pending recalculation tasks",
-            len(self._pending_recalculation_tasks),
-        )
         for task in self._pending_recalculation_tasks:
             task.cancel()
         if self._pending_recalculation_tasks:
-            await asyncio.gather(*self._pending_recalculation_tasks, return_exceptions=True)
+            await asyncio.gather(
+                *self._pending_recalculation_tasks,
+                return_exceptions=True,
+            )
         await super().stop()

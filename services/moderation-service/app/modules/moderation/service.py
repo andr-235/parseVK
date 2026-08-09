@@ -2,23 +2,31 @@ import asyncio
 import logging
 from datetime import UTC, datetime
 
+from common.events import ContentCanonicalCommentsChangedV1, WireEvent
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
 from app.db.models import KeywordRecalculationJob
 from app.modules.keywords.matcher import KeywordMatcher
 from app.modules.keywords.recalculation import RecalculationWorker
 from app.modules.keywords.repository import KeywordMatchRepository
 from app.modules.moderation.comment_event_mapper import (
-    InvalidVkCommentEvent,
-    map_vk_comment_event,
+    InvalidCanonicalCommentEvent,
+    map_canonical_comment_snapshot,
 )
 from app.modules.moderation.crud_service import ModerationCrudService
-from common.events import VkEvent
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 logger = logging.getLogger(__name__)
 
+CANONICAL_COMMENTS_EVENT_TYPE = "content.canonical_comments_changed"
+TASK_COMPLETED_EVENT_TYPE = "task.completed"
+
 
 class ModerationService:
-    def __init__(self, session: AsyncSession, session_maker: async_sessionmaker | None = None):
+    def __init__(
+        self,
+        session: AsyncSession,
+        session_maker: async_sessionmaker | None = None,
+    ):
         self.session = session
         self.session_maker = session_maker
         svc = self
@@ -67,17 +75,27 @@ class ModerationService:
     async def update_status(self, id: int, status: str):
         return await self.crud.update_status(id, status)
 
-    async def handle_event(self, event: VkEvent) -> bool:
-        logger.debug("ModerationService.handle_event: event_id=%s type=%s", event.event_id, event.event_type)
+    async def handle_event(
+        self,
+        event: WireEvent,
+        payload: ContentCanonicalCommentsChangedV1,
+    ) -> bool:
         if await self.crud.is_processed(event.event_id):
-            logger.info("ModerationService.handle_event: duplicate event skipped event_id=%s", event.event_id)
+            logger.info("Duplicate canonical event skipped event_id=%s", event.event_id)
             return False
-        if event.event_type == "vk.comments_collected":
-            await self._handle_comments_collected_batch(event)
-        elif event.event_type == "vk.task_completed":
-            await self._handle_task_completed(event)
-        else:
-            logger.warning("ModerationService.handle_event: unsupported event type=%s", event.event_type)
+        if event.event_type != CANONICAL_COMMENTS_EVENT_TYPE:
+            raise ValueError(f"unsupported canonical moderation event: {event.event_type}")
+        await self._handle_canonical_comments(event, payload)
+        await self.crud.mark_processed(event.event_id, event.event_type)
+        return True
+
+    async def handle_task_completed(self, event: WireEvent) -> bool:
+        if await self.crud.is_processed(event.event_id):
+            logger.info("Duplicate task completion skipped event_id=%s", event.event_id)
+            return False
+        if event.event_type != TASK_COMPLETED_EVENT_TYPE:
+            raise ValueError(f"unsupported task lifecycle event: {event.event_type}")
+        await self._schedule_recalculation(event)
         await self.crud.mark_processed(event.event_id, event.event_type)
         return True
 
@@ -86,54 +104,51 @@ class ModerationService:
         self._pending_tasks.clear()
         return tasks
 
-    async def _handle_comments_collected_batch(self, event: VkEvent) -> None:
-        """Handle vk.comments_collected batch event."""
-        payload = event.payload
-        comments = payload.get("comments", [])
-
-        if not comments:
-            logger.debug(
-                "ModerationService._handle_comments_collected_batch: empty batch event_id=%s",
-                event.event_id,
+    async def _handle_canonical_comments(
+        self,
+        event: WireEvent,
+        payload: ContentCanonicalCommentsChangedV1,
+    ) -> None:
+        if payload.postKey != event.aggregate_id:
+            raise InvalidCanonicalCommentEvent(
+                "canonical payload postKey does not match aggregate_id"
             )
+        for comment in payload.comments:
+            if f"{comment.ownerId}:{comment.postId}" != payload.postKey:
+                raise InvalidCanonicalCommentEvent(
+                    "canonical comment owner/post does not match payload postKey"
+                )
+        if not payload.comments:
             return
 
-        # Load keyword candidates once for the entire batch
         candidates = await self.keyword_repository.load_candidates()
         matcher = KeywordMatcher(candidates)
-        saved_count = 0
-
-        for comment in comments:
-            # Skip comments without text
-            text = comment.get("text") or ""
-            matched_keywords = matcher.match_text(text)
-            if not matched_keywords:
-                continue
-
-            try:
-                payload = map_vk_comment_event(comment, matched_keywords)
-            except InvalidVkCommentEvent:
-                logger.exception(
-                    "ModerationService._handle_comments_collected_batch: invalid comment in batch event_id=%s comment_id=%s",
-                    event.event_id, comment.get("id"),
-                )
-                continue
-
-            await self.crud.upsert_comment(payload)
-            saved_count += 1
+        applied_count = 0
+        matched_count = 0
+        for comment in payload.comments:
+            matched_keywords = matcher.match_text(comment.text or "")
+            applied = await self.crud.apply_canonical_comment(
+                map_canonical_comment_snapshot(comment, matched_keywords),
+                payload.postRevision,
+            )
+            if applied:
+                applied_count += 1
+                if matched_keywords:
+                    matched_count += 1
 
         logger.info(
-            "Processed batch event_id=%s total_comments=%d matched_saved=%d",
-            event.event_id, len(comments), saved_count,
+            "Processed canonical batch event_id=%s revision=%d total_comments=%d applied=%d matched=%d",
+            event.event_id,
+            payload.postRevision,
+            len(payload.comments),
+            applied_count,
+            matched_count,
         )
 
-    async def _handle_task_completed(self, event: VkEvent) -> None:
+    async def _schedule_recalculation(self, event: WireEvent) -> None:
         sm = self.session_maker
-        if not sm:
-            logger.warning(
-                "ModerationService._handle_task_completed: session_maker not available, skipping recalculation"
-            )
-            return
+        if sm is None:
+            raise RuntimeError("session_maker is required for task.completed recalculation")
         async with sm() as session:
             job = KeywordRecalculationJob(
                 status="pending",
@@ -142,11 +157,16 @@ class ModerationService:
             session.add(job)
             await session.commit()
             job_id = job.id
-        logger.info(
-            "ModerationService._handle_task_completed: created recalculation job=%d from event=%s",
-            job_id, event.event_id,
-        )
         worker = RecalculationWorker(sm)
         task = asyncio.create_task(worker.run_recalculation(job_id))
         self._pending_tasks.append(task)
-        task.add_done_callback(lambda t: self._pending_tasks.remove(t))
+        task.add_done_callback(
+            lambda completed: self._pending_tasks.remove(completed)
+            if completed in self._pending_tasks
+            else None
+        )
+        logger.info(
+            "Created recalculation job=%d from canonical task event=%s",
+            job_id,
+            event.event_id,
+        )

@@ -30,8 +30,9 @@ class ContentOutboxService:
         event_version: int = 1,
         dedupe_key: str | None = None,
         event_id: UUID | None = None,
+        created_at: datetime | None = None,
     ) -> None:
-        now = datetime.now(UTC)
+        now = created_at or datetime.now(UTC)
         stmt = insert(ContentOutboxEvent).values(
             id=event_id or uuid4(),
             event_type=event_type,

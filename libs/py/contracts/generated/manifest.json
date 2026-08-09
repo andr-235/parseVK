@@ -3,6 +3,24 @@
     {
       "causationPolicy": "optional",
       "consumers": [
+        "moderation-service"
+      ],
+      "correlationRequired": false,
+      "messageType": "content.canonical_comments_changed",
+      "partitionKey": {
+        "paths": [
+          "payload.postKey"
+        ],
+        "separator": ":"
+      },
+      "producers": [
+        "content-service"
+      ],
+      "topic": "parsevk.content.events"
+    },
+    {
+      "causationPolicy": "optional",
+      "consumers": [
         "vk-service"
       ],
       "correlationRequired": false,

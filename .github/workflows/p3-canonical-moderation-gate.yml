@@ -1,0 +1,93 @@
+name: P3 Canonical Moderation Gate
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/p3-canonical-moderation-gate.yml'
+      - 'libs/py/common/**'
+      - 'libs/py/contracts/**'
+      - 'services/content-service/**'
+      - 'services/moderation-service/**'
+      - 'docker-compose.yml'
+      - 'docs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p3-canonical-moderation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/libs/py/common:${{ github.workspace }}/libs/py/contracts
+
+jobs:
+  content-postgres-kafka-replay:
+    name: Content PostgreSQL Kafka Replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install content-service dependencies
+        working-directory: services/content-service
+        run: uv sync --extra test --frozen
+      - name: Run real crash and replay path repeatedly
+        working-directory: services/content-service
+        env:
+          P3_CANONICAL_E2E_REPEATS: '3'
+        run: |
+          set +e
+          uv run pytest -q --strict-markers \
+            -o addopts="--import-mode=importlib" \
+            -m integration \
+            tests/p3/test_canonical_moderation_e2e.py \
+            2>&1 | tee p3-canonical-e2e.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [[ "$status" -ne 0 ]]; then
+            detail=$(tail -n 140 p3-canonical-e2e.log)
+            detail=${detail//'%'/'%25'}
+            detail=${detail//$'\r'/'%0D'}
+            detail=${detail//$'\n'/'%0A'}
+            echo "::error title=P3 canonical moderation E2E failure::$detail"
+          fi
+          exit "$status"
+
+  contract-drift:
+    name: Canonical Contract Drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install contract dependencies
+        working-directory: libs/py/contracts
+        run: uv sync --group dev --frozen
+      - name: Validate contract registry and generated artifacts
+        working-directory: libs/py/contracts
+        run: |
+          uv run python -m parsevk_contracts.generation.cli validate-registry
+          uv run python -m parsevk_contracts.generation.cli validate-policy
+          uv run python -m parsevk_contracts.generation.cli check
+
+  gate:
+    name: P3 Canonical Moderation Gate
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - content-postgres-kafka-replay
+      - contract-drift
+    steps:
+      - name: Enforce P3 canonical checks
+        env:
+          E2E_RESULT: ${{ needs.content-postgres-kafka-replay.result }}
+          CONTRACT_RESULT: ${{ needs.contract-drift.result }}
+        run: |
+          set -euo pipefail
+          [[ "$E2E_RESULT" == "success" ]]
+          [[ "$CONTRACT_RESULT" == "success" ]]

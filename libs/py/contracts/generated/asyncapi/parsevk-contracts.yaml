@@ -5,6 +5,11 @@ info:
   description: ParseVK Kafka message contracts
 defaultContentType: application/json
 channels:
+  parsevk_content_events:
+    address: parsevk.content.events
+    messages:
+      content_canonical_comments_changed:
+        $ref: '#/components/messages/content_canonical_comments_changed'
   parsevk_sources_events:
     address: parsevk.sources.events
     messages:
@@ -27,6 +32,18 @@ channels:
       vk_ingestion_post-part-prepared:
         $ref: '#/components/messages/vk_ingestion_post-part-prepared'
 operations:
+  content_service_send_content_canonical_comments_changed:
+    action: send
+    channel:
+      $ref: '#/channels/parsevk_content_events'
+    messages:
+    - $ref: '#/channels/parsevk_content_events/messages/content_canonical_comments_changed'
+  moderation_service_receive_content_canonical_comments_changed:
+    action: receive
+    channel:
+      $ref: '#/channels/parsevk_content_events'
+    messages:
+    - $ref: '#/channels/parsevk_content_events/messages/content_canonical_comments_changed'
   tasks_service_send_sources_access_granted:
     action: send
     channel:
@@ -101,6 +118,13 @@ operations:
     - $ref: '#/channels/parsevk_content_ingestion_vk/messages/vk_ingestion_post-part-prepared'
 components:
   messages:
+    content_canonical_comments_changed:
+      name: content.canonical_comments_changed
+      title: content.canonical_comments_changed
+      summary: content.canonical_comments_changed
+      contentType: application/json
+      payload:
+        $ref: ../json-schema/content.canonical_comments_changed.json
     sources_access_granted:
       name: sources.access.granted
       title: sources.access.granted

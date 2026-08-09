@@ -2,8 +2,10 @@
 
 import asyncio
 import logging
+from datetime import UTC, datetime
 
 from common.runtime import WorkerHealth
+from prometheus_client import REGISTRY, Gauge
 
 from app.core.config import settings
 from app.db.session import SessionLocal
@@ -19,6 +21,23 @@ from app.modules.outbox.repository import OutboxRepository
 logger = logging.getLogger(__name__)
 
 
+def _gauge(name: str, description: str) -> Gauge:
+    try:
+        return Gauge(name, description)
+    except ValueError:
+        return REGISTRY._names_to_collectors[name]  # type: ignore[return-value]
+
+
+_OUTBOX_PENDING = _gauge(
+    "content_outbox_pending_events",
+    "Number of pending content outbox events",
+)
+_OUTBOX_OLDEST_AGE = _gauge(
+    "content_outbox_oldest_pending_seconds",
+    "Age in seconds of the oldest pending content outbox event",
+)
+
+
 def _topic_for(message) -> str:
     if message.event_type == ACK_EVENT_TYPE:
         return settings.kafka_topic_vk_ingestion_ack
@@ -29,6 +48,21 @@ def _dlq_topic_for(message) -> str:
     if message.event_type == ACK_EVENT_TYPE:
         return settings.kafka_topic_vk_ingestion_dlq
     return settings.kafka_topic_content_dlq
+
+
+def _normalize_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
+def _observe_outbox(pending: int, oldest_created_at: datetime | None) -> None:
+    _OUTBOX_PENDING.set(pending)
+    if oldest_created_at is None:
+        _OUTBOX_OLDEST_AGE.set(0)
+        return
+    age = (datetime.now(UTC) - _normalize_utc(oldest_created_at)).total_seconds()
+    _OUTBOX_OLDEST_AGE.set(max(age, 0.0))
 
 
 async def publish_outbox_forever(health: WorkerHealth) -> None:
@@ -46,7 +80,8 @@ async def publish_outbox_forever(health: WorkerHealth) -> None:
             try:
                 async with SessionLocal() as session:
                     async with session.begin():
-                        repository = ContentOutboxRepositoryAdapter(OutboxRepository(session))
+                        inner_repository = OutboxRepository(session)
+                        repository = ContentOutboxRepositoryAdapter(inner_repository)
                         publisher = OutboxPublisher(
                             repository=repository,
                             producer=producer,
@@ -61,6 +96,8 @@ async def publish_outbox_forever(health: WorkerHealth) -> None:
                             headers_fn=ingestion_ack_headers,
                         )
                         count = await publisher.publish_batch()
+                        pending, oldest = await inner_repository.pending_stats()
+                        _observe_outbox(pending, oldest)
                         if count:
                             logger.info("Content outbox batch published: %d events", count)
                         health.mark_cycle_success()

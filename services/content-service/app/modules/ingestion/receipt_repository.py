@@ -86,8 +86,24 @@ class IngestionReceiptRepository:
         )
         await self.session.execute(stmt)
 
-    async def get_ack(self, event_id: UUID) -> ContentOutboxEvent | None:
+    async def get_outbox(self, event_id: UUID) -> ContentOutboxEvent | None:
         return await self.session.get(ContentOutboxEvent, event_id)
+
+    async def get_outbox_by_dedupe_key(self, dedupe_key: str) -> ContentOutboxEvent | None:
+        return await self.session.scalar(
+            select(ContentOutboxEvent).where(ContentOutboxEvent.dedupe_key == dedupe_key)
+        )
+
+    async def has_outbox_dedupe_prefix(self, prefix: str) -> bool:
+        value = await self.session.scalar(
+            select(ContentOutboxEvent.id)
+            .where(ContentOutboxEvent.dedupe_key.like(f"{prefix}%"))
+            .limit(1)
+        )
+        return value is not None
+
+    async def get_ack(self, event_id: UUID) -> ContentOutboxEvent | None:
+        return await self.get_outbox(event_id)
 
     async def flush(self) -> None:
         await self.session.flush()

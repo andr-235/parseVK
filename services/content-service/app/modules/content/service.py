@@ -46,6 +46,11 @@ class ContentService:
     async def list_comments(self, page: int, limit: int) -> dict:
         return await self._posts.list_comments(page, limit)
 
+    async def list_comments_reconciliation(
+        self, after_id: int | None, limit: int
+    ) -> dict:
+        return await self._posts.list_comments_reconciliation(after_id, limit)
+
     async def list_authors(
         self,
         limit: int = 20,
