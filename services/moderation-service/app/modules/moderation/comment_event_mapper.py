@@ -11,12 +11,10 @@ class InvalidCanonicalCommentEvent(ValueError):
     pass
 
 
-def map_canonical_comment_event(
+def map_canonical_comment_snapshot(
     comment: ContentCanonicalCommentV1,
     matched_keywords: list[str],
 ) -> dict[str, Any]:
-    if not matched_keywords:
-        raise InvalidCanonicalCommentEvent("matched_keywords cannot be empty for persistence")
     created_at: datetime | None = None
     if comment.createdAt is not None:
         try:
@@ -35,10 +33,19 @@ def map_canonical_comment_event(
         "matched_keywords": sorted(set(matched_keywords)),
     }
     logger.debug(
-        "Mapped canonical comment: owner_id=%s post_id=%s comment_id=%s matched_count=%d",
+        "Mapped canonical comment snapshot: owner_id=%s post_id=%s comment_id=%s matched_count=%d",
         comment.ownerId,
         comment.postId,
         comment.commentId,
         len(payload["matched_keywords"]),
     )
     return payload
+
+
+def map_canonical_comment_event(
+    comment: ContentCanonicalCommentV1,
+    matched_keywords: list[str],
+) -> dict[str, Any]:
+    if not matched_keywords:
+        raise InvalidCanonicalCommentEvent("matched_keywords cannot be empty for persistence")
+    return map_canonical_comment_snapshot(comment, matched_keywords)
