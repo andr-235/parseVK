@@ -73,6 +73,7 @@ class ContentCanonicalCommentsChangedV1(BaseModel):
     sourceMessageId: str
     batchId: str
     postKey: str
+    postRevision: int = Field(gt=0)
     chunkIndex: int = Field(ge=0)
     chunkCount: int = Field(gt=0)
     comments: list[ContentCanonicalCommentV1]
