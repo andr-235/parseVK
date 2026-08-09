@@ -2,6 +2,9 @@ import asyncio
 import logging
 from datetime import UTC, datetime
 
+from common.events import ContentCanonicalCommentsChangedV1, WireEvent
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
 from app.db.models import KeywordRecalculationJob
 from app.modules.keywords.matcher import KeywordMatcher
 from app.modules.keywords.recalculation import RecalculationWorker
@@ -11,8 +14,6 @@ from app.modules.moderation.comment_event_mapper import (
     map_canonical_comment_snapshot,
 )
 from app.modules.moderation.crud_service import ModerationCrudService
-from common.events import ContentCanonicalCommentsChangedV1, WireEvent
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 logger = logging.getLogger(__name__)
 
