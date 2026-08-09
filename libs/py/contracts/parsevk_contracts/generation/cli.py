@@ -7,20 +7,11 @@ import sys
 import tempfile
 from pathlib import Path
 
-from parsevk_contracts.catalog import ContractCatalog
 from parsevk_contracts.generation import generate_all
 from parsevk_contracts.generation.policy_evolution import compare_generated_contracts
 from parsevk_contracts.generation.policy_layout import validate_unversioned_layout
+from parsevk_contracts.registry import CATALOG
 from parsevk_contracts.registry_validation import validate_registry
-from parsevk_contracts.sources import SOURCES_CATALOG
-from parsevk_contracts.vk.commands import CATALOG as VK_CATALOG
-from parsevk_contracts.vk.ingestion import CATALOG as VK_INGESTION_CATALOG
-
-CATALOG = ContractCatalog.from_contracts(
-    VK_CATALOG.contracts
-    + VK_INGESTION_CATALOG.contracts
-    + SOURCES_CATALOG.contracts
-)
 
 
 def _tree_files(root: Path) -> set[Path]:

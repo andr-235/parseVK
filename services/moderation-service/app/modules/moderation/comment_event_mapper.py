@@ -1,57 +1,51 @@
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
+
+from common.events import ContentCanonicalCommentV1
 
 logger = logging.getLogger(__name__)
 
 
-class InvalidVkCommentEvent(ValueError):
+class InvalidCanonicalCommentEvent(ValueError):
     pass
 
 
-def _required_int(comment: dict[str, Any], field: str) -> int:
-    value = comment.get(field)
-    if value is None:
-        raise InvalidVkCommentEvent(f"VK comment field is required: {field}")
-    try:
-        return int(value)
-    except (TypeError, ValueError) as exc:
-        raise InvalidVkCommentEvent(f"VK comment field must be an integer: {field}") from exc
-
-
-def _vk_timestamp(value: Any) -> datetime | None:
-    if value is None:
-        return None
-    try:
-        return datetime.fromtimestamp(int(value), UTC)
-    except (TypeError, ValueError) as exc:
-        raise InvalidVkCommentEvent("VK comment field must be a unix timestamp: date") from exc
-
-
-def map_vk_comment_event(
-    comment: dict[str, Any],
+def map_canonical_comment_snapshot(
+    comment: ContentCanonicalCommentV1,
     matched_keywords: list[str],
 ) -> dict[str, Any]:
-    if not matched_keywords:
-        raise InvalidVkCommentEvent("matched_keywords cannot be empty for persistence")
-    owner_id = _required_int(comment, "owner_id")
-    post_id = _required_int(comment, "post_id")
-    comment_id = _required_int(comment, "id")
-    author_vk_id = comment.get("from_id")
+    created_at: datetime | None = None
+    if comment.createdAt is not None:
+        try:
+            created_at = datetime.fromisoformat(comment.createdAt)
+        except ValueError as exc:
+            raise InvalidCanonicalCommentEvent(
+                "canonical comment createdAt must be ISO 8601"
+            ) from exc
     payload = {
-        "external_key": f"vk_{owner_id}_{post_id}_{comment_id}",
-        "post_external_key": f"vk_{owner_id}_{post_id}",
-        "text": comment.get("text"),
-        "date": _vk_timestamp(comment.get("date")),
-        "author_vk_id": int(author_vk_id) if author_vk_id is not None else None,
+        "external_key": f"vk_{comment.ownerId}_{comment.postId}_{comment.commentId}",
+        "post_external_key": f"vk_{comment.ownerId}_{comment.postId}",
+        "text": comment.text,
+        "date": created_at,
+        "author_vk_id": comment.authorId,
         "source": "VK",
         "matched_keywords": sorted(set(matched_keywords)),
     }
     logger.debug(
-        "Mapped VK comment event: owner_id=%s post_id=%s comment_id=%s matched_count=%d",
-        owner_id,
-        post_id,
-        comment_id,
+        "Mapped canonical comment snapshot: owner_id=%s post_id=%s comment_id=%s matched_count=%d",
+        comment.ownerId,
+        comment.postId,
+        comment.commentId,
         len(payload["matched_keywords"]),
     )
     return payload
+
+
+def map_canonical_comment_event(
+    comment: ContentCanonicalCommentV1,
+    matched_keywords: list[str],
+) -> dict[str, Any]:
+    if not matched_keywords:
+        raise InvalidCanonicalCommentEvent("matched_keywords cannot be empty for persistence")
+    return map_canonical_comment_snapshot(comment, matched_keywords)

@@ -30,7 +30,7 @@ class CanonicalIngestionRepository:
         existing_comments = await self._existing_comments(comment_keys)
         for author in part.authors:
             await upsert_author(self.session, author)
-        await upsert_post(self.session, part.post)
+        post_revision = await upsert_post(self.session, part.post)
         for comment in comments:
             await upsert_comment(self.session, comment)
         if comments:
@@ -42,6 +42,7 @@ class CanonicalIngestionRepository:
             "authorsUpdated": len(author_ids & existing_authors),
             "commentsInserted": len(comment_keys - existing_comments),
             "commentsUpdated": len(comment_keys & existing_comments),
+            "postRevision": post_revision,
         }
 
     async def _existing_authors(self, ids: set[int]) -> set[int]:

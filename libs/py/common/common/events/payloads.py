@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,39 @@ class ContentCommentsProjectedV1(BaseModel):
     ownerId: int | None = None
     postId: int | None = None
     batchId: str | None = None
-    projectedAt: str  # ISO 8601 datetime
+    projectedAt: str
+
+
+class ContentCanonicalCommentV1(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ownerId: int
+    postId: int
+    commentId: int
+    authorId: int | None = None
+    text: str | None = None
+    createdAt: str | None = None
+
+
+class ContentCanonicalCommentsChangedV1(BaseModel):
+    """Content-owned moderation feed emitted from durable canonical ingestion."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    sourceService: Literal["content-service"]
+    sourceMessageId: str
+    batchId: str
+    postKey: str
+    postRevision: int = Field(gt=0)
+    chunkIndex: int = Field(ge=0)
+    chunkCount: int = Field(gt=0)
+    comments: list[ContentCanonicalCommentV1]
+
+    @model_validator(mode="after")
+    def validate_chunk_bounds(self):
+        if self.chunkIndex >= self.chunkCount:
+            raise ValueError("chunkIndex must be smaller than chunkCount")
+        return self
 
 
 class TaskStateChangedV1(BaseModel):

@@ -4,10 +4,12 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from app.db.models import ModerationComment, ProcessedEvent
 from sqlalchemy import and_, case, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.models import ModerationComment, ProcessedEvent
+from app.modules.moderation.projection_models import CanonicalCommentRevision
 
 CONSUMER_NAME = "moderation-service"
 
@@ -207,9 +209,8 @@ class ModerationCrudService:
 
     async def upsert_comment(self, comment_data: dict) -> ModerationComment:
         logger.debug("ModerationCrudService.upsert_comment")
-        stmt = (
-            select(ModerationComment)
-            .where(ModerationComment.external_key == comment_data["external_key"])
+        stmt = select(ModerationComment).where(
+            ModerationComment.external_key == comment_data["external_key"]
         )
         result = await self.session.execute(stmt)
         existing = result.scalar_one_or_none()
@@ -222,14 +223,77 @@ class ModerationCrudService:
             existing.updated_at = now
             logger.info("ModerationCrudService.upsert_comment: updated comment %d", existing.id)
             return existing
-        else:
-            comment = ModerationComment(**comment_data, updated_at=now)
-            self.session.add(comment)
-            await self.session.flush()
-            logger.info("ModerationCrudService.upsert_comment: created comment %d", comment.id)
-            return comment
+        comment = ModerationComment(**comment_data, updated_at=now)
+        self.session.add(comment)
+        await self.session.flush()
+        logger.info("ModerationCrudService.upsert_comment: created comment %d", comment.id)
+        return comment
 
-    async def mark_processed(self, event_id: UUID, event_type: str, consumer_name: str | None = None) -> None:
+    async def apply_canonical_comment(
+        self,
+        comment_data: dict,
+        post_revision: int,
+        *,
+        allow_equal_revision: bool = False,
+    ) -> bool:
+        if post_revision <= 0:
+            raise ValueError("post_revision must be positive")
+        external_key = comment_data["external_key"]
+        now = datetime.now(UTC)
+        if allow_equal_revision:
+            revision_predicate = CanonicalCommentRevision.post_revision <= post_revision
+        else:
+            revision_predicate = CanonicalCommentRevision.post_revision < post_revision
+        revision_stmt = (
+            insert(CanonicalCommentRevision)
+            .values(
+                external_key=external_key,
+                post_revision=post_revision,
+                updated_at=now,
+            )
+            .on_conflict_do_update(
+                index_elements=[CanonicalCommentRevision.external_key],
+                set_={"post_revision": post_revision, "updated_at": now},
+                where=revision_predicate,
+            )
+            .returning(CanonicalCommentRevision.external_key)
+        )
+        accepted = (await self.session.execute(revision_stmt)).scalar_one_or_none()
+        if accepted is None:
+            logger.info(
+                "Stale canonical comment skipped external_key=%s revision=%d",
+                external_key,
+                post_revision,
+            )
+            return False
+
+        if comment_data.get("matched_keywords"):
+            await self.upsert_comment(comment_data)
+            return True
+
+        existing = await self.session.scalar(
+            select(ModerationComment).where(
+                ModerationComment.external_key == external_key
+            )
+        )
+        if existing is None:
+            return True
+        for key, value in comment_data.items():
+            if hasattr(existing, key):
+                setattr(existing, key, value)
+        existing.updated_at = now
+        logger.info(
+            "Canonical comment no longer matches; projection hidden external_key=%s",
+            external_key,
+        )
+        return True
+
+    async def mark_processed(
+        self,
+        event_id: UUID,
+        event_type: str,
+        consumer_name: str | None = None,
+    ) -> None:
         logger.debug("ModerationCrudService.mark_processed: event_id=%s, type=%s", event_id, event_type)
         now = datetime.now(UTC)
         stmt = insert(ProcessedEvent).values(
