@@ -10,9 +10,10 @@ from _service_path import use_service_path
 
 use_service_path()
 
+from common.events import ContentCanonicalCommentsChangedV1, WireEvent
+
 from app.modules.keywords.matcher import build_keyword_candidates
 from app.modules.moderation.service import ModerationService
-from common.events import ContentCanonicalCommentsChangedV1, WireEvent
 
 
 class FakeSession:
