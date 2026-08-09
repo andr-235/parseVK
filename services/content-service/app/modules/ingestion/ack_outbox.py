@@ -19,8 +19,6 @@ async def ensure_ack_outbox(
     receipts: IngestionReceiptRepository,
     outbox: ContentOutboxService,
     receipt: ContentIngestionReceipt,
-    *,
-    correlation_id: str | None = None,
 ) -> dict:
     payload = ack_payload(receipt)
     dedupe_key = ack_dedupe_key(receipt)
@@ -37,7 +35,7 @@ async def ensure_ack_outbox(
         event_version=1,
         aggregate_type="vk_ingestion_part",
         aggregate_id=str(receipt.source_message_id),
-        correlation_id=correlation_id,
+        correlation_id=receipt.correlation_id,
         dedupe_key=dedupe_key,
         payload=payload,
     )
@@ -60,6 +58,7 @@ def _verify_ack_identity(existing, receipt, payload: dict, dedupe_key: str) -> N
         1,
         "vk_ingestion_part",
         str(receipt.source_message_id),
+        receipt.correlation_id,
         dedupe_key,
     )
     actual = (
@@ -67,6 +66,7 @@ def _verify_ack_identity(existing, receipt, payload: dict, dedupe_key: str) -> N
         existing.event_version,
         existing.aggregate_type,
         existing.aggregate_id,
+        existing.correlation_id,
         existing.dedupe_key,
     )
     if actual != expected:

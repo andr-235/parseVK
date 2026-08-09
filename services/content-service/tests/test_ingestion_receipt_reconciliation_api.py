@@ -17,6 +17,7 @@ MESSAGE_ID = UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")
 ACK_ID = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 RECEIPT_ID = UUID("dddddddd-dddd-dddd-dddd-dddddddddddd")
 BATCH_ID = UUID("cccccccc-cccc-cccc-cccc-cccccccccccc")
+CORRELATION_ID = "task-run:447:recovery"
 
 
 class FakeRepository:
@@ -65,6 +66,7 @@ class FakeRepository:
             page_digest="1" * 64,
             part_digest="2" * 64,
             wire_digest="3" * 64,
+            correlation_id=CORRELATION_ID,
             applied_at=datetime(2026, 8, 9, tzinfo=UTC),
             effect_summary={"comments": 1},
         )
@@ -83,6 +85,7 @@ class FakeOutbox:
             event_version=values["event_version"],
             aggregate_type=values["aggregate_type"],
             aggregate_id=values["aggregate_id"],
+            correlation_id=values["correlation_id"],
             dedupe_key=values["dedupe_key"],
             payload=values["payload"],
         )
@@ -115,4 +118,5 @@ async def test_receipt_reconciliation_regenerates_durable_ack_evidence() -> None
     assert repository.flushes == 1
     assert len(outbox.calls) == 1
     assert outbox.calls[0]["event_id"] == ACK_ID
+    assert outbox.calls[0]["correlation_id"] == CORRELATION_ID
     assert outbox.calls[0]["dedupe_key"] == f"ingestion-ack:{MESSAGE_ID}"

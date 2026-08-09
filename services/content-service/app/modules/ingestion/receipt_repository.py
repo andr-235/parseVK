@@ -77,6 +77,7 @@ class IngestionReceiptRepository:
             wire_bytes=part.wire_bytes,
             effect_summary={},
             ack_event_id=ack_event_id(part.source_message_id),
+            correlation_id=part.event.correlation_id,
             applied_at=None,
             created_at=now,
         )
@@ -103,9 +104,7 @@ class IngestionReceiptRepository:
                 processed_at=datetime.now(UTC),
                 retry_count=0,
             )
-            .on_conflict_do_nothing(
-                constraint="uq_processed_events_consumer_event"
-            )
+            .on_conflict_do_nothing(constraint="uq_processed_events_consumer_event")
         )
         await self.session.execute(stmt)
 

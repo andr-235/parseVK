@@ -62,18 +62,14 @@ class IngestionApplicationService:
             }
         else:
             self._verify_receipt(receipt, part)
+            self._merge_correlation(receipt, part.event.correlation_id)
             if receipt.applied_at is None:
                 raise IngestionCorruptionError("committed receipt is not marked applied")
 
         if MANIFEST_KEY in receipt.effect_summary:
             await self.canonical_outbox.ensure(receipt)
         await self.receipts.ensure_processed(part.source_message_id, part.event.event_type)
-        await ensure_ack_outbox(
-            self.receipts,
-            self.outbox,
-            receipt,
-            correlation_id=part.event.correlation_id,
-        )
+        await ensure_ack_outbox(self.receipts, self.outbox, receipt)
         await self.receipts.flush()
         return receipt
 
@@ -104,3 +100,13 @@ class IngestionApplicationService:
         )
         if actual != expected:
             raise IngestionIdentityCollision("receipt identity has different immutable content")
+
+    @staticmethod
+    def _merge_correlation(receipt: ContentIngestionReceipt, incoming: str | None) -> None:
+        if receipt.correlation_id is None:
+            receipt.correlation_id = incoming
+            return
+        if incoming is not None and receipt.correlation_id != incoming:
+            raise IngestionIdentityCollision(
+                "receipt identity has different correlation metadata"
+            )
