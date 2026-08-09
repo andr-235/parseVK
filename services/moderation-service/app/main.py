@@ -6,13 +6,14 @@ from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
-from app.modules.moderation.consumer import ProjectionConsumer
+from app.modules.moderation.consumer import ProjectionConsumer, TaskLifecycleConsumer
 from app.modules.moderation.router import router as moderation_router
 from app.modules.photo_analysis.router import router as photo_analysis_router
 
 logger = logging.getLogger(__name__)
 
-_consumer_healthy: list[bool] = [False]
+_content_consumer_healthy: list[bool] = [False]
+_tasks_consumer_healthy: list[bool] = [False]
 
 
 async def supervise(name: str, coro_factory, health_flag: list[bool] | None = None):
@@ -38,48 +39,61 @@ async def supervise(name: str, coro_factory, health_flag: list[bool] | None = No
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Восстановление зависших задач при старте
     from app.db.session import async_session_maker
     from app.modules.keywords.recalculation import RecalculationWorker
+
     worker = RecalculationWorker(async_session_maker)
     try:
         cleaned_count = await worker.cleanup_stale_jobs()
         if cleaned_count > 0:
-            print(f"Cleaned up {cleaned_count} stale recalculation jobs on startup")
-    except Exception as e:
-        print(f"Failed to cleanup stale recalculation jobs on startup: {e}")
+            logger.info("Cleaned up %d stale recalculation jobs on startup", cleaned_count)
+    except Exception:
+        logger.exception("Failed to cleanup stale recalculation jobs on startup")
 
     from app.modules.watchlist.monitor import publish_watchlist_monitor_forever
 
-    consumer = ProjectionConsumer()
-    task = None
-    monitor_task = None
+    content_consumer = ProjectionConsumer()
+    tasks_consumer = TaskLifecycleConsumer()
+    consumer_tasks: list[asyncio.Task] = []
     if settings.kafka_consumer_enabled:
-
-        async def run_consumer():
-            await consumer.run_forever()
-
-        task = asyncio.create_task(
-            supervise("Kafka consumer", run_consumer, health_flag=_consumer_healthy)
+        consumer_tasks.extend(
+            [
+                asyncio.create_task(
+                    supervise(
+                        "Content Kafka consumer",
+                        content_consumer.run_forever,
+                        health_flag=_content_consumer_healthy,
+                    )
+                ),
+                asyncio.create_task(
+                    supervise(
+                        "Tasks Kafka consumer",
+                        tasks_consumer.run_forever,
+                        health_flag=_tasks_consumer_healthy,
+                    )
+                ),
+            ]
         )
     else:
-        logger.info("Moderation Kafka consumer disabled by configuration")
+        logger.info("Moderation Kafka consumers disabled by configuration")
 
-    # Запускаем фоновый мониторинг авторов watchlist
-    monitor_task = asyncio.create_task(publish_watchlist_monitor_forever(async_session_maker))
+    monitor_task = asyncio.create_task(
+        publish_watchlist_monitor_forever(async_session_maker)
+    )
 
     try:
         yield
     finally:
-        if task:
+        for task in consumer_tasks:
             task.cancel()
+        for task in consumer_tasks:
             with suppress(asyncio.CancelledError):
                 await task
-        if monitor_task:
-            monitor_task.cancel()
-            with suppress(asyncio.CancelledError):
-                await monitor_task
-        await consumer.stop()
+        monitor_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await monitor_task
+        await content_consumer.stop()
+        await tasks_consumer.stop()
 
 
 def create_app() -> FastAPI:
@@ -94,15 +108,20 @@ def create_app() -> FastAPI:
     async def health() -> dict[str, str]:
         result: dict[str, str] = {"status": "UP"}
         if settings.kafka_consumer_enabled:
-            result["kafkaConsumer"] = "healthy" if _consumer_healthy[0] else "unhealthy"
+            result["contentKafkaConsumer"] = (
+                "healthy" if _content_consumer_healthy[0] else "unhealthy"
+            )
+            result["tasksKafkaConsumer"] = (
+                "healthy" if _tasks_consumer_healthy[0] else "unhealthy"
+            )
         return result
 
     @app.get("/ready")
     async def ready() -> dict[str, str]:
         from fastapi import HTTPException
         from sqlalchemy import text
-
         from app.db.session import engine
+
         try:
             async with engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))
@@ -119,7 +138,6 @@ def create_app() -> FastAPI:
     app.include_router(photo_analysis_router)
 
     Instrumentator().instrument(app).expose(app)
-
     return app
 
 
