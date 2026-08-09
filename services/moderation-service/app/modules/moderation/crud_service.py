@@ -4,11 +4,12 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from app.db.models import ModerationComment, ProcessedEvent
-from app.modules.moderation.projection_models import CanonicalCommentRevision
 from sqlalchemy import and_, case, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.models import ModerationComment, ProcessedEvent
+from app.modules.moderation.projection_models import CanonicalCommentRevision
 
 CONSUMER_NAME = "moderation-service"
 
@@ -208,9 +209,8 @@ class ModerationCrudService:
 
     async def upsert_comment(self, comment_data: dict) -> ModerationComment:
         logger.debug("ModerationCrudService.upsert_comment")
-        stmt = (
-            select(ModerationComment)
-            .where(ModerationComment.external_key == comment_data["external_key"])
+        stmt = select(ModerationComment).where(
+            ModerationComment.external_key == comment_data["external_key"]
         )
         result = await self.session.execute(stmt)
         existing = result.scalar_one_or_none()
@@ -288,7 +288,12 @@ class ModerationCrudService:
         )
         return True
 
-    async def mark_processed(self, event_id: UUID, event_type: str, consumer_name: str | None = None) -> None:
+    async def mark_processed(
+        self,
+        event_id: UUID,
+        event_type: str,
+        consumer_name: str | None = None,
+    ) -> None:
         logger.debug("ModerationCrudService.mark_processed: event_id=%s, type=%s", event_id, event_type)
         now = datetime.now(UTC)
         stmt = insert(ProcessedEvent).values(
