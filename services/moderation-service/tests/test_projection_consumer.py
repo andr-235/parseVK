@@ -34,13 +34,28 @@ class FakeCrud:
         self.processed = processed
         self.upserts = []
         self.marked = []
+        self.revisions = {}
 
     async def is_processed(self, event_id):
         return self.processed
 
-    async def upsert_comment(self, payload):
+    async def apply_canonical_comment(
+        self,
+        payload,
+        post_revision,
+        *,
+        allow_equal_revision=False,
+    ):
+        external_key = payload["external_key"]
+        current = self.revisions.get(external_key)
+        if current is not None:
+            if post_revision < current:
+                return False
+            if post_revision == current and not allow_equal_revision:
+                return False
+        self.revisions[external_key] = post_revision
         self.upserts.append(payload)
-        return payload
+        return True
 
     async def mark_processed(self, event_id, event_type):
         self.marked.append((event_id, event_type))
@@ -55,13 +70,14 @@ class FakeKeywordRepository:
         return self.candidates
 
 
-def canonical_event(comments, *, post_key="-123:456"):
+def canonical_event(comments, *, post_key="-123:456", revision=1):
     payload = ContentCanonicalCommentsChangedV1.model_validate(
         {
             "sourceService": "content-service",
             "sourceMessageId": str(uuid4()),
             "batchId": str(uuid4()),
             "postKey": post_key,
+            "postRevision": revision,
             "chunkIndex": 0,
             "chunkCount": 1,
             "comments": comments,
@@ -175,6 +191,7 @@ def test_unowned_canonical_payload_is_rejected():
                 "sourceMessageId": str(uuid4()),
                 "batchId": str(uuid4()),
                 "postKey": "-1:2",
+                "postRevision": 1,
                 "chunkIndex": 0,
                 "chunkCount": 1,
                 "comments": [],
