@@ -10,6 +10,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from common.outbox import OutboxMessage, OutboxPublisher
+from prometheus_client import REGISTRY, Counter
 
 from app.db.models import ContentOutboxEvent
 from app.modules.outbox.repository import MAX_OUTBOX_ATTEMPTS, OutboxRepository
@@ -20,6 +21,17 @@ __all__ = [
     "kafka_key_for_event",
     "MAX_OUTBOX_ATTEMPTS",
 ]
+
+
+def _retry_counter() -> Counter:
+    name = "content_outbox_retry_total"
+    try:
+        return Counter(name, "Content outbox publish retries", ["event_type"])
+    except ValueError:
+        return REGISTRY._names_to_collectors[name]  # type: ignore[return-value]
+
+
+_CONTENT_OUTBOX_RETRIES = _retry_counter()
 
 
 def kafka_key_for_event(event_type: str, payload: dict, aggregate_id: str) -> str:
@@ -52,6 +64,7 @@ class ContentOutboxRepositoryAdapter:
         event = await self._inner.get(event_id)
         if event is None:
             return False
+        _CONTENT_OUTBOX_RETRIES.labels(event_type=event.event_type).inc()
         await self._inner.mark_failed(event, error, max_attempts=MAX_OUTBOX_ATTEMPTS)
         return event.attempts >= MAX_OUTBOX_ATTEMPTS
 
