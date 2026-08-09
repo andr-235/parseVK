@@ -112,6 +112,11 @@ class ModerationService:
             raise InvalidCanonicalCommentEvent(
                 "canonical payload postKey does not match aggregate_id"
             )
+        for comment in payload.comments:
+            if f"{comment.ownerId}:{comment.postId}" != payload.postKey:
+                raise InvalidCanonicalCommentEvent(
+                    "canonical comment owner/post does not match payload postKey"
+                )
         if not payload.comments:
             return
 
