@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     internal_service_token: str = "dev-internal-token"
     kafka_bootstrap_servers: str = "kafka:9092"
     kafka_topic_content: str = "parsevk.content.events"
+    kafka_topic_tasks: str = "parsevk.tasks.events"
     kafka_consumer_enabled: bool = False
 
 
