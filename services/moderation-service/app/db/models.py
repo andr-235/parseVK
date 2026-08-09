@@ -11,6 +11,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -64,10 +65,6 @@ class ProcessedEvent(Base):
     next_retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
-from sqlalchemy import ForeignKey
-from sqlalchemy.orm import relationship
-
-
 class Keyword(Base):
     __tablename__ = "keywords"
 
@@ -76,7 +73,11 @@ class Keyword(Base):
     category: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_phrase: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    scopes: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default="'[\"moderation\", \"im-monitoring\"]'::jsonb")
+    scopes: Mapped[list[str]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default=text("'[\"moderation\", \"im-monitoring\"]'::jsonb"),
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
 
@@ -204,5 +205,3 @@ class PhotoAnalysis(Base):
     analyzed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
-
-
