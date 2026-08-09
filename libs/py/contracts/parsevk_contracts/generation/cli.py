@@ -8,6 +8,7 @@ import tempfile
 from pathlib import Path
 
 from parsevk_contracts.catalog import ContractCatalog
+from parsevk_contracts.content import CATALOG as CONTENT_CATALOG
 from parsevk_contracts.generation import generate_all
 from parsevk_contracts.generation.policy_evolution import compare_generated_contracts
 from parsevk_contracts.generation.policy_layout import validate_unversioned_layout
@@ -20,6 +21,7 @@ CATALOG = ContractCatalog.from_contracts(
     VK_CATALOG.contracts
     + VK_INGESTION_CATALOG.contracts
     + SOURCES_CATALOG.contracts
+    + CONTENT_CATALOG.contracts
 )
 
 
