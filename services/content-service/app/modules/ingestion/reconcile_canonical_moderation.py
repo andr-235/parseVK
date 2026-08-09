@@ -34,6 +34,9 @@ async def reconcile_canonical_moderation_outbox() -> dict[str, int]:
                 )
             ).all()
             outbox = ContentOutboxService(session)
+            expected_event_ids: set[UUID] = set()
+            expected_dedupe_keys: dict[str, UUID] = {}
+
             for receipt in receipts:
                 stats["receiptsScanned"] += 1
                 manifest = (receipt.effect_summary or {}).get(MANIFEST_KEY)
@@ -48,32 +51,32 @@ async def reconcile_canonical_moderation_outbox() -> dict[str, int]:
                     )
                 for item in events:
                     event_id = UUID(item["eventId"])
+                    dedupe_key = item["dedupeKey"]
+                    if event_id in expected_event_ids:
+                        raise RuntimeError(
+                            f"canonical moderation event {event_id} is claimed by multiple manifests"
+                        )
+                    previous_event_id = expected_dedupe_keys.get(dedupe_key)
+                    if previous_event_id is not None and previous_event_id != event_id:
+                        raise RuntimeError(
+                            f"canonical moderation dedupe key {dedupe_key} is claimed by multiple events"
+                        )
+                    expected_event_ids.add(event_id)
+                    expected_dedupe_keys[dedupe_key] = event_id
+
                     existing = await session.get(ContentOutboxEvent, event_id)
+                    by_dedupe = await session.scalar(
+                        select(ContentOutboxEvent).where(
+                            ContentOutboxEvent.dedupe_key == dedupe_key
+                        )
+                    )
+                    if by_dedupe is not None and by_dedupe.id != event_id:
+                        raise RuntimeError(
+                            f"canonical moderation dedupe key {dedupe_key} belongs to "
+                            f"unexpected event {by_dedupe.id}"
+                        )
                     if existing is not None:
-                        expected = (
-                            CANONICAL_COMMENTS_EVENT_TYPE,
-                            version,
-                            item["aggregateType"],
-                            item["aggregateId"],
-                            item.get("correlationId"),
-                            item["dedupeKey"],
-                            item["payload"],
-                            datetime.fromisoformat(item["createdAt"]),
-                        )
-                        actual = (
-                            existing.event_type,
-                            existing.event_version,
-                            existing.aggregate_type,
-                            existing.aggregate_id,
-                            existing.correlation_id,
-                            existing.dedupe_key,
-                            existing.payload,
-                            existing.created_at,
-                        )
-                        if actual != expected:
-                            raise RuntimeError(
-                                f"canonical moderation outbox {event_id} differs from receipt manifest"
-                            )
+                        _verify_existing(existing, version, item)
                         stats["eventsPresent"] += 1
                         continue
                     await outbox.add_event(
@@ -83,12 +86,56 @@ async def reconcile_canonical_moderation_outbox() -> dict[str, int]:
                         aggregate_type=item["aggregateType"],
                         aggregate_id=item["aggregateId"],
                         correlation_id=item.get("correlationId"),
-                        dedupe_key=item["dedupeKey"],
+                        dedupe_key=dedupe_key,
                         payload=item["payload"],
                         created_at=datetime.fromisoformat(item["createdAt"]),
                     )
                     stats["eventsRepaired"] += 1
+
+            canonical_outbox_ids = (
+                await session.scalars(
+                    select(ContentOutboxEvent.id).where(
+                        ContentOutboxEvent.event_type == CANONICAL_COMMENTS_EVENT_TYPE
+                    )
+                )
+            ).all()
+            orphan_ids = sorted(
+                (event_id for event_id in canonical_outbox_ids if event_id not in expected_event_ids),
+                key=str,
+            )
+            if orphan_ids:
+                raise RuntimeError(
+                    "canonical moderation outbox exists without receipt manifest: "
+                    + ", ".join(str(event_id) for event_id in orphan_ids[:10])
+                )
     return stats
+
+
+def _verify_existing(existing: ContentOutboxEvent, version: int, item: dict) -> None:
+    expected = (
+        CANONICAL_COMMENTS_EVENT_TYPE,
+        version,
+        item["aggregateType"],
+        item["aggregateId"],
+        item.get("correlationId"),
+        item["dedupeKey"],
+        item["payload"],
+        datetime.fromisoformat(item["createdAt"]),
+    )
+    actual = (
+        existing.event_type,
+        existing.event_version,
+        existing.aggregate_type,
+        existing.aggregate_id,
+        existing.correlation_id,
+        existing.dedupe_key,
+        existing.payload,
+        existing.created_at,
+    )
+    if actual != expected:
+        raise RuntimeError(
+            f"canonical moderation outbox {existing.id} differs from receipt manifest"
+        )
 
 
 async def _main() -> None:
