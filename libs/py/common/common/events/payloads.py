@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class ContentCommentsProjectedV1(BaseModel):
     ownerId: int | None = None
     postId: int | None = None
     batchId: str | None = None
-    projectedAt: str  # ISO 8601 datetime
+    projectedAt: str
 
 
 class ContentCanonicalCommentV1(BaseModel):
@@ -76,6 +76,12 @@ class ContentCanonicalCommentsChangedV1(BaseModel):
     chunkIndex: int = Field(ge=0)
     chunkCount: int = Field(gt=0)
     comments: list[ContentCanonicalCommentV1]
+
+    @model_validator(mode="after")
+    def validate_chunk_bounds(self):
+        if self.chunkIndex >= self.chunkCount:
+            raise ValueError("chunkIndex must be smaller than chunkCount")
+        return self
 
 
 class TaskStateChangedV1(BaseModel):
