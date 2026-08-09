@@ -7,9 +7,8 @@ from app.modules.ingestion.ack import (
     IngestionCorruptionError,
     IngestionIdentityCollision,
     ack_id_for,
-    ack_payload,
-    verify_ack,
 )
+from app.modules.ingestion.ack_outbox import ensure_ack_outbox
 from app.modules.ingestion.canonical_events import (
     MANIFEST_KEY,
     build_canonical_moderation_manifest,
@@ -69,7 +68,12 @@ class IngestionApplicationService:
         if MANIFEST_KEY in receipt.effect_summary:
             await self.canonical_outbox.ensure(receipt)
         await self.receipts.ensure_processed(part.source_message_id, part.event.event_type)
-        await self._ensure_ack(receipt, part.event.correlation_id)
+        await ensure_ack_outbox(
+            self.receipts,
+            self.outbox,
+            receipt,
+            correlation_id=part.event.correlation_id,
+        )
         await self.receipts.flush()
         return receipt
 
@@ -83,24 +87,6 @@ class IngestionApplicationService:
             raise IngestionCorruptionError(
                 "canonical moderation outbox exists without ingestion receipt"
             )
-
-    async def _ensure_ack(
-        self, receipt: ContentIngestionReceipt, correlation_id: str | None
-    ) -> None:
-        payload = ack_payload(receipt)
-        existing = await self.receipts.get_ack(receipt.ack_event_id)
-        if existing is not None:
-            verify_ack(existing, payload)
-            return
-        await self.outbox.add_event(
-            event_id=receipt.ack_event_id,
-            event_type=ACK_EVENT_TYPE,
-            aggregate_type="vk_ingestion_part",
-            aggregate_id=str(receipt.source_message_id),
-            correlation_id=correlation_id,
-            dedupe_key=f"ingestion-ack:{receipt.source_message_id}",
-            payload=payload,
-        )
 
     @staticmethod
     def _verify_receipt(receipt: ContentIngestionReceipt, part: IngestionPartEnvelope) -> None:
