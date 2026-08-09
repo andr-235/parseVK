@@ -30,6 +30,12 @@ __all__ = [
 ]
 
 
+def _utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
 class IngestionApplicationService:
     def __init__(
         self,
@@ -117,6 +123,8 @@ class IngestionApplicationService:
 
     @staticmethod
     def _verify_canonical_outbox(existing, version: int, item: dict) -> None:
+        expected_created_at = _utc(datetime.fromisoformat(item["createdAt"]))
+        actual_created_at = _utc(existing.created_at)
         expected = (
             CANONICAL_COMMENTS_EVENT_TYPE,
             version,
@@ -125,7 +133,7 @@ class IngestionApplicationService:
             item.get("correlationId"),
             item["dedupeKey"],
             item["payload"],
-            datetime.fromisoformat(item["createdAt"]),
+            expected_created_at,
         )
         actual = (
             existing.event_type,
@@ -135,7 +143,7 @@ class IngestionApplicationService:
             existing.correlation_id,
             existing.dedupe_key,
             existing.payload,
-            existing.created_at,
+            actual_created_at,
         )
         if actual != expected:
             raise IngestionCorruptionError(
