@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from app.core.config import settings
 from app.tasks import publish_outbox_forever
 from app.tasks.ingestion_ack_consumer import VkIngestionAckConsumer
+from app.tasks.ingestion_ack_reconciliation import reconcile_ingestion_acks_forever
 from app.tasks.runtime_supervision import BackgroundRuntime, supervise
 from app.tasks.staged_part_publisher import publish_staged_parts_forever
 from app.tasks.task_runtime import build_execution_worker
@@ -61,6 +62,13 @@ def start_background_runtime(
 
     _start_simple_worker(
         tasks,
+        enabled=settings.ingestion_ack_reconciliation_enabled,
+        name="Ingestion ACK reconciliation",
+        factory=lambda: reconcile_ingestion_acks_forever(session_factory),
+        health=None,
+    )
+    _start_simple_worker(
+        tasks,
         enabled=settings.outbox_publish_enabled,
         name="Outbox publisher",
         factory=lambda: publish_outbox_forever(session_factory),
@@ -94,16 +102,12 @@ def _start_simple_worker(
     enabled: bool,
     name: str,
     factory,
-    health: list[bool],
+    health: list[bool] | None,
 ) -> None:
     if enabled:
         tasks.append(
             asyncio.create_task(
-                supervise(
-                    name,
-                    factory,
-                    health_flag=health,
-                )
+                supervise(name, factory, health_flag=health)
             )
         )
     else:
@@ -119,7 +123,6 @@ def _start_staged_publisher(
     if not settings.staged_part_publisher_enabled:
         logger.info("Staged ingestion part publisher disabled by configuration")
         return
-
     tasks.append(
         asyncio.create_task(
             supervise(

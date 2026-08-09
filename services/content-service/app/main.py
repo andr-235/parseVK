@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.modules.content.router import router as content_router
 from app.modules.im_events.consumer import ImEventConsumer
 from app.modules.ingestion.consumer import VkIngestionConsumer
+from app.modules.ingestion.router import router as ingestion_router
 from app.modules.projections.consumer import ProjectionConsumer
 
 _vk_consumer_health: WorkerHealth = WorkerHealth()
@@ -41,14 +42,26 @@ async def lifespan(app: FastAPI):
         await publish_outbox_forever(health=_outbox_publisher_health)
 
     if settings.kafka_consumer_enabled:
-        vk_task = asyncio.create_task(supervise("VK consumer", run_vk, health=_vk_consumer_health))
-        ingestion_task = asyncio.create_task(
-            supervise("VK staged ingestion", run_ingestion, health=_vk_ingestion_health)
+        vk_task = asyncio.create_task(
+            supervise("VK consumer", run_vk, health=_vk_consumer_health)
         )
-        im_task = asyncio.create_task(supervise("IM consumer", run_im, health=_im_consumer_health))
+        ingestion_task = asyncio.create_task(
+            supervise(
+                "VK staged ingestion",
+                run_ingestion,
+                health=_vk_ingestion_health,
+            )
+        )
+        im_task = asyncio.create_task(
+            supervise("IM consumer", run_im, health=_im_consumer_health)
+        )
     if settings.kafka_producer_enabled:
         outbox_task = asyncio.create_task(
-            supervise("Content outbox publisher", run_outbox, health=_outbox_publisher_health)
+            supervise(
+                "Content outbox publisher",
+                run_outbox,
+                health=_outbox_publisher_health,
+            )
         )
     try:
         yield
@@ -78,11 +91,15 @@ def create_app() -> FastAPI:
     async def health() -> dict[str, str]:
         result: dict[str, str] = {"status": "UP"}
         if settings.kafka_consumer_enabled:
-            result["vkConsumer"] = "healthy" if _vk_consumer_health.is_healthy else "unhealthy"
+            result["vkConsumer"] = (
+                "healthy" if _vk_consumer_health.is_healthy else "unhealthy"
+            )
             result["vkIngestionConsumer"] = (
                 "healthy" if _vk_ingestion_health.is_healthy else "unhealthy"
             )
-            result["imConsumer"] = "healthy" if _im_consumer_health.is_healthy else "unhealthy"
+            result["imConsumer"] = (
+                "healthy" if _im_consumer_health.is_healthy else "unhealthy"
+            )
         if settings.kafka_producer_enabled:
             result["outboxPublisher"] = (
                 "healthy" if _outbox_publisher_health.is_healthy else "unhealthy"
@@ -110,6 +127,7 @@ def create_app() -> FastAPI:
     from app.modules.search.router import router as search_router
 
     app.include_router(content_router)
+    app.include_router(ingestion_router)
     app.include_router(monitoring_router)
     app.include_router(search_router)
     Instrumentator().instrument(app).expose(app)

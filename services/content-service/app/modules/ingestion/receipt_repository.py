@@ -38,6 +38,25 @@ class IngestionReceiptRepository:
             .with_for_update()
         )
 
+    async def load_applied_by_source_ids(
+        self,
+        source_message_ids: list[UUID],
+        *,
+        source_service: str = "vk-service",
+    ) -> tuple[ContentIngestionReceipt, ...]:
+        if not source_message_ids:
+            return ()
+        rows = await self.session.scalars(
+            select(ContentIngestionReceipt)
+            .where(
+                ContentIngestionReceipt.source_service == source_service,
+                ContentIngestionReceipt.source_message_id.in_(source_message_ids),
+                ContentIngestionReceipt.applied_at.is_not(None),
+            )
+            .order_by(ContentIngestionReceipt.source_message_id)
+        )
+        return tuple(rows)
+
     async def create(self, part: IngestionPartEnvelope) -> ContentIngestionReceipt:
         now = datetime.now(UTC)
         row = ContentIngestionReceipt(
@@ -75,14 +94,18 @@ class IngestionReceiptRepository:
         return value is not None
 
     async def ensure_processed(self, event_id: UUID, event_type: str) -> None:
-        stmt = insert(ProcessedEvent).values(
-            consumer_name=PROCESSED_CONSUMER,
-            event_id=event_id,
-            event_type=event_type,
-            processed_at=datetime.now(UTC),
-            retry_count=0,
-        ).on_conflict_do_nothing(
-            constraint="uq_processed_events_consumer_event"
+        stmt = (
+            insert(ProcessedEvent)
+            .values(
+                consumer_name=PROCESSED_CONSUMER,
+                event_id=event_id,
+                event_type=event_type,
+                processed_at=datetime.now(UTC),
+                retry_count=0,
+            )
+            .on_conflict_do_nothing(
+                constraint="uq_processed_events_consumer_event"
+            )
         )
         await self.session.execute(stmt)
 
