@@ -36,16 +36,19 @@ def test_canonical_comment_chunking_is_deterministic() -> None:
     first = build_canonical_moderation_manifest(
         ingestion_part,
         created_at=created_at,
+        post_revision=7,
     )
     second = build_canonical_moderation_manifest(
         ingestion_part,
         created_at=created_at,
+        post_revision=7,
     )
 
     assert first == second
     assert len(first["events"]) == 2
     assert len(first["events"][0]["payload"]["comments"]) == 250
     assert len(first["events"][1]["payload"]["comments"]) == 1
+    assert first["events"][0]["payload"]["postRevision"] == 7
     assert first["events"][0]["payload"]["chunkIndex"] == 0
     assert first["events"][1]["payload"]["chunkIndex"] == 1
     assert all(
