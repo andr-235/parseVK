@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from types import SimpleNamespace
 import sys
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -132,6 +133,48 @@ async def test_replay_rejects_canonical_outbox_that_differs_from_manifest() -> N
     with pytest.raises(IngestionCorruptionError, match="differs from manifest"):
         await service.apply(ingestion_part)
     assert canonical.calls == 1
+
+
+@pytest.mark.anyio
+async def test_replay_rejects_canonical_dedupe_key_owned_by_different_event() -> None:
+    ingestion_part = replace(
+        part(),
+        comments=({"id": 7, "owner_id": -10, "post_id": 20, "text": "опасно"},),
+    )
+    receipts = FakeReceipts()
+    canonical = FakeCanonical()
+    outbox = FakeOutbox(receipts)
+    service = IngestionApplicationService(receipts, canonical, outbox)
+    receipt = await service.apply(ingestion_part)
+    manifest_event = receipt.effect_summary[MANIFEST_KEY]["events"][0]
+    event_id = UUID(manifest_event["eventId"])
+    del receipts.outbox[event_id]
+    rogue_id = uuid4()
+    receipts.outbox[rogue_id] = SimpleNamespace(
+        id=rogue_id,
+        dedupe_key=manifest_event["dedupeKey"],
+    )
+
+    with pytest.raises(IngestionCorruptionError, match="dedupe key belongs"):
+        await service.apply(ingestion_part)
+    assert canonical.calls == 1
+
+
+@pytest.mark.anyio
+async def test_canonical_outbox_without_receipt_is_corruption_before_mutation() -> None:
+    ingestion_part = part()
+    receipts = FakeReceipts()
+    rogue_id = uuid4()
+    receipts.outbox[rogue_id] = SimpleNamespace(
+        id=rogue_id,
+        dedupe_key=f"canonical-comments:{ingestion_part.source_message_id}:0",
+    )
+    canonical = FakeCanonical()
+    service = IngestionApplicationService(receipts, canonical, FakeOutbox(receipts))
+
+    with pytest.raises(IngestionCorruptionError, match="outbox exists without ingestion receipt"):
+        await service.apply(ingestion_part)
+    assert canonical.calls == 0
 
 
 @pytest.mark.anyio
