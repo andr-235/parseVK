@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -50,6 +51,9 @@ async def test_ack_replay_and_last_part_apply_batch_atomically(db_session) -> No
     second = _ack(batch, parts[1], event_suffix=2)
 
     assert await repository.apply(first, received_at=datetime.now(UTC)) == "applied"
+    partially_applied = await db_session.get(VkIngestionStagingBatch, batch.batch_id)
+    assert partially_applied is not None
+    assert partially_applied.status != "applied"
     assert await repository.apply(first, received_at=datetime.now(UTC)) == "replayed"
     assert await repository.apply(second, received_at=datetime.now(UTC)) == "batch_applied"
 
@@ -72,5 +76,20 @@ async def test_ack_digest_mismatch_quarantines_batch(db_session) -> None:
         received_at=datetime.now(UTC),
     )
     assert outcome == "quarantined"
+    persisted_batch = await db_session.get(VkIngestionStagingBatch, batch.batch_id)
+    assert persisted_batch is not None and persisted_batch.status == "quarantined"
+
+
+async def test_ack_receipt_identity_collision_quarantines_batch(db_session) -> None:
+    batch, parts = await prepare_parts(db_session)
+    repository = SqlAlchemyIngestionAckRepository(db_session)
+    first = _ack(batch, parts[0], event_suffix=4)
+    second = replace(
+        _ack(batch, parts[1], event_suffix=5),
+        receipt_id=first.receipt_id,
+    )
+
+    assert await repository.apply(first, received_at=datetime.now(UTC)) == "applied"
+    assert await repository.apply(second, received_at=datetime.now(UTC)) == "quarantined"
     persisted_batch = await db_session.get(VkIngestionStagingBatch, batch.batch_id)
     assert persisted_batch is not None and persisted_batch.status == "quarantined"
