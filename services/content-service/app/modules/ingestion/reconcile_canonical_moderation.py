@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from datetime import UTC, datetime
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -13,14 +13,9 @@ from app.modules.ingestion.canonical_events import (
     CANONICAL_COMMENTS_EVENT_TYPE,
     MANIFEST_KEY,
 )
+from app.modules.ingestion.canonical_outbox import verify_canonical_outbox
 from app.modules.ingestion.models import ContentIngestionReceipt
 from app.modules.projections.outbox_service import ContentOutboxService
-
-
-def _utc(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value.replace(tzinfo=UTC)
-    return value.astimezone(UTC)
 
 
 async def reconcile_canonical_moderation_outbox() -> dict[str, int]:
@@ -47,9 +42,6 @@ async def reconcile_canonical_moderation_outbox() -> dict[str, int]:
                 stats["receiptsScanned"] += 1
                 manifest = (receipt.effect_summary or {}).get(MANIFEST_KEY)
                 if not isinstance(manifest, dict):
-                    # Pre-cutover receipts intentionally have no canonical moderation
-                    # manifest. Existing rows are backfilled through the content API,
-                    # never reconstructed from historical staged payloads.
                     stats["receiptsWithoutManifest"] += 1
                     continue
                 version = manifest.get("contractVersion")
@@ -85,7 +77,7 @@ async def reconcile_canonical_moderation_outbox() -> dict[str, int]:
                             f"unexpected event {by_dedupe.id}"
                         )
                     if existing is not None:
-                        _verify_existing(existing, version, item)
+                        verify_canonical_outbox(existing, version, item)
                         stats["eventsPresent"] += 1
                         continue
                     await outbox.add_event(
@@ -109,11 +101,7 @@ async def reconcile_canonical_moderation_outbox() -> dict[str, int]:
                 )
             ).all()
             orphan_ids = sorted(
-                (
-                    event_id
-                    for event_id in canonical_outbox_ids
-                    if event_id not in expected_event_ids
-                ),
+                (event_id for event_id in canonical_outbox_ids if event_id not in expected_event_ids),
                 key=str,
             )
             if orphan_ids:
@@ -122,33 +110,6 @@ async def reconcile_canonical_moderation_outbox() -> dict[str, int]:
                     + ", ".join(str(event_id) for event_id in orphan_ids[:10])
                 )
     return stats
-
-
-def _verify_existing(existing: ContentOutboxEvent, version: int, item: dict) -> None:
-    expected = (
-        CANONICAL_COMMENTS_EVENT_TYPE,
-        version,
-        item["aggregateType"],
-        item["aggregateId"],
-        item.get("correlationId"),
-        item["dedupeKey"],
-        item["payload"],
-        _utc(datetime.fromisoformat(item["createdAt"])),
-    )
-    actual = (
-        existing.event_type,
-        existing.event_version,
-        existing.aggregate_type,
-        existing.aggregate_id,
-        existing.correlation_id,
-        existing.dedupe_key,
-        existing.payload,
-        _utc(existing.created_at),
-    )
-    if actual != expected:
-        raise RuntimeError(
-            f"canonical moderation outbox {existing.id} differs from receipt manifest"
-        )
 
 
 async def _main() -> None:
