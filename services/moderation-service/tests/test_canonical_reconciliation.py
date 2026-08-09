@@ -81,8 +81,8 @@ class FakeContentClient:
             "items": [
                 {
                     "id": 1,
-                    "externalKey": "vk_-123_456_1",
-                    "postExternalKey": "vk_-123_456",
+                    "externalKey": "-123:456:1",
+                    "postExternalKey": "-123:456",
                     "vkOwnerId": -123,
                     "vkPostId": 456,
                     "vkCommentId": 1,
@@ -92,8 +92,8 @@ class FakeContentClient:
                 },
                 {
                     "id": 2,
-                    "externalKey": "vk_-123_456_2",
-                    "postExternalKey": "vk_-123_456",
+                    "externalKey": "-123:456:2",
+                    "postExternalKey": "-123:456",
                     "vkOwnerId": -123,
                     "vkPostId": 456,
                     "vkCommentId": 2,
@@ -125,6 +125,7 @@ async def test_reconciliation_upserts_matches_and_clears_existing_unmatched(monk
     assert stats.matching == 1
     assert stats.upserted == 1
     assert stats.cleared == 1
+    assert FakeCrud.upserts[0]["external_key"] == "vk_-123_456_1"
     assert FakeCrud.upserts[0]["matched_keywords"] == ["Привет"]
     assert FakeCrud.upserts[1]["matched_keywords"] == []
 
@@ -136,8 +137,8 @@ def test_reconciliation_rejects_canonical_identity_mismatch():
     ):
         reconciliation._canonical_comment_from_api(
             {
-                "externalKey": "vk_-1_2_999",
-                "postExternalKey": "vk_-1_2",
+                "externalKey": "-1:2:999",
+                "postExternalKey": "-1:2",
                 "vkOwnerId": -1,
                 "vkPostId": 2,
                 "vkCommentId": 3,
