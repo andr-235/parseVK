@@ -10,6 +10,8 @@ from common.events.helpers import (
     get_task_id,
 )
 from common.events.payloads import (
+    ContentCanonicalCommentV1,
+    ContentCanonicalCommentsChangedV1,
     ContentCommentsProjectedV1,
     ImMessageCollectedPayload,
     TaskStateChangedV1,
@@ -53,6 +55,8 @@ __all__ = [
     "ImMessageCollectedPayload",
     "VkCommentsCollectedV1",
     "ContentCommentsProjectedV1",
+    "ContentCanonicalCommentV1",
+    "ContentCanonicalCommentsChangedV1",
     "TaskStateChangedV1",
     "TaskExecutionProgressedPayload",
     "TaskExecutionProgressedV1",
