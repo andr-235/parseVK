@@ -139,7 +139,9 @@ services:
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.content.events --partitions 3 --replication-factor 1;
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.content.dlq --partitions 3 --replication-factor 1;
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.content.ingestion.vk --partitions 3 --replication-factor 1 --config max.message.bytes=1048576;
-      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.content.ingestion.vk.dlq --partitions 3 --replication-factor 1 --config max.message.bytes=1048576 --config cleanup.policy=delete --config retention.ms=604800000
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.content.ingestion.vk.dlq --partitions 3 --replication-factor 1 --config max.message.bytes=1048576 --config cleanup.policy=delete --config retention.ms=604800000;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.content.ingestion.acks --partitions 3 --replication-factor 1;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic parsevk.content.ingestion.acks.dlq --partitions 3 --replication-factor 1 --config cleanup.policy=delete --config retention.ms=604800000
       "
     networks:
       - backend
@@ -309,18 +311,26 @@ services:
         condition: service_completed_successfully
       tasks-service:
         condition: service_healthy
+      content-service:
+        condition: service_healthy
       kafka-init:
         condition: service_completed_successfully
     environment:
       VK_SERVICE_DATABASE_URL: ${VK_SERVICE_DATABASE_URL:-postgresql+asyncpg://vk:vk_dev_password_change_me@vk-db:5432/vk}
       VK_SERVICE_INTERNAL_SERVICE_TOKEN: ${FASTAPI_INTERNAL_SERVICE_TOKEN:-dev-internal-token}
       VK_SERVICE_TASKS_BASE_URL: http://tasks-service:8000
+      VK_SERVICE_CONTENT_SERVICE_BASE_URL: http://content-service:8000
       VK_SERVICE_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       VK_SERVICE_KAFKA_CONSUMER_ENABLED: ${VK_SERVICE_KAFKA_CONSUMER_ENABLED:-true}
       VK_SERVICE_OUTBOX_PUBLISH_ENABLED: ${VK_SERVICE_OUTBOX_PUBLISH_ENABLED:-true}
       VK_SERVICE_STAGED_PART_PUBLISHER_ENABLED: ${VK_SERVICE_STAGED_PART_PUBLISHER_ENABLED:-false}
       VK_SERVICE_KAFKA_TOPIC_VK_INGESTION: ${VK_SERVICE_KAFKA_TOPIC_VK_INGESTION:-parsevk.content.ingestion.vk}
       VK_SERVICE_KAFKA_TOPIC_VK_INGESTION_DLQ: ${VK_SERVICE_KAFKA_TOPIC_VK_INGESTION_DLQ:-parsevk.content.ingestion.vk.dlq}
+      VK_SERVICE_KAFKA_TOPIC_VK_INGESTION_ACK: ${VK_SERVICE_KAFKA_TOPIC_VK_INGESTION_ACK:-parsevk.content.ingestion.acks}
+      VK_SERVICE_KAFKA_TOPIC_VK_INGESTION_ACK_DLQ: ${VK_SERVICE_KAFKA_TOPIC_VK_INGESTION_ACK_DLQ:-parsevk.content.ingestion.acks.dlq}
+      VK_SERVICE_INGESTION_ACK_CONSUMER_ENABLED: ${VK_SERVICE_INGESTION_ACK_CONSUMER_ENABLED:-false}
+      VK_SERVICE_INGESTION_ACK_RECONCILIATION_ENABLED: ${VK_SERVICE_INGESTION_ACK_RECONCILIATION_ENABLED:-false}
+      VK_SERVICE_INGESTION_PAYLOAD_PURGE_ENABLED: ${VK_SERVICE_INGESTION_PAYLOAD_PURGE_ENABLED:-false}
       VK_SERVICE_STAGED_PART_PRODUCER_MAX_REQUEST_BYTES: ${VK_SERVICE_STAGED_PART_PRODUCER_MAX_REQUEST_BYTES:-1048576}
       VK_SERVICE_DEFAULT_GROUP_IDS: '${VK_SERVICE_DEFAULT_GROUP_IDS:-[1]}'
       VK_SERVICE_VK_TOKEN: ${VK_SERVICE_VK_TOKEN:-${VK_TOKEN:-}}
@@ -398,6 +408,7 @@ services:
       CONTENT_KAFKA_PRODUCER_ENABLED: ${CONTENT_KAFKA_PRODUCER_ENABLED:-true}
       CONTENT_CONTENT_PROJECTION_EVENTS_ENABLED: ${CONTENT_CONTENT_PROJECTION_EVENTS_ENABLED:-true}
       CONTENT_KAFKA_TOPIC_IM: ${CONTENT_KAFKA_TOPIC_IM:-parsevk.im.events}
+      CONTENT_KAFKA_TOPIC_VK_INGESTION_ACK: ${CONTENT_KAFKA_TOPIC_VK_INGESTION_ACK:-parsevk.content.ingestion.acks}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
