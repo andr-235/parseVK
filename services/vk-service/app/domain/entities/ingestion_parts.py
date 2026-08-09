@@ -14,11 +14,12 @@ from app.domain.entities.ingestion_staging import canonical_payload
 
 PREPARED = "prepared"
 PUBLISHED = "published"
+APPLIED = "applied"
 FAILED = "failed"
 QUARANTINED = "quarantined"
 PENDING = "pending"
-PART_STATUSES = frozenset({PREPARED, PUBLISHED, FAILED, QUARANTINED})
-REFERENCE_STATUSES = frozenset({PENDING, PUBLISHED, FAILED, QUARANTINED})
+PART_STATUSES = frozenset({PREPARED, PUBLISHED, APPLIED, FAILED, QUARANTINED})
+REFERENCE_STATUSES = frozenset({PENDING, PUBLISHED, APPLIED, FAILED, QUARANTINED})
 
 
 @dataclass(frozen=True, slots=True)

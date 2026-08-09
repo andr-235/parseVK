@@ -34,10 +34,7 @@ class VkIngestionStagingPart(Base):
             "part_index",
             name="uq_vk_ingestion_part_identity",
         ),
-        CheckConstraint(
-            "part_kind IN ('post', 'comments')",
-            name="ck_vk_ingestion_part_kind",
-        ),
+        CheckConstraint("part_kind IN ('post', 'comments')", name="ck_vk_ingestion_part_kind"),
         CheckConstraint(
             "part_count > 0 AND part_index >= 0 AND part_index < part_count",
             name="ck_vk_ingestion_part_position",
@@ -52,7 +49,8 @@ class VkIngestionStagingPart(Base):
             name="ck_vk_ingestion_part_wire_bytes",
         ),
         CheckConstraint(
-            "status IN ('prepared', 'published', 'failed', 'quarantined')",
+            "status IN ('prepared', 'published', 'applied', 'payload_purged', "
+            "'failed', 'quarantined')",
             name="ck_vk_ingestion_part_status",
         ),
         Index("ix_vk_ingestion_parts_batch", "batch_id", "part_index"),
@@ -73,32 +71,22 @@ class VkIngestionStagingPart(Base):
     event_contract_version: Mapped[int] = mapped_column(Integer, nullable=False)
     item_manifest: Mapped[list] = mapped_column(JSONB, nullable=False)
     author_manifest: Mapped[list] = mapped_column(JSONB, nullable=False)
-    prepared_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-    )
+    prepared_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     part_digest: Mapped[str] = mapped_column(String(64), nullable=False)
-    wire_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    wire_bytes: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     wire_bytes_count: Mapped[int] = mapped_column(Integer, nullable=False)
     wire_digest: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[str] = mapped_column(
-        String(32),
-        nullable=False,
-        default="prepared",
-        server_default=text("'prepared'"),
+        String(32), nullable=False, default="prepared", server_default=text("'prepared'")
     )
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    payload_purged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utcnow,
-        server_default=text("CURRENT_TIMESTAMP"),
+        DateTime(timezone=True), nullable=False, default=utcnow, server_default=text("CURRENT_TIMESTAMP")
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=utcnow,
-        onupdate=utcnow,
-        server_default=text("CURRENT_TIMESTAMP"),
+        DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow,
+        server_default=text("CURRENT_TIMESTAMP")
     )
 
 
