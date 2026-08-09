@@ -8,7 +8,7 @@ from app.modules.keywords.recalculation import RecalculationWorker
 from app.modules.keywords.repository import KeywordMatchRepository
 from app.modules.moderation.comment_event_mapper import (
     InvalidCanonicalCommentEvent,
-    map_canonical_comment_event,
+    map_canonical_comment_snapshot,
 )
 from app.modules.moderation.crud_service import ModerationCrudService
 from common.events import ContentCanonicalCommentsChangedV1, WireEvent
@@ -117,21 +117,26 @@ class ModerationService:
 
         candidates = await self.keyword_repository.load_candidates()
         matcher = KeywordMatcher(candidates)
-        saved_count = 0
+        applied_count = 0
+        matched_count = 0
         for comment in payload.comments:
             matched_keywords = matcher.match_text(comment.text or "")
-            if not matched_keywords:
-                continue
-            await self.crud.upsert_comment(
-                map_canonical_comment_event(comment, matched_keywords)
+            applied = await self.crud.apply_canonical_comment(
+                map_canonical_comment_snapshot(comment, matched_keywords),
+                payload.postRevision,
             )
-            saved_count += 1
+            if applied:
+                applied_count += 1
+                if matched_keywords:
+                    matched_count += 1
 
         logger.info(
-            "Processed canonical batch event_id=%s total_comments=%d matched_saved=%d",
+            "Processed canonical batch event_id=%s revision=%d total_comments=%d applied=%d matched=%d",
             event.event_id,
+            payload.postRevision,
             len(payload.comments),
-            saved_count,
+            applied_count,
+            matched_count,
         )
 
     async def _schedule_recalculation(self, event: WireEvent) -> None:
