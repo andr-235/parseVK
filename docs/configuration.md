@@ -77,6 +77,40 @@ FASTAPI_INTERNAL_SERVICE_TOKEN=dev-internal-token
 `VK_SERVICE_TASK_TIMEOUT_SECONDS` ограничивает полное время одной задачи, а
 `VK_SERVICE_VK_API_TIMEOUT_SECONDS` — отдельный сетевой вызов VK.
 
+## P3 staged VK ingestion transport
+
+Подготовленные post/comment parts публикуются только в новый ingress-контур. До финального
+cutover staged publisher остаётся выключенным, поэтому наличие topic/configuration само по
+себе не включает новый production runtime.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `VK_SERVICE_STAGED_PART_PUBLISHER_ENABLED` | `false` | Enable the staged-only publisher after the integration contour is ready |
+| `VK_SERVICE_KAFKA_TOPIC_VK_INGESTION` | `parsevk.content.ingestion.vk` | Staged ingress topic |
+| `VK_SERVICE_KAFKA_TOPIC_VK_INGESTION_DLQ` | `parsevk.content.ingestion.vk.dlq` | Staged ingress DLQ |
+| `VK_SERVICE_STAGED_PART_PRODUCER_MAX_REQUEST_BYTES` | `1048576` | Producer request ceiling; must stay above the 768 KiB application hard limit including key/header overhead |
+| `CONTENT_KAFKA_TOPIC_VK_INGESTION` | `parsevk.content.ingestion.vk` | Typed future content-consumer ingress setting |
+| `CONTENT_KAFKA_TOPIC_VK_INGESTION_DLQ` | `parsevk.content.ingestion.vk.dlq` | Typed future content-consumer DLQ setting |
+| `CONTENT_KAFKA_VK_INGESTION_FETCH_MAX_BYTES` | `1048576` | Future content-consumer total fetch ceiling |
+| `CONTENT_KAFKA_VK_INGESTION_MAX_PARTITION_FETCH_BYTES` | `1048576` | Future content-consumer per-partition fetch ceiling |
+
+### Retention boundaries
+
+Kafka retention и PostgreSQL staging retention — разные механизмы и не должны быть
+связаны одним TTL:
+
+- `parsevk.content.ingestion.vk` не задаёт topic-level `retention.ms` и наследует broker
+  log-retention policy. Изменение broker retention не меняет жизненный цикл staging rows.
+- `parsevk.content.ingestion.vk.dlq` использует `cleanup.policy=delete` и явный
+  `retention.ms=604800000` (7 суток).
+- `vk_ingestion_staging_batches` хранится в PostgreSQL как durable replay source. Staging
+  намеренно переживает cleanup execution-attempt records; отдельного time-based Kafka TTL
+  у него нет. Его lifecycle связан с родительским `vk_executions` через FK `ON DELETE CASCADE`.
+
+Transport limits также независимы от retention: application hard limit равен 768 KiB, а
+producer/topic/future-consumer limits для staged ingress равны 1 MiB. Legacy IM topics
+сохраняют существующий лимит 5 MiB и этим P3-срезом не уменьшаются.
+
 ## VK credentials: precedence and fallback
 
 Приоритет источника секрета VK (см. `services/vk-service/docs/vk-provider-accounts.md`):

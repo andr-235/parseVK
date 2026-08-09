@@ -19,6 +19,13 @@ channels:
         $ref: '#/components/messages/vk_execution_cancel_requested'
       vk_execution_requested:
         $ref: '#/components/messages/vk_execution_requested'
+  parsevk_content_ingestion_vk:
+    address: parsevk.content.ingestion.vk
+    messages:
+      vk_ingestion_comment-part-prepared:
+        $ref: '#/components/messages/vk_ingestion_comment-part-prepared'
+      vk_ingestion_post-part-prepared:
+        $ref: '#/components/messages/vk_ingestion_post-part-prepared'
 operations:
   tasks_service_send_sources_access_granted:
     action: send
@@ -68,6 +75,30 @@ operations:
       $ref: '#/channels/parsevk_vk_commands'
     messages:
     - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_requested'
+  vk_service_send_vk_ingestion_comment-part-prepared:
+    action: send
+    channel:
+      $ref: '#/channels/parsevk_content_ingestion_vk'
+    messages:
+    - $ref: '#/channels/parsevk_content_ingestion_vk/messages/vk_ingestion_comment-part-prepared'
+  content_service_receive_vk_ingestion_comment-part-prepared:
+    action: receive
+    channel:
+      $ref: '#/channels/parsevk_content_ingestion_vk'
+    messages:
+    - $ref: '#/channels/parsevk_content_ingestion_vk/messages/vk_ingestion_comment-part-prepared'
+  vk_service_send_vk_ingestion_post-part-prepared:
+    action: send
+    channel:
+      $ref: '#/channels/parsevk_content_ingestion_vk'
+    messages:
+    - $ref: '#/channels/parsevk_content_ingestion_vk/messages/vk_ingestion_post-part-prepared'
+  content_service_receive_vk_ingestion_post-part-prepared:
+    action: receive
+    channel:
+      $ref: '#/channels/parsevk_content_ingestion_vk'
+    messages:
+    - $ref: '#/channels/parsevk_content_ingestion_vk/messages/vk_ingestion_post-part-prepared'
 components:
   messages:
     sources_access_granted:
@@ -98,3 +129,17 @@ components:
       contentType: application/json
       payload:
         $ref: ../json-schema/vk.execution.requested.json
+    vk_ingestion_comment-part-prepared:
+      name: vk.ingestion.comment-part-prepared
+      title: vk.ingestion.comment-part-prepared
+      summary: vk.ingestion.comment-part-prepared
+      contentType: application/json
+      payload:
+        $ref: ../json-schema/vk.ingestion.comment-part-prepared.json
+    vk_ingestion_post-part-prepared:
+      name: vk.ingestion.post-part-prepared
+      title: vk.ingestion.post-part-prepared
+      summary: vk.ingestion.post-part-prepared
+      contentType: application/json
+      payload:
+        $ref: ../json-schema/vk.ingestion.post-part-prepared.json

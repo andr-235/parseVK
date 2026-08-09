@@ -10,6 +10,7 @@ from app.domain.entities.ingestion_parts import (
     IngestionPart,
     IngestionPartReference,
 )
+from app.domain.entities.ingestion_staging import PREPARED, STAGED
 from app.domain.repositories.ingestion_parts import IngestionPartConflictError
 from app.infrastructure.db.models.ingestion_parts import (
     VkIngestionPartReference,
@@ -36,11 +37,12 @@ class SqlAlchemyIngestionPartRepository:
         references: tuple[IngestionPartReference, ...],
     ) -> tuple[tuple[IngestionPart, ...], bool]:
         validate_part_set(parts, references)
-        await self._lock_batch(parts[0].batch_id)
+        batch = await self._lock_batch(parts[0].batch_id)
         existing = await self.list_for_batch(parts[0].batch_id)
         if existing:
             verify_part_set(existing, parts)
             await self._verify_references(references)
+            self._mark_batch_prepared(batch)
             return existing, False
 
         dialect = self.session.get_bind().dialect.name
@@ -66,6 +68,7 @@ class SqlAlchemyIngestionPartRepository:
             raise IngestionPartConflictError(
                 "concurrent preparation produced a partial ingestion part set"
             )
+        self._mark_batch_prepared(batch)
         return stored, inserted == len(parts)
 
     async def list_for_batch(self, batch_id: UUID) -> tuple[IngestionPart, ...]:
@@ -78,16 +81,25 @@ class SqlAlchemyIngestionPartRepository:
         ).all()
         return tuple(part_from_model(model) for model in models)
 
-    async def _lock_batch(self, batch_id: UUID) -> None:
-        locked = await self.session.scalar(
-            select(VkIngestionStagingBatch.id)
+    async def _lock_batch(self, batch_id: UUID) -> VkIngestionStagingBatch:
+        batch = await self.session.scalar(
+            select(VkIngestionStagingBatch)
             .where(VkIngestionStagingBatch.id == batch_id)
             .with_for_update()
         )
-        if locked is None:
+        if batch is None:
             raise IngestionPartConflictError(
                 "ingestion part preparation requires a durable staged batch"
             )
+        return batch
+
+    @staticmethod
+    def _mark_batch_prepared(batch: VkIngestionStagingBatch) -> None:
+        if batch.status not in {STAGED, PREPARED}:
+            raise IngestionPartConflictError(
+                "terminal staged batch cannot be prepared again"
+            )
+        batch.status = PREPARED
 
     async def _verify_references(
         self,
