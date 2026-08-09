@@ -18,12 +18,20 @@ def build_canonical_moderation_manifest(
     part: IngestionPartEnvelope,
     *,
     created_at: datetime,
+    post_revision: int,
 ) -> dict[str, Any]:
+    if post_revision <= 0:
+        raise ValueError("post_revision must be positive")
     owner_id = int(part.source["ownerId"])
     post_id = int(part.source["postId"])
     post_key = f"{owner_id}:{post_id}"
-    normalized = [_normalize_comment(item) for item in flatten_comments(part.comments, owner_id, post_id)]
-    normalized.sort(key=lambda item: (item["ownerId"], item["postId"], item["commentId"]))
+    normalized = [
+        _normalize_comment(item)
+        for item in flatten_comments(part.comments, owner_id, post_id)
+    ]
+    normalized.sort(
+        key=lambda item: (item["ownerId"], item["postId"], item["commentId"])
+    )
 
     chunks = [
         normalized[index : index + CANONICAL_COMMENTS_CHUNK_SIZE]
@@ -46,6 +54,7 @@ def build_canonical_moderation_manifest(
                     "sourceMessageId": str(part.source_message_id),
                     "batchId": str(part.batch_id),
                     "postKey": post_key,
+                    "postRevision": post_revision,
                     "chunkIndex": chunk_index,
                     "chunkCount": chunk_count,
                     "comments": comments,
