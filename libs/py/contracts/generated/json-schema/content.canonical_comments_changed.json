@@ -3,30 +3,120 @@
     "ContentCanonicalComment": {
       "additionalProperties": false,
       "properties": {
-        "authorId": {"anyOf": [{"type": "integer"}, {"type": "null"}], "default": null, "title": "Authorid"},
-        "commentId": {"title": "Commentid", "type": "integer"},
-        "createdAt": {"anyOf": [{"format": "date-time", "type": "string"}, {"type": "null"}], "default": null, "title": "Createdat"},
-        "ownerId": {"title": "Ownerid", "type": "integer"},
-        "postId": {"title": "Postid", "type": "integer"},
-        "text": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Text"}
+        "authorId": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Authorid"
+        },
+        "commentId": {
+          "title": "Commentid",
+          "type": "integer"
+        },
+        "createdAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Createdat"
+        },
+        "ownerId": {
+          "title": "Ownerid",
+          "type": "integer"
+        },
+        "postId": {
+          "title": "Postid",
+          "type": "integer"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        }
       },
-      "required": ["ownerId", "postId", "commentId"],
+      "required": [
+        "ownerId",
+        "postId",
+        "commentId"
+      ],
       "title": "ContentCanonicalComment",
       "type": "object"
     },
     "ContentCanonicalCommentsChanged": {
       "additionalProperties": false,
       "properties": {
-        "batchId": {"format": "uuid", "title": "Batchid", "type": "string"},
-        "chunkCount": {"exclusiveMinimum": 0, "title": "Chunkcount", "type": "integer"},
-        "chunkIndex": {"minimum": 0, "title": "Chunkindex", "type": "integer"},
-        "comments": {"items": {"$ref": "#/$defs/ContentCanonicalComment"}, "title": "Comments", "type": "array"},
-        "postKey": {"minLength": 3, "title": "Postkey", "type": "string"},
-        "postRevision": {"exclusiveMinimum": 0, "title": "Postrevision", "type": "integer"},
-        "sourceMessageId": {"format": "uuid", "title": "Sourcemessageid", "type": "string"},
-        "sourceService": {"const": "content-service", "title": "Sourceservice", "type": "string"}
+        "batchId": {
+          "format": "uuid",
+          "title": "Batchid",
+          "type": "string"
+        },
+        "chunkCount": {
+          "exclusiveMinimum": 0,
+          "title": "Chunkcount",
+          "type": "integer"
+        },
+        "chunkIndex": {
+          "minimum": 0,
+          "title": "Chunkindex",
+          "type": "integer"
+        },
+        "comments": {
+          "items": {
+            "$ref": "#/$defs/ContentCanonicalComment"
+          },
+          "title": "Comments",
+          "type": "array"
+        },
+        "postKey": {
+          "minLength": 3,
+          "title": "Postkey",
+          "type": "string"
+        },
+        "postRevision": {
+          "exclusiveMinimum": 0,
+          "title": "Postrevision",
+          "type": "integer"
+        },
+        "sourceMessageId": {
+          "format": "uuid",
+          "title": "Sourcemessageid",
+          "type": "string"
+        },
+        "sourceService": {
+          "const": "content-service",
+          "title": "Sourceservice",
+          "type": "string"
+        }
       },
-      "required": ["sourceService", "sourceMessageId", "batchId", "postKey", "postRevision", "chunkIndex", "chunkCount", "comments"],
+      "required": [
+        "sourceService",
+        "sourceMessageId",
+        "batchId",
+        "postKey",
+        "postRevision",
+        "chunkIndex",
+        "chunkCount",
+        "comments"
+      ],
       "title": "ContentCanonicalCommentsChanged",
       "type": "object"
     }
@@ -36,15 +126,61 @@
   "additionalProperties": false,
   "description": "Schema for content.canonical_comments_changed",
   "properties": {
-    "causationId": {"anyOf": [{"format": "uuid", "type": "string"}, {"type": "null"}], "default": null, "title": "Causationid"},
-    "correlationId": {"anyOf": [{"format": "uuid", "type": "string"}, {"type": "null"}], "default": null, "title": "Correlationid"},
-    "messageId": {"format": "uuid", "title": "Messageid", "type": "string"},
-    "messageType": {"const": "content.canonical_comments_changed"},
-    "occurredAt": {"format": "date-time", "title": "Occurredat", "type": "string"},
-    "payload": {"$ref": "#/$defs/ContentCanonicalCommentsChanged"},
-    "producer": {"enum": ["content-service"]}
+    "causationId": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Causationid"
+    },
+    "correlationId": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Correlationid"
+    },
+    "messageId": {
+      "format": "uuid",
+      "title": "Messageid",
+      "type": "string"
+    },
+    "messageType": {
+      "const": "content.canonical_comments_changed"
+    },
+    "occurredAt": {
+      "format": "date-time",
+      "title": "Occurredat",
+      "type": "string"
+    },
+    "payload": {
+      "$ref": "#/$defs/ContentCanonicalCommentsChanged"
+    },
+    "producer": {
+      "enum": [
+        "content-service"
+      ]
+    }
   },
-  "required": ["messageId", "messageType", "occurredAt", "producer", "payload"],
+  "required": [
+    "messageId",
+    "messageType",
+    "occurredAt",
+    "producer",
+    "payload"
+  ],
   "title": "content.canonical_comments_changed",
   "type": "object"
 }
