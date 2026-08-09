@@ -100,6 +100,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, lifespan=lifespan)
     try:
         from common.tracing import setup_opentelemetry
+
         setup_opentelemetry("moderation-service")
     except Exception:
         pass
@@ -120,6 +121,7 @@ def create_app() -> FastAPI:
     async def ready() -> dict[str, str]:
         from fastapi import HTTPException
         from sqlalchemy import text
+
         from app.db.session import engine
 
         try:
