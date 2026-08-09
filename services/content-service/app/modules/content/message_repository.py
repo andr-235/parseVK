@@ -47,18 +47,29 @@ class MessageRepository(BaseContentRepository):
         after_id: int | None,
         limit: int,
     ) -> dict:
-        stmt = select(ContentComment)
+        stmt = (
+            select(ContentComment, ContentPost.projection_revision)
+            .join(
+                ContentPost,
+                ContentPost.external_key == ContentComment.post_external_key,
+            )
+        )
         if after_id is not None:
             stmt = stmt.where(ContentComment.id > after_id)
-        result = await self.session.scalars(
+        result = await self.session.execute(
             stmt.order_by(ContentComment.id.asc()).limit(limit + 1)
         )
-        rows = list(result)
+        rows = list(result.all())
         has_more = len(rows) > limit
-        items = rows[:limit]
+        page_rows = rows[:limit]
+        items: list[dict] = []
+        for comment, post_revision in page_rows:
+            item = self.comment_to_dict(comment)
+            item["postRevision"] = int(post_revision)
+            items.append(item)
         return {
-            "items": [self.comment_to_dict(row) for row in items],
-            "nextAfterId": items[-1].id if items else None,
+            "items": items,
+            "nextAfterId": page_rows[-1][0].id if page_rows else None,
             "hasMore": has_more,
         }
 
