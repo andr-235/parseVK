@@ -99,9 +99,12 @@ def _raw_post_part() -> tuple[bytes, list[tuple[str, bytes]]]:
 def test_valid_part_recomputes_identity_and_digests() -> None:
     raw, headers = _raw_post_part()
     part = parse_ingestion_part(raw, headers)
-    assert part.part_kind == "post"
-    assert part.part_index == 0
-    assert part.page_digest == "a" * 64
+    batch_id = UUID("11111111-1111-4111-8111-111111111111")
+    expected_id = uuid5(PART_NAMESPACE, f"{batch_id}:post:1:1:1:0")
+    expected_part_digest = dict(headers)["part-digest"].decode()
+    assert part.source_message_id == expected_id
+    assert part.batch_id == batch_id
+    assert part.part_digest == expected_part_digest
     assert part.wire_digest == sha256(raw).hexdigest()
 
 
@@ -112,6 +115,16 @@ def test_wire_digest_mismatch_fails_before_application() -> None:
         for name, value in headers
     ]
     with pytest.raises(IngressValidationError, match="wire-digest"):
+        parse_ingestion_part(raw, headers)
+
+
+def test_part_digest_mismatch_is_rejected() -> None:
+    raw, headers = _raw_post_part()
+    headers = [
+        (name, ("b" * 64).encode() if name == "part-digest" else value)
+        for name, value in headers
+    ]
+    with pytest.raises(IngressValidationError, match="part digest mismatch"):
         parse_ingestion_part(raw, headers)
 
 
