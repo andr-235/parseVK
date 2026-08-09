@@ -14,9 +14,8 @@ class Settings(BaseSettings):
     image_moderation_verify_ssl: bool = True
     internal_service_token: str = "dev-internal-token"
     kafka_bootstrap_servers: str = "kafka:9092"
-    kafka_topic_vk: str = "parsevk.vk.events"
+    kafka_topic_content: str = "parsevk.content.events"
     kafka_consumer_enabled: bool = False
-
 
 
 settings = Settings()
