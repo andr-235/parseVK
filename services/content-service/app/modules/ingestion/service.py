@@ -53,27 +53,27 @@ class IngestionApplicationService:
             await self._assert_no_orphans(part)
             receipt = await self.receipts.create(part)
             effects = await self.canonical.apply(part)
+            post_revision = int(effects.get("postRevision", 0))
+            if post_revision <= 0:
+                raise IngestionCorruptionError(
+                    "canonical mutation did not return a positive post revision"
+                )
             receipt.applied_at = datetime.now(UTC)
             receipt.effect_summary = {
                 **effects,
                 MANIFEST_KEY: build_canonical_moderation_manifest(
-                    part, created_at=receipt.applied_at
+                    part,
+                    created_at=receipt.applied_at,
+                    post_revision=post_revision,
                 ),
             }
         else:
             self._verify_receipt(receipt, part)
             if receipt.applied_at is None:
                 raise IngestionCorruptionError("committed receipt is not marked applied")
-            # Receipts created during the previous P3 step have no moderation manifest yet.
-            # The immutable replayed part is enough to backfill it without reapplying canonical state.
-            if MANIFEST_KEY not in receipt.effect_summary:
-                receipt.effect_summary = {
-                    **receipt.effect_summary,
-                    MANIFEST_KEY: build_canonical_moderation_manifest(
-                        part, created_at=receipt.applied_at
-                    ),
-                }
-        await self._ensure_canonical_events(receipt)
+
+        if MANIFEST_KEY in receipt.effect_summary:
+            await self._ensure_canonical_events(receipt)
         await self.receipts.ensure_processed(part.source_message_id, part.event.event_type)
         await self._ensure_ack(receipt, part.event.correlation_id)
         await self.receipts.flush()
