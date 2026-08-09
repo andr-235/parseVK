@@ -64,7 +64,9 @@ class ContentService:
         sort_order: str = "desc",
     ) -> dict:
         return await self._authors.list_authors(
-            limit=limit, page=page, offset=offset, search=search, keywords=keywords, keyword_source=keyword_source
+            limit=limit, page=page, offset=offset, search=search,
+            city=city, verified=verified, author_type=author_type,
+            sort_by=sort_by, sort_order=sort_order,
         )
 
     async def get_author(self, vk_author_id: int) -> dict | None:
