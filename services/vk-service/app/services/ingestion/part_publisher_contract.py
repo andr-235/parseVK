@@ -9,8 +9,11 @@ def publication_headers(
     return [
         ("event-id", str(claim.event_id).encode()),
         ("event-type", claim.event_type.encode()),
+        ("source-service", b"vk-service"),
         ("batch-id", str(claim.batch.batch_id).encode()),
         ("wire-digest", claim.part.wire_digest.encode()),
+        ("page-digest", claim.batch.payload_digest.encode()),
+        ("part-digest", claim.part.part_digest.encode()),
     ]
 
 

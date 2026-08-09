@@ -14,7 +14,9 @@ class Settings(BaseSettings):
     kafka_topic_content: str = "parsevk.content.events"
     kafka_topic_content_dlq: str = "parsevk.content.dlq"
     kafka_topic_vk_ingestion: str = "parsevk.content.ingestion.vk"
+    kafka_topic_vk_ingestion_ack: str = "parsevk.content.ingestion.acks"
     kafka_topic_vk_ingestion_dlq: str = "parsevk.content.ingestion.vk.dlq"
+    kafka_vk_ingestion_max_retries: int = Field(default=3, ge=1, le=20)
     kafka_vk_ingestion_fetch_max_bytes: int = Field(
         default=1_048_576,
         ge=1_048_576,
@@ -33,7 +35,6 @@ class Settings(BaseSettings):
     photo_analysis_max_concurrency: int = 5
     photo_analysis_enrichment_budget_seconds: float = 2.0
 
-    # Настройки внешней БД мониторинга (WhatsApp / Max)
     monitor_database_url: str | None = Field(default=None, validation_alias="MONITOR_DATABASE_URL")
     monitor_messages_table: str = Field(default="messages", validation_alias="MONITOR_MESSAGES_TABLE")
     monitor_message_id_column: str = Field(default="id", validation_alias="MONITOR_MESSAGE_ID_COLUMN")
@@ -50,13 +51,17 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_vk_ingestion_transport_limits(self) -> "Settings":
-        if (
-            self.kafka_vk_ingestion_fetch_max_bytes
-            < self.kafka_vk_ingestion_max_partition_fetch_bytes
-        ):
+        if self.kafka_vk_ingestion_fetch_max_bytes < self.kafka_vk_ingestion_max_partition_fetch_bytes:
             raise ValueError(
                 "VK ingestion fetch max bytes must be at least the per-partition fetch limit"
             )
+        required_topics = (
+            self.kafka_topic_vk_ingestion,
+            self.kafka_topic_vk_ingestion_ack,
+            self.kafka_topic_vk_ingestion_dlq,
+        )
+        if any(not topic.strip() for topic in required_topics):
+            raise ValueError("VK ingestion, ACK and DLQ topics must be configured")
         return self
 
 
