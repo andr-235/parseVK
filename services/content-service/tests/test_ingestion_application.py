@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import replace
-from types import SimpleNamespace
 import sys
+from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import pytest
