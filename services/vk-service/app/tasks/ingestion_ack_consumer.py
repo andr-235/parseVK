@@ -13,6 +13,7 @@ from app.infrastructure.db.repositories.ingestion_ack import (
 )
 from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsRepository
 from app.services.ingestion.ack_contract import decode_ingestion_ack
+from app.services.ingestion.lifecycle_metrics import observe_ack_latency
 
 ACK_OUTCOMES = Counter(
     "vk_ingestion_ack_outcomes_total",
@@ -47,6 +48,7 @@ class VkIngestionAckConsumer(BaseEventConsumer):
         headers: list[tuple[str, bytes | None]],
     ) -> None:
         ack = decode_ingestion_ack(raw_value, headers)
+        received_at = datetime.now(UTC)
         async with self.session_factory() as session:
             async with session.begin():
                 inbox = SqlAlchemyTaskEventsRepository(session)
@@ -58,7 +60,7 @@ class VkIngestionAckConsumer(BaseEventConsumer):
                     return
                 outcome = await SqlAlchemyIngestionAckRepository(session).apply(
                     ack,
-                    received_at=datetime.now(UTC),
+                    received_at=received_at,
                 )
                 await inbox.mark_processed(
                     self.consumer_name,
@@ -66,3 +68,4 @@ class VkIngestionAckConsumer(BaseEventConsumer):
                     "content.ingestion.part-applied",
                 )
                 ACK_OUTCOMES.labels(outcome=outcome).inc()
+        observe_ack_latency(applied_at=ack.applied_at, received_at=received_at)

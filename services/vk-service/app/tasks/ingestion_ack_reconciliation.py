@@ -8,18 +8,11 @@ from prometheus_client import Counter
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.core.config import settings
-from app.infrastructure.db.repositories.ingestion_ack import (
-    SqlAlchemyIngestionAckRepository,
-)
-from app.infrastructure.db.repositories.ingestion_ack_reconciliation import (
-    pending_ack_message_ids,
-)
-from app.infrastructure.db.repositories.ingestion_lifecycle_repair import (
-    repair_local_lifecycle,
-)
-from app.services.ingestion.reconciliation_client import (
-    ContentIngestionReceiptClient,
-)
+from app.infrastructure.db.repositories.ingestion_ack import SqlAlchemyIngestionAckRepository
+from app.infrastructure.db.repositories.ingestion_ack_reconciliation import pending_ack_message_ids
+from app.infrastructure.db.repositories.ingestion_lifecycle_repair import repair_local_lifecycle
+from app.services.ingestion.lifecycle_metrics import observe_lifecycle_snapshot
+from app.services.ingestion.reconciliation_client import ContentIngestionReceiptClient
 
 RECONCILIATION_OUTCOMES = Counter(
     "vk_ingestion_ack_reconciliation_total",
@@ -40,20 +33,13 @@ class ReconciliationStats:
 
 
 class IngestionAckReconciler:
-    def __init__(
-        self,
-        *,
-        session_factory: async_sessionmaker,
-        client: ContentIngestionReceiptClient,
-    ) -> None:
+    def __init__(self, *, session_factory: async_sessionmaker, client: ContentIngestionReceiptClient) -> None:
         self._session_factory = session_factory
         self._client = client
 
     async def run_once(self) -> ReconciliationStats:
         now = datetime.now(UTC)
-        cutoff = now - timedelta(
-            seconds=settings.ingestion_ack_reconciliation_min_age_seconds
-        )
+        cutoff = now - timedelta(seconds=settings.ingestion_ack_reconciliation_min_age_seconds)
         async with self._session_factory() as session:
             async with session.begin():
                 local = await repair_local_lifecycle(
@@ -66,6 +52,7 @@ class IngestionAckReconciler:
                     older_than=cutoff,
                     limit=settings.ingestion_ack_reconciliation_batch_size,
                 )
+                await observe_lifecycle_snapshot(session, now=now)
         _record_local_repair(local)
         acks = await self._client.fetch_applied(candidate_ids)
         repaired = 0
@@ -73,8 +60,7 @@ class IngestionAckReconciler:
             async with self._session_factory() as session:
                 async with session.begin():
                     outcome = await SqlAlchemyIngestionAckRepository(session).apply(
-                        ack,
-                        received_at=datetime.now(UTC),
+                        ack, received_at=datetime.now(UTC)
                     )
             RECONCILIATION_OUTCOMES.labels(outcome=outcome).inc()
             if outcome in {"applied", "batch_applied", "replayed"}:
@@ -83,13 +69,8 @@ class IngestionAckReconciler:
         if missing:
             RECONCILIATION_OUTCOMES.labels(outcome="missing").inc(missing)
         return ReconciliationStats(
-            candidates=len(candidate_ids),
-            found=len(acks),
-            repaired=repaired,
-            missing=missing,
-            missing_references=local.missing_references,
-            expired_claims=local.expired_claims,
-            quarantined_batches=local.quarantined_batches,
+            len(candidate_ids), len(acks), repaired, missing,
+            local.missing_references, local.expired_claims, local.quarantined_batches,
         )
 
 
@@ -103,17 +84,12 @@ def _record_local_repair(local) -> None:
             RECONCILIATION_OUTCOMES.labels(outcome=outcome).inc(count)
 
 
-async def reconcile_ingestion_acks_forever(
-    session_factory: async_sessionmaker,
-) -> None:
+async def reconcile_ingestion_acks_forever(session_factory: async_sessionmaker) -> None:
     client = ContentIngestionReceiptClient(
         base_url=settings.content_service_base_url,
         internal_token=settings.internal_service_token,
     )
-    reconciler = IngestionAckReconciler(
-        session_factory=session_factory,
-        client=client,
-    )
+    reconciler = IngestionAckReconciler(session_factory=session_factory, client=client)
     while True:
         await reconciler.run_once()
         await asyncio.sleep(settings.ingestion_ack_reconciliation_poll_seconds)
