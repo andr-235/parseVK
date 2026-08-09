@@ -86,8 +86,11 @@ class IngestionReceiptRepository:
         )
         await self.session.execute(stmt)
 
-    async def get_ack(self, event_id: UUID) -> ContentOutboxEvent | None:
+    async def get_outbox(self, event_id: UUID) -> ContentOutboxEvent | None:
         return await self.session.get(ContentOutboxEvent, event_id)
+
+    async def get_ack(self, event_id: UUID) -> ContentOutboxEvent | None:
+        return await self.get_outbox(event_id)
 
     async def flush(self) -> None:
         await self.session.flush()
