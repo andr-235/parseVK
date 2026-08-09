@@ -1,19 +1,20 @@
-import asyncio
 import json
 import logging
-from datetime import UTC, datetime, timedelta
 
 from app.core.config import settings
 from app.db.models import ProcessedEvent
 from app.db.session import async_session_maker
-from common.events import VkEvent
+from app.modules.moderation.service import (
+    CANONICAL_COMMENTS_EVENT_TYPE,
+    ModerationService,
+)
+from common.events import ContentCanonicalCommentsChangedV1, WireEvent
 from common.kafka.consumer import BaseEventConsumer
-from app.modules.moderation.service import ModerationService
 from prometheus_client import Gauge
 
 logger = logging.getLogger(__name__)
 
-DLQ_TOPIC = "parsevk.vk.dlq"
+DLQ_TOPIC = "parsevk.moderation.dlq"
 CONSUMER_NAME = "moderation-service"
 
 try:
@@ -36,46 +37,30 @@ class ProjectionConsumer(BaseEventConsumer):
     def __init__(self):
         super().__init__(
             session_factory=async_session_maker,
-            kafka_topic=settings.kafka_topic_vk,
+            kafka_topic=settings.kafka_topic_content,
             bootstrap_servers=settings.kafka_bootstrap_servers,
             model_class=ProcessedEvent,
             lag_gauge=_consumer_lag,
         )
-        self._pending_recalculation_tasks: set[asyncio.Task] = set()
 
     async def handle_message(self, raw_value: bytes) -> None:
-        payload = json.loads(raw_value.decode("utf-8"))
-        event = VkEvent.model_validate(payload)
-        if event.event_version != 1:
-            logger.warning(
-                "Skipping unsupported event version %d for type %s",
-                event.event_version, event.event_type,
-            )
+        raw = json.loads(raw_value.decode("utf-8"))
+        event = WireEvent.model_validate(raw)
+        if event.event_type != CANONICAL_COMMENTS_EVENT_TYPE:
+            logger.debug("Ignoring unrelated content event type=%s", event.event_type)
             return
+        if event.event_version != 1:
+            raise ValueError(
+                f"unsupported {CANONICAL_COMMENTS_EVENT_TYPE} version: {event.event_version}"
+            )
+        payload = ContentCanonicalCommentsChangedV1.model_validate(event.payload)
         logger.debug(
-            "Moderation Kafka message received event_id=%s type=%s",
-            event.event_id, event.event_type,
+            "Canonical moderation message received event_id=%s chunk=%d/%d",
+            event.event_id,
+            payload.chunkIndex + 1,
+            payload.chunkCount,
         )
         async with self.session_factory() as session:
             async with session.begin():
-                service = ModerationService(session, session_maker=async_session_maker)
-                await service.handle_event(event)
-                # Track any fire-and-forget recalculation tasks
-                for pending_task in service.drain_pending_tasks():
-                    self._pending_recalculation_tasks.add(pending_task)
-                    pending_task.add_done_callback(self._pending_recalculation_tasks.discard)
-                    logger.debug(
-                        "Tracking recalculation task %s",
-                        pending_task.get_name(),
-                    )
-
-    async def stop(self) -> None:
-        logger.info(
-            "Stopping ProjectionConsumer, cancelling %d pending recalculation tasks",
-            len(self._pending_recalculation_tasks),
-        )
-        for task in self._pending_recalculation_tasks:
-            task.cancel()
-        if self._pending_recalculation_tasks:
-            await asyncio.gather(*self._pending_recalculation_tasks, return_exceptions=True)
-        await super().stop()
+                service = ModerationService(session)
+                await service.handle_event(event, payload)
