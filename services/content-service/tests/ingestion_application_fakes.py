@@ -22,6 +22,7 @@ class FakeCanonical:
             "authorsUpdated": 0,
             "commentsInserted": 0,
             "commentsUpdated": 0,
+            "postRevision": 1,
         }
 
 
