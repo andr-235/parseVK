@@ -1,4 +1,11 @@
-from common.events.base import ConsumerEvent, EventEnvelope, ImEvent, TaskEvent, VkEvent, WireEvent
+from common.events.base import (
+    ConsumerEvent,
+    EventEnvelope,
+    ImEvent,
+    TaskEvent,
+    VkEvent,
+    WireEvent,
+)
 from common.events.codec import decode_payload
 from common.events.helpers import (
     get_group_ids,
