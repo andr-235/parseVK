@@ -14,6 +14,9 @@ from app.infrastructure.db.repositories.ingestion_ack import (
 from app.infrastructure.db.repositories.ingestion_ack_reconciliation import (
     pending_ack_message_ids,
 )
+from app.infrastructure.db.repositories.ingestion_lifecycle_repair import (
+    repair_local_lifecycle,
+)
 from app.services.ingestion.reconciliation_client import (
     ContentIngestionReceiptClient,
 )
@@ -31,6 +34,9 @@ class ReconciliationStats:
     found: int
     repaired: int
     missing: int
+    missing_references: int
+    expired_claims: int
+    quarantined_batches: int
 
 
 class IngestionAckReconciler:
@@ -44,15 +50,23 @@ class IngestionAckReconciler:
         self._client = client
 
     async def run_once(self) -> ReconciliationStats:
-        cutoff = datetime.now(UTC) - timedelta(
+        now = datetime.now(UTC)
+        cutoff = now - timedelta(
             seconds=settings.ingestion_ack_reconciliation_min_age_seconds
         )
         async with self._session_factory() as session:
-            candidate_ids = await pending_ack_message_ids(
-                session,
-                older_than=cutoff,
-                limit=settings.ingestion_ack_reconciliation_batch_size,
-            )
+            async with session.begin():
+                local = await repair_local_lifecycle(
+                    session,
+                    now=now,
+                    limit=settings.ingestion_ack_reconciliation_batch_size,
+                )
+                candidate_ids = await pending_ack_message_ids(
+                    session,
+                    older_than=cutoff,
+                    limit=settings.ingestion_ack_reconciliation_batch_size,
+                )
+        _record_local_repair(local)
         acks = await self._client.fetch_applied(candidate_ids)
         repaired = 0
         for ack in acks:
@@ -73,7 +87,20 @@ class IngestionAckReconciler:
             found=len(acks),
             repaired=repaired,
             missing=missing,
+            missing_references=local.missing_references,
+            expired_claims=local.expired_claims,
+            quarantined_batches=local.quarantined_batches,
         )
+
+
+def _record_local_repair(local) -> None:
+    for outcome, count in (
+        ("missing_reference_repaired", local.missing_references),
+        ("expired_claim_released", local.expired_claims),
+        ("local_inconsistency_quarantined", local.quarantined_batches),
+    ):
+        if count:
+            RECONCILIATION_OUTCOMES.labels(outcome=outcome).inc(count)
 
 
 async def reconcile_ingestion_acks_forever(
