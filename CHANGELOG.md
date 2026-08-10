@@ -1,3 +1,10 @@
+# [0.93.0](https://github.com/andr-235/parseVK/compare/v0.92.0...v0.93.0) (2026-08-10)
+
+
+### Features
+
+* **p3:** restore production staged ingestion path ([#460](https://github.com/andr-235/parseVK/issues/460)) ([0261dc0](https://github.com/andr-235/parseVK/commit/0261dc07b241ce889f2aa7bbfe626bbbb9a3296f))
+
 # [0.92.0](https://github.com/andr-235/parseVK/compare/v0.91.9...v0.92.0) (2026-08-06)
 
 
