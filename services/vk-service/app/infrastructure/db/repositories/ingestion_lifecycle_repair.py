@@ -12,6 +12,9 @@ from app.infrastructure.db.models.ingestion_part_publication import (
 )
 from app.infrastructure.db.models.ingestion_parts import VkIngestionStagingPart
 from app.infrastructure.db.models.ingestion_staging import VkIngestionStagingBatch
+from app.infrastructure.db.repositories.ingestion_part_publication_records import (
+    batch_from_model,
+)
 from app.infrastructure.db.repositories.ingestion_part_records import part_from_model
 from app.infrastructure.db.repositories.ingestion_part_reference_recovery import (
     recover_missing_references,
@@ -19,7 +22,6 @@ from app.infrastructure.db.repositories.ingestion_part_reference_recovery import
 from app.infrastructure.db.repositories.ingestion_part_set_validation import (
     validate_part_set,
 )
-from app.infrastructure.db.repositories.ingestion_staging import batch_from_model
 
 _AUDITED_BATCH_STATUSES = ("staged", "prepared", "published", "applied")
 _PART_REFERENCE_PAIRS = {
