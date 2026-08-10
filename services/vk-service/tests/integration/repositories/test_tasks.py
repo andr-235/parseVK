@@ -1,7 +1,8 @@
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 
 from app.infrastructure.db.models.tasks import ProcessedEvent
 from app.infrastructure.db.repositories.tasks import SqlAlchemyTaskEventsRepository
@@ -18,6 +19,7 @@ async def test_task_event_inbox_is_idempotent(db_session):
     await repository.mark_processed("consumer-1", event_id, "task.created")
 
     assert await repository.is_processed("consumer-1", event_id)
+    assert await repository.is_successfully_processed("consumer-1", event_id)
     count = await db_session.scalar(
         select(func.count(ProcessedEvent.id)).where(
             ProcessedEvent.consumer_name == "consumer-1",
@@ -25,6 +27,29 @@ async def test_task_event_inbox_is_idempotent(db_session):
         )
     )
     assert count == 1
+
+
+@pytest.mark.anyio
+async def test_retry_row_is_not_treated_as_successful_processing(db_session):
+    repository = SqlAlchemyTaskEventsRepository(db_session)
+    event_id = uuid4()
+    await repository.mark_processed("ack-consumer", event_id, "content.ingestion.part-applied")
+    await db_session.execute(
+        update(ProcessedEvent)
+        .where(
+            ProcessedEvent.consumer_name == "ack-consumer",
+            ProcessedEvent.event_id == event_id,
+        )
+        .values(
+            retry_count=1,
+            last_error="temporary failure",
+            next_retry_at=datetime.now(UTC) + timedelta(seconds=30),
+        )
+    )
+    await db_session.flush()
+
+    assert await repository.is_processed("ack-consumer", event_id)
+    assert not await repository.is_successfully_processed("ack-consumer", event_id)
 
 
 @pytest.mark.anyio

@@ -1,8 +1,4 @@
-"""Shared outbox publisher — claim → publish → mark cycle.
-
-Follows the tasks-service pattern: receives an already-started AIOKafkaProducer.
-The service worker manages producer lifecycle (create, start, stop).
-"""
+"""Shared outbox publisher — claim → publish → mark cycle."""
 
 from __future__ import annotations
 
@@ -22,32 +18,18 @@ if TYPE_CHECKING:
     from aiokafka import AIOKafkaProducer
 
 logger = logging.getLogger(__name__)
+HeadersFn = Callable[[OutboxMessage], list[tuple[str, bytes]]]
 
 
 def _create_dlq_counter(namespace: str) -> Counter:
     metric_name = f"{namespace}_dlq_events_total"
     try:
-        return Counter(
-            metric_name,
-            "Total events sent to DLQ",
-            ["event_type", "namespace"],
-        )
+        return Counter(metric_name, "Total events sent to DLQ", ["event_type", "namespace"])
     except ValueError:
-        # Re-import in the same process (tests reset sys.modules) — reuse existing collector.
         return REGISTRY._names_to_collectors[metric_name]  # type: ignore[return-value]
 
 
 class OutboxPublisher:
-    """Publishes pending outbox events to Kafka.
-
-    Does NOT manage the Kafka producer lifecycle — the producer is created and
-    started by the calling worker. This class handles:
-    - Claiming pending events from repository
-    - Publishing to Kafka topic
-    - Marking published/failed
-    - Moving fatally-failed events to dead-letter topic
-    """
-
     def __init__(
         self,
         *,
@@ -60,6 +42,7 @@ class OutboxPublisher:
         key_fn: Callable[[OutboxMessage], str] | None = None,
         topic_fn: Callable[[OutboxMessage], str] | None = None,
         dlq_topic_fn: Callable[[OutboxMessage], str] | None = None,
+        headers_fn: HeadersFn | None = None,
     ):
         self.repository = repository
         self.producer = producer
@@ -70,13 +53,8 @@ class OutboxPublisher:
         self.key_fn = key_fn or self._default_key
         self.topic_fn = topic_fn
         self.dlq_topic_fn = dlq_topic_fn
+        self.headers_fn = headers_fn
         self.dlq_counter = _create_dlq_counter(namespace)
-        logger.debug(
-            "OutboxPublisher initialized: topic=%s dlq=%s namespace=%s",
-            topic,
-            dlq_topic,
-            namespace,
-        )
 
     @staticmethod
     def _default_key(msg: OutboxMessage) -> str:
@@ -86,20 +64,14 @@ class OutboxPublisher:
         return self.topic_fn(event) if self.topic_fn is not None else self.topic
 
     def _dlq_topic_for(self, event: OutboxMessage) -> str:
-        return (
-            self.dlq_topic_fn(event)
-            if self.dlq_topic_fn is not None
-            else self.dlq_topic
-        )
+        return self.dlq_topic_fn(event) if self.dlq_topic_fn is not None else self.dlq_topic
 
     async def publish_batch(self, limit: int = 100) -> int:
         if not self.publish_enabled:
             return 0
-
         events = await self.repository.claim_batch(limit=limit)
         if not events:
             return 0
-
         for event in events:
             try:
                 await self._publish_event(event)
@@ -116,7 +88,6 @@ class OutboxPublisher:
                     await self._publish_to_dlq(event, error)
                 continue
             await self.repository.mark_published(event.id)
-
         return len(events)
 
     async def _publish_event(self, event: OutboxMessage) -> None:
@@ -128,35 +99,18 @@ class OutboxPublisher:
             aggregate_id=event.aggregate_id,
             correlation_id=event.correlation_id,
             payload=event.payload,
-            created_at=(
-                event.created_at.isoformat()
-                if event.created_at
-                else datetime.now(UTC).isoformat()
-            ),
+            created_at=event.created_at.isoformat() if event.created_at else datetime.now(UTC).isoformat(),
         )
-        key = self.key_fn(event)
-        topic = self._topic_for(event)
-        logger.debug(
-            "Publishing event id=%s type=%s topic=%s key=%s",
-            event.id,
-            event.event_type,
-            topic,
-            key,
-        )
-        await self.producer.send_and_wait(
-            topic,
-            key=key.encode("utf-8"),
-            value=wire.model_dump_json().encode("utf-8"),
-        )
+        kwargs = {
+            "key": self.key_fn(event).encode("utf-8"),
+            "value": wire.model_dump_json().encode("utf-8"),
+        }
+        if self.headers_fn is not None:
+            kwargs["headers"] = self.headers_fn(event)
+        await self.producer.send_and_wait(self._topic_for(event), **kwargs)
 
-    async def _publish_to_dlq(
-        self, event: OutboxMessage, last_error: str = ""
-    ) -> None:
-        dlq_reason = (
-            f"max_retries_exceeded: {last_error}"
-            if last_error
-            else "max_retries_exceeded"
-        )
+    async def _publish_to_dlq(self, event: OutboxMessage, last_error: str = "") -> None:
+        dlq_reason = f"max_retries_exceeded: {last_error}" if last_error else "max_retries_exceeded"
         envelope = {
             "event_id": str(event.id),
             "event_type": event.event_type,
@@ -169,21 +123,18 @@ class OutboxPublisher:
             "dlq_reason": dlq_reason,
             "dlq_timestamp": datetime.now(UTC).isoformat(),
         }
-        self.dlq_counter.labels(
-            event_type=event.event_type, namespace=self.namespace
-        ).inc()
-        key = self.key_fn(event)
-        topic = self._dlq_topic_for(event)
-        await self.producer.send_and_wait(
-            topic,
-            key=key.encode("utf-8"),
-            value=json.dumps(envelope).encode("utf-8"),
-        )
+        self.dlq_counter.labels(event_type=event.event_type, namespace=self.namespace).inc()
+        kwargs = {
+            "key": self.key_fn(event).encode("utf-8"),
+            "value": json.dumps(envelope).encode("utf-8"),
+        }
+        if self.headers_fn is not None:
+            kwargs["headers"] = self.headers_fn(event)
+        await self.producer.send_and_wait(self._dlq_topic_for(event), **kwargs)
         logger.warning(
-            "Moved outbox event id=%s type=%s to DLQ topic=%s after %d attempts (reason: %s)",
+            "Moved outbox event id=%s type=%s to DLQ topic=%s after %d attempts",
             event.id,
             event.event_type,
-            topic,
+            self._dlq_topic_for(event),
             event.attempts,
-            dlq_reason,
         )

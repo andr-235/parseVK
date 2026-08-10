@@ -26,11 +26,15 @@ class BaseEventConsumer(ABC):
         bootstrap_servers,
         model_class,
         lag_gauge=None,
+        fetch_max_bytes: int | None = None,
+        max_partition_fetch_bytes: int | None = None,
     ):
         self.session_factory = session_factory
         self.kafka_topic = kafka_topic
         self.bootstrap_servers = bootstrap_servers
         self._consumer = None
+        self._fetch_max_bytes = fetch_max_bytes
+        self._max_partition_fetch_bytes = max_partition_fetch_bytes
         repository = ProcessedEventRepository(model_class, self.consumer_name)
         self._retry = ConsumerRetryController(
             session_factory=session_factory,
@@ -51,13 +55,17 @@ class BaseEventConsumer(ABC):
             self.kafka_topic,
             self.consumer_group,
         )
-        self._consumer = AIOKafkaConsumer(
-            self.kafka_topic,
-            bootstrap_servers=self.bootstrap_servers,
-            group_id=self.consumer_group,
-            enable_auto_commit=False,
-            auto_offset_reset=self.auto_offset_reset,
-        )
+        consumer_options = {
+            "bootstrap_servers": self.bootstrap_servers,
+            "group_id": self.consumer_group,
+            "enable_auto_commit": False,
+            "auto_offset_reset": self.auto_offset_reset,
+        }
+        if self._fetch_max_bytes is not None:
+            consumer_options["fetch_max_bytes"] = self._fetch_max_bytes
+        if self._max_partition_fetch_bytes is not None:
+            consumer_options["max_partition_fetch_bytes"] = self._max_partition_fetch_bytes
+        self._consumer = AIOKafkaConsumer(self.kafka_topic, **consumer_options)
         await self._consumer.start()
         logger.info("Kafka consumer started, waiting for messages")
         try:
@@ -66,16 +74,13 @@ class BaseEventConsumer(ABC):
                     if await self._retry.skip_due_to_backoff(
                         message.value,
                         self._consumer,
+                        headers=message.headers,
                     ):
                         continue
-                    await self.handle_message(message.value)
+                    await self.handle_record(message)
                     await self._consumer.commit()
                 except Exception as error:
-                    await self._retry.handle_failure(
-                        message,
-                        error,
-                        self._consumer,
-                    )
+                    await self._retry.handle_failure(message, error, self._consumer)
                 update_lag_metric(
                     self._lag_gauge,
                     self.consumer_group,
@@ -87,6 +92,10 @@ class BaseEventConsumer(ABC):
         finally:
             await self._retry.cancel_pending_resumes()
             await self.stop()
+
+    async def handle_record(self, message) -> None:
+        """Handle a Kafka record; override when headers are part of the contract."""
+        await self.handle_message(message.value)
 
     async def stop(self) -> None:
         if self._consumer is not None:

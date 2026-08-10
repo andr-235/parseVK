@@ -35,6 +35,7 @@ def test_only_one_canonical_command_consumer_switch_exists():
     assert "vk_commands_consumer_enabled" not in Settings.model_fields
     assert "legacy_task_events_enabled" not in Settings.model_fields
     assert "vk_legacy_comment_events_enabled" not in Settings.model_fields
+    assert "vk_batch_events_enabled" not in Settings.model_fields
 
 
 def test_scheduler_knob_defaults():

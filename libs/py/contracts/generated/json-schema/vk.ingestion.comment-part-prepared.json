@@ -1,0 +1,216 @@
+{
+  "$defs": {
+    "IngestionPartSourceV1": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "post_snapshot",
+            "comment_page"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "nextOffset": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Nextoffset"
+        },
+        "ownerId": {
+          "title": "Ownerid",
+          "type": "integer"
+        },
+        "pageOffset": {
+          "minimum": 0,
+          "title": "Pageoffset",
+          "type": "integer"
+        },
+        "postId": {
+          "title": "Postid",
+          "type": "integer"
+        },
+        "providerMetadata": {
+          "additionalProperties": true,
+          "title": "Providermetadata",
+          "type": "object"
+        }
+      },
+      "required": [
+        "kind",
+        "ownerId",
+        "postId",
+        "pageOffset"
+      ],
+      "title": "IngestionPartSourceV1",
+      "type": "object"
+    },
+    "IngestionPartVersionsV1": {
+      "additionalProperties": false,
+      "properties": {
+        "eventContract": {
+          "minimum": 1,
+          "title": "Eventcontract",
+          "type": "integer"
+        },
+        "packing": {
+          "minimum": 1,
+          "title": "Packing",
+          "type": "integer"
+        },
+        "stagingSchema": {
+          "minimum": 1,
+          "title": "Stagingschema",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "stagingSchema",
+        "packing",
+        "eventContract"
+      ],
+      "title": "IngestionPartVersionsV1",
+      "type": "object"
+    },
+    "VkIngestionCommentPartPreparedV1": {
+      "additionalProperties": false,
+      "properties": {
+        "authors": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Authors",
+          "type": "array"
+        },
+        "batchId": {
+          "format": "uuid",
+          "title": "Batchid",
+          "type": "string"
+        },
+        "comments": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Comments",
+          "type": "array"
+        },
+        "partCount": {
+          "exclusiveMinimum": 0,
+          "title": "Partcount",
+          "type": "integer"
+        },
+        "partId": {
+          "format": "uuid",
+          "title": "Partid",
+          "type": "string"
+        },
+        "partIndex": {
+          "minimum": 0,
+          "title": "Partindex",
+          "type": "integer"
+        },
+        "partKind": {
+          "const": "comments",
+          "default": "comments",
+          "title": "Partkind",
+          "type": "string"
+        },
+        "post": {
+          "additionalProperties": true,
+          "title": "Post",
+          "type": "object"
+        },
+        "source": {
+          "$ref": "#/$defs/IngestionPartSourceV1"
+        },
+        "versions": {
+          "$ref": "#/$defs/IngestionPartVersionsV1"
+        }
+      },
+      "required": [
+        "batchId",
+        "partId",
+        "partIndex",
+        "partCount",
+        "versions",
+        "source",
+        "post",
+        "comments",
+        "authors"
+      ],
+      "title": "VkIngestionCommentPartPreparedV1",
+      "type": "object"
+    }
+  },
+  "$id": "urn:parsevk:contract:vk.ingestion.comment-part-prepared",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Schema for vk.ingestion.comment-part-prepared",
+  "properties": {
+    "causationId": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Causationid"
+    },
+    "correlationId": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Correlationid"
+    },
+    "messageId": {
+      "format": "uuid",
+      "title": "Messageid",
+      "type": "string"
+    },
+    "messageType": {
+      "const": "vk.ingestion.comment-part-prepared"
+    },
+    "occurredAt": {
+      "format": "date-time",
+      "title": "Occurredat",
+      "type": "string"
+    },
+    "payload": {
+      "$ref": "#/$defs/VkIngestionCommentPartPreparedV1"
+    },
+    "producer": {
+      "enum": [
+        "vk-service"
+      ]
+    }
+  },
+  "required": [
+    "messageId",
+    "messageType",
+    "occurredAt",
+    "producer",
+    "payload"
+  ],
+  "title": "vk.ingestion.comment-part-prepared",
+  "type": "object"
+}

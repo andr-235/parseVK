@@ -11,7 +11,6 @@ from app.domain.repositories.ok_friends import OkFriendsRepository
 from app.domain.repositories.vk_friends import VkFriendsRepository
 from app.infrastructure.db.session import get_session
 from app.infrastructure.vk_client.transport import VkApiConfigurationError
-from app.services.ingestion_service import IngestionService
 from app.services.ok_friends.exporter import OkFriendsExportService
 from app.services.vk_friends.exporter import VkFriendsExportService
 from app.services.vk_groups_service import VkGroupsService
@@ -48,13 +47,6 @@ async def get_ok_friends_service_dep(
     session: AsyncSession = Depends(get_session),
 ) -> OkFriendsExportService:
     return bootstrap.get_ok_friends_service(session)
-
-
-async def get_ingestion_service_dep(
-    session: AsyncSession = Depends(get_session),
-    client: VkApiPort = Depends(get_vk_client_dep),
-) -> IngestionService:
-    return bootstrap.get_ingestion_service(session, adapter=client)
 
 
 async def get_vk_groups_service_dep(

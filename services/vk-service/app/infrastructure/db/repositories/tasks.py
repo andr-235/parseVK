@@ -28,6 +28,23 @@ class SqlAlchemyTaskEventsRepository(TaskEventsRepository):
             is not None
         )
 
+    async def is_successfully_processed(
+        self,
+        consumer_name: str,
+        event_id: uuid.UUID,
+    ) -> bool:
+        return (
+            await self.session.scalar(
+                select(ProcessedEvent.id).where(
+                    ProcessedEvent.consumer_name == consumer_name,
+                    ProcessedEvent.event_id == event_id,
+                    ProcessedEvent.last_error.is_(None),
+                    ProcessedEvent.next_retry_at.is_(None),
+                )
+            )
+            is not None
+        )
+
     async def mark_processed(
         self, consumer_name: str, event_id: uuid.UUID, event_type: str
     ) -> None:

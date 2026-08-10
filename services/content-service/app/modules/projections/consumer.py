@@ -1,15 +1,14 @@
 import json
 import logging
 
+from common.events import VkEvent
+from common.kafka.consumer import BaseEventConsumer
 from prometheus_client import Gauge
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.core.config import settings
 from app.db.models import ProcessedEvent
 from app.db.session import SessionLocal
-from common.events import VkEvent
-from common.kafka.consumer import BaseEventConsumer
-from app.modules.projections.outbox_service import ContentOutboxService
 from app.modules.projections.processor import ProjectionRepository
 from app.modules.projections.service import ProjectionService
 
@@ -45,10 +44,13 @@ class ProjectionConsumer(BaseEventConsumer):
         payload = json.loads(raw_value) if isinstance(raw_value, str) else raw_value
         event = VkEvent.model_validate(payload)
         if event.event_version != 1:
-            logger.warning("Skipping unsupported event version %d for type %s", event.event_version, event.event_type)
+            logger.warning(
+                "Skipping unsupported event version %d for type %s",
+                event.event_version,
+                event.event_type,
+            )
             return
         async with self.session_factory() as session:
             async with session.begin():
-                outbox = ContentOutboxService(session)
-                service = ProjectionService(ProjectionRepository(session), outbox_service=outbox)
+                service = ProjectionService(ProjectionRepository(session))
                 await service.handle(event)

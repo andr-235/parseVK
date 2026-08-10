@@ -2,6 +2,9 @@ import logging
 from typing import Any
 
 from app.domain.ports.vk_api import VkApiPort as VkApiAdapter
+from app.services.ingestion.author_payload import post_author_payload
+from app.services.ingestion.post_snapshot_reuse import stage_or_reuse_post_snapshot
+from app.services.ingestion.prepared_stager import PreparedPhysicalIngestionStager
 
 logger = logging.getLogger("vk-service.ingestion")
 
@@ -16,11 +19,13 @@ class PostCollector:
         *,
         adapter: VkApiAdapter,
         repository,
-        outbox=None,
+        staging: PreparedPhysicalIngestionStager | None = None,
+        require_staging: bool = False,
     ) -> None:
         self.adapter = adapter
         self.repository = repository
-        self.outbox = outbox
+        self.staging = staging
+        self.require_staging = require_staging
 
     async def collect_for_group(
         self,
@@ -38,19 +43,18 @@ class PostCollector:
         posts = posts_response["items"]
 
         for profile in posts_response.get("profiles", []):
-            author_profiles.setdefault(profile["id"], profile)
+            author_profiles.setdefault(int(profile["id"]), profile)
         for group_profile in posts_response.get("groups", []):
-            author_profiles.setdefault(group_profile["id"], group_profile)
+            author_profiles.setdefault(-abs(int(group_profile["id"])), group_profile)
 
         valid_posts: list[dict] = []
         for post in posts:
             owner_id = post.get("owner_id")
             post_id = post.get("id")
             if owner_id is None or post_id is None:
-                logger.warning("Skipping post without owner_id or id: %s", post.get("id"))
+                logger.warning("Skipping post without owner_id or id: %s", post_id)
                 continue
             valid_posts.append(post)
-
         return valid_posts
 
     async def save_post(
@@ -60,32 +64,31 @@ class PostCollector:
         author_profiles: dict[int, dict],
         *,
         correlation_id: str | None = None,
-    ) -> bool:
-        author_added = await self._upsert_post_author(post, author_profiles)
-        await self.repository.upsert_post(
-            post,
-            task_id=task_run.task_id,
-            group_id=post.get("owner_id"),
-        )
-        if self.outbox:
-            await self.outbox.emit_post_collected(
-                post,
-                task_id=task_run.task_id,
-                correlation_id=correlation_id,
-            )
-        return author_added
+    ) -> tuple[bool, dict]:
+        author = post_author_payload(post, author_profiles)
+        effective_post = post
+        effective_authors = [author] if author is not None else []
 
-    async def _upsert_post_author(
-        self,
-        post: dict,
-        profiles: dict[int, dict],
-    ) -> bool:
-        from_id = post.get("from_id")
-        if from_id is None:
-            return False
-        payload = _author_payload(from_id, profiles)
-        await self.repository.upsert_author(payload)
-        return True
+        if self.staging is None:
+            if self.require_staging:
+                raise RuntimeError("durable post staging requires a fenced execution")
+        else:
+            resolved = await stage_or_reuse_post_snapshot(
+                self.staging,
+                post=post,
+                authors=effective_authors,
+            )
+            effective_post = resolved.post
+            effective_authors = list(resolved.authors)
+
+        for stored_author in effective_authors:
+            await self.repository.upsert_author(stored_author)
+        await self.repository.upsert_post(
+            effective_post,
+            task_id=task_run.task_id,
+            group_id=effective_post.get("owner_id"),
+        )
+        return bool(effective_authors), effective_post
 
 
 def post_collection_mode(task_run: Any) -> str:
@@ -98,42 +101,5 @@ def post_collection_mode(task_run: Any) -> str:
     )
     mode = _POST_STRATEGY_TO_MODE.get(strategy)
     if mode is None:
-        raise RuntimeError(
-            "Execution plan has unsupported postSelection strategy"
-        )
+        raise RuntimeError("Execution plan has unsupported postSelection strategy")
     return mode
-
-
-def _author_payload(
-    from_id: int,
-    profiles: dict[int, dict] | None = None,
-) -> dict:
-    author_vk_id = int(from_id)
-    profile = profiles.get(author_vk_id) if profiles else None
-    if profile is None and author_vk_id < 0:
-        profile = profiles.get(abs(author_vk_id)) if profiles else None
-    if profile:
-        display_name = (
-            profile.get("name")
-            or f"{profile.get('first_name', '')} {profile.get('last_name', '')}".strip()
-            or str(author_vk_id)
-        )
-        return {
-            "vk_author_id": author_vk_id,
-            "type": "group" if author_vk_id < 0 else "user",
-            "display_name": display_name,
-            "first_name": profile.get("first_name", ""),
-            "last_name": profile.get("last_name", ""),
-            "photo_50": profile.get("photo_50") or profile.get("photo"),
-            "photo_100": profile.get("photo_100") or profile.get("photo"),
-            "photo_200": profile.get("photo_200") or profile.get("photo"),
-            "domain": profile.get("domain", ""),
-            "screen_name": profile.get("screen_name", ""),
-            "raw": {"from_id": from_id},
-        }
-    return {
-        "vk_author_id": author_vk_id,
-        "type": "group" if author_vk_id < 0 else "user",
-        "display_name": str(author_vk_id),
-        "raw": {"from_id": from_id},
-    }

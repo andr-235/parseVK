@@ -3,6 +3,24 @@
     {
       "causationPolicy": "optional",
       "consumers": [
+        "moderation-service"
+      ],
+      "correlationRequired": false,
+      "messageType": "content.canonical_comments_changed",
+      "partitionKey": {
+        "paths": [
+          "payload.postKey"
+        ],
+        "separator": ":"
+      },
+      "producers": [
+        "content-service"
+      ],
+      "topic": "parsevk.content.events"
+    },
+    {
+      "causationPolicy": "optional",
+      "consumers": [
         "vk-service"
       ],
       "correlationRequired": false,
@@ -73,6 +91,44 @@
         "tasks-service"
       ],
       "topic": "parsevk.vk.commands"
+    },
+    {
+      "causationPolicy": "optional",
+      "consumers": [
+        "content-service"
+      ],
+      "correlationRequired": false,
+      "messageType": "vk.ingestion.comment-part-prepared",
+      "partitionKey": {
+        "paths": [
+          "payload.source.ownerId",
+          "payload.source.postId"
+        ],
+        "separator": ":"
+      },
+      "producers": [
+        "vk-service"
+      ],
+      "topic": "parsevk.content.ingestion.vk"
+    },
+    {
+      "causationPolicy": "optional",
+      "consumers": [
+        "content-service"
+      ],
+      "correlationRequired": false,
+      "messageType": "vk.ingestion.post-part-prepared",
+      "partitionKey": {
+        "paths": [
+          "payload.source.ownerId",
+          "payload.source.postId"
+        ],
+        "separator": ":"
+      },
+      "producers": [
+        "vk-service"
+      ],
+      "topic": "parsevk.content.ingestion.vk"
     }
   ],
   "package": {

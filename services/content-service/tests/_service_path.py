@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import sys
-from inspect import stack
 from pathlib import Path
 
 _service_path_applied: bool = False
@@ -11,7 +10,7 @@ _service_path_root: str = ""
 def use_service_path() -> None:
     global _service_path_applied, _service_path_root
 
-    service_root = str(Path(stack()[1].filename).resolve().parents[1])
+    service_root = str(Path(__file__).resolve().parents[1])
 
     if _service_path_applied:
         if service_root == _service_path_root:

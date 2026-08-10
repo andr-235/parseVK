@@ -5,6 +5,11 @@ info:
   description: ParseVK Kafka message contracts
 defaultContentType: application/json
 channels:
+  parsevk_content_events:
+    address: parsevk.content.events
+    messages:
+      content_canonical_comments_changed:
+        $ref: '#/components/messages/content_canonical_comments_changed'
   parsevk_sources_events:
     address: parsevk.sources.events
     messages:
@@ -19,7 +24,26 @@ channels:
         $ref: '#/components/messages/vk_execution_cancel_requested'
       vk_execution_requested:
         $ref: '#/components/messages/vk_execution_requested'
+  parsevk_content_ingestion_vk:
+    address: parsevk.content.ingestion.vk
+    messages:
+      vk_ingestion_comment-part-prepared:
+        $ref: '#/components/messages/vk_ingestion_comment-part-prepared'
+      vk_ingestion_post-part-prepared:
+        $ref: '#/components/messages/vk_ingestion_post-part-prepared'
 operations:
+  content_service_send_content_canonical_comments_changed:
+    action: send
+    channel:
+      $ref: '#/channels/parsevk_content_events'
+    messages:
+    - $ref: '#/channels/parsevk_content_events/messages/content_canonical_comments_changed'
+  moderation_service_receive_content_canonical_comments_changed:
+    action: receive
+    channel:
+      $ref: '#/channels/parsevk_content_events'
+    messages:
+    - $ref: '#/channels/parsevk_content_events/messages/content_canonical_comments_changed'
   tasks_service_send_sources_access_granted:
     action: send
     channel:
@@ -68,8 +92,39 @@ operations:
       $ref: '#/channels/parsevk_vk_commands'
     messages:
     - $ref: '#/channels/parsevk_vk_commands/messages/vk_execution_requested'
+  vk_service_send_vk_ingestion_comment-part-prepared:
+    action: send
+    channel:
+      $ref: '#/channels/parsevk_content_ingestion_vk'
+    messages:
+    - $ref: '#/channels/parsevk_content_ingestion_vk/messages/vk_ingestion_comment-part-prepared'
+  content_service_receive_vk_ingestion_comment-part-prepared:
+    action: receive
+    channel:
+      $ref: '#/channels/parsevk_content_ingestion_vk'
+    messages:
+    - $ref: '#/channels/parsevk_content_ingestion_vk/messages/vk_ingestion_comment-part-prepared'
+  vk_service_send_vk_ingestion_post-part-prepared:
+    action: send
+    channel:
+      $ref: '#/channels/parsevk_content_ingestion_vk'
+    messages:
+    - $ref: '#/channels/parsevk_content_ingestion_vk/messages/vk_ingestion_post-part-prepared'
+  content_service_receive_vk_ingestion_post-part-prepared:
+    action: receive
+    channel:
+      $ref: '#/channels/parsevk_content_ingestion_vk'
+    messages:
+    - $ref: '#/channels/parsevk_content_ingestion_vk/messages/vk_ingestion_post-part-prepared'
 components:
   messages:
+    content_canonical_comments_changed:
+      name: content.canonical_comments_changed
+      title: content.canonical_comments_changed
+      summary: content.canonical_comments_changed
+      contentType: application/json
+      payload:
+        $ref: ../json-schema/content.canonical_comments_changed.json
     sources_access_granted:
       name: sources.access.granted
       title: sources.access.granted
@@ -98,3 +153,17 @@ components:
       contentType: application/json
       payload:
         $ref: ../json-schema/vk.execution.requested.json
+    vk_ingestion_comment-part-prepared:
+      name: vk.ingestion.comment-part-prepared
+      title: vk.ingestion.comment-part-prepared
+      summary: vk.ingestion.comment-part-prepared
+      contentType: application/json
+      payload:
+        $ref: ../json-schema/vk.ingestion.comment-part-prepared.json
+    vk_ingestion_post-part-prepared:
+      name: vk.ingestion.post-part-prepared
+      title: vk.ingestion.post-part-prepared
+      summary: vk.ingestion.post-part-prepared
+      contentType: application/json
+      payload:
+        $ref: ../json-schema/vk.ingestion.post-part-prepared.json

@@ -29,6 +29,15 @@ async def get_post(
     return row
 
 
+@router.get("/comments/reconciliation")
+async def list_comments_reconciliation(
+    after_id: int | None = Query(default=None, ge=0),
+    limit: int = Query(default=500, ge=1, le=1000),
+    service: ContentService = Depends(get_content_service),
+):
+    return await service.list_comments_reconciliation(after_id, limit)
+
+
 @router.get("/comments")
 async def list_comments(
     page: int = Query(default=1, ge=1),

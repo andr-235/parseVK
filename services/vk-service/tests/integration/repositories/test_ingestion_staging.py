@@ -57,7 +57,13 @@ async def execution_with_attempts(db_session):
     return execution, first, second
 
 
-def make_batch(execution, attempt, *, payload=None) -> StagedIngestionBatch:
+def make_batch(
+    execution,
+    attempt,
+    *,
+    payload=None,
+    staged_at: datetime | None = None,
+) -> StagedIngestionBatch:
     return StagedIngestionBatch.create(
         execution_id=execution.id,
         attempt_id=attempt.id,
@@ -67,21 +73,29 @@ def make_batch(execution, attempt, *, payload=None) -> StagedIngestionBatch:
         post_id=99,
         page_offset=200,
         payload=payload or {"comments": [{"id": 1}], "next_offset": 300},
+        staged_at=staged_at,
     )
 
 
 async def test_stage_is_idempotent_across_execution_attempts(db_session) -> None:
     execution, first, second = await execution_with_attempts(db_session)
     repository = SqlAlchemyIngestionStagingRepository(db_session)
+    first_timestamp = datetime(2026, 8, 7, 1, 0, tzinfo=UTC)
+    replay_timestamp = first_timestamp + timedelta(minutes=5)
 
-    original, created = await repository.stage(make_batch(execution, first))
-    replay, replay_created = await repository.stage(make_batch(execution, second))
+    original, created = await repository.stage(
+        make_batch(execution, first, staged_at=first_timestamp)
+    )
+    replay, replay_created = await repository.stage(
+        make_batch(execution, second, staged_at=replay_timestamp)
+    )
 
     assert created is True
     assert replay_created is False
     assert replay.batch_id == original.batch_id
     assert replay.staged_by_attempt_id == first.id
     assert replay.staged_by_fencing_token == first.fencing_token
+    assert replay.staged_at == first_timestamp
     assert await repository.get(original.batch_id) == original
 
 

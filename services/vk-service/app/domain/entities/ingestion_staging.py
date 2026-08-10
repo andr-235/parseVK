@@ -2,12 +2,23 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
+from datetime import UTC, datetime
 from hashlib import sha256
 from typing import Any
 from uuid import UUID, uuid5
 
 STAGING_BATCH_NAMESPACE = UUID("659168a2-aabb-4b95-8f6f-96b2714f4d4e")
+STAGED = "staged"
+PREPARED = "prepared"
+PUBLISHED = "published"
+APPLIED = "applied"
+PAYLOAD_PURGED = "payload_purged"
+FAILED = "failed"
+QUARANTINED = "quarantined"
+STAGING_BATCH_STATUSES = frozenset(
+    {STAGED, PREPARED, PUBLISHED, APPLIED, PAYLOAD_PURGED, FAILED, QUARANTINED}
+)
 
 
 def canonical_payload(payload: Mapping[str, Any]) -> tuple[dict[str, Any], str, int]:
@@ -57,7 +68,8 @@ class StagedIngestionBatch:
     payload: dict[str, Any]
     payload_digest: str
     payload_bytes: int
-    status: str = "staged"
+    staged_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    status: str = STAGED
 
     @classmethod
     def create(
@@ -71,9 +83,13 @@ class StagedIngestionBatch:
         post_id: int,
         page_offset: int,
         payload: Mapping[str, Any],
+        staged_at: datetime | None = None,
     ) -> StagedIngestionBatch:
         if fencing_token < 1:
             raise ValueError("fencing_token must be positive")
+        timestamp = staged_at or datetime.now(UTC)
+        if timestamp.tzinfo is None:
+            raise ValueError("staged_at must be timezone-aware")
         normalized, digest, byte_count = canonical_payload(payload)
         return cls(
             batch_id=deterministic_batch_id(
@@ -93,12 +109,17 @@ class StagedIngestionBatch:
             payload=normalized,
             payload_digest=digest,
             payload_bytes=byte_count,
+            staged_at=timestamp,
         )
 
     def verified_copy(self) -> StagedIngestionBatch:
         """Return an isolated canonical copy after rechecking identity and bytes."""
         if self.staged_by_fencing_token < 1:
             raise ValueError("staging fencing token must remain positive")
+        if self.staged_at.tzinfo is None:
+            raise ValueError("staging timestamp must remain timezone-aware")
+        if self.status not in STAGING_BATCH_STATUSES:
+            raise ValueError("unsupported staging batch status")
         expected_id = deterministic_batch_id(
             execution_id=self.execution_id,
             source_kind=self.source_kind,

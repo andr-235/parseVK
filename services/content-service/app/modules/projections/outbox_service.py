@@ -1,10 +1,10 @@
-"""Content-service outbox service for projection events."""
+"""Content-service transactional outbox writer."""
 
 from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
@@ -16,8 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 class ContentOutboxService:
-    """Manages outbox events in content-service's own outbox table."""
-
     def __init__(self, session: AsyncSession):
         self.session = session
 
@@ -31,9 +29,12 @@ class ContentOutboxService:
         correlation_id: str | None = None,
         event_version: int = 1,
         dedupe_key: str | None = None,
+        event_id: UUID | None = None,
+        created_at: datetime | None = None,
     ) -> None:
+        now = created_at or datetime.now(UTC)
         stmt = insert(ContentOutboxEvent).values(
-            id=uuid4(),
+            id=event_id or uuid4(),
             event_type=event_type,
             event_version=event_version,
             aggregate_type=aggregate_type,
@@ -43,8 +44,8 @@ class ContentOutboxService:
             payload=payload,
             status="pending",
             attempts=0,
-            next_attempt_at=datetime.now(UTC),
-            created_at=datetime.now(UTC),
+            next_attempt_at=now,
+            created_at=now,
         )
         if dedupe_key:
             stmt = stmt.on_conflict_do_nothing(

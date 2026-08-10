@@ -36,8 +36,15 @@ class VkIngestionStagingBatch(Base):
         CheckConstraint("page_offset >= 0", name="ck_vk_ingestion_staging_page_offset"),
         CheckConstraint("payload_bytes >= 2", name="ck_vk_ingestion_staging_payload_bytes"),
         CheckConstraint(
-            "status IN ('staged', 'persisted', 'failed')",
+            "status IN ('staged', 'prepared', 'published', 'applied', "
+            "'payload_purged', 'failed', 'quarantined')",
             name="ck_vk_ingestion_staging_status",
+        ),
+        CheckConstraint(
+            "status != 'payload_purged' OR "
+            "(payload IS NULL AND purge_manifest IS NOT NULL "
+            "AND payload_purged_at IS NOT NULL)",
+            name="ck_vk_ingestion_staging_purge_atomic",
         ),
         Index("ix_vk_ingestion_staging_status", "status", "created_at"),
         Index("ix_vk_ingestion_staging_execution", "execution_id", "page_offset"),
@@ -49,8 +56,6 @@ class VkIngestionStagingBatch(Base):
         ForeignKey("vk_executions.id", ondelete="CASCADE"),
         nullable=False,
     )
-    # Attempt identity is immutable provenance, not lifecycle ownership. Keeping
-    # the UUID without an FK lets durable recovery data outlive attempt cleanup.
     staged_by_attempt_id: Mapped[PyUUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     staged_by_fencing_token: Mapped[int] = mapped_column(BigInteger, nullable=False)
     source_kind: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -59,10 +64,15 @@ class VkIngestionStagingBatch(Base):
     page_offset: Mapped[int] = mapped_column(Integer, nullable=False)
     payload_digest: Mapped[str] = mapped_column(String(64), nullable=False)
     payload_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
-    payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    payload: Mapped[dict | None] = mapped_column(
+        JSONB(none_as_null=True), nullable=True
+    )
+    purge_manifest: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     status: Mapped[str] = mapped_column(
         String(32), nullable=False, default="staged", server_default=text("'staged'")
     )
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    payload_purged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

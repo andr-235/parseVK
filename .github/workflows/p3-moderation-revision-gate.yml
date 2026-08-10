@@ -1,0 +1,48 @@
+name: P3 Moderation Revision Gate
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/p3-moderation-revision-gate.yml'
+      - 'libs/py/common/**'
+      - 'services/moderation-service/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p3-moderation-revision-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/libs/py/common
+
+jobs:
+  revision-reorder:
+    name: PostgreSQL Revision and Reorder
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install moderation-service dependencies
+        working-directory: services/moderation-service
+        run: uv sync --extra test --frozen
+      - name: Run canonical projection unit coverage
+        working-directory: services/moderation-service
+        run: |
+          uv run pytest -q \
+            -o addopts="--import-mode=importlib" \
+            tests/test_projection_contract.py \
+            tests/test_projection_consumer.py \
+            tests/test_canonical_reconciliation.py
+      - name: Run PostgreSQL revision checkpoint test
+        working-directory: services/moderation-service
+        run: |
+          uv run pytest -q --strict-markers \
+            -o addopts="--import-mode=importlib" \
+            -m integration \
+            tests/p3/test_canonical_revision_postgres.py
