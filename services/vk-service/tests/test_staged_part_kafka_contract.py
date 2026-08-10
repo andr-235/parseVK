@@ -23,10 +23,13 @@ def test_compose_provisions_ingestion_topic_and_dlq() -> None:
     assert "VK_SERVICE_STAGED_PART_PRODUCER_MAX_REQUEST_BYTES" in compose
 
 
-def test_production_env_wires_ingestion_transport_without_cutover() -> None:
+def test_production_env_enables_staged_ingestion_cutover() -> None:
     production_env = PRODUCTION_ENV.read_text(encoding="utf-8")
 
-    assert "VK_SERVICE_STAGED_PART_PUBLISHER_ENABLED=false" in production_env
+    assert "VK_SERVICE_STAGED_PART_PUBLISHER_ENABLED=true" in production_env
+    assert "VK_SERVICE_INGESTION_ACK_CONSUMER_ENABLED=true" in production_env
+    assert "VK_SERVICE_INGESTION_ACK_RECONCILIATION_ENABLED=true" in production_env
+    assert "VK_SERVICE_INGESTION_PAYLOAD_PURGE_ENABLED=false" in production_env
     assert (
         "VK_SERVICE_KAFKA_TOPIC_VK_INGESTION=parsevk.content.ingestion.vk"
         in production_env
@@ -34,6 +37,16 @@ def test_production_env_wires_ingestion_transport_without_cutover() -> None:
     assert (
         "VK_SERVICE_KAFKA_TOPIC_VK_INGESTION_DLQ="
         "parsevk.content.ingestion.vk.dlq"
+        in production_env
+    )
+    assert (
+        "VK_SERVICE_KAFKA_TOPIC_VK_INGESTION_ACK="
+        "parsevk.content.ingestion.acks"
+        in production_env
+    )
+    assert (
+        "VK_SERVICE_KAFKA_TOPIC_VK_INGESTION_ACK_DLQ="
+        "parsevk.content.ingestion.acks.dlq"
         in production_env
     )
     assert (
