@@ -11,6 +11,7 @@ from app.infrastructure.db.session import SessionLocal
 from app.tasks.lifespan import (
     get_consumer_healthy,
     get_execution_worker_healthy,
+    get_ingestion_ack_consumer_healthy,
     get_publisher_healthy,
     get_staged_part_publisher_healthy,
     lifespan,
@@ -84,6 +85,10 @@ def create_app() -> FastAPI:
                 settings.kafka_consumer_enabled,
                 get_consumer_healthy(),
             ),
+            "ingestionAckConsumer": _worker_status(
+                settings.ingestion_ack_consumer_enabled,
+                get_ingestion_ack_consumer_healthy(),
+            ),
             "outboxPublisher": _worker_status(
                 settings.outbox_publish_enabled,
                 get_publisher_healthy(),
@@ -109,6 +114,14 @@ def create_app() -> FastAPI:
             raise HTTPException(
                 status_code=503,
                 detail="Staged ingestion Kafka topology is not ready",
+            )
+        if (
+            settings.ingestion_ack_consumer_enabled
+            and not get_ingestion_ack_consumer_healthy()
+        ):
+            raise HTTPException(
+                status_code=503,
+                detail="Ingestion ACK Kafka consumer is not ready",
             )
 
         try:

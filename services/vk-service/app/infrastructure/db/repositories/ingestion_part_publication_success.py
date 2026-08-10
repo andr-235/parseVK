@@ -4,7 +4,8 @@ from uuid import UUID
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.entities.ingestion_parts import PREPARED, PUBLISHED
+from app.domain.entities.ingestion_parts import APPLIED, PREPARED, PUBLISHED
+from app.domain.entities.ingestion_staging import APPLIED as BATCH_APPLIED
 from app.domain.entities.ingestion_staging import PREPARED as BATCH_PREPARED
 from app.domain.entities.ingestion_staging import PUBLISHED as BATCH_PUBLISHED
 from app.domain.repositories.ingestion_part_publication import (
@@ -44,6 +45,8 @@ async def mark_published(
         )
     )
     if reference.rowcount != 1:
+        if await _already_applied(session, part_id, wire_digest):
+            return
         raise IngestionPartPublicationConflictError(
             "publication claim no longer owns the pending reference"
         )
@@ -59,10 +62,33 @@ async def mark_published(
     )
     batch_id = part.scalar_one_or_none()
     if batch_id is None:
+        if await _already_applied(session, part_id, wire_digest):
+            return
         raise IngestionPartPublicationConflictError(
             "published part identity or wire digest changed"
         )
     await _mark_batch_if_complete(session, batch_id, published_at)
+
+
+async def _already_applied(
+    session: AsyncSession,
+    part_id: UUID,
+    wire_digest: str,
+) -> bool:
+    row = (
+        await session.execute(
+            select(VkIngestionStagingPart.status, VkIngestionPartReference.status)
+            .join(
+                VkIngestionPartReference,
+                VkIngestionPartReference.part_id == VkIngestionStagingPart.id,
+            )
+            .where(
+                VkIngestionStagingPart.id == part_id,
+                VkIngestionStagingPart.wire_digest == wire_digest,
+            )
+        )
+    ).one_or_none()
+    return row is not None and row[0] == APPLIED and row[1] == APPLIED
 
 
 async def _mark_batch_if_complete(
@@ -79,7 +105,7 @@ async def _mark_batch_if_complete(
         )
         .where(
             VkIngestionStagingPart.batch_id == batch_id,
-            VkIngestionPartReference.status != PUBLISHED,
+            VkIngestionPartReference.status.notin_([PUBLISHED, APPLIED]),
         )
     )
     if remaining:
@@ -92,7 +118,15 @@ async def _mark_batch_if_complete(
         )
         .values(status=BATCH_PUBLISHED, updated_at=published_at)
     )
-    if result.rowcount != 1:
-        raise IngestionPartPublicationConflictError(
-            "complete publication found an incompatible batch state"
+    if result.rowcount == 1:
+        return
+    status = await session.scalar(
+        select(VkIngestionStagingBatch.status).where(
+            VkIngestionStagingBatch.id == batch_id
         )
+    )
+    if status in {BATCH_PUBLISHED, BATCH_APPLIED}:
+        return
+    raise IngestionPartPublicationConflictError(
+        "complete publication found an incompatible batch state"
+    )

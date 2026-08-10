@@ -55,6 +55,7 @@ class FakeReceipts:
             wire_bytes=part.wire_bytes,
             effect_summary={},
             ack_event_id=ack_event_id(part.source_message_id),
+            correlation_id=part.event.correlation_id,
             applied_at=None,
             created_at=datetime.now(UTC),
         )

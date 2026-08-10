@@ -54,5 +54,6 @@ class ContentIngestionReceipt(Base):
     wire_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
     effect_summary: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     ack_event_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False, unique=True)
+    correlation_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

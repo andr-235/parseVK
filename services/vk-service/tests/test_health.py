@@ -53,6 +53,7 @@ async def test_health_reports_unconfigured_provider_as_degraded(monkeypatch):
         "okCredentialsConfigured": "no",
         "okTokenMasked": "",
         "kafkaConsumer": "disabled",
+        "ingestionAckConsumer": "disabled",
         "outboxPublisher": "disabled",
         "stagedPartPublisher": "disabled",
         "executionWorker": "blocked",
