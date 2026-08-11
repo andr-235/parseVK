@@ -1,3 +1,11 @@
+## [0.93.3](https://github.com/andr-235/parseVK/compare/v0.93.2...v0.93.3) (2026-08-11)
+
+
+### Bug Fixes
+
+* **deploy:** force-refresh main on self-hosted runner ([69496c2](https://github.com/andr-235/parseVK/commit/69496c2441b7cb6242c48c05adc211c7e50c8590))
+* **vk:** expose execution plan through claim ([#464](https://github.com/andr-235/parseVK/issues/464)) ([15d8b5d](https://github.com/andr-235/parseVK/commit/15d8b5d80bae0e40184ae9cd95276aaf379c4697)), closes [#308](https://github.com/andr-235/parseVK/issues/308)
+
 ## [0.93.2](https://github.com/andr-235/parseVK/compare/v0.93.1...v0.93.2) (2026-08-11)
 
 
