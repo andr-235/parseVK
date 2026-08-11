@@ -406,6 +406,24 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Cleanup trusted deploy tools
+        if: always()
+        run: |
+          set -euo pipefail
+          BUNDLE_ROOT="${TRUSTED_DEPLOY_TOOLS_ROOT:-}"
+          if [ -z "$BUNDLE_ROOT" ]; then
+            exit 0
+          fi
+          case "$BUNDLE_ROOT" in
+            /var/tmp/parsevk-deploy-tools.*)
+              rm -rf -- "$BUNDLE_ROOT"
+              echo "Removed trusted deploy tools bundle: $BUNDLE_ROOT"
+              ;;
+            *)
+              echo "::warning::Refusing to remove unexpected trusted deploy tools path: $BUNDLE_ROOT"
+              ;;
+          esac
+
       - name: Deployment status
         if: always()
         run: |
