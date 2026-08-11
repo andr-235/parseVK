@@ -111,6 +111,12 @@ require_pattern "$DEPLOY" '^run-name: Deploy release .*inputs\.expected_release_
   "Production deploy run name does not expose the immutable release input"
 require_pattern "$DEPLOY" 'name: Fence stale queued release' \
   "Production deploy has no self-hosted stale-release fence"
+grep -Fq 'git fetch --no-tags --unshallow origin +main:refs/remotes/origin/main' "$DEPLOY" || {
+  echo "Production fence does not force-refresh origin/main for a shallow self-hosted checkout"; exit 1;
+}
+grep -Fq 'git fetch --no-tags origin +main:refs/remotes/origin/main' "$DEPLOY" || {
+  echo "Production fence does not force-refresh origin/main for a reused self-hosted checkout"; exit 1;
+}
 grep -Fq 'git show origin/main:.github/scripts/latest_release.py > "$RUNNER_TEMP/latest_release.py"' "$DEPLOY" || {
   echo "Production fence does not load the trusted latest-release resolver into the runner temp directory"; exit 1;
 }
