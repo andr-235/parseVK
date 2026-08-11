@@ -15,10 +15,8 @@ use_service_path()
 
 from aiokafka import ConsumerRecord
 from common.events import WireEvent
-
 from app.modules.execution_events import consumer as execution_consumer
 from app.modules.execution_events.consumer import _parse_payload, handle_execution_event
-
 
 PAYLOADS = {
     "task.execution_started": {
@@ -72,18 +70,14 @@ PAYLOADS = {
 @pytest.mark.parametrize(("event_type", "payload"), PAYLOADS.items())
 def test_parse_payload_accepts_wire_event_payload_objects(event_type, payload):
     parsed = _parse_payload(event_type, payload)
-
     assert parsed is not None
     assert parsed.taskId == 42
     assert parsed.runId == "run-42"
 
 
 def test_parse_payload_keeps_json_string_compatibility():
-    parsed = _parse_payload(
-        "task.execution_started",
-        json.dumps(PAYLOADS["task.execution_started"]),
-    )
-
+    raw = json.dumps(PAYLOADS["task.execution_started"])
+    parsed = _parse_payload("task.execution_started", raw)
     assert parsed is not None
     assert parsed.executionSequence == 1
 
@@ -120,11 +114,7 @@ async def test_handle_execution_event_accepts_production_wire_event(monkeypatch)
 
     service = MagicMock()
     service.apply_started = AsyncMock(return_value=True)
-    monkeypatch.setattr(
-        execution_consumer,
-        "ExecutionEventService",
-        lambda _session: service,
-    )
+    monkeypatch.setattr(execution_consumer, "ExecutionEventService", lambda _: service)
 
     wire = WireEvent(
         event_id=uuid4(),
@@ -136,11 +126,8 @@ async def test_handle_execution_event_accepts_production_wire_event(monkeypatch)
         payload=PAYLOADS["task.execution_started"],
         created_at="2026-08-11T07:27:02+00:00",
     )
-
     ok = await handle_execution_event(
-        session,
-        _make_record(wire.model_dump_json()),
-        "consumer-1",
+        session, _make_record(wire.model_dump_json()), "consumer-1"
     )
 
     assert ok is True
