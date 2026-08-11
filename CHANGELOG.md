@@ -1,3 +1,11 @@
+## [0.93.4](https://github.com/andr-235/parseVK/compare/v0.93.3...v0.93.4) (2026-08-11)
+
+
+### Bug Fixes
+
+* **deploy:** persist VK production secret mount ([bbf1d7a](https://github.com/andr-235/parseVK/commit/bbf1d7aea8cfb89ca418db46c547469594cd9b76))
+* **vk:** refuse missing production token bind path ([6764d89](https://github.com/andr-235/parseVK/commit/6764d89d93f1eeefd3acd207671e1372b6255903)), closes [#465](https://github.com/andr-235/parseVK/issues/465)
+
 ## [0.93.3](https://github.com/andr-235/parseVK/compare/v0.93.2...v0.93.3) (2026-08-11)
 
 
