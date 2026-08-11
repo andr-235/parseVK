@@ -17,7 +17,13 @@ PROJECT_ROOT=${PROJECT_ROOT:-$(pwd)}
 COMPOSE_FILE=${COMPOSE_FILE:-docker-compose.yml}
 COMPOSE_OVERRIDE_FILE=${COMPOSE_OVERRIDE_FILE:-}
 if [ -z "$COMPOSE_OVERRIDE_FILE" ] && [ "$PROJECT_ROOT" = "/opt/parseVK" ]; then
-  COMPOSE_OVERRIDE_FILE="/etc/parsevk/vk-secret.override.yml"
+  if [ -f "/etc/parsevk/vk-secret.override.yml" ]; then
+    COMPOSE_OVERRIDE_FILE="/etc/parsevk/vk-secret.override.yml"
+  elif [ -n "${GITHUB_WORKSPACE:-}" ] && [ -f "$GITHUB_WORKSPACE/docker-compose.production.yml" ]; then
+    COMPOSE_OVERRIDE_FILE="$GITHUB_WORKSPACE/docker-compose.production.yml"
+  else
+    COMPOSE_OVERRIDE_FILE="/etc/parsevk/vk-secret.override.yml"
+  fi
 fi
 SMOKE_REPORT=${SMOKE_REPORT:-/tmp/parsevk-post-deploy-smoke.json}
 COMPOSE_CMD=(docker compose -f "$COMPOSE_FILE")
