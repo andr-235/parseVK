@@ -1,3 +1,10 @@
+## [0.93.7](https://github.com/andr-235/parseVK/compare/v0.93.6...v0.93.7) (2026-08-11)
+
+
+### Bug Fixes
+
+* **release:** materialize deploy tools from Git object ([ef2158d](https://github.com/andr-235/parseVK/commit/ef2158d24fc26e090219c128291d3d266b114224))
+
 ## [0.93.6](https://github.com/andr-235/parseVK/compare/v0.93.5...v0.93.6) (2026-08-11)
 
 
