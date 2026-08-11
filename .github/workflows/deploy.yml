@@ -63,7 +63,7 @@ jobs:
             exit 1
           fi
 
-          RELEASE_JSON="$(python .github/scripts/latest_release.py --ref HEAD)"
+          RELEASE_JSON="$(python3 .github/scripts/latest_release.py --ref HEAD)"
           TARGET_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
           if [ -n "$EXPECTED_RELEASE_SHA" ] && [ "$TARGET_SHA" != "$EXPECTED_RELEASE_SHA" ]; then
             echo "::error::Coordinator ожидал release $EXPECTED_RELEASE_SHA, но latest release равен $TARGET_SHA"
@@ -174,7 +174,8 @@ jobs:
             git fetch --no-tags origin main:refs/remotes/origin/main
           fi
 
-          RELEASE_JSON="$(python .github/scripts/latest_release.py --ref origin/main)"
+          git show origin/main:.github/scripts/latest_release.py > "$RUNNER_TEMP/latest_release.py"
+          RELEASE_JSON="$(python3 "$RUNNER_TEMP/latest_release.py" --ref origin/main)"
           LATEST_RELEASE_SHA="$(jq -r '.release_sha' <<<"$RELEASE_JSON")"
           [[ "$LATEST_RELEASE_SHA" == "$TARGET_SHA" ]] || {
             echo "::error::Queued production release $TARGET_SHA is stale; latest release is $LATEST_RELEASE_SHA"
