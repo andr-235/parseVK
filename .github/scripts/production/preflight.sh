@@ -13,44 +13,35 @@ stage_deploy_tools() {
     return 0
   fi
 
-  local source_root stage_root
-  if [ -n "${GITHUB_WORKSPACE:-}" ] && [ -d "$GITHUB_WORKSPACE/.github/scripts" ]; then
-    source_root="$GITHUB_WORKSPACE/.github/scripts"
-    stage_root="$GITHUB_WORKSPACE/.parsevk-deploy-tools-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}"
-  elif [ -n "${RUNNER_TEMP:-}" ]; then
-    source_root="$(project_root)/.github/scripts"
-    stage_root="$RUNNER_TEMP/parsevk-deploy-tools-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}"
-  else
-    log_error "No persistent directory is available for trusted deploy tools"
+  if [ -z "${GITHUB_WORKSPACE:-}" ] || [ ! -d "$GITHUB_WORKSPACE/.github/scripts" ]; then
+    log_error "Trusted GitHub Actions checkout is unavailable for deploy tools"
     return 1
   fi
 
-  [ -d "$source_root" ] || {
-    log_error "Validated deploy scripts not found: $source_root"
-    return 1
-  }
+  local trusted_root
+  trusted_root="$GITHUB_WORKSPACE/.github/scripts"
 
-  rm -rf "$stage_root"
-  mkdir -p "$stage_root"
-  cp -a "$source_root/." "$stage_root/"
-
-  PRODUCTION_SCRIPTS_DIR="$stage_root/production"
-  SERVICE_CATALOG_CLI="$stage_root/service_catalog.py"
-  LOCAL_RELEASE_SCRIPT="$stage_root/production/local-release.sh"
-  STORAGE_GUARD_SCRIPT="$stage_root/production/storage-guard.sh"
-  HEALTH_CHECK_SCRIPT="$stage_root/health-check.sh"
-  HTTP_HEALTH_CHECK_SCRIPT="$stage_root/http-health-check.sh"
+  PRODUCTION_SCRIPTS_DIR="$trusted_root/production"
+  SERVICE_CATALOG_CLI="$trusted_root/service_catalog.py"
+  LOCAL_RELEASE_SCRIPT="$trusted_root/production/local-release.sh"
+  STORAGE_GUARD_SCRIPT="$trusted_root/production/storage-guard.sh"
+  HEALTH_CHECK_SCRIPT="$trusted_root/health-check.sh"
+  HTTP_HEALTH_CHECK_SCRIPT="$trusted_root/http-health-check.sh"
 
   [ -f "$SERVICE_CATALOG_CLI" ] || {
-    log_error "Validated service catalog CLI was not staged: $SERVICE_CATALOG_CLI"
+    log_error "Validated service catalog CLI is missing from trusted checkout: $SERVICE_CATALOG_CLI"
     return 1
   }
-  [ -f "$stage_root/service_catalog_lib/__init__.py" ] || {
-    log_error "Validated service catalog package was not staged: $stage_root/service_catalog_lib"
+  [ -f "$trusted_root/service_catalog_lib/__init__.py" ] || {
+    log_error "Validated service catalog package is missing from trusted checkout: $trusted_root/service_catalog_lib"
+    return 1
+  }
+  [ -d "$PRODUCTION_SCRIPTS_DIR" ] || {
+    log_error "Validated production scripts are missing from trusted checkout: $PRODUCTION_SCRIPTS_DIR"
     return 1
   }
   if ! python3 "$SERVICE_CATALOG_CLI" --help >/dev/null; then
-    log_error "Validated service catalog CLI cannot start from staged tools"
+    log_error "Validated service catalog CLI cannot start from trusted checkout"
     return 1
   fi
 
@@ -67,7 +58,7 @@ stage_deploy_tools() {
     printf 'COMPOSE_OVERRIDE_FILE=%s\n' "$COMPOSE_OVERRIDE_FILE"
   } >> "$GITHUB_ENV"
 
-  log_info "Trusted deploy tools staged: $stage_root"
+  log_info "Trusted deploy tools pinned to validated checkout: $trusted_root"
 }
 
 require_env_file() {
