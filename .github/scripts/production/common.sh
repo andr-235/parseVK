@@ -10,13 +10,25 @@ fi
 PROJECT_ROOT="${PROJECT_ROOT:-/opt/parseVK}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 COMPOSE_OVERRIDE_FILE="${COMPOSE_OVERRIDE_FILE:-}"
+if [ -z "$COMPOSE_OVERRIDE_FILE" ] && [ "$PROJECT_ROOT" = "/opt/parseVK" ]; then
+  COMPOSE_OVERRIDE_FILE="/etc/parsevk/vk-secret.override.yml"
+fi
 
 project_root() {
   printf '%s\n' "$PROJECT_ROOT"
 }
 
+project_file_path() {
+  local file_path="$1"
+  if [[ "$file_path" = /* ]]; then
+    printf '%s\n' "$file_path"
+  else
+    printf '%s/%s\n' "$(project_root)" "$file_path"
+  fi
+}
+
 compose_file_path() {
-  printf '%s/%s\n' "$(project_root)" "$COMPOSE_FILE"
+  project_file_path "$COMPOSE_FILE"
 }
 
 with_project_root() {
@@ -43,9 +55,10 @@ require_command() {
 }
 
 require_project_file() {
-  local file_path="$1"
-  if [ ! -f "$(project_root)/$file_path" ]; then
-    log_error "Required file not found: $(project_root)/$file_path"
+  local file_path="$1" resolved
+  resolved="$(project_file_path "$file_path")"
+  if [ ! -f "$resolved" ]; then
+    log_error "Required file not found: $resolved"
     return 1
   fi
 }
