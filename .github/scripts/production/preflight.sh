@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
 STORAGE_GUARD_SCRIPT="${STORAGE_GUARD_SCRIPT:-$SCRIPT_DIR/storage-guard.sh}"
+VK_PRODUCTION_SECRET_PATH="${VK_PRODUCTION_SECRET_PATH:-/etc/parsevk/secrets/vk_token}"
 
 stage_deploy_tools() {
   if [ -z "${RUNNER_TEMP:-}" ] || [ -z "${GITHUB_ENV:-}" ]; then
@@ -49,6 +50,23 @@ stage_deploy_tools() {
 require_env_file() {
   if [ ! -f "$(project_root)/.env" ]; then
     log_error "Production .env file not found at $(project_root)/.env"
+    return 1
+  fi
+}
+
+require_production_compose_overlay() {
+  if [ -z "$COMPOSE_OVERRIDE_FILE" ]; then
+    return 0
+  fi
+  require_project_file "$COMPOSE_OVERRIDE_FILE"
+}
+
+require_vk_secret() {
+  if [ -z "$COMPOSE_OVERRIDE_FILE" ]; then
+    return 0
+  fi
+  if [ ! -f "$VK_PRODUCTION_SECRET_PATH" ] || [ ! -s "$VK_PRODUCTION_SECRET_PATH" ]; then
+    log_error "Required VK production secret is missing or empty: $VK_PRODUCTION_SECRET_PATH"
     return 1
   fi
 }
@@ -130,6 +148,8 @@ main() {
 
   require_env_file
   require_project_file "$COMPOSE_FILE"
+  require_production_compose_overlay
+  require_vk_secret
   validate_compose
   stage_deploy_tools
   check_storage_integrity
