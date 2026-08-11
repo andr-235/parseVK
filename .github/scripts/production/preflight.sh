@@ -8,19 +8,45 @@ source "$SCRIPT_DIR/common.sh"
 STORAGE_GUARD_SCRIPT="${STORAGE_GUARD_SCRIPT:-$SCRIPT_DIR/storage-guard.sh}"
 VK_PRODUCTION_SECRET_PATH="${VK_PRODUCTION_SECRET_PATH:-/etc/parsevk/secrets/vk_token}"
 
-resolve_trusted_deploy_tools() {
+materialize_trusted_deploy_tools() {
   if [ -z "${GITHUB_ENV:-}" ]; then
     return 0
   fi
 
-  if [ -z "${GITHUB_WORKSPACE:-}" ] || [ ! -d "$GITHUB_WORKSPACE/.github/scripts" ]; then
-    log_error "Trusted GitHub Actions checkout is unavailable for deploy tools"
+  if [ -z "${GITHUB_WORKSPACE:-}" ] || [ ! -d "$GITHUB_WORKSPACE/.git" ]; then
+    log_error "Trusted GitHub Actions repository is unavailable for deploy tools"
     return 1
   fi
 
-  local trusted_root
-  trusted_root="$GITHUB_WORKSPACE/.github/scripts"
+  local trusted_sha bundle_root trusted_root
+  trusted_sha="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)"
 
+  if ! git -C "$GITHUB_WORKSPACE" cat-file -e \
+    "$trusted_sha:.github/scripts/service_catalog.py"; then
+    log_error "Validated service catalog CLI is missing from Git object $trusted_sha"
+    return 1
+  fi
+  if ! git -C "$GITHUB_WORKSPACE" cat-file -e \
+    "$trusted_sha:.github/scripts/service_catalog_lib/__init__.py"; then
+    log_error "Validated service catalog package is missing from Git object $trusted_sha"
+    return 1
+  fi
+
+  bundle_root="$(mktemp -d /var/tmp/parsevk-deploy-tools.XXXXXXXX)"
+  chmod 0700 "$bundle_root"
+
+  if ! git -C "$GITHUB_WORKSPACE" archive "$trusted_sha" .github/scripts \
+    | tar -x -C "$bundle_root"; then
+    rm -rf -- "$bundle_root"
+    log_error "Failed to materialize trusted deploy tools from Git object $trusted_sha"
+    return 1
+  fi
+
+  TRUSTED_DEPLOY_TOOLS_ROOT="$bundle_root"
+  export TRUSTED_DEPLOY_TOOLS_ROOT
+  printf 'TRUSTED_DEPLOY_TOOLS_ROOT=%s\n' "$TRUSTED_DEPLOY_TOOLS_ROOT" >> "$GITHUB_ENV"
+
+  trusted_root="$bundle_root/.github/scripts"
   PRODUCTION_SCRIPTS_DIR="$trusted_root/production"
   SERVICE_CATALOG_CLI="$trusted_root/service_catalog.py"
   LOCAL_RELEASE_SCRIPT="$trusted_root/production/local-release.sh"
@@ -29,19 +55,25 @@ resolve_trusted_deploy_tools() {
   HTTP_HEALTH_CHECK_SCRIPT="$trusted_root/http-health-check.sh"
 
   [ -f "$SERVICE_CATALOG_CLI" ] || {
-    log_error "Validated service catalog CLI is missing from trusted checkout: $SERVICE_CATALOG_CLI"
+    log_error "Materialized service catalog CLI is missing: $SERVICE_CATALOG_CLI"
     return 1
   }
   [ -f "$trusted_root/service_catalog_lib/__init__.py" ] || {
-    log_error "Validated service catalog package is missing from trusted checkout: $trusted_root/service_catalog_lib"
+    log_error "Materialized service catalog package is missing: $trusted_root/service_catalog_lib"
     return 1
   }
   [ -d "$PRODUCTION_SCRIPTS_DIR" ] || {
-    log_error "Validated production scripts are missing from trusted checkout: $PRODUCTION_SCRIPTS_DIR"
+    log_error "Materialized production scripts are missing: $PRODUCTION_SCRIPTS_DIR"
     return 1
   }
   if ! python3 "$SERVICE_CATALOG_CLI" --help >/dev/null; then
-    log_error "Validated service catalog CLI cannot start from trusted checkout"
+    log_error "Materialized service catalog CLI cannot start"
+    return 1
+  fi
+  if ! python3 "$SERVICE_CATALOG_CLI" \
+    --repo-root "$(project_root)" \
+    changed --purpose deploy --all >/dev/null; then
+    log_error "Materialized service catalog CLI cannot resolve production deploy targets"
     return 1
   fi
 
@@ -58,7 +90,7 @@ resolve_trusted_deploy_tools() {
     printf 'COMPOSE_OVERRIDE_FILE=%s\n' "$COMPOSE_OVERRIDE_FILE"
   } >> "$GITHUB_ENV"
 
-  log_info "Trusted deploy tools pinned to validated checkout: $trusted_root"
+  log_info "Trusted deploy tools materialized from Git object $trusted_sha: $trusted_root"
 }
 
 require_env_file() {
@@ -156,8 +188,11 @@ check_local_runtime_images() {
 
 main() {
   require_command docker
+  require_command git
   require_command jq
+  require_command mktemp
   require_command python3
+  require_command tar
 
   if ! docker compose version >/dev/null 2>&1; then
     log_error "Docker Compose is not available"
@@ -169,7 +204,7 @@ main() {
   require_production_compose_overlay
   require_vk_secret
   validate_compose
-  resolve_trusted_deploy_tools
+  materialize_trusted_deploy_tools
   check_storage_integrity
   check_external_networks
   check_local_runtime_images
