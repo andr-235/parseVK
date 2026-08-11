@@ -8,7 +8,7 @@ source "$SCRIPT_DIR/common.sh"
 STORAGE_GUARD_SCRIPT="${STORAGE_GUARD_SCRIPT:-$SCRIPT_DIR/storage-guard.sh}"
 VK_PRODUCTION_SECRET_PATH="${VK_PRODUCTION_SECRET_PATH:-/etc/parsevk/secrets/vk_token}"
 
-stage_deploy_tools() {
+resolve_trusted_deploy_tools() {
   if [ -z "${GITHUB_ENV:-}" ]; then
     return 0
   fi
@@ -169,7 +169,7 @@ main() {
   require_production_compose_overlay
   require_vk_secret
   validate_compose
-  stage_deploy_tools
+  resolve_trusted_deploy_tools
   check_storage_integrity
   check_external_networks
   check_local_runtime_images
