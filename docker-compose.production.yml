@@ -1,0 +1,9 @@
+services:
+  vk-service:
+    environment:
+      VK_SERVICE_TOKEN_FILE: /run/secrets/vk_token
+    volumes:
+      - type: bind
+        source: /etc/parsevk/secrets/vk_token
+        target: /run/secrets/vk_token
+        read_only: true
