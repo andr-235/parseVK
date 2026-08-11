@@ -7,3 +7,5 @@ services:
         source: /etc/parsevk/secrets/vk_token
         target: /run/secrets/vk_token
         read_only: true
+        bind:
+          create_host_path: false
