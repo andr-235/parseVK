@@ -42,6 +42,10 @@ materialize_trusted_deploy_tools() {
     return 1
   fi
 
+  TRUSTED_DEPLOY_TOOLS_ROOT="$bundle_root"
+  export TRUSTED_DEPLOY_TOOLS_ROOT
+  printf 'TRUSTED_DEPLOY_TOOLS_ROOT=%s\n' "$TRUSTED_DEPLOY_TOOLS_ROOT" >> "$GITHUB_ENV"
+
   trusted_root="$bundle_root/.github/scripts"
   PRODUCTION_SCRIPTS_DIR="$trusted_root/production"
   SERVICE_CATALOG_CLI="$trusted_root/service_catalog.py"
