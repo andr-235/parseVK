@@ -178,16 +178,22 @@ require_pattern "$PREFLIGHT" 'check_local_runtime_images' \
   "Production preflight does not verify local runtime images"
 reject_pattern "$PREFLIGHT" 'https?://|check_registry_reachability' \
   "Production preflight still requires external registry access"
-require_pattern "$PREFLIGHT" 'trusted_root="\$GITHUB_WORKSPACE/\.github/scripts"' \
-  "Production preflight does not pin trusted deploy tools to the validated checkout"
-reject_pattern "$PREFLIGHT" '\.parsevk-deploy-tools-|cp -a .*source_root' \
-  "Production preflight still copies trusted tools into a secondary staging directory"
-require_pattern "$PREFLIGHT" 'Validated service catalog CLI is missing from trusted checkout' \
-  "Production preflight does not verify the trusted service catalog CLI"
+require_pattern "$PREFLIGHT" 'trusted_sha="\$\(git -C "\$GITHUB_WORKSPACE" rev-parse HEAD\)"' \
+  "Production preflight does not bind trusted deploy tools to a Git object"
+require_pattern "$PREFLIGHT" 'cat-file -e' \
+  "Production preflight does not verify deploy tools in the Git object database"
+require_pattern "$PREFLIGHT" 'git -C "\$GITHUB_WORKSPACE" archive "\$trusted_sha" \.github/scripts' \
+  "Production preflight does not materialize trusted deploy tools with git archive"
+require_pattern "$PREFLIGHT" 'mktemp -d /var/tmp/parsevk-deploy-tools' \
+  "Production preflight does not materialize tools outside mutable repository worktrees"
+reject_pattern "$PREFLIGHT" 'trusted_root="\$GITHUB_WORKSPACE/\.github/scripts"|cp -a .*source_root' \
+  "Production preflight still trusts or copies mutable checkout files directly"
+require_pattern "$PREFLIGHT" 'Validated service catalog CLI is missing from Git object' \
+  "Production preflight does not fail closed when the Git object lacks the catalog CLI"
 require_pattern "$PREFLIGHT" 'service_catalog_lib/__init__\.py' \
   "Production preflight does not verify the trusted service catalog package"
 require_pattern "$PREFLIGHT" 'python3 "\$SERVICE_CATALOG_CLI" --help' \
-  "Production preflight does not smoke-test the trusted service catalog CLI"
+  "Production preflight does not smoke-test the materialized service catalog CLI"
 require_pattern "$IMAGES" 'ALLOW_IMAGE_PULLS.*false' \
   "Image preparation does not default to local-only mode"
 require_pattern "$IMAGES" 'docker image inspect' \
@@ -208,6 +214,19 @@ require_pattern "$LOCAL_RELEASE" 'status = "successful"' \
   "Local release is not promoted after health checks"
 require_pattern "$METADATA" 'previous_successful_commit' \
   "Deployment metadata does not retain the previous release"
+
+archive_probe="$(mktemp -d)"
+trap 'rm -rf -- "$archive_probe"' EXIT
+git -C "$ROOT_DIR" archive HEAD .github/scripts | tar -x -C "$archive_probe"
+[[ -f "$archive_probe/.github/scripts/service_catalog.py" ]] || {
+  echo "Git archive smoke did not materialize service_catalog.py"; exit 1;
+}
+[[ -f "$archive_probe/.github/scripts/service_catalog_lib/__init__.py" ]] || {
+  echo "Git archive smoke did not materialize service_catalog_lib"; exit 1;
+}
+python3 "$archive_probe/.github/scripts/service_catalog.py" --help >/dev/null
+rm -rf -- "$archive_probe"
+trap - EXIT
 
 for helper in common metadata preflight images migrations release local-release; do
   [[ -f "$ROOT_DIR/.github/scripts/production/$helper.sh" ]] || {
