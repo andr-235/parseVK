@@ -111,7 +111,9 @@ require_pattern "$DEPLOY" '^run-name: Deploy release .*inputs\.expected_release_
   "Production deploy run name does not expose the immutable release input"
 require_pattern "$DEPLOY" 'name: Fence stale queued release' \
   "Production deploy has no self-hosted stale-release fence"
-require_pattern "$DEPLOY" 'latest_release\.py --ref origin/main' \
+require_pattern "$DEPLOY" 'git show origin/main:\.github/scripts/latest_release\.py' \
+  "Production fence does not load the trusted latest-release resolver from main"
+require_pattern "$DEPLOY" 'python3 .*latest_release\.py.*--ref origin/main' \
   "Production fence does not resolve the latest semantic release"
 require_pattern "$DEPLOY" 'LATEST_RELEASE_SHA.*TARGET_SHA' \
   "Production fence does not compare the queued target with the latest release"
