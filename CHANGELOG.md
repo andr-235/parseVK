@@ -1,3 +1,10 @@
+## [0.93.5](https://github.com/andr-235/parseVK/compare/v0.93.4...v0.93.5) (2026-08-11)
+
+
+### Bug Fixes
+
+* **release:** persist trusted deploy tools across steps ([05f99ba](https://github.com/andr-235/parseVK/commit/05f99bac77abd90a78899a3237a4ff275a1400e7))
+
 ## [0.93.4](https://github.com/andr-235/parseVK/compare/v0.93.3...v0.93.4) (2026-08-11)
 
 
