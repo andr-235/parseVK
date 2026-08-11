@@ -9,17 +9,21 @@ STORAGE_GUARD_SCRIPT="${STORAGE_GUARD_SCRIPT:-$SCRIPT_DIR/storage-guard.sh}"
 VK_PRODUCTION_SECRET_PATH="${VK_PRODUCTION_SECRET_PATH:-/etc/parsevk/secrets/vk_token}"
 
 stage_deploy_tools() {
-  if [ -z "${RUNNER_TEMP:-}" ] || [ -z "${GITHUB_ENV:-}" ]; then
+  if [ -z "${GITHUB_ENV:-}" ]; then
     return 0
   fi
 
   local source_root stage_root
   if [ -n "${GITHUB_WORKSPACE:-}" ] && [ -d "$GITHUB_WORKSPACE/.github/scripts" ]; then
     source_root="$GITHUB_WORKSPACE/.github/scripts"
-  else
+    stage_root="$GITHUB_WORKSPACE/.parsevk-deploy-tools-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}"
+  elif [ -n "${RUNNER_TEMP:-}" ]; then
     source_root="$(project_root)/.github/scripts"
+    stage_root="$RUNNER_TEMP/parsevk-deploy-tools-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}"
+  else
+    log_error "No persistent directory is available for trusted deploy tools"
+    return 1
   fi
-  stage_root="$RUNNER_TEMP/parsevk-deploy-tools-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}"
 
   [ -d "$source_root" ] || {
     log_error "Validated deploy scripts not found: $source_root"
@@ -36,6 +40,20 @@ stage_deploy_tools() {
   STORAGE_GUARD_SCRIPT="$stage_root/production/storage-guard.sh"
   HEALTH_CHECK_SCRIPT="$stage_root/health-check.sh"
   HTTP_HEALTH_CHECK_SCRIPT="$stage_root/http-health-check.sh"
+
+  [ -f "$SERVICE_CATALOG_CLI" ] || {
+    log_error "Validated service catalog CLI was not staged: $SERVICE_CATALOG_CLI"
+    return 1
+  }
+  [ -f "$stage_root/service_catalog_lib/__init__.py" ] || {
+    log_error "Validated service catalog package was not staged: $stage_root/service_catalog_lib"
+    return 1
+  }
+  if ! python3 "$SERVICE_CATALOG_CLI" --help >/dev/null; then
+    log_error "Validated service catalog CLI cannot start from staged tools"
+    return 1
+  fi
+
   export PRODUCTION_SCRIPTS_DIR SERVICE_CATALOG_CLI LOCAL_RELEASE_SCRIPT STORAGE_GUARD_SCRIPT
   export HEALTH_CHECK_SCRIPT HTTP_HEALTH_CHECK_SCRIPT COMPOSE_OVERRIDE_FILE
 
@@ -49,7 +67,7 @@ stage_deploy_tools() {
     printf 'COMPOSE_OVERRIDE_FILE=%s\n' "$COMPOSE_OVERRIDE_FILE"
   } >> "$GITHUB_ENV"
 
-  log_info "Deploy tools staged outside shared workspace: $stage_root"
+  log_info "Trusted deploy tools staged: $stage_root"
 }
 
 require_env_file() {
