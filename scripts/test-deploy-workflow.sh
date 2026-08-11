@@ -178,14 +178,16 @@ require_pattern "$PREFLIGHT" 'check_local_runtime_images' \
   "Production preflight does not verify local runtime images"
 reject_pattern "$PREFLIGHT" 'https?://|check_registry_reachability' \
   "Production preflight still requires external registry access"
-require_pattern "$PREFLIGHT" 'GITHUB_WORKSPACE/\.parsevk-deploy-tools-' \
-  "Production preflight does not persist trusted deploy tools across workflow steps"
-require_pattern "$PREFLIGHT" 'Validated service catalog CLI was not staged' \
-  "Production preflight does not verify the staged service catalog CLI"
+require_pattern "$PREFLIGHT" 'trusted_root="\$GITHUB_WORKSPACE/\.github/scripts"' \
+  "Production preflight does not pin trusted deploy tools to the validated checkout"
+reject_pattern "$PREFLIGHT" '\.parsevk-deploy-tools-|cp -a .*source_root' \
+  "Production preflight still copies trusted tools into a secondary staging directory"
+require_pattern "$PREFLIGHT" 'Validated service catalog CLI is missing from trusted checkout' \
+  "Production preflight does not verify the trusted service catalog CLI"
 require_pattern "$PREFLIGHT" 'service_catalog_lib/__init__\.py' \
-  "Production preflight does not verify the staged service catalog package"
+  "Production preflight does not verify the trusted service catalog package"
 require_pattern "$PREFLIGHT" 'python3 "\$SERVICE_CATALOG_CLI" --help' \
-  "Production preflight does not smoke-test the staged service catalog CLI"
+  "Production preflight does not smoke-test the trusted service catalog CLI"
 require_pattern "$IMAGES" 'ALLOW_IMAGE_PULLS.*false' \
   "Image preparation does not default to local-only mode"
 require_pattern "$IMAGES" 'docker image inspect' \
