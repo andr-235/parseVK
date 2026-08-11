@@ -88,6 +88,10 @@ class VkExecutionClaim:
         return self.execution.post_limit
 
     @property
+    def plan_snapshot(self) -> dict:
+        return self.execution.plan_snapshot
+
+    @property
     def processed_items(self) -> int:
         return self.execution.processed_items
 
