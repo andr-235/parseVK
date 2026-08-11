@@ -1,3 +1,11 @@
+## [0.93.1](https://github.com/andr-235/parseVK/compare/v0.93.0...v0.93.1) (2026-08-11)
+
+
+### Bug Fixes
+
+* **deploy:** publish corrected production workflow ([7c010ff](https://github.com/andr-235/parseVK/commit/7c010ff11d94f16c9c0c7477e8929e39c238f486))
+* **release:** publish corrected production workflow ([7bd9cb8](https://github.com/andr-235/parseVK/commit/7bd9cb893f51789743d2d40d52c59d72210f417e))
+
 # [0.93.0](https://github.com/andr-235/parseVK/compare/v0.92.0...v0.93.0) (2026-08-10)
 
 
