@@ -1,3 +1,10 @@
+## [0.93.2](https://github.com/andr-235/parseVK/compare/v0.93.1...v0.93.2) (2026-08-11)
+
+
+### Bug Fixes
+
+* **release:** publish trusted deploy resolver contract ([9201aa9](https://github.com/andr-235/parseVK/commit/9201aa92f57758a7d7488a4c68d52c0ba0988e38))
+
 ## [0.93.1](https://github.com/andr-235/parseVK/compare/v0.93.0...v0.93.1) (2026-08-11)
 
 
