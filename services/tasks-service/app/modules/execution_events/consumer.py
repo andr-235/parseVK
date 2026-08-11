@@ -36,9 +36,19 @@ class _MalformedPayload(Exception):
     """Raised when an event payload cannot be parsed."""
 
 
-def _parse_payload(event_type: str, raw: str) -> Optional[object]:
+def _parse_payload(event_type: str, raw: object) -> Optional[object]:
     try:
-        data = json.loads(raw)
+        if isinstance(raw, dict):
+            data = raw
+        elif isinstance(raw, (str, bytes, bytearray)):
+            data = json.loads(raw)
+            if not isinstance(data, dict):
+                raise TypeError("payload JSON must decode to an object")
+        else:
+            raise TypeError(
+                f"payload must be an object or JSON string, got {type(raw).__name__}"
+            )
+
         if event_type == "task.execution_started":
             return TaskExecutionStartedPayload(**data)
         if event_type == "task.execution_progressed":
