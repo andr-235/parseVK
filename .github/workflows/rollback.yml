@@ -185,6 +185,24 @@ jobs:
           PROJECT_ROOT="$PROJECT_ROOT" COMPOSE_FILE="$COMPOSE_FILE" PULL_POLICY="$PULL_POLICY" \
             UP_ARGS="-d --no-build" bash "$PRODUCTION_SCRIPTS_DIR/release.sh"
 
+      - name: Cleanup trusted deploy tools
+        if: always()
+        run: |
+          set -euo pipefail
+          BUNDLE_ROOT="${TRUSTED_DEPLOY_TOOLS_ROOT:-}"
+          if [ -z "$BUNDLE_ROOT" ]; then
+            exit 0
+          fi
+          case "$BUNDLE_ROOT" in
+            /var/tmp/parsevk-deploy-tools.*)
+              rm -rf -- "$BUNDLE_ROOT"
+              echo "Removed trusted deploy tools bundle: $BUNDLE_ROOT"
+              ;;
+            *)
+              echo "::warning::Refusing to remove unexpected trusted deploy tools path: $BUNDLE_ROOT"
+              ;;
+          esac
+
       - name: Rollback summary
         if: always()
         run: |
