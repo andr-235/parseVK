@@ -13,8 +13,12 @@ fi
 MAX_ATTEMPTS=${MAX_ATTEMPTS:-30}
 TARGET_SERVICES=${TARGET_SERVICES:-}
 FULL_DEPLOY=${FULL_DEPLOY:-false}
+PROJECT_ROOT=${PROJECT_ROOT:-$(pwd)}
 COMPOSE_FILE=${COMPOSE_FILE:-docker-compose.yml}
 COMPOSE_OVERRIDE_FILE=${COMPOSE_OVERRIDE_FILE:-}
+if [ -z "$COMPOSE_OVERRIDE_FILE" ] && [ "$PROJECT_ROOT" = "/opt/parseVK" ]; then
+  COMPOSE_OVERRIDE_FILE="/etc/parsevk/vk-secret.override.yml"
+fi
 SMOKE_REPORT=${SMOKE_REPORT:-/tmp/parsevk-post-deploy-smoke.json}
 COMPOSE_CMD=(docker compose -f "$COMPOSE_FILE")
 if [ -n "$COMPOSE_OVERRIDE_FILE" ]; then
@@ -156,8 +160,11 @@ fi
 
 log_info "All runtime containers are healthy"
 
-if [ "$FULL_DEPLOY" = "true" ]; then
+if [ -n "$COMPOSE_OVERRIDE_FILE" ]; then
   verify_vk_runtime
+fi
+
+if [ "$FULL_DEPLOY" = "true" ]; then
   SMOKE_SCRIPT="$(dirname "$0")/production/post_deploy_smoke.py"
   if [ ! -f "$SMOKE_SCRIPT" ]; then
     log_error "Production smoke script not found: $SMOKE_SCRIPT"
