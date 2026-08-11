@@ -24,17 +24,8 @@ project_root() {
   printf '%s\n' "$PROJECT_ROOT"
 }
 
-project_file_path() {
-  local file_path="$1"
-  if [[ "$file_path" = /* ]]; then
-    printf '%s\n' "$file_path"
-  else
-    printf '%s/%s\n' "$(project_root)" "$file_path"
-  fi
-}
-
 compose_file_path() {
-  project_file_path "$COMPOSE_FILE"
+  printf '%s/%s\n' "$(project_root)" "$COMPOSE_FILE"
 }
 
 with_project_root() {
@@ -61,10 +52,25 @@ require_command() {
 }
 
 require_project_file() {
-  local file_path="$1" resolved
-  resolved="$(project_file_path "$file_path")"
-  if [ ! -f "$resolved" ]; then
-    log_error "Required file not found: $resolved"
+  local file_path="$1"
+  if [ ! -f "$(project_root)/$file_path" ]; then
+    log_error "Required file not found: $(project_root)/$file_path"
+    return 1
+  fi
+}
+
+require_host_file() {
+  local file_path="$1"
+  case "$file_path" in
+    /etc/parsevk/*|"${GITHUB_WORKSPACE:-/nonexistent}"/*)
+      ;;
+    *)
+      log_error "Refusing to validate untrusted host path: $file_path"
+      return 1
+      ;;
+  esac
+  if [ ! -f "$file_path" ]; then
+    log_error "Required host file not found: $file_path"
     return 1
   fi
 }
