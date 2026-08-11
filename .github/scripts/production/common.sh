@@ -9,6 +9,16 @@ fi
 
 PROJECT_ROOT="${PROJECT_ROOT:-/opt/parseVK}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
+COMPOSE_OVERRIDE_FILE="${COMPOSE_OVERRIDE_FILE:-}"
+if [ -z "$COMPOSE_OVERRIDE_FILE" ] && [ "$PROJECT_ROOT" = "/opt/parseVK" ]; then
+  if [ -f "/etc/parsevk/vk-secret.override.yml" ]; then
+    COMPOSE_OVERRIDE_FILE="/etc/parsevk/vk-secret.override.yml"
+  elif [ -n "${GITHUB_WORKSPACE:-}" ] && [ -f "$GITHUB_WORKSPACE/docker-compose.production.yml" ]; then
+    COMPOSE_OVERRIDE_FILE="$GITHUB_WORKSPACE/docker-compose.production.yml"
+  else
+    COMPOSE_OVERRIDE_FILE="/etc/parsevk/vk-secret.override.yml"
+  fi
+fi
 
 project_root() {
   printf '%s\n' "$PROJECT_ROOT"
@@ -26,7 +36,11 @@ with_project_root() {
 }
 
 compose() {
-  with_project_root docker compose -f "$COMPOSE_FILE" "$@"
+  local compose_cmd=(docker compose -f "$COMPOSE_FILE")
+  if [ -n "$COMPOSE_OVERRIDE_FILE" ]; then
+    compose_cmd+=(-f "$COMPOSE_OVERRIDE_FILE")
+  fi
+  with_project_root "${compose_cmd[@]}" "$@"
 }
 
 require_command() {
@@ -41,6 +55,22 @@ require_project_file() {
   local file_path="$1"
   if [ ! -f "$(project_root)/$file_path" ]; then
     log_error "Required file not found: $(project_root)/$file_path"
+    return 1
+  fi
+}
+
+require_host_file() {
+  local file_path="$1"
+  case "$file_path" in
+    /etc/parsevk/*|"${GITHUB_WORKSPACE:-/nonexistent}"/*)
+      ;;
+    *)
+      log_error "Refusing to validate untrusted host path: $file_path"
+      return 1
+      ;;
+  esac
+  if [ ! -f "$file_path" ]; then
+    log_error "Required host file not found: $file_path"
     return 1
   fi
 }

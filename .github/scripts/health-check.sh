@@ -13,9 +13,23 @@ fi
 MAX_ATTEMPTS=${MAX_ATTEMPTS:-30}
 TARGET_SERVICES=${TARGET_SERVICES:-}
 FULL_DEPLOY=${FULL_DEPLOY:-false}
+PROJECT_ROOT=${PROJECT_ROOT:-$(pwd)}
 COMPOSE_FILE=${COMPOSE_FILE:-docker-compose.yml}
+COMPOSE_OVERRIDE_FILE=${COMPOSE_OVERRIDE_FILE:-}
+if [ -z "$COMPOSE_OVERRIDE_FILE" ] && [ "$PROJECT_ROOT" = "/opt/parseVK" ]; then
+  if [ -f "/etc/parsevk/vk-secret.override.yml" ]; then
+    COMPOSE_OVERRIDE_FILE="/etc/parsevk/vk-secret.override.yml"
+  elif [ -n "${GITHUB_WORKSPACE:-}" ] && [ -f "$GITHUB_WORKSPACE/docker-compose.production.yml" ]; then
+    COMPOSE_OVERRIDE_FILE="$GITHUB_WORKSPACE/docker-compose.production.yml"
+  else
+    COMPOSE_OVERRIDE_FILE="/etc/parsevk/vk-secret.override.yml"
+  fi
+fi
 SMOKE_REPORT=${SMOKE_REPORT:-/tmp/parsevk-post-deploy-smoke.json}
 COMPOSE_CMD=(docker compose -f "$COMPOSE_FILE")
+if [ -n "$COMPOSE_OVERRIDE_FILE" ]; then
+  COMPOSE_CMD+=(-f "$COMPOSE_OVERRIDE_FILE")
+fi
 
 if [ "$FULL_DEPLOY" = "true" ]; then
   TARGET_SERVICES=""
@@ -44,6 +58,40 @@ resolve_services() {
         | select((.value.restart // "") != "no")
         | .key
       '
+}
+
+verify_vk_runtime() {
+  log_info "Verifying VK runtime readiness"
+  "${COMPOSE_CMD[@]}" exec -T vk-service python - <<'PY'
+import json
+import urllib.request
+
+with urllib.request.urlopen("http://localhost:8000/health", timeout=5) as response:
+    data = json.load(response)
+
+print(json.dumps(data, ensure_ascii=False))
+
+expected = {
+    "status": "UP",
+    "vkTokenConfigured": "yes",
+    "vkAccountStatus": "active",
+    "kafkaConsumer": "healthy",
+    "ingestionAckConsumer": "healthy",
+    "outboxPublisher": "healthy",
+    "stagedPartPublisher": "healthy",
+    "executionWorker": "healthy",
+}
+
+failed = {
+    key: {"expected": value, "actual": data.get(key)}
+    for key, value in expected.items()
+    if data.get(key) != value
+}
+
+if failed:
+    print(json.dumps({"vk_runtime_failures": failed}, ensure_ascii=False))
+    raise SystemExit(1)
+PY
 }
 
 mapfile -t SERVICES < <(resolve_services)
@@ -117,6 +165,10 @@ if [ "$ALL_HEALTHY" != "true" ]; then
 fi
 
 log_info "All runtime containers are healthy"
+
+if [ -n "$COMPOSE_OVERRIDE_FILE" ]; then
+  verify_vk_runtime
+fi
 
 if [ "$FULL_DEPLOY" = "true" ]; then
   SMOKE_SCRIPT="$(dirname "$0")/production/post_deploy_smoke.py"

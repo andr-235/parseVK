@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
 STORAGE_GUARD_SCRIPT="${STORAGE_GUARD_SCRIPT:-$SCRIPT_DIR/storage-guard.sh}"
+VK_PRODUCTION_SECRET_PATH="${VK_PRODUCTION_SECRET_PATH:-/etc/parsevk/secrets/vk_token}"
 
 stage_deploy_tools() {
   if [ -z "${RUNNER_TEMP:-}" ] || [ -z "${GITHUB_ENV:-}" ]; then
@@ -13,7 +14,11 @@ stage_deploy_tools() {
   fi
 
   local source_root stage_root
-  source_root="$(project_root)/.github/scripts"
+  if [ -n "${GITHUB_WORKSPACE:-}" ] && [ -d "$GITHUB_WORKSPACE/.github/scripts" ]; then
+    source_root="$GITHUB_WORKSPACE/.github/scripts"
+  else
+    source_root="$(project_root)/.github/scripts"
+  fi
   stage_root="$RUNNER_TEMP/parsevk-deploy-tools-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}"
 
   [ -d "$source_root" ] || {
@@ -32,7 +37,7 @@ stage_deploy_tools() {
   HEALTH_CHECK_SCRIPT="$stage_root/health-check.sh"
   HTTP_HEALTH_CHECK_SCRIPT="$stage_root/http-health-check.sh"
   export PRODUCTION_SCRIPTS_DIR SERVICE_CATALOG_CLI LOCAL_RELEASE_SCRIPT STORAGE_GUARD_SCRIPT
-  export HEALTH_CHECK_SCRIPT HTTP_HEALTH_CHECK_SCRIPT
+  export HEALTH_CHECK_SCRIPT HTTP_HEALTH_CHECK_SCRIPT COMPOSE_OVERRIDE_FILE
 
   {
     printf 'PRODUCTION_SCRIPTS_DIR=%s\n' "$PRODUCTION_SCRIPTS_DIR"
@@ -41,6 +46,7 @@ stage_deploy_tools() {
     printf 'STORAGE_GUARD_SCRIPT=%s\n' "$STORAGE_GUARD_SCRIPT"
     printf 'HEALTH_CHECK_SCRIPT=%s\n' "$HEALTH_CHECK_SCRIPT"
     printf 'HTTP_HEALTH_CHECK_SCRIPT=%s\n' "$HTTP_HEALTH_CHECK_SCRIPT"
+    printf 'COMPOSE_OVERRIDE_FILE=%s\n' "$COMPOSE_OVERRIDE_FILE"
   } >> "$GITHUB_ENV"
 
   log_info "Deploy tools staged outside shared workspace: $stage_root"
@@ -49,6 +55,27 @@ stage_deploy_tools() {
 require_env_file() {
   if [ ! -f "$(project_root)/.env" ]; then
     log_error "Production .env file not found at $(project_root)/.env"
+    return 1
+  fi
+}
+
+require_production_compose_overlay() {
+  if [ "$PROJECT_ROOT" != "/opt/parseVK" ]; then
+    return 0
+  fi
+  if [ -z "$COMPOSE_OVERRIDE_FILE" ]; then
+    log_error "Production compose override is not configured"
+    return 1
+  fi
+  require_host_file "$COMPOSE_OVERRIDE_FILE"
+}
+
+require_vk_secret() {
+  if [ "$PROJECT_ROOT" != "/opt/parseVK" ]; then
+    return 0
+  fi
+  if [ ! -f "$VK_PRODUCTION_SECRET_PATH" ] || [ ! -s "$VK_PRODUCTION_SECRET_PATH" ]; then
+    log_error "Required VK production secret is missing or empty: $VK_PRODUCTION_SECRET_PATH"
     return 1
   fi
 }
@@ -130,6 +157,8 @@ main() {
 
   require_env_file
   require_project_file "$COMPOSE_FILE"
+  require_production_compose_overlay
+  require_vk_secret
   validate_compose
   stage_deploy_tools
   check_storage_integrity
