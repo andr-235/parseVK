@@ -1,3 +1,10 @@
+## [0.93.6](https://github.com/andr-235/parseVK/compare/v0.93.5...v0.93.6) (2026-08-11)
+
+
+### Bug Fixes
+
+* **release:** use trusted checkout tools directly ([b3a5b2f](https://github.com/andr-235/parseVK/commit/b3a5b2f2d8ec629310fc9238e2e11985526beadb))
+
 ## [0.93.5](https://github.com/andr-235/parseVK/compare/v0.93.4...v0.93.5) (2026-08-11)
 
 
