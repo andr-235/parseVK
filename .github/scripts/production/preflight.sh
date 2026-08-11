@@ -66,6 +66,12 @@ materialize_trusted_deploy_tools() {
     log_error "Materialized service catalog CLI cannot start"
     return 1
   fi
+  if ! python3 "$SERVICE_CATALOG_CLI" \
+    --repo-root "$(project_root)" \
+    changed --purpose deploy --all >/dev/null; then
+    log_error "Materialized service catalog CLI cannot resolve production deploy targets"
+    return 1
+  fi
 
   export PRODUCTION_SCRIPTS_DIR SERVICE_CATALOG_CLI LOCAL_RELEASE_SCRIPT STORAGE_GUARD_SCRIPT
   export HEALTH_CHECK_SCRIPT HTTP_HEALTH_CHECK_SCRIPT COMPOSE_OVERRIDE_FILE
