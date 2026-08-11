@@ -9,6 +9,7 @@ fi
 
 PROJECT_ROOT="${PROJECT_ROOT:-/opt/parseVK}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
+COMPOSE_OVERRIDE_FILE="${COMPOSE_OVERRIDE_FILE:-}"
 
 project_root() {
   printf '%s\n' "$PROJECT_ROOT"
@@ -26,7 +27,11 @@ with_project_root() {
 }
 
 compose() {
-  with_project_root docker compose -f "$COMPOSE_FILE" "$@"
+  local compose_cmd=(docker compose -f "$COMPOSE_FILE")
+  if [ -n "$COMPOSE_OVERRIDE_FILE" ]; then
+    compose_cmd+=(-f "$COMPOSE_OVERRIDE_FILE")
+  fi
+  with_project_root "${compose_cmd[@]}" "$@"
 }
 
 require_command() {
