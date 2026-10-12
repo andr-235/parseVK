@@ -160,7 +160,7 @@ jobs:
           fi
 
       - name: Upload commit review plan
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ai-review-plan-${{ github.run_id }}
           path: .ai-review-runtime/commit-plan.json
@@ -405,7 +405,7 @@ jobs:
 
       - name: Upload validated commit result
         if: always() && steps.result.outputs.path != ''
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ai-review-commit-${{ github.run_id }}-${{ matrix.unit.index }}
           path: ${{ steps.result.outputs.path }}
@@ -510,7 +510,7 @@ jobs:
 
       - name: Upload validated result
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ai-review-result-${{ github.run_id }}
           path: |
